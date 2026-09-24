@@ -1,0 +1,9 @@
+.git
+**/.env
+**/.env.*
+**/vendor
+**/node_modules
+**/dist
+**/coverage
+backend/storage/logs/*
+backend/storage/framework/*
