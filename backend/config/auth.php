@@ -1,12 +1,23 @@
 <?php
 
+use App\Models\User;
+
 return [
-    // La autenticación se configurará en una historia aprobada.
     'defaults' => [
-        'guard' => null,
+        'guard' => 'web',
         'passwords' => null,
     ],
-    'guards' => [],
-    'providers' => [],
+    'guards' => [
+        'web' => [
+            'driver' => 'session',
+            'provider' => 'users',
+        ],
+    ],
+    'providers' => [
+        'users' => [
+            'driver' => 'eloquent',
+            'model' => User::class,
+        ],
+    ],
     'passwords' => [],
 ];

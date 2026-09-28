@@ -30,6 +30,7 @@ services:
       APP_ENV: local
       APP_DEBUG: "true"
       APP_URL: http://localhost:${BACKEND_PORT:-8000}
+      SANCTUM_STATEFUL_DOMAINS: localhost:${FRONTEND_PORT:-5173},127.0.0.1:${FRONTEND_PORT:-5173}
       DB_CONNECTION: pgsql
       DB_HOST: db
       DB_PORT: 5432

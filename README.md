@@ -1,139 +1,105 @@
 # Banco de Talentos – Educación Dual
 
-Estructura inicial para desarrollo local de un monolito modular. Esta base no implementa historias de usuario.
+Monolito modular con **HU-S1-01 — Autenticación y control de acceso** implementada. El alcance actual es iniciar sesión, consultar la identidad y cerrar sesión. No existen módulos de negocio ni registro público.
 
-## Stack
+## Stack y estructura
 
-- API REST: Laravel 13 sobre PHP 8.4, con Laravel Sanctum 4 como base de autenticación.
-- Frontend: React 19, TypeScript 5.9 y Vite 8 sobre Node.js 24.
-- Base de datos: PostgreSQL 17 con PostGIS 3.5.
-- Entorno local: Docker Compose, con los servicios `db`, `backend` y `frontend`.
-- Herramientas de pruebas: Pest, Vitest + React Testing Library y Playwright.
-
-## Estructura
+- Laravel 13 / PHP 8.4, Sanctum 4 con sesiones y CSRF, PostgreSQL 17 + PostGIS 3.5.
+- React 19 / TypeScript 5.9 / Vite 8 sobre Node 24.
+- Pest, Vitest + React Testing Library y Playwright/Chromium.
 
 ```text
-backend/                  Aplicación Laravel y rutas de API
-frontend/                 Aplicación React + TypeScript + Vite
-docker/
-  backend/                Imagen PHP y arranque de Laravel
-  frontend/               Imagen Node.js y arranque de Vite
-  postgres/01-postgis.sql  Habilitación inicial de PostGIS
-compose.yaml              Servicios, red y volúmenes locales
-.env.example              Variables de Compose para desarrollo
-AGENTS.md                 Reglas del proyecto
+backend/                 API, usuarios, autorización y pruebas Pest
+frontend/                Login, área protegida mínima, pruebas React y E2E
+docker/                  Imágenes y configuración de desarrollo/pruebas
+compose.yaml             Entorno de desarrollo
+compose.testing.yaml     Entorno aislado de pruebas
+scripts/test-backend.sh   Ejecuta Pest con PostgreSQL temporal
+scripts/test-e2e.sh       Ejecuta Chromium con API y base de pruebas reales
 ```
 
-Las versiones resueltas de las dependencias se registran en `backend/composer.lock` y `frontend/package-lock.json`.
+`backend/composer.lock` y `frontend/package-lock.json` fijan las dependencias.
 
-## Requisitos
+## Desarrollo local
 
-Instala Docker Engine o Docker Desktop con el complemento Docker Compose v2. No necesitas instalar PHP, Composer, Node.js ni PostgreSQL en el equipo.
+Requiere Docker Engine/Desktop con Docker Compose. PHP, Node y PostgreSQL se ejecutan dentro de los contenedores.
 
-Los puertos locales predeterminados son `5173`, `8000` y `5432`. La primera construcción y la instalación de dependencias requieren acceso a Internet.
-
-## Primer arranque
-
-Desde la raíz del repositorio:
+La primera vez:
 
 ```bash
 cp .env.example .env
 ```
 
-En Linux, consulta tu usuario y grupo con estos comandos y coloca sus valores en `LOCAL_UID` y `LOCAL_GID` dentro del archivo `.env`. Esto permite que los archivos creados por los contenedores pertenezcan a tu usuario.
-
-```bash
-id -u
-id -g
-```
-
-Inicia el entorno:
+En Linux, configura `LOCAL_UID` y `LOCAL_GID` en `.env` con los resultados de `id -u` e `id -g` para que los archivos generados pertenezcan a tu usuario.
 
 ```bash
 docker compose up --build -d
-docker compose ps
-docker compose logs -f
+docker compose exec backend php artisan migrate
+docker compose exec backend php artisan auth:create-user
 ```
 
-El servicio `db` inicializa PostgreSQL y habilita la extensión PostGIS cuando el volumen de datos está vacío. El backend espera a que la base de datos esté disponible; su arranque instala las dependencias con `composer install`, crea `backend/.env` a partir de su ejemplo si no existe y genera `APP_KEY` si está vacía. El frontend espera al backend e instala sus dependencias con `npm ci` antes de iniciar Vite. El primer arranque puede tardar varios minutos.
-
-El entorno no ejecuta migraciones automáticamente ni contiene migraciones de negocio.
-
-## Acceso local
+`auth:create-user` sólo funciona de forma interactiva en el entorno local. Solicita un rol explícito, estado activo y contraseña oculta con confirmación; no hay cuentas o contraseñas predeterminadas. Los usuarios de las pruebas se crean exclusivamente en bases de pruebas. No utilices factories para aprovisionar cuentas reales.
 
 | Servicio | Dirección predeterminada |
 | --- | --- |
-| Frontend | <http://localhost:5173> |
-| Backend | <http://localhost:8000> |
-| Salud del backend | <http://localhost:8000/up> |
-| PostgreSQL desde el equipo | `localhost:5432` |
+| SPA | <http://localhost:5173> |
+| API | <http://localhost:8000> |
+| Salud | <http://localhost:8000/up> |
+| PostgreSQL | `localhost:5432` |
 
-Los puertos publicados están vinculados a `127.0.0.1`. Puedes cambiarlos mediante `FRONTEND_PORT`, `BACKEND_PORT` y `DB_PORT` en el `.env` de la raíz.
+Los puertos se publican sólo en `127.0.0.1` y se configuran mediante `FRONTEND_PORT`, `BACKEND_PORT` y `DB_PORT`. Utiliza de forma consistente `localhost` o `127.0.0.1`; sus cookies son distintas. Vite reenvía `/api`, `/sanctum` y `/up` al backend. Compose ajusta los dominios de Sanctum al puerto del frontend.
 
-Vite reenvía las solicitudes `/api` y `/up` al servicio `backend:8000` dentro de Docker. Por ejemplo, <http://localhost:5173/up> llega al endpoint de salud de Laravel. Las futuras llamadas del frontend pueden utilizar rutas relativas `/api/...`. El archivo de rutas de API está vacío; `/api` todavía no ofrece endpoints funcionales y es normal que devuelva `404`.
+El backend instala dependencias, crea `backend/.env` y genera `APP_KEY` cuando faltan. El frontend ejecuta `npm ci`. **Las migraciones se aplican explícitamente**, no durante el arranque.
 
-## Configuración y secretos
+## Autenticación y roles
 
-El `.env` de la raíz configura Docker Compose. Las variables de conexión a PostgreSQL se pasan al contenedor del backend y prevalecen sobre los valores de `backend/.env`. Dentro de Docker, Laravel utiliza `DB_HOST=db` y `DB_PORT=5432`, independientemente del puerto publicado en el equipo.
+La SPA consulta `GET /api/me` al cargar. Para iniciar sesión obtiene primero `GET /sanctum/csrf-cookie` y envía `POST /api/login` con correo y contraseña. `POST /api/logout` destruye la sesión actual. No se emiten tokens de acceso ni se guardan credenciales en `localStorage` o `sessionStorage`.
 
-Después de modificar el `.env` de la raíz, aplica la configuración con:
+La cookie de sesión es `HttpOnly`, de dominio local y `SameSite=Lax`. El cliente envía el token CSRF mediante `X-XSRF-TOKEN`. El identificador de sesión se regenera al autenticar; el cierre de sesión impide reutilizar la cookie anterior. Las sesiones locales expiran tras 120 minutos de inactividad. Las opciones de cookies y duración están en `backend/.env.example`.
+
+Los roles son `ADMIN`, `INSTITUTION`, `COMPANY` y `SECRETARY`. Todos requieren una cuenta activa y sólo disponen de identidad y logout en esta entrega. No hay acceso implícito de ADMIN a otros roles. Los futuros endpoints deberán declarar sus roles permitidos en backend; no basta ocultar botones. En este Sprint no se crean módulos ni permisos de módulos.
+
+Las credenciales incorrectas y las cuentas inactivas producen el mismo mensaje. La API devuelve errores JSON controlados: `401` sin sesión válida, `403` por autorización, `419` por CSRF, `422` por validación y `429` al superar el límite de login. Una cuenta desactivada durante la sesión pierde acceso en su siguiente petición protegida. El frontend trata errores de red sin afirmar que un logout fallido haya cerrado la sesión.
+
+Consulta [backend/README.md](backend/README.md) para detalles del contrato HTTP y del alta local. La matriz de aceptación, los resultados y el inventario de cambios están en [docs/HU-S1-01.md](docs/HU-S1-01.md).
+
+## Pruebas
+
+Ejecuta desde la raíz:
 
 ```bash
-docker compose up -d
+# PostgreSQL temporal, flujo real de cookies y autorización: CA-01/02/04–10
+sh scripts/test-backend.sh
+
+# Cliente HTTP, formulario, recuperación de sesión y rutas protegidas: CA-03
+# Requiere el servicio frontend de desarrollo iniciado.
+docker compose exec frontend npm run test
+docker compose exec frontend npm run lint
+docker compose exec frontend npm run build
+
+# Chromium + API real: visitante bloqueado, login, recarga, logout y cookie revocada
+sh scripts/test-e2e.sh
 ```
 
-Si cambias `LOCAL_UID`, `LOCAL_GID` o un Dockerfile, reconstruye las imágenes con `docker compose up --build -d`.
+Los scripts usan el proyecto Compose independiente `banco-talentos-tests`, sin puertos publicados ni el volumen PostgreSQL de desarrollo. PostgreSQL utiliza almacenamiento temporal; Pest y E2E tienen bases distintas. Las sesiones, cachés y clave de aplicación de ese entorno también son independientes. Las pruebas Pest comprueban la base de destino antes de aplicar migraciones destructivas.
 
-`backend/.env` conserva la clave `APP_KEY` y la configuración local de Laravel. Ambos archivos `.env` están excluidos de Git; los ejemplos contienen únicamente valores de desarrollo. No incluyas secretos en archivos versionados.
+Cada script limpia sus contenedores y red al terminar; el volumen `test_vendor` conserva sólo dependencias. Ejecuta los dos scripts secuencialmente, porque comparten el proyecto de pruebas. El E2E genera credenciales efímeras, no las imprime y no guarda trazas de red. Chromium y sus bibliotecas se instalan en la imagen de pruebas, no en tu equipo ni en el contenedor de desarrollo. La primera construcción requiere Internet y puede tardar varios minutos.
 
-Las variables `POSTGRES_DB`, `POSTGRES_USER` y `POSTGRES_PASSWORD` inicializan un volumen de PostgreSQL nuevo. Cambiar sus valores en `.env` no cambia usuarios, contraseñas ni bases de datos de un volumen existente. Para reinicializar con otros valores, utiliza un volumen nuevo; consulta la sección de persistencia antes de eliminar el actual.
+Los tests de roles registran rutas únicamente dentro de Pest para verificar la matriz de acceso sin introducir módulos ficticios en la aplicación. Las pruebas de sesión usan cookies cifradas y archivos reales; no sustituyen el login por `actingAs`. Las pruebas CSRF desactivan únicamente la excepción del framework para el entorno de tests.
 
-## Comandos de desarrollo
-
-El código de `backend/` y `frontend/` se monta directamente en los contenedores. Ejecuta los siguientes comandos desde la raíz, con los servicios iniciados:
+## Operación local
 
 ```bash
-# Estado y registros
 docker compose ps
 docker compose logs -f backend frontend db
-
-# Laravel y Composer
-docker compose exec backend php artisan about
 docker compose exec backend php artisan route:list
 docker compose exec backend composer validate --strict
-docker compose exec backend vendor/bin/pint --test
-docker compose exec backend composer test
-
-# TypeScript, compilación y lint del frontend
-docker compose exec frontend npm run build
-docker compose exec frontend npm run lint
-docker compose exec frontend npm run test
-
-# Confirmar la extensión PostGIS
-docker compose exec db sh -c 'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -c "SELECT PostGIS_Version();"'
-```
-
-Vitest y React Testing Library están configurados, inicialmente sin casos de prueba. `npm run test` admite una suite vacía; `npm run test:watch` activa el modo interactivo. Playwright tiene configuración base para Chromium y se ejecuta con `docker compose exec frontend npm run test:e2e` cuando se agreguen escenarios E2E y se instale el navegador en el contenedor. La instalación de Chromium no forma parte del arranque local.
-
-Los arranques usan los archivos de bloqueo y no actualizan las versiones de las dependencias. Cuando sea necesario actualizar dependencias de forma explícita, ejecuta estos comandos y revisa los cambios en los archivos de bloqueo antes de versionarlos:
-
-```bash
-docker compose exec backend composer update
-docker compose exec frontend npm update
-```
-
-## Detener y conservar los datos
-
-```bash
+docker compose exec backend composer lint
 docker compose down
 ```
 
-Este comando detiene y elimina los contenedores y la red, conservando los volúmenes:
+`docker compose down` conserva `postgres_data`, `backend_vendor` y `frontend_node_modules`. Los cambios de código se montan directamente; al modificar `.env` de Compose aplica `docker compose up -d`. Si cambias Dockerfiles o UID/GID, reconstruye con `--build`.
 
-- `postgres_data`: datos de PostgreSQL y PostGIS.
-- `backend_vendor`: dependencias de Composer.
-- `frontend_node_modules`: dependencias de npm.
+El `.env` raíz configura Compose; `backend/.env` conserva la clave y opciones Laravel. Las variables que Compose pasa al backend prevalecen sobre ese archivo. Ambos `.env` están excluidos de Git. Cambiar las credenciales PostgreSQL en `.env` no modifica las de un volumen ya inicializado.
 
-Para volver a iniciar el entorno, ejecuta `docker compose up -d`.
-
-Solo si quieres reiniciar deliberadamente todo el entorno local, utiliza `docker compose down -v`. **Este comando elimina los datos de PostgreSQL y los volúmenes de dependencias.** El siguiente arranque recreará la base de datos e instalará las dependencias. Los archivos del repositorio y los `.env` locales permanecen en el equipo.
+Sólo para borrar deliberadamente todos los datos y dependencias locales: `docker compose down -v`. Este comando **elimina PostgreSQL de desarrollo**; los scripts de pruebas no lo ejecutan.

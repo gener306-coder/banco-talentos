@@ -7,3 +7,5 @@
 **/coverage
 backend/storage/logs/*
 backend/storage/framework/*
+**/test-results
+**/playwright-report

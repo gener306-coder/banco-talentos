@@ -1,0 +1,80 @@
+name: banco-talentos-tests
+
+# Entorno exclusivo de pruebas: nunca monta el volumen de datos de desarrollo.
+services:
+  db:
+    image: docker.io/postgis/postgis:17-3.5
+    environment:
+      POSTGRES_DB: banco_talentos_testing
+      POSTGRES_USER: banco_talentos_test
+      POSTGRES_PASSWORD: local_test_password
+    tmpfs:
+      - /var/lib/postgresql/data
+    volumes:
+      - ./docker/testing/databases.sql:/docker-entrypoint-initdb.d/20-testing.sql:ro,Z
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U \"$$POSTGRES_USER\" -d \"$$POSTGRES_DB\""]
+      interval: 2s
+      timeout: 5s
+      retries: 30
+
+  backend:
+    image: banco-talentos-backend-testing
+    build:
+      context: .
+      dockerfile: docker/backend/Dockerfile
+      args:
+        LOCAL_UID: ${LOCAL_UID:-1000}
+        LOCAL_GID: ${LOCAL_GID:-1000}
+    init: true
+    entrypoint: ["sh", "/test-entrypoint.sh"]
+    command: ["serve-e2e"]
+    environment:
+      APP_ENV: testing
+      APP_DEBUG: "false"
+      APP_URL: http://backend:8000
+      DB_CONNECTION: pgsql
+      DB_HOST: db
+      DB_PORT: 5432
+      DB_DATABASE: banco_talentos_testing
+      DB_USERNAME: banco_talentos_test
+      DB_PASSWORD: local_test_password
+      DB_URL: ""
+      CACHE_STORE: file
+      SESSION_DRIVER: file
+      SESSION_COOKIE: banco-talentos-test-session
+      SESSION_DOMAIN: ""
+      SESSION_SECURE_COOKIE: "false"
+      SANCTUM_STATEFUL_DOMAINS: localhost:5173,127.0.0.1:5173
+      E2E_EMAIL: ${E2E_EMAIL:-}
+      E2E_PASSWORD: ${E2E_PASSWORD:-}
+    volumes:
+      - ./backend:/app:z
+      - test_vendor:/app/vendor
+      - ./docker/testing/backend-entrypoint.sh:/test-entrypoint.sh:ro,Z
+    depends_on:
+      db:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "php", "-r", "exit(@file_get_contents('http://127.0.0.1:8000/up') === false ? 1 : 0);"]
+      interval: 2s
+      timeout: 5s
+      retries: 60
+      start_period: 30s
+
+  e2e:
+    build:
+      context: .
+      dockerfile: docker/testing/Dockerfile.e2e
+    init: true
+    environment:
+      CI: "true"
+      API_PROXY_TARGET: http://backend:8000
+      E2E_EMAIL: ${E2E_EMAIL:-}
+      E2E_PASSWORD: ${E2E_PASSWORD:-}
+    depends_on:
+      backend:
+        condition: service_healthy
+
+volumes:
+  test_vendor:
