@@ -1,6 +1,6 @@
 # Banco de Talentos – Educación Dual
 
-Monolito modular con **HU-S1-01 — Autenticación y control de acceso** implementada. El alcance actual es iniciar sesión, consultar la identidad y cerrar sesión. No existen módulos de negocio ni registro público.
+Monolito modular con **HU-S1-01 — Autenticación y control de acceso** y **HU-S1-02 — Gestión de instituciones**. ADMIN puede listar, registrar, consultar, editar y activar o inactivar instituciones desde React. Las cuentas institucionales pertenecen a HU-S1-03; no hay registro público.
 
 ## Stack y estructura
 
@@ -10,7 +10,7 @@ Monolito modular con **HU-S1-01 — Autenticación y control de acceso** impleme
 
 ```text
 backend/                 API, usuarios, autorización y pruebas Pest
-frontend/                Login, área protegida mínima, pruebas React y E2E
+frontend/                Sesión, gestión de instituciones, pruebas React y E2E
 docker/                  Imágenes y configuración de desarrollo/pruebas
 compose.yaml             Entorno de desarrollo
 compose.testing.yaml     Entorno aislado de pruebas
@@ -57,7 +57,9 @@ La SPA consulta `GET /api/me` al cargar. Para iniciar sesión obtiene primero `G
 
 La cookie de sesión es `HttpOnly`, de dominio local y `SameSite=Lax`. El cliente envía el token CSRF mediante `X-XSRF-TOKEN`. El identificador de sesión se regenera al autenticar; el cierre de sesión impide reutilizar la cookie anterior. Las sesiones locales expiran tras 120 minutos de inactividad. Las opciones de cookies y duración están en `backend/.env.example`.
 
-Los roles son `ADMIN`, `INSTITUTION`, `COMPANY` y `SECRETARY`. Todos requieren una cuenta activa y sólo disponen de identidad y logout en esta entrega. No hay acceso implícito de ADMIN a otros roles. Los futuros endpoints deberán declarar sus roles permitidos en backend; no basta ocultar botones. En este Sprint no se crean módulos ni permisos de módulos.
+Los roles son `ADMIN`, `INSTITUTION`, `COMPANY` y `SECRETARY`. Todos requieren una cuenta activa. ADMIN dispone además de la gestión de instituciones; los demás roles conservan identidad y logout. El acceso se restringe tanto en las rutas React como en la API con Sanctum y `role:ADMIN`.
+
+Después de iniciar sesión como ADMIN, abre **Instituciones**. El listado incluye instituciones activas e inactivas. El registro y la edición solicitan nombre, CCT y correo de contacto; el detalle ofrece la acción para activar o inactivar. El CCT es único incluso entre instituciones inactivas y no existe eliminación. Consulta el contrato y la matriz de pruebas en [docs/HU-S1-02.md](docs/HU-S1-02.md).
 
 Las credenciales incorrectas y las cuentas inactivas producen el mismo mensaje. La API devuelve errores JSON controlados: `401` sin sesión válida, `403` por autorización, `419` por CSRF, `422` por validación y `429` al superar el límite de login. Una cuenta desactivada durante la sesión pierde acceso en su siguiente petición protegida. El frontend trata errores de red sin afirmar que un logout fallido haya cerrado la sesión.
 
@@ -68,22 +70,22 @@ Consulta [backend/README.md](backend/README.md) para detalles del contrato HTTP 
 Ejecuta desde la raíz:
 
 ```bash
-# PostgreSQL temporal, flujo real de cookies y autorización: CA-01/02/04–10
+# PostgreSQL temporal: autenticación, autorización y API de instituciones
 sh scripts/test-backend.sh
 
-# Cliente HTTP, formulario, recuperación de sesión y rutas protegidas: CA-03
+# Clientes HTTP, sesión y pantallas administrativas de instituciones
 # Requiere el servicio frontend de desarrollo iniciado.
 docker compose exec frontend npm run test
 docker compose exec frontend npm run lint
 docker compose exec frontend npm run build
 
-# Chromium + API real: visitante bloqueado, login, recarga, logout y cookie revocada
+# Chromium + API real: autenticación y flujo administrativo de instituciones
 sh scripts/test-e2e.sh
 ```
 
 Los scripts usan el proyecto Compose independiente `banco-talentos-tests`, sin puertos publicados ni el volumen PostgreSQL de desarrollo. PostgreSQL utiliza almacenamiento temporal; Pest y E2E tienen bases distintas. Las sesiones, cachés y clave de aplicación de ese entorno también son independientes. Las pruebas Pest comprueban la base de destino antes de aplicar migraciones destructivas.
 
-Cada script limpia sus contenedores y red al terminar; el volumen `test_vendor` conserva sólo dependencias. Ejecuta los dos scripts secuencialmente, porque comparten el proyecto de pruebas. El E2E genera credenciales efímeras, no las imprime y no guarda trazas de red. Chromium y sus bibliotecas se instalan en la imagen de pruebas, no en tu equipo ni en el contenedor de desarrollo. La primera construcción requiere Internet y puede tardar varios minutos.
+Cada script limpia sus contenedores y red al terminar; el volumen `test_vendor` conserva sólo dependencias. Ejecuta los dos scripts secuencialmente, porque comparten el proyecto de pruebas. El E2E genera credenciales efímeras separadas para ADMIN e INSTITUTION, no las imprime y no guarda trazas de red. Chromium y sus bibliotecas se instalan en la imagen de pruebas, no en tu equipo ni en el contenedor de desarrollo. La primera construcción requiere Internet y puede tardar varios minutos.
 
 Los tests de roles registran rutas únicamente dentro de Pest para verificar la matriz de acceso sin introducir módulos ficticios en la aplicación. Las pruebas de sesión usan cookies cifradas y archivos reales; no sustituyen el login por `actingAs`. Las pruebas CSRF desactivan únicamente la excepción del framework para el entorno de tests.
 

@@ -18,18 +18,38 @@ if (! $app->environment('testing')
     throw new RuntimeException('Las cuentas E2E sólo pueden crearse en la base aislada de pruebas.');
 }
 
-$email = getenv('E2E_EMAIL');
-$password = getenv('E2E_PASSWORD');
+$accounts = [
+    [
+        'email' => getenv('E2E_EMAIL'),
+        'password' => getenv('E2E_PASSWORD'),
+        'name' => 'Usuario de prueba E2E',
+        'role' => UserRole::INSTITUTION,
+    ],
+    [
+        'email' => getenv('E2E_ADMIN_EMAIL'),
+        'password' => getenv('E2E_ADMIN_PASSWORD'),
+        'name' => 'Administrador de prueba E2E',
+        'role' => UserRole::ADMIN,
+    ],
+];
 
-if (! is_string($email) || ! filter_var($email, FILTER_VALIDATE_EMAIL)
-    || ! is_string($password) || strlen($password) < 24
-) {
-    throw new RuntimeException('Ejecuta scripts/test-e2e.sh para generar las credenciales efímeras.');
+foreach ($accounts as $account) {
+    if (! is_string($account['email']) || ! filter_var($account['email'], FILTER_VALIDATE_EMAIL)
+        || ! is_string($account['password']) || strlen($account['password']) < 24
+    ) {
+        throw new RuntimeException('Ejecuta scripts/test-e2e.sh para generar las credenciales efímeras.');
+    }
 }
 
-User::query()->updateOrCreate(['email' => $email], [
-    'name' => 'Usuario de prueba E2E',
-    'password' => $password,
-    'role' => UserRole::INSTITUTION,
-    'is_active' => true,
-]);
+if (strtolower($accounts[0]['email']) === strtolower($accounts[1]['email'])) {
+    throw new RuntimeException('Las cuentas E2E requieren correos distintos.');
+}
+
+foreach ($accounts as $account) {
+    User::query()->updateOrCreate(['email' => $account['email']], [
+        'name' => $account['name'],
+        'password' => $account['password'],
+        'role' => $account['role'],
+        'is_active' => true,
+    ]);
+}

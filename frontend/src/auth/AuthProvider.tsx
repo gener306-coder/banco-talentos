@@ -50,6 +50,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     controller.current?.abort()
   }, [])
 
+  const expireSession = useCallback(() => {
+    cancelPending()
+    busy.current = false
+    setPending(false)
+    setSession({ status: 'ready', user: null, message: expiredMessage })
+  }, [cancelPending])
+
   useEffect(() => {
     void restore()
     return cancelPending
@@ -96,6 +103,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       ...session,
       pending,
       restore,
+      expireSession,
       signIn: (email, password) => mutate(() => login(email, password), false),
       signOut: () => mutate(logout, true),
     }}>

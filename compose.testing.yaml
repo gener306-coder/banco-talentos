@@ -48,6 +48,8 @@ services:
       SANCTUM_STATEFUL_DOMAINS: localhost:5173,127.0.0.1:5173
       E2E_EMAIL: ${E2E_EMAIL:-}
       E2E_PASSWORD: ${E2E_PASSWORD:-}
+      E2E_ADMIN_EMAIL: ${E2E_ADMIN_EMAIL:-}
+      E2E_ADMIN_PASSWORD: ${E2E_ADMIN_PASSWORD:-}
     volumes:
       - ./backend:/app:z
       - test_vendor:/app/vendor
@@ -72,6 +74,8 @@ services:
       API_PROXY_TARGET: http://backend:8000
       E2E_EMAIL: ${E2E_EMAIL:-}
       E2E_PASSWORD: ${E2E_PASSWORD:-}
+      E2E_ADMIN_EMAIL: ${E2E_ADMIN_EMAIL:-}
+      E2E_ADMIN_PASSWORD: ${E2E_ADMIN_PASSWORD:-}
     depends_on:
       backend:
         condition: service_healthy

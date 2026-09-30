@@ -31,3 +31,5 @@ dl { margin: 1.5rem 0; }
 dt { margin-top: 1rem; }
 dd { margin: 0.3rem 0 0; overflow-wrap: anywhere; }
 .actions { display: flex; flex-wrap: wrap; gap: 0.75rem; }
+.card > nav { margin: 1rem 0; }
+a { color: #20545b; text-underline-offset: 0.2em; }

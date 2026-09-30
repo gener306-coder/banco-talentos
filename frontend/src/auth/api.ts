@@ -1,3 +1,7 @@
+import { ApiError, csrfToken, request } from '../lib/http'
+
+export { ApiError } from '../lib/http'
+
 export const roleLabels = {
   ADMIN: 'Administrador',
   INSTITUTION: 'Institución',
@@ -12,58 +16,6 @@ export interface User {
   name: string
   email: string
   role: Role
-}
-
-export class ApiError extends Error {
-  readonly status: number
-
-  constructor(status: number) {
-    super(status === 0 ? 'No pudimos conectar con el servidor.' : `Error HTTP ${status}`)
-    this.name = 'ApiError'
-    this.status = status
-  }
-}
-
-function csrfToken(): string | undefined {
-  const cookie = document.cookie.split('; ').find((value) => value.startsWith('XSRF-TOKEN='))
-
-  if (!cookie) return undefined
-
-  try {
-    return decodeURIComponent(cookie.slice('XSRF-TOKEN='.length))
-  } catch {
-    return undefined
-  }
-}
-
-async function request(path: string, options: RequestInit = {}): Promise<unknown> {
-  const headers = new Headers(options.headers)
-  headers.set('Accept', 'application/json')
-
-  if (options.method === 'POST') {
-    const token = csrfToken()
-    if (!token) throw new ApiError(419)
-    headers.set('X-XSRF-TOKEN', token)
-    if (options.body) headers.set('Content-Type', 'application/json')
-  }
-
-  let response: Response
-
-  try {
-    response = await fetch(path, { ...options, headers, credentials: 'include' })
-  } catch (error) {
-    if (error instanceof DOMException && error.name === 'AbortError') throw error
-    throw new ApiError(0)
-  }
-
-  if (!response.ok) throw new ApiError(response.status)
-  if (response.status === 204) return undefined
-
-  try {
-    return await response.json()
-  } catch {
-    throw new ApiError(502)
-  }
 }
 
 function sessionUser(data: unknown): User {

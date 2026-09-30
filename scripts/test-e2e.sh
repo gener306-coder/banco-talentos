@@ -2,10 +2,12 @@
 set -eu
 cd "$(dirname "$0")/.."
 
-# Credenciales efímeras de la cuenta de prueba; nunca se imprimen ni versionan.
+# Credenciales efímeras de las cuentas de prueba; nunca se imprimen ni versionan.
 E2E_PASSWORD="$(od -An -N24 -tx1 /dev/urandom | tr -d ' \n')"
 E2E_EMAIL="hu-s1-01-$(date +%s)@example.test"
-export E2E_EMAIL E2E_PASSWORD
+E2E_ADMIN_PASSWORD="$(od -An -N24 -tx1 /dev/urandom | tr -d ' \n')"
+E2E_ADMIN_EMAIL="hu-s1-02-admin-$(date +%s)@example.test"
+export E2E_EMAIL E2E_PASSWORD E2E_ADMIN_EMAIL E2E_ADMIN_PASSWORD
 
 cleanup() {
     docker compose -p banco-talentos-tests -f compose.testing.yaml down --remove-orphans

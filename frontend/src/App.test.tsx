@@ -56,13 +56,17 @@ describe('acceso y sesión', () => {
     ['INSTITUTION', 'Institución'],
     ['COMPANY', 'Empresa'],
     ['SECRETARY', 'Secretaría de Economía'],
-  ])('restaura la sesión de %s al recargar y ofrece únicamente su identidad y salir', async (role, label) => {
+  ])('restaura la sesión de %s al recargar y muestra la navegación correspondiente a su rol', async (role, label) => {
     fetchMock.mockResolvedValueOnce(Response.json({ user: { ...user, role } }))
     renderApp()
     expect(await screen.findByText(user.email)).toBeInTheDocument()
     expect(screen.getByText(label)).toBeInTheDocument()
     expect(screen.getAllByRole('button')).toHaveLength(1)
-    expect(screen.queryByRole('link')).not.toBeInTheDocument()
+    if (role === 'ADMIN') {
+      expect(screen.getByRole('link', { name: 'Instituciones' })).toHaveAttribute('href', '/institutions')
+    } else {
+      expect(screen.queryByRole('link')).not.toBeInTheDocument()
+    }
     expect(fetchMock.mock.calls[0][0]).toBe('/api/me')
   })
 

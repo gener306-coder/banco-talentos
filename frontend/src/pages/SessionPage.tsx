@@ -1,3 +1,4 @@
+import { Link } from 'react-router'
 import { roleLabels } from '../auth/api'
 import { useAuth } from '../auth/useAuth'
 
@@ -14,6 +15,9 @@ export function SessionPage() {
         <dt>Rol</dt><dd>{roleLabels[user.role]}</dd>
       </dl>
       {message && <p className="notice" role="alert">{message}</p>}
+      {user.role === 'ADMIN' && (
+        <nav aria-label="Administración"><Link to="/institutions">Instituciones</Link></nav>
+      )}
       <button type="button" disabled={pending} onClick={() => { void signOut() }}>
         {pending ? 'Cerrando sesión…' : 'Cerrar sesión'}
       </button>

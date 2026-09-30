@@ -1,9 +1,13 @@
-import { Navigate, Route, Routes } from 'react-router'
+import { Navigate, Route, Routes, useLocation } from 'react-router'
 import { AuthProvider } from './auth/AuthProvider'
 import { ProtectedRoute } from './auth/ProtectedRoute'
 import { useAuth } from './auth/useAuth'
 import { LoginPage } from './pages/LoginPage'
 import { SessionPage } from './pages/SessionPage'
+import { InstitutionsPage } from './institutions/InstitutionsPage'
+import { InstitutionCreatePage } from './institutions/InstitutionCreatePage'
+import { InstitutionDetailPage } from './institutions/InstitutionDetailPage'
+import { InstitutionEditPage } from './institutions/InstitutionEditPage'
 
 function AuthRoutes() {
   const { status, message, pending, restore, signOut } = useAuth()
@@ -35,14 +39,21 @@ function AuthRoutes() {
       <Route element={<ProtectedRoute />}>
         <Route path="/" element={<SessionPage />} />
       </Route>
+      <Route element={<ProtectedRoute role="ADMIN" />}>
+        <Route path="/institutions" element={<InstitutionsPage />} />
+        <Route path="/institutions/new" element={<InstitutionCreatePage />} />
+        <Route path="/institutions/:id" element={<InstitutionDetailPage />} />
+        <Route path="/institutions/:id/edit" element={<InstitutionEditPage />} />
+      </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   )
 }
 
 function App() {
+  const { pathname } = useLocation()
   return (
-    <main>
+    <main className={pathname.startsWith('/institutions') ? 'institutions-shell' : undefined}>
       <header>
         <p className="eyebrow">Educación Dual</p>
         <h1>Banco de Talentos</h1>

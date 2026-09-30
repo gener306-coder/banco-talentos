@@ -7,6 +7,7 @@ export interface AuthState {
   message: string | null
   pending: boolean
   restore: () => Promise<void>
+  expireSession: () => void
   signIn: (email: string, password: string) => Promise<void>
   signOut: () => Promise<void>
 }

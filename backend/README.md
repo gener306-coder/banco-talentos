@@ -22,7 +22,9 @@ lista explícita `SANCTUM_STATEFUL_DOMAINS`. Laravel 13 valida el origen
 Las cuentas deben estar activas. Los roles son `ADMIN`, `INSTITUTION`,
 `COMPANY` y `SECRETARY`; el middleware `role` exige coincidencia exacta,
 sin acceso implícito de administrador a otros roles. Los cuatro roles pueden
-iniciar sesión; las funciones de negocio se implementarán en otras historias.
+iniciar sesión. ADMIN puede además gestionar instituciones mediante los cinco
+endpoints descritos en [HU-S1-02](../docs/HU-S1-02.md), con CCT único y cambio de
+estado sin eliminación. La creación de cuentas institucionales pertenece a HU-S1-03.
 
 El login devuelve el mismo error 422 para credenciales incorrectas o cuentas
 inactivas. Las peticiones sin sesión reciben 401; la autorización por rol
