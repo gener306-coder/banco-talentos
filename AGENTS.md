@@ -53,3 +53,17 @@ Cada historia debe:
 3. Tener autorización backend cuando corresponda.
 4. Incluir pruebas automatizadas relevantes.
 5. Mantener el código sencillo y mantenible.
+
+## Desarrollo por Sprint
+
+La fuente de verdad del Sprint actual es:
+docs/sprint-1.md
+
+Solo pueden implementarse historias contenidas en ese archivo.
+Si una solicitud no aparece ahí, no debe desarrollarse sin confirmación.
+
+Antes de implementar una historia:
+1. Verifica que exista en docs/sprint-1.md.
+2. Revisa sus criterios de aceptación.
+3. Limita los cambios estrictamente al alcance de esa historia.
+4. Detente y pide confirmación si una funcionalidad solicitada no está incluida en el Sprint.
