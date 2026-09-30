@@ -2,6 +2,7 @@
 
 use App\Enums\UserRole;
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\InstitutionAccountController;
 use App\Http\Controllers\InstitutionController;
 use App\Models\Institution;
 use Illuminate\Support\Facades\Route;
@@ -27,3 +28,7 @@ Route::middleware(['auth:sanctum', 'active', 'role:'.UserRole::ADMIN->value])
         Route::put('/{institution}', [InstitutionController::class, 'update'])->name('update');
         Route::patch('/{institution}/status', [InstitutionController::class, 'updateStatus'])->name('status');
     });
+
+Route::post('/institution-accounts', [InstitutionAccountController::class, 'store'])
+    ->middleware(['auth:sanctum', 'active', 'role:'.UserRole::ADMIN->value]);
+

@@ -33,6 +33,14 @@ class UserFactory extends Factory
         return $this->state(fn (): array => ['role' => $role]);
     }
 
+    public function forInstitution(\App\Models\Institution $institution): static
+    {
+        return $this->state(fn (): array => [
+            'institution_id' => $institution->id,
+            'role' => UserRole::INSTITUTION,
+        ]);
+    }
+
     protected function withFaker()
     {
         // Los datos de esta factory no necesitan Faker.

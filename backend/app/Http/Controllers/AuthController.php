@@ -43,13 +43,25 @@ class AuthController extends Controller
 
     private function userResponse(User $user): JsonResponse
     {
+        $user->loadMissing('institution');
+
+        $data = [
+            'id' => $user->id,
+            'name' => $user->name,
+            'email' => $user->email,
+            'role' => $user->role->value,
+            'institution' => null,
+        ];
+
+        if ($user->institution) {
+            $data['institution'] = [
+                'id' => $user->institution->id,
+                'name' => $user->institution->name,
+            ];
+        }
+
         return response()->json([
-            'user' => [
-                'id' => $user->id,
-                'name' => $user->name,
-                'email' => $user->email,
-                'role' => $user->role->value,
-            ],
+            'user' => $data,
         ])->header('Cache-Control', 'no-store, private');
     }
 }

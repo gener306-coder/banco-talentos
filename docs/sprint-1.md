@@ -60,3 +60,58 @@ Esta historia gestiona **instituciones**. La creación de sus cuentas de acceso 
 ## Resultado esperado
 
 Un Administrador puede registrar y gestionar instituciones desde React; la API aplica las mismas reglas de autorización y validación; PostgreSQL conserva los registros cuando pasan a `INACTIVA`.
+
+# HU-S1-03 — Creación de cuentas institucionales
+
+**Tipo Jira:** Story  
+**Story Points:** 5  
+**Prioridad:** Alta  
+**Dependencias:** HU-S1-01 — Autenticación y control de acceso; HU-S1-02 — Gestión de instituciones
+
+## Historia de usuario
+
+**COMO** Administrador  
+**QUIERO** crear cuentas de acceso asociadas a instituciones registradas  
+**PARA** permitir que cada institución acceda posteriormente a las funciones que le correspondan dentro del Banco de Talentos.
+
+## Criterios de aceptación
+
+- **CA-01.** Solamente un usuario con rol `ADMIN` puede crear una cuenta institucional.
+- **CA-02.** Para crear una cuenta debe existir previamente la institución asociada.
+- **CA-03.** Toda cuenta institucional queda relacionada con exactamente una institución.
+- **CA-04.** Toda cuenta creada mediante esta funcionalidad recibe el rol `INSTITUTION`.
+- **CA-05.** No se permite registrar dos cuentas utilizando el mismo correo de acceso.
+- **CA-06.** Las credenciales nunca se almacenan en texto plano.
+- **CA-07.** Una cuenta institucional válida puede autenticarse en el sistema.
+- **CA-08.** Después del inicio de sesión, la API puede identificar al usuario autenticado, su rol y la institución a la que pertenece.
+- **CA-09.** Un usuario `INSTITUTION` no puede acceder a funciones exclusivas de `ADMIN`.
+- **CA-10.** Intentar acceder directamente a endpoints administrativos devuelve una respuesta de acceso denegado.
+- **CA-11.** La existencia de los roles `COMPANY` y `SECRETARY` en el modelo no habilita funcionalidades para ellos en este Sprint.
+
+## Decisiones de diseño y límites de alcance
+
+- Reutilizar el modelo de usuarios, la autenticación con Sanctum y el control de roles establecidos en HU-S1-01; reutilizar la entidad y la clave `institutions.id` de HU-S1-02.
+- El rol se asigna desde el servidor como `INSTITUTION`; el formulario o una petición HTTP manipulada no pueden elegir otro rol.
+- La relación con una institución se valida en la API. La interfaz no sustituye la autorización ni las restricciones de datos del backend.
+- Esta historia crea cuentas institucionales. No incluye alta de alumnos, cuentas de empresa o Secretaría, ni el restablecimiento administrativo de contraseñas de HU-S1-04.
+- La historia aprobada no fija cómo establece la institución su contraseña inicial ni cómo recibe el acceso. Antes de programar ese flujo, definir una opción segura en el plan técnico. El Administrador no debe conocer ni establecer la contraseña del usuario institucional.
+- El Planning tampoco fija el efecto de `INACTIVA` sobre la creación de cuentas o el inicio de sesión de cuentas ya existentes. Documentar esa regla antes de implementarla, sin asumir que inactivar una institución elimina usuarios o sus datos.
+
+## Subtareas técnicas
+
+- **S1-03-T01 — Relacionar User con Institution:** definir la relación en base de datos y modelos, de modo que cada cuenta institucional pertenezca a una institución.
+- **S1-03-T02 — Implementar creación administrativa de cuentas:** crear un endpoint protegido para el alta de cuentas institucionales.
+- **S1-03-T03 — Asignación automática de rol:** asignar `INSTITUTION` en backend, sin aceptar un rol enviado por el cliente.
+- **S1-03-T04 — Validación de correo:** aplicar la regla de unicidad al identificador de acceso.
+- **S1-03-T05 — Implementar autorización:** restringir la creación a `ADMIN` y verificar la restricción en la API.
+- **S1-03-T06 — Crear interfaz React:** formulario administrativo de creación de una cuenta vinculada a una institución existente.
+- **S1-03-T07 — Restricción de navegación:** mostrar únicamente las opciones permitidas para cada rol, manteniendo la protección equivalente en backend.
+- **S1-03-T08 — Pruebas de integración:** verificar la relación **Usuario → Institución → Rol** y la identificación de los tres datos después del login.
+- **S1-03-T09 — Pruebas de autorización:** comprobar accesos permitidos y denegados, incluidos intentos directos de usar endpoints administrativos o de alterar el rol.
+- **S1-03-T10 — Prueba E2E:** **Administrador → institución registrada → crear cuenta → iniciar sesión como institución.**
+
+## Resultado esperado
+
+Un Administrador puede crear una cuenta institucional vinculada a una institución existente. Esa cuenta puede iniciar sesión; la API identifica correctamente usuario, rol e institución, y rechaza sus intentos de acceder a funciones administrativas.
+
+La historia se cierra cuando sus criterios de aceptación están verificados, frontend y backend funcionan integrados, las migraciones y pruebas son reproducibles, y no se han incorporado funcionalidades de historias posteriores.
