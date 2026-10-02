@@ -33,3 +33,6 @@ dd { margin: 0.3rem 0 0; overflow-wrap: anywhere; }
 .actions { display: flex; flex-wrap: wrap; gap: 0.75rem; }
 .card > nav { margin: 1rem 0; }
 a { color: #20545b; text-underline-offset: 0.2em; }
+
+.password-setup .field-error { margin: -0.65rem 0 0.7rem; color: #7c2921; font-size: 0.9rem; }
+.password-setup input[aria-invalid='true'] { border-color: #b74738; }

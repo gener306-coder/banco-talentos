@@ -2,6 +2,7 @@
 
 namespace App\Http\Middleware;
 
+use App\Exceptions\AccountAccessDenied;
 use Closure;
 use Illuminate\Auth\AuthenticationException;
 use Illuminate\Http\Request;
@@ -14,12 +15,18 @@ class EnsureUserIsActive
     {
         $user = $request->user()?->fresh();
 
-        if (! $user || ! $user->is_active) {
+        $restriction = $user?->accessRestriction();
+
+        if (! $user || ! $user->is_active || $restriction !== null) {
             Auth::guard('web')->logout();
 
             if ($request->hasSession()) {
                 $request->session()->invalidate();
                 $request->session()->regenerateToken();
+            }
+
+            if ($restriction !== null) {
+                throw new AccountAccessDenied($restriction);
             }
 
             throw new AuthenticationException;

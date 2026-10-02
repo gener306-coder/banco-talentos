@@ -3,6 +3,7 @@
 namespace Database\Factories;
 
 use App\Enums\UserRole;
+use App\Models\Institution;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Support\Str;
@@ -33,7 +34,7 @@ class UserFactory extends Factory
         return $this->state(fn (): array => ['role' => $role]);
     }
 
-    public function forInstitution(\App\Models\Institution $institution): static
+    public function forInstitution(Institution $institution): static
     {
         return $this->state(fn (): array => [
             'institution_id' => $institution->id,

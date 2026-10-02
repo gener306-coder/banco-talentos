@@ -1,4 +1,5 @@
 import { createContext } from 'react'
+import type { ApiError } from '../lib/http'
 import type { User } from './api'
 
 export interface AuthState {
@@ -7,7 +8,7 @@ export interface AuthState {
   message: string | null
   pending: boolean
   restore: () => Promise<void>
-  expireSession: () => void
+  expireSession: (error?: ApiError) => void
   signIn: (email: string, password: string) => Promise<void>
   signOut: () => Promise<void>
 }

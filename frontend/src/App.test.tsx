@@ -268,3 +268,36 @@ describe('acceso y sesión', () => {
     expect(screen.getByRole('button', { name: 'Salir' })).toBeEnabled()
   })
 })
+
+describe('sesión institucional HU-S1-03', () => {
+  it('presenta la institución vinculada sin ofrecer navegación ADMIN', async () => {
+    fetchMock.mockResolvedValueOnce(Response.json({ user: { ...user, role: 'INSTITUTION', institution: { id: 7, name: 'Instituto Dual' } } }))
+    renderApp()
+    expect(await screen.findByText('Institución vinculada')).toBeInTheDocument()
+    expect(screen.getByText('Instituto Dual')).toBeInTheDocument()
+    expect(screen.queryByRole('link', { name: 'Instituciones' })).not.toBeInTheDocument()
+  })
+
+  it('rechaza restaurar una sesión cuya institución ha sido inactivada', async () => {
+    fetchMock.mockResolvedValueOnce(Response.json({ code: 'INSTITUTION_INACTIVE', message: 'Mensaje arbitrario' }, { status: 401 }))
+    renderApp()
+    expect(await screen.findByRole('heading', { name: 'Iniciar sesión' })).toBeInTheDocument()
+    expect(screen.getByRole('alert')).toHaveTextContent('La institución está inactiva. No puedes acceder al sistema.')
+    expect(screen.queryByText('Mensaje arbitrario')).not.toBeInTheDocument()
+  })
+
+  it.each([
+    [401, 'INSTITUTION_INACTIVE', 'La institución está inactiva. No puedes acceder al sistema.'],
+    [403, 'PASSWORD_SETUP_REQUIRED', 'Debes establecer tu contraseña antes de iniciar sesión.'],
+  ])('presenta un login rechazado %i con código %s de forma controlada', async (status, code, message) => {
+    fetchMock.mockResolvedValueOnce(new Response(null, { status: 401 }))
+      .mockImplementationOnce(csrfResponse)
+      .mockResolvedValueOnce(Response.json({ code, message: 'Mensaje arbitrario' }, { status }))
+    renderApp('/login')
+    await fillLogin()
+    expect(await screen.findByRole('alert')).toHaveTextContent(message)
+    expect(screen.queryByText('Mensaje arbitrario')).not.toBeInTheDocument()
+    expect(screen.getByLabelText('Contraseña')).toHaveValue('')
+    expect(screen.queryByRole('heading', { name: 'Sesión iniciada' })).not.toBeInTheDocument()
+  })
+})

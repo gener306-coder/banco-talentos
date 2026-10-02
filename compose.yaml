@@ -19,6 +19,11 @@ services:
       retries: 10
       start_period: 10s
 
+  mailpit:
+    image: docker.io/axllent/mailpit:v1.30.5
+    ports:
+      - "127.0.0.1:${MAILPIT_PORT:-8025}:8025"
+
   backend:
     build:
       context: .
@@ -27,9 +32,15 @@ services:
         LOCAL_UID: ${LOCAL_UID:-1000}
         LOCAL_GID: ${LOCAL_GID:-1000}
     environment:
+      MAIL_MAILER: smtp
+      MAIL_HOST: mailpit
+      MAIL_PORT: 1025
+      MAIL_TIMEOUT: 10
+      MAIL_FROM_ADDRESS: no-reply@banco-talentos.test
       APP_ENV: local
       APP_DEBUG: "true"
       APP_URL: http://localhost:${BACKEND_PORT:-8000}
+      FRONTEND_URL: http://localhost:${FRONTEND_PORT:-5173}
       SANCTUM_STATEFUL_DOMAINS: localhost:${FRONTEND_PORT:-5173},127.0.0.1:${FRONTEND_PORT:-5173}
       DB_CONNECTION: pgsql
       DB_HOST: db
@@ -43,6 +54,8 @@ services:
       - ./backend:/app:z
       - backend_vendor:/app/vendor
     depends_on:
+      mailpit:
+        condition: service_started
       db:
         condition: service_healthy
     healthcheck:

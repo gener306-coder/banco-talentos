@@ -1,5 +1,7 @@
 import { useCallback, useState } from 'react'
 import { Link, useLocation, useParams } from 'react-router'
+import { InstitutionAccountForm } from './InstitutionAccountForm'
+import { InstitutionAccountSetupLinkForm } from './InstitutionAccountSetupLinkForm'
 import { getInstitution, setInstitutionStatus } from './api'
 import { InstitutionLayout, InstitutionRequestError, InstitutionStatus } from './InstitutionLayout'
 import { useInstitutionMutation, useInstitutionRequest } from './useInstitutionRequest'
@@ -43,6 +45,12 @@ function InstitutionDetail({ id }: { id: string }) {
                 {mutation.pending ? 'Guardando estado…' : data.is_active ? 'Inactivar institución' : 'Activar institución'}
               </button>
             </div>
+            {data.is_active
+              ? <>
+                <InstitutionAccountForm institutionId={data.id} disabled={mutation.pending} />
+                <InstitutionAccountSetupLinkForm institutionId={data.id} disabled={mutation.pending} />
+              </>
+              : <p className="notice">Activa la institución para crear una cuenta institucional.</p>}
           </>
         )}
       <p className="institution-back"><Link to="/institutions">Volver a instituciones</Link></p>

@@ -1,6 +1,7 @@
 <?php
 
 use App\Enums\UserRole;
+use App\Models\Institution;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
@@ -42,6 +43,7 @@ it('logs in each allowed role and restores its identity from the session cookie'
         'name' => $user->name,
         'email' => $user->email,
         'role' => $role,
+        'institution' => null,
     ]];
 
     $this->loginWithCookies($user)->assertOk()->assertExactJson($expected);
@@ -371,3 +373,91 @@ it('returns JSON 401 without redirecting clients that do not request JSON', func
         ->assertHeader('Content-Type', 'application/json')
         ->assertHeaderMissing('Location');
 })->with(['no accept' => [''], 'wildcard' => ['*/*'], 'html' => ['text/html']]);
+
+it('rejects login for every account of an inactive institution while preserving their data', function () {
+    $institution = Institution::factory()->inactive()->create();
+    $users = User::factory()->count(2)->forInstitution($institution)->create();
+
+    foreach ($users as $user) {
+        $original = $user->fresh()->getAttributes();
+        $this->loginWithCookies($user)
+            ->assertUnauthorized()
+            ->assertJsonPath('code', 'INSTITUTION_INACTIVE')
+            ->assertJsonStructure(['message']);
+        $this->browserRequest('GET', '/api/me')->assertUnauthorized();
+        expect($user->fresh()->getAttributes())->toBe($original);
+    }
+
+    $institution->forceFill(['is_active' => true])->save();
+    $this->loginWithCookies($users->first())
+        ->assertOk()
+        ->assertJsonPath('user.institution.id', $institution->id);
+});
+
+it('does not disclose inactive institution status for incorrect credentials', function () {
+    $user = User::factory()->forInstitution(Institution::factory()->inactive()->create())->create();
+
+    $this->loginWithCookies($user, ['password' => 'IncorrectPassword123!'])
+        ->assertUnprocessable()
+        ->assertJsonValidationErrors('email')
+        ->assertJsonMissingPath('code');
+
+    $this->browserRequest('GET', '/api/me')->assertUnauthorized();
+});
+
+it('rejects a pending initial password even if the supplied placeholder credential matches', function () {
+    $user = User::factory()->forInstitution(Institution::factory()->create())->create([
+        'password_setup_required' => true,
+    ]);
+
+    $this->loginWithCookies($user)
+        ->assertUnauthorized()
+        ->assertJsonPath('code', 'PASSWORD_SETUP_REQUIRED');
+
+    $this->browserRequest('GET', '/api/me')->assertUnauthorized();
+    expect($user->fresh()->password_setup_required)->toBeTrue();
+});
+
+it('invalidates an existing institutional session immediately after institution deactivation', function (string $method, string $uri) {
+    $institution = Institution::factory()->create();
+    $user = User::factory()->forInstitution($institution)->create();
+    $original = $user->fresh()->getAttributes();
+    $this->loginWithCookies($user)->assertOk();
+    $oldCookies = $this->currentBrowserCookies();
+    $oldId = $this->currentSessionId();
+    $institution->forceFill(['is_active' => false])->save();
+
+    $this->browserRequest($method, $uri, [
+        'name' => 'Attempted account',
+        'email' => 'attempted@example.test',
+        'institution_id' => $institution->id,
+    ])->assertUnauthorized()->assertJsonPath('code', 'INSTITUTION_INACTIVE');
+
+    expect(is_file($this->sessionFile($oldId)))->toBeFalse();
+    expect($user->fresh()->getAttributes())->toBe($original);
+    $this->assertDatabaseCount('users', 1);
+
+    // Reactivation permits a fresh login; it must not resurrect the old cookie.
+    $institution->forceFill(['is_active' => true])->save();
+    $this->replaceBrowserCookies($oldCookies);
+    $this->browserRequest('GET', '/api/me')->assertUnauthorized();
+    $this->loginWithCookies($user)->assertOk();
+})->with([
+    'identity' => ['GET', '/api/me'],
+    'protected role endpoint' => ['GET', '/_tests/roles/INSTITUTION'],
+    'admin read endpoint' => ['GET', '/api/institutions'],
+    'admin write endpoint' => ['POST', '/api/institution-accounts'],
+]);
+
+it('rejects an authenticated session if its account becomes pending initial password setup', function () {
+    $user = User::factory()->forInstitution(Institution::factory()->create())->create();
+    $this->loginWithCookies($user)->assertOk();
+    $oldId = $this->currentSessionId();
+    $user->forceFill(['password_setup_required' => true])->save();
+
+    $this->browserRequest('GET', '/api/me')
+        ->assertUnauthorized()
+        ->assertJsonPath('code', 'PASSWORD_SETUP_REQUIRED');
+
+    expect(is_file($this->sessionFile($oldId)))->toBeFalse();
+});

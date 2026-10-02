@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useAuth } from '../auth/useAuth'
-import { ApiError } from '../lib/http'
+import { accessErrorMessages, ApiError } from '../lib/http'
 
 export interface InstitutionFailure {
   status: number
@@ -13,7 +13,7 @@ function useInstitutionFailure() {
 
   return useCallback((error: unknown): InstitutionFailure => {
     const status = error instanceof ApiError ? error.status : 500
-    if (status === 401) expireSession()
+    if (status === 401) expireSession(error instanceof ApiError ? error : undefined)
 
     const messages: Record<number, string> = {
       0: 'No pudimos conectar con el servidor. Inténtalo de nuevo.',
@@ -22,11 +22,13 @@ function useInstitutionFailure() {
       404: 'La institución no existe.',
       419: 'No pudimos validar la solicitud. Tus datos se conservaron; inténtalo de nuevo.',
       422: 'Revisa los campos indicados.',
+      429: 'Demasiadas solicitudes. Espera al menos un minuto antes de volver a intentarlo.',
     }
 
     return {
       status,
-      message: messages[status] ?? 'No pudimos completar la solicitud. Inténtalo de nuevo.',
+      message: error instanceof ApiError && error.code ? accessErrorMessages[error.code]
+        : messages[status] ?? 'No pudimos completar la solicitud. Inténtalo de nuevo.',
       errors: error instanceof ApiError ? error.errors : {},
     }
   }, [expireSession])

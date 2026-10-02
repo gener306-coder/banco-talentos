@@ -4,6 +4,7 @@ import { ApiError, currentUser, login, logout } from './api'
 import type { User } from './api'
 import { AuthContext } from './auth-context'
 import type { AuthState } from './auth-context'
+import { accessErrorMessages } from '../lib/http'
 
 type Session = Pick<AuthState, 'status' | 'user' | 'message'>
 
@@ -36,7 +37,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } catch (error) {
       if (version !== generation.current) return
       if (error instanceof ApiError && [401, 419].includes(error.status)) {
-        setSession({ status: 'ready', user: null, message: error.status === 419 ? expiredMessage : null })
+        setSession({ status: 'ready', user: null, message: error.code ? accessErrorMessages[error.code] : error.status === 419 ? expiredMessage : null })
       } else if (error instanceof ApiError && error.status === 403) {
         setSession({ status: 'forbidden', user: null, message: forbiddenMessage })
       } else {
@@ -50,11 +51,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     controller.current?.abort()
   }, [])
 
-  const expireSession = useCallback(() => {
+  const expireSession = useCallback((error?: ApiError) => {
     cancelPending()
     busy.current = false
     setPending(false)
-    setSession({ status: 'ready', user: null, message: expiredMessage })
+    setSession({ status: 'ready', user: null, message: error?.code ? accessErrorMessages[error.code] : expiredMessage })
   }, [cancelPending])
 
   useEffect(() => {
@@ -76,8 +77,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setSession({ status: 'ready', user: user ?? null, message: null })
     } catch (error) {
       if (version !== generation.current) return
-      if (error instanceof ApiError && (error.status === 401 || (error.status === 419 && !signingOut))) {
-        setSession({ status: 'ready', user: null, message: expiredMessage })
+      if (error instanceof ApiError && (error.status === 401 || (error.status === 419 && !signingOut) || (error.status === 403 && error.code))) {
+        setSession({ status: 'ready', user: null, message: error.code ? accessErrorMessages[error.code] : expiredMessage })
       } else {
         const message = signingOut && error instanceof ApiError && error.status === 419
           ? 'No pudimos cerrar la sesión. Inténtalo de nuevo.'

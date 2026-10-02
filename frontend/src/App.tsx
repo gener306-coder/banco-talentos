@@ -4,6 +4,7 @@ import { ProtectedRoute } from './auth/ProtectedRoute'
 import { useAuth } from './auth/useAuth'
 import { LoginPage } from './pages/LoginPage'
 import { SessionPage } from './pages/SessionPage'
+import { SetInitialPasswordPage } from './pages/SetInitialPasswordPage'
 import { InstitutionsPage } from './institutions/InstitutionsPage'
 import { InstitutionCreatePage } from './institutions/InstitutionCreatePage'
 import { InstitutionDetailPage } from './institutions/InstitutionDetailPage'
@@ -58,7 +59,10 @@ function App() {
         <p className="eyebrow">Educación Dual</p>
         <h1>Banco de Talentos</h1>
       </header>
-      <AuthProvider><AuthRoutes /></AuthProvider>
+      <Routes>
+        <Route path="/set-initial-password" element={<SetInitialPasswordPage />} />
+        <Route path="*" element={<AuthProvider><AuthRoutes /></AuthProvider>} />
+      </Routes>
     </main>
   )
 }

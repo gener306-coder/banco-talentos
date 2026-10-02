@@ -87,7 +87,8 @@ Un Administrador puede registrar y gestionar instituciones desde React; la API a
 - **CA-09.** Un usuario `INSTITUTION` no puede acceder a funciones exclusivas de `ADMIN`.
 - **CA-10.** Intentar acceder directamente a endpoints administrativos devuelve una respuesta de acceso denegado.
 - **CA-11.** La existencia de los roles `COMPANY` y `SECRETARY` en el modelo no habilita funcionalidades para ellos en este Sprint.
-
+- **CA-12:** Si una institución pasa a estado INACTIVA, ninguna de sus cuentas vinculadas podrá iniciar sesión ni consumir la API autenticada (la sesión se invalida inmediatamente).
+- **CA-13:** ADMIN puede reenviar el enlace de configuración únicamente para cuentas que sigan pendientes. El reenvío se hace al correo ya registrado, invalida el token anterior, y el ADMIN nunca tiene acceso visual al enlace.
 ## Decisiones de diseño y límites de alcance
 
 - Reutilizar el modelo de usuarios, la autenticación con Sanctum y el control de roles establecidos en HU-S1-01; reutilizar la entidad y la clave `institutions.id` de HU-S1-02.
@@ -95,7 +96,7 @@ Un Administrador puede registrar y gestionar instituciones desde React; la API a
 - La relación con una institución se valida en la API. La interfaz no sustituye la autorización ni las restricciones de datos del backend.
 - Esta historia crea cuentas institucionales. No incluye alta de alumnos, cuentas de empresa o Secretaría, ni el restablecimiento administrativo de contraseñas de HU-S1-04.
 - La historia aprobada no fija cómo establece la institución su contraseña inicial ni cómo recibe el acceso. Antes de programar ese flujo, definir una opción segura en el plan técnico. El Administrador no debe conocer ni establecer la contraseña del usuario institucional.
-- El Planning tampoco fija el efecto de `INACTIVA` sobre la creación de cuentas o el inicio de sesión de cuentas ya existentes. Documentar esa regla antes de implementarla, sin asumir que inactivar una institución elimina usuarios o sus datos.
+- Conforme al CA-12, una institución `INACTIVA` bloquea el inicio de sesión y el acceso autenticado de todas sus cuentas vinculadas. No se crean cuentas para instituciones inactivas. Inactivar conserva los usuarios y sus datos; el detalle técnico se documenta en `docs/HU-S1-03.md`.
 
 ## Subtareas técnicas
 

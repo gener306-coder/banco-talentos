@@ -3,8 +3,11 @@
 use App\Enums\UserRole;
 use App\Models\Institution;
 use App\Models\User;
+use App\Notifications\SetInitialPassword;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Notification;
 use Tests\Support\InteractsWithCookieSessions;
 
 uses(RefreshDatabase::class, InteractsWithCookieSessions::class);
@@ -16,142 +19,264 @@ beforeEach(function () {
 function accountPayload(array $overrides = []): array
 {
     return array_replace([
-        'name' => 'Admin Institucional',
-        'email' => 'admin@instituto.test',
-        'password' => 'Password123!',
-        'institution_id' => null, // Deberá proveerse en cada test
+        'name' => 'Responsable institucional',
+        'email' => 'responsable@instituto.test',
+        'institution_id' => null,
     ], $overrides);
 }
 
-dataset('unauthorized roles', [
+dataset('institution account unauthorized roles', [
     'institution' => [UserRole::INSTITUTION],
     'company' => [UserRole::COMPANY],
     'secretary' => [UserRole::SECRETARY],
 ]);
 
-it('allows an admin to create an institutional account linked to an active institution', function () {
+it('creates a pending institutional account without an administrator-provided password', function () {
     $institution = Institution::factory()->create();
     $this->loginWithCookies(User::factory()->role(UserRole::ADMIN)->create())->assertOk();
 
-    $payload = accountPayload(['institution_id' => $institution->id]);
-
-    $response = $this->browserRequest('POST', '/api/institution-accounts', $payload)
-        ->assertCreated()
-        ->assertJsonPath('data.name', 'Admin Institucional')
-        ->assertJsonPath('data.email', 'admin@instituto.test')
+    $response = $this->browserRequest('POST', '/api/institution-accounts', accountPayload([
+        'institution_id' => $institution->id,
+    ]))->assertCreated()
+        ->assertJsonPath('data.name', 'Responsable institucional')
+        ->assertJsonPath('data.email', 'responsable@instituto.test')
         ->assertJsonPath('data.role', UserRole::INSTITUTION->value)
         ->assertJsonPath('data.is_active', true)
         ->assertJsonPath('data.institution.id', $institution->id)
-        ->assertJsonPath('data.institution.name', $institution->name);
+        ->assertJsonPath('data.institution.name', $institution->name)
+        ->assertJsonMissingPath('data.password')
+        ->assertJsonMissingPath('data.remember_token')
+        ->assertJsonMissingPath('data.password_setup_required');
 
+    $user = User::findOrFail($response->json('data.id'));
+    expect($user->password_setup_required)->toBeTrue();
+    expect($user->getHidden())->toContain('password');
+    expect($user->toArray())->not->toHaveKeys(['password', 'remember_token']);
+    expect(password_get_info($user->password)['algoName'])->toBe('bcrypt');
+    expect($response->getContent())->not->toContain($user->password);
+
+    $setupUrl = $response->json('setup_url');
+    expect($setupUrl)->toBeString();
+    expect(parse_url($setupUrl, PHP_URL_PATH))->toBe('/set-initial-password');
+    parse_str(parse_url($setupUrl, PHP_URL_QUERY), $query);
+    expect($query['email'])->toBe($user->email);
+    expect($query['token'])->toBeString()->not->toBeEmpty();
+
+    $storedToken = DB::table('institution_password_setup_tokens')->where('email', $user->email)->value('token');
+    expect($storedToken)->not->toBe($query['token']);
+    expect(Hash::check($query['token'], $storedToken))->toBeTrue();
+    $this->assertDatabaseCount('users', 2);
+    $this->assertDatabaseCount('institution_password_setup_tokens', 1);
     $this->assertDatabaseHas('users', [
-        'id' => $response->json('data.id'),
-        'email' => 'admin@instituto.test',
-        'role' => UserRole::INSTITUTION,
+        'id' => $user->id,
         'institution_id' => $institution->id,
+        'role' => 'INSTITUTION',
         'is_active' => true,
+        'password_setup_required' => true,
     ]);
 });
 
-it('rejects account creation if the institution is inactive', function () {
-    $institution = Institution::factory()->inactive()->create();
-    $this->loginWithCookies(User::factory()->role(UserRole::ADMIN)->create())->assertOk();
-
-    $this->browserRequest('POST', '/api/institution-accounts', accountPayload(['institution_id' => $institution->id]))
-        ->assertUnprocessable()
-        ->assertJsonValidationErrors('institution_id');
-});
-
-it('rejects account creation if the institution does not exist', function () {
-    $this->loginWithCookies(User::factory()->role(UserRole::ADMIN)->create())->assertOk();
-
-    $this->browserRequest('POST', '/api/institution-accounts', accountPayload(['institution_id' => 999999]))
-        ->assertUnprocessable()
-        ->assertJsonValidationErrors('institution_id');
-});
-
-it('forces the role to INSTITUTION regardless of the payload', function () {
+it('ignores forged password role state and setup flags at administrative creation', function () {
     $institution = Institution::factory()->create();
     $this->loginWithCookies(User::factory()->role(UserRole::ADMIN)->create())->assertOk();
 
-    $payload = accountPayload([
+    $response = $this->browserRequest('POST', '/api/institution-accounts', accountPayload([
         'institution_id' => $institution->id,
-        'role' => UserRole::ADMIN->value, // Intento malicioso
-    ]);
+        'password' => 'AdministratorKnownPassword!',
+        'role' => 'ADMIN',
+        'is_active' => false,
+        'password_setup_required' => false,
+        'id' => 99999999,
+    ]))->assertCreated()
+        ->assertJsonPath('data.role', 'INSTITUTION')
+        ->assertJsonPath('data.is_active', true);
 
-    $response = $this->browserRequest('POST', '/api/institution-accounts', $payload)
-        ->assertCreated()
-        ->assertJsonPath('data.role', UserRole::INSTITUTION->value);
-
-    $this->assertDatabaseHas('users', [
-        'id' => $response->json('data.id'),
-        'role' => UserRole::INSTITUTION,
-    ]);
+    $user = User::findOrFail($response->json('data.id'));
+    expect($user->id)->not->toBe(99999999);
+    expect($user->password_setup_required)->toBeTrue();
+    expect(Hash::check('AdministratorKnownPassword!', $user->password))->toBeFalse();
+    expect($response->getContent())->not->toContain('AdministratorKnownPassword!', $user->password);
 });
 
-it('hashes the password and allows the new user to authenticate', function () {
+it('rejects inactive or nonexistent institution associations without creating an account or token', function (bool $exists) {
+    $institutionId = $exists ? Institution::factory()->inactive()->create()->id : 99999999;
+    $this->loginWithCookies(User::factory()->role(UserRole::ADMIN)->create())->assertOk();
+
+    $this->browserRequest('POST', '/api/institution-accounts', accountPayload(['institution_id' => $institutionId]))
+        ->assertUnprocessable()
+        ->assertJsonValidationErrors('institution_id');
+
+    $this->assertDatabaseCount('users', 1);
+    $this->assertDatabaseCount('institution_password_setup_tokens', 0);
+})->with(['inactive' => [true], 'nonexistent' => [false]]);
+
+it('validates institutional account fields without partial writes', function (array $overrides, array $fields) {
     $institution = Institution::factory()->create();
     $this->loginWithCookies(User::factory()->role(UserRole::ADMIN)->create())->assertOk();
 
-    $payload = accountPayload(['institution_id' => $institution->id]);
-    $response = $this->browserRequest('POST', '/api/institution-accounts', $payload)->assertCreated();
+    $this->browserRequest('POST', '/api/institution-accounts', accountPayload(array_replace([
+        'institution_id' => $institution->id,
+    ], $overrides)))
+        ->assertUnprocessable()
+        ->assertJsonValidationErrors($fields);
 
-    $user = User::find($response->json('data.id'));
-    
-    // Verificamos CA-06
-    expect(Hash::check('Password123!', $user->password))->toBeTrue();
-    expect($user->password)->not->toBe('Password123!');
+    $this->assertDatabaseCount('users', 1);
+    $this->assertDatabaseCount('institution_password_setup_tokens', 0);
+})->with([
+    'missing name' => [['name' => null], ['name']],
+    'blank name' => [['name' => '   '], ['name']],
+    'non-string name' => [['name' => []], ['name']],
+    'long name' => [['name' => str_repeat('n', 121)], ['name']],
+    'missing email' => [['email' => null], ['email']],
+    'invalid email' => [['email' => 'not-an-email'], ['email']],
+    'non-string email' => [['email' => []], ['email']],
+    'long email' => [['email' => str_repeat('a', 245).'@example.test'], ['email']],
+    'missing institution' => [['institution_id' => null], ['institution_id']],
+    'non-integer institution' => [['institution_id' => 'invalid'], ['institution_id']],
+    'array institution' => [['institution_id' => []], ['institution_id']],
+]);
 
-    // Verificamos CA-07 (logout del admin e intento de login del nuevo usuario)
-    $this->browserRequest('POST', '/api/logout')->assertNoContent();
-    $this->loginWithCookies($user, ['password' => 'Password123!'])->assertOk();
-});
-
-it('returns the user role and institution on the /me endpoint', function () {
+it('normalizes account emails and rejects duplicates across roles including inactive accounts', function (UserRole $role) {
     $institution = Institution::factory()->create();
-    $user = User::factory()->forInstitution($institution)->create();
-
-    $this->loginWithCookies($user)->assertOk();
-
-    // Verificamos CA-08
-    $this->browserRequest('GET', '/api/me')
-        ->assertOk()
-        ->assertJsonPath('user.role', UserRole::INSTITUTION->value)
-        ->assertJsonPath('user.institution.id', $institution->id)
-        ->assertJsonPath('user.institution.name', $institution->name);
-});
-
-it('prevents duplicate emails via uniqueness validation', function () {
-    $institution = Institution::factory()->create();
-    User::factory()->create(['email' => 'duplicate@example.test']);
-
+    $existing = User::factory()->role($role)->inactive()->create(['email' => 'duplicate@example.test']);
+    $original = $existing->fresh()->getAttributes();
     $this->loginWithCookies(User::factory()->role(UserRole::ADMIN)->create())->assertOk();
 
     $this->browserRequest('POST', '/api/institution-accounts', accountPayload([
         'institution_id' => $institution->id,
-        'email' => 'duplicate@example.test',
-    ]))
-        ->assertUnprocessable()
-        ->assertJsonValidationErrors('email');
+        'email' => '  DUPLICATE@EXAMPLE.TEST  ',
+    ]))->assertUnprocessable()->assertJsonValidationErrors('email');
+
+    $this->assertDatabaseCount('users', 2);
+    $this->assertDatabaseCount('institution_password_setup_tokens', 0);
+    expect($existing->fresh()->getAttributes())->toBe($original);
+
+    $this->browserRequest('POST', '/api/institution-accounts', accountPayload([
+        'institution_id' => $institution->id,
+        'email' => '  NEW@EXAMPLE.TEST  ',
+    ]))->assertCreated()->assertJsonPath('data.email', 'new@example.test');
+})->with([UserRole::ADMIN, UserRole::INSTITUTION, UserRole::COMPANY, UserRole::SECRETARY]);
+
+it('rolls back a duplicate email conflict arising after request validation', function () {
+    $institution = Institution::factory()->create();
+    $this->loginWithCookies(User::factory()->role(UserRole::ADMIN)->create())->assertOk();
+    $dispatcher = User::getEventDispatcher();
+    User::setEventDispatcher(clone $dispatcher);
+
+    try {
+        User::creating(function (User $pending): void {
+            DB::table('users')->insert($pending->getAttributes());
+        });
+
+        $this->browserRequest('POST', '/api/institution-accounts', accountPayload(['institution_id' => $institution->id]))
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('email');
+    } finally {
+        User::setEventDispatcher($dispatcher);
+    }
+
+    $this->assertDatabaseCount('users', 1);
+    $this->assertDatabaseCount('institution_password_setup_tokens', 0);
 });
 
-it('rejects account creation from non-admin roles', function (UserRole $role) {
+it('rejects anonymous account creation with valid CSRF', function () {
+    $institution = Institution::factory()->create();
+    $this->startCookieSession();
+
+    $this->browserRequest('POST', '/api/institution-accounts', accountPayload(['institution_id' => $institution->id]))
+        ->assertUnauthorized();
+
+    $this->assertDatabaseCount('users', 0);
+    $this->assertDatabaseCount('institution_password_setup_tokens', 0);
+});
+
+it('rejects account creation by every non-admin role even with forged admin claims', function (UserRole $role) {
     $institution = Institution::factory()->create();
     $this->loginWithCookies(User::factory()->role($role)->create())->assertOk();
 
-    $this->browserRequest('POST', '/api/institution-accounts', accountPayload(['institution_id' => $institution->id]))
-        ->assertForbidden();
-})->with('unauthorized roles');
+    $this->browserRequest('POST', '/api/institution-accounts?role=ADMIN', accountPayload([
+        'institution_id' => $institution->id,
+        'role' => 'ADMIN',
+    ]), headers: ['X-Role' => 'ADMIN'])->assertForbidden();
 
-it('rejects access to administrative endpoints for institutional accounts', function () {
+    $this->assertDatabaseCount('users', 1);
+    $this->assertDatabaseCount('institution_password_setup_tokens', 0);
+})->with('institution account unauthorized roles');
+
+it('rejects account creation after the administrator is deactivated', function () {
+    $institution = Institution::factory()->create();
+    $admin = User::factory()->role(UserRole::ADMIN)->create();
+    $this->loginWithCookies($admin)->assertOk();
+    $admin->update(['is_active' => false]);
+
+    $this->browserRequest('POST', '/api/institution-accounts', accountPayload(['institution_id' => $institution->id]))
+        ->assertUnauthorized();
+
+    $this->assertDatabaseCount('users', 1);
+    $this->assertDatabaseCount('institution_password_setup_tokens', 0);
+});
+
+it('protects administrative creation with real CSRF verification', function (?string $token) {
+    $institution = Institution::factory()->create();
+    $this->loginWithCookies(User::factory()->role(UserRole::ADMIN)->create())->assertOk();
+
+    $this->browserRequest('POST', '/api/institution-accounts', accountPayload(['institution_id' => $institution->id]),
+        csrf: false, headers: $token === null ? [] : ['X-XSRF-TOKEN' => $token])
+        ->assertStatus(419);
+
+    $this->assertDatabaseCount('users', 1);
+    $this->assertDatabaseCount('institution_password_setup_tokens', 0);
+})->with(['missing' => [null], 'invalid' => ['forged-csrf-token']]);
+
+it('returns institutional identity without exposing password hashes or setup credentials', function () {
     $institution = Institution::factory()->create();
     $user = User::factory()->forInstitution($institution)->create();
-    $this->loginWithCookies($user)->assertOk();
 
-    // Verificamos CA-09 y CA-10
-    $this->browserRequest('GET', '/api/institutions')
-        ->assertForbidden();
-        
+    foreach ([
+        $this->loginWithCookies($user)->assertOk(),
+        $this->browserRequest('GET', '/api/me')->assertOk(),
+    ] as $response) {
+        $response->assertExactJson(['user' => [
+            'id' => $user->id,
+            'name' => $user->name,
+            'email' => $user->email,
+            'role' => 'INSTITUTION',
+            'institution' => ['id' => $institution->id, 'name' => $institution->name],
+        ]]);
+        expect($response->getContent())->not->toContain($user->password, 'Password123!');
+    }
+
+    $this->browserRequest('GET', '/api/institutions')->assertForbidden();
     $this->browserRequest('POST', '/api/institution-accounts', accountPayload(['institution_id' => $institution->id]))
         ->assertForbidden();
 });
+
+it('delivers the setup link without exposing it in local or production JSON', function (string $environment) {
+    Notification::fake();
+    $institution = Institution::factory()->create();
+    $this->loginWithCookies(User::factory()->role(UserRole::ADMIN)->create())->assertOk();
+    // TestCase already verified the isolated PostgreSQL testing database before
+    // RefreshDatabase ran. Only exercise the response environment condition.
+    $this->app->detectEnvironment(fn () => $environment);
+
+    try {
+        $response = $this->browserRequest('POST', '/api/institution-accounts', accountPayload(['institution_id' => $institution->id]))
+            ->assertCreated()
+            ->assertJsonPath('setup_delivery', 'sent')
+            ->assertJsonMissingPath('setup_url')
+            ->assertJsonMissingPath('data.password')
+            ->assertJsonMissingPath('data.password_setup_required');
+
+        $user = User::findOrFail($response->json('data.id'));
+        Notification::assertSentTo($user, SetInitialPassword::class, function (SetInitialPassword $notification, array $channels) use ($response, $user): bool {
+            parse_str(parse_url($notification->setupUrl, PHP_URL_QUERY), $query);
+            expect($query['email'])->toBe($user->email);
+            expect(Hash::check($query['token'], DB::table('institution_password_setup_tokens')->where('email', $user->email)->value('token')))->toBeTrue();
+            expect($response->getContent())->not->toContain($query['token'], $user->password);
+
+            return in_array('mail', $channels, true);
+        });
+    } finally {
+        $this->app->detectEnvironment(fn () => 'testing');
+    }
+})->with(['local', 'production']);

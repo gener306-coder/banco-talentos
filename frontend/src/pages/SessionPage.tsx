@@ -13,6 +13,7 @@ export function SessionPage() {
         <dt>Nombre</dt><dd>{user.name}</dd>
         <dt>Correo electrónico</dt><dd>{user.email}</dd>
         <dt>Rol</dt><dd>{roleLabels[user.role]}</dd>
+        {user.institution && <><dt>Institución vinculada</dt><dd>{user.institution.name}</dd></>}
       </dl>
       {message && <p className="notice" role="alert">{message}</p>}
       {user.role === 'ADMIN' && (

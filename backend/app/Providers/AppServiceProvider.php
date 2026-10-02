@@ -21,6 +21,19 @@ class AppServiceProvider extends ServiceProvider
         // Esta SPA sólo utiliza sesiones; no consulta ni emite API tokens.
         Sanctum::getAccessTokenFromRequestUsing(fn (Request $request) => null);
 
+        RateLimiter::for('password-setup', function (Request $request): array {
+            $email = $request->input('email');
+            $email = is_string($email) ? Str::lower(trim($email)) : '';
+
+            return [
+                Limit::perMinute(10)->by('setup-ip:'.$request->ip()),
+                Limit::perMinute(5)->by('setup-email:'.hash('sha256', $email)),
+            ];
+        });
+
+        RateLimiter::for('institution-setup-resend', fn (Request $request) => Limit::perMinute(10)->by('setup-resend-admin:'.$request->user()->id)
+        );
+
         RateLimiter::for('login', function (Request $request): array {
             $email = $request->input('email');
             $email = is_string($email) ? Str::lower(trim($email)) : '';

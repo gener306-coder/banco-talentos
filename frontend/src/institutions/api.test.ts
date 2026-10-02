@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { createInstitution, getInstitution, listInstitutions, setInstitutionStatus, updateInstitution } from './api'
+import { createInstitution, createInstitutionAccount, getInstitution, listInstitutions, resendInstitutionAccountSetup, setInstitutionStatus, updateInstitution } from './api'
 
 const input = { name: 'Instituto Dual', cct: '09DIT0001A', contact_email: 'contacto@example.test' }
 const record = { ...input, id: 7, is_active: true, created_at: '2026-09-30T12:00:00Z', updated_at: '2026-09-30T12:00:00Z' }
@@ -27,7 +27,7 @@ describe('cliente de instituciones', () => {
     await expect(getInstitution('7', controller.signal)).resolves.toEqual(record)
     expect(fetchMock.mock.calls.map(([path]) => path)).toEqual(['/api/institutions', '/api/institutions/7'])
     for (const [, options] of fetchMock.mock.calls) {
-      expect(options).toMatchObject({ credentials: 'include', signal: controller.signal })
+      expect(options).toMatchObject({ credentials: 'include', signal: controller.signal, referrerPolicy: 'origin' })
       expect(new Headers(options?.headers).get('Accept')).toBe('application/json')
       expect(new Headers(options?.headers).has('Authorization')).toBe(false)
     }
@@ -103,5 +103,72 @@ describe('cliente de instituciones', () => {
       .mockResolvedValueOnce(new Response(null, { status: 404 }))
     await expect(getInstitution('7')).rejects.toMatchObject({ status: 502 })
     await expect(getInstitution('999')).rejects.toMatchObject({ status: 404 })
+  })
+})
+
+describe('cliente de cuentas institucionales', () => {
+  const accountInput = { name: 'Titular', email: 'titular@example.test', institution_id: 7 }
+  const account = { id: 9, name: accountInput.name, email: accountInput.email, role: 'INSTITUTION', is_active: true, institution: { id: 7, name: input.name } }
+
+  it('crea una cuenta sin contraseña ni rol y descarta cualquier enlace o credencial de la respuesta', async () => {
+    fetchMock.mockImplementationOnce(csrfResponse).mockResolvedValueOnce(Response.json({
+      data: { ...account, password: 'dato que nunca se conserva' }, setup_url: 'http://localhost/set-initial-password?token=secreto',
+    }, { status: 201 }))
+    await expect(createInstitutionAccount({ ...accountInput, ...{ password: 'no enviar', role: 'ADMIN' } })).resolves.toEqual(account)
+    expect(fetchMock.mock.calls.map(([url]) => url)).toEqual(['/sanctum/csrf-cookie', '/api/institution-accounts'])
+    expect(JSON.parse(fetchMock.mock.calls[1][1]?.body as string)).toEqual(accountInput)
+    expect(new Headers(fetchMock.mock.calls[1][1]?.headers).get('X-XSRF-TOKEN')).toBe('renovado+=')
+  })
+
+  it.each([{ ...account, role: 'ADMIN' }, { ...account, institution: null }, { ...account, institution: { id: 8, name: 'Otra' } }])('rechaza una asociación o un rol incompatible en la respuesta', async (data) => {
+    fetchMock.mockImplementationOnce(csrfResponse).mockResolvedValueOnce(Response.json({ data }, { status: 201 }))
+    await expect(createInstitutionAccount(accountInput)).rejects.toMatchObject({ status: 502 })
+  })
+
+  it('no crea la cuenta si falla CSRF', async () => {
+    fetchMock.mockResolvedValueOnce(new Response(null, { status: 503 }))
+    await expect(createInstitutionAccount(accountInput)).rejects.toMatchObject({ status: 503 })
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+  })
+})
+
+
+describe('entrega del enlace de cuentas pendientes', () => {
+  const input = { email: 'titular@example.test', institution_id: 7 }
+
+  it.each(['sent', 'pending', 'testing'] as const)('conserva el estado %s del alta sin conservar el enlace', async (delivery) => {
+    const accountInput = { ...input, name: 'Titular' }
+    const account = { id: 9, name: 'Titular', email: input.email, role: 'INSTITUTION', is_active: true, institution: { id: 7, name: 'Instituto' } }
+    fetchMock.mockImplementationOnce(csrfResponse).mockResolvedValueOnce(Response.json({
+      data: account, setup_delivery: delivery, setup_url: 'https://private.example.test?token=secret',
+    }, { status: 201 }))
+    await expect(createInstitutionAccount(accountInput)).resolves.toEqual({ ...account, setup_delivery: delivery })
+  })
+
+  it('reenvía únicamente correo e institución y descarta el enlace', async () => {
+    fetchMock.mockImplementationOnce(csrfResponse).mockResolvedValueOnce(Response.json({
+      setup_delivery: 'sent', setup_url: 'https://private.example.test?token=secret',
+    }))
+    await expect(resendInstitutionAccountSetup({ ...input, ...{ password: 'omitido', email_to: 'otro@example.test' } })).resolves.toBe('sent')
+    expect(fetchMock.mock.calls.map(([url]) => url)).toEqual(['/sanctum/csrf-cookie', '/api/institution-accounts/resend-setup'])
+    expect(JSON.parse(fetchMock.mock.calls[1][1]?.body as string)).toEqual(input)
+    expect(new Headers(fetchMock.mock.calls[1][1]?.headers).get('X-XSRF-TOKEN')).toBe('renovado+=')
+  })
+
+  it.each([{}, { setup_delivery: null }, { setup_delivery: 'delivered' }, { setup_delivery: 1 }])('rechaza un estado de reenvío inválido', async (body) => {
+    fetchMock.mockImplementationOnce(csrfResponse).mockResolvedValueOnce(Response.json(body))
+    await expect(resendInstitutionAccountSetup(input)).rejects.toMatchObject({ status: 502 })
+  })
+
+  it('no inicia el reenvío sin CSRF', async () => {
+    fetchMock.mockResolvedValueOnce(new Response(null, { status: 419 }))
+    await expect(resendInstitutionAccountSetup(input)).rejects.toMatchObject({ status: 419 })
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+  })
+
+  it.each([401, 403, 422, 429, 500])('conserva el error %i y no reintenta automáticamente', async (status) => {
+    fetchMock.mockImplementationOnce(csrfResponse).mockResolvedValueOnce(new Response(null, { status }))
+    await expect(resendInstitutionAccountSetup(input)).rejects.toMatchObject({ status })
+    expect(fetchMock).toHaveBeenCalledTimes(2)
   })
 })

@@ -4,6 +4,7 @@ use App\Enums\UserRole;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\InstitutionAccountController;
 use App\Http\Controllers\InstitutionController;
+use App\Http\Controllers\InstitutionSetupLinkController;
 use App\Models\Institution;
 use Illuminate\Support\Facades\Route;
 
@@ -32,3 +33,5 @@ Route::middleware(['auth:sanctum', 'active', 'role:'.UserRole::ADMIN->value])
 Route::post('/institution-accounts', [InstitutionAccountController::class, 'store'])
     ->middleware(['auth:sanctum', 'active', 'role:'.UserRole::ADMIN->value]);
 
+Route::post('/institution-accounts/resend-setup', [InstitutionSetupLinkController::class, 'store'])
+    ->middleware(['auth:sanctum', 'active', 'role:'.UserRole::ADMIN->value, 'throttle:institution-setup-resend']);

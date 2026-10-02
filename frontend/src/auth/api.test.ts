@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { ApiError, currentUser, login, logout } from './api'
+import { ApiError, currentUser, login, logout, setInitialPassword } from './api'
 
-const user = { id: 1, name: 'Ana', email: 'ana@example.test', role: 'ADMIN' }
+const user = { id: 1, name: 'Ana', email: 'ana@example.test', role: 'ADMIN', institution: null }
 const fetchMock = vi.fn<typeof fetch>()
 
 beforeEach(() => {
@@ -16,7 +16,7 @@ describe('cliente de sesión', () => {
   it('recupera la sesión con cookies, Accept JSON y sin token de autorización', async () => {
     fetchMock.mockResolvedValueOnce(Response.json({ user }))
     await expect(currentUser()).resolves.toEqual(user)
-    expect(fetchMock).toHaveBeenCalledWith('/api/me', expect.objectContaining({ credentials: 'include' }))
+    expect(fetchMock).toHaveBeenCalledWith('/api/me', expect.objectContaining({ credentials: 'include', referrerPolicy: 'origin' }))
     const headers = new Headers(fetchMock.mock.calls[0][1]?.headers)
     expect(headers.get('Accept')).toBe('application/json')
     expect(headers.has('Authorization')).toBe(false)
@@ -110,5 +110,41 @@ describe('cliente de sesión', () => {
     await expect(currentUser()).rejects.toMatchObject({ status: 403 })
     fetchMock.mockResolvedValueOnce(new Response('<html>error</html>', { status: 200 }))
     await expect(currentUser()).rejects.toEqual(expect.any(ApiError))
+  })
+})
+
+describe('contraseña inicial e institución en la sesión', () => {
+  it('conserva únicamente el identificador y nombre de la institución vinculada', async () => {
+    fetchMock.mockResolvedValueOnce(Response.json({ user: { ...user, role: 'INSTITUTION', institution: { id: 7, name: 'Instituto Dual', private: 'omitido' }, password: 'nunca mostrar' } }))
+    await expect(currentUser()).resolves.toEqual({ ...user, role: 'INSTITUTION', institution: { id: 7, name: 'Instituto Dual' } })
+  })
+
+  it('mantiene compatibilidad con sesiones sin institución y rechaza relaciones malformadas', async () => {
+    fetchMock.mockResolvedValueOnce(Response.json({ user: { id: 1, name: user.name, email: user.email, role: user.role } }))
+      .mockResolvedValueOnce(Response.json({ user: { ...user, institution: { id: 0, name: 'Inválida' } } }))
+    await expect(currentUser()).resolves.toEqual(user)
+    await expect(currentUser()).rejects.toMatchObject({ status: 502 })
+  })
+
+  it('establece la contraseña con CSRF y los cuatro campos exactos', async () => {
+    const input = { email: 'cuenta@example.test', token: 'token-seguro', password: 'Nueva-clave-2026', password_confirmation: 'Nueva-clave-2026' }
+    fetchMock.mockImplementationOnce(async () => {
+      document.cookie = 'XSRF-TOKEN=csrf%3D; Path=/'
+      return new Response(null, { status: 204 })
+    }).mockResolvedValueOnce(new Response(null, { status: 204 }))
+    await expect(setInitialPassword({ ...input, ...{ role: 'ADMIN' } })).resolves.toBeUndefined()
+    expect(fetchMock.mock.calls.map(([url]) => url)).toEqual(['/sanctum/csrf-cookie', '/api/institution-accounts/password-setup'])
+    for (const [, init] of fetchMock.mock.calls) expect(init?.referrerPolicy).toBe('no-referrer')
+    const options = fetchMock.mock.calls[1][1]
+    expect(options).toMatchObject({ method: 'POST', credentials: 'include' })
+    expect(JSON.parse(options?.body as string)).toEqual(input)
+    expect(new Headers(options?.headers).get('X-XSRF-TOKEN')).toBe('csrf=')
+  })
+
+  it('conserva solo códigos conocidos e ignora mensajes arbitrarios del servidor', async () => {
+    fetchMock.mockResolvedValueOnce(Response.json({ code: 'INSTITUTION_INACTIVE', message: 'Mensaje arbitrario' }, { status: 401 }))
+      .mockResolvedValueOnce(Response.json({ code: 'UNRECOGNIZED', message: 'Mensaje arbitrario' }, { status: 403 }))
+    await expect(currentUser()).rejects.toMatchObject({ status: 401, code: 'INSTITUTION_INACTIVE' })
+    await expect(currentUser()).rejects.toMatchObject({ status: 403, code: undefined })
   })
 })

@@ -16,6 +16,7 @@ export interface User {
   name: string
   email: string
   role: Role
+  institution: { id: number; name: string } | null
 }
 
 function sessionUser(data: unknown): User {
@@ -38,7 +39,16 @@ function sessionUser(data: unknown): User {
     throw new ApiError(502)
   }
 
-  return { id: user.id, name: user.name, email: user.email, role: user.role as Role }
+  let institution: User['institution'] = null
+  if ('institution' in user && user.institution !== null && user.institution !== undefined) {
+    const linked = user.institution
+    if (typeof linked !== 'object' || !('id' in linked) || typeof linked.id !== 'number' ||
+        !Number.isSafeInteger(linked.id) || linked.id <= 0 ||
+        !('name' in linked) || typeof linked.name !== 'string') throw new ApiError(502)
+    institution = { id: linked.id, name: linked.name }
+  }
+
+  return { id: user.id, name: user.name, email: user.email, role: user.role as Role, institution }
 }
 
 export async function currentUser(signal?: AbortSignal): Promise<User> {
@@ -63,4 +73,23 @@ export async function logout(): Promise<void> {
     await request('/sanctum/csrf-cookie')
     await request('/api/logout', { method: 'POST' })
   }
+}
+
+export interface InitialPasswordInput {
+  email: string
+  token: string
+  password: string
+  password_confirmation: string
+}
+
+export async function setInitialPassword(input: InitialPasswordInput): Promise<void> {
+  await request('/sanctum/csrf-cookie', { referrerPolicy: 'no-referrer' })
+  await request('/api/institution-accounts/password-setup', {
+    method: 'POST',
+    referrerPolicy: 'no-referrer',
+    body: JSON.stringify({
+      email: input.email, token: input.token,
+      password: input.password, password_confirmation: input.password_confirmation,
+    }),
+  })
 }

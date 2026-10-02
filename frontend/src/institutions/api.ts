@@ -74,3 +74,65 @@ export function updateInstitution(id: string, input: InstitutionInput): Promise<
 export function setInstitutionStatus(id: string, isActive: boolean): Promise<Institution> {
   return writeInstitution(`${institutionPath(id)}/status`, 'PATCH', { is_active: isActive })
 }
+
+export interface InstitutionAccountInput {
+  name: string
+  email: string
+  institution_id: number
+}
+
+export type SetupDelivery = 'sent' | 'pending' | 'testing'
+
+function setupDelivery(response: unknown, required = false): SetupDelivery | undefined {
+  if (typeof response !== 'object' || response === null) throw new ApiError(502)
+  const value = 'setup_delivery' in response ? response.setup_delivery : undefined
+  if (value === undefined && !required) return undefined
+  if (value !== 'sent' && value !== 'pending' && value !== 'testing') throw new ApiError(502)
+  return value
+}
+
+export interface InstitutionAccount {
+  id: number
+  name: string
+  email: string
+  role: 'INSTITUTION'
+  is_active: boolean
+  institution: { id: number; name: string }
+  setup_delivery?: SetupDelivery
+}
+
+export async function createInstitutionAccount(input: InstitutionAccountInput): Promise<InstitutionAccount> {
+  await request('/sanctum/csrf-cookie')
+  const response = await request('/api/institution-accounts', {
+    method: 'POST',
+    body: JSON.stringify({ name: input.name, email: input.email, institution_id: input.institution_id }),
+  })
+  const data = responseData(response)
+  const delivery = setupDelivery(response)
+  if (typeof data !== 'object' || data === null ||
+      !('id' in data) || typeof data.id !== 'number' || !Number.isSafeInteger(data.id) || data.id <= 0 ||
+      !('name' in data) || typeof data.name !== 'string' ||
+      !('email' in data) || typeof data.email !== 'string' ||
+      !('role' in data) || data.role !== 'INSTITUTION' ||
+      !('is_active' in data) || typeof data.is_active !== 'boolean' ||
+      !('institution' in data) || typeof data.institution !== 'object' || data.institution === null ||
+      !('id' in data.institution) || typeof data.institution.id !== 'number' ||
+      data.institution.id !== input.institution_id ||
+      !('name' in data.institution) || typeof data.institution.name !== 'string') throw new ApiError(502)
+
+  // El enlace exclusivo de testing nunca se conserva ni se muestra al ADMIN.
+  return {
+    id: data.id, name: data.name, email: data.email, role: data.role, is_active: data.is_active,
+    institution: { id: data.institution.id, name: data.institution.name },
+    ...(delivery ? { setup_delivery: delivery } : {}),
+  }
+}
+
+export async function resendInstitutionAccountSetup(input: { email: string; institution_id: number }): Promise<SetupDelivery> {
+  await request('/sanctum/csrf-cookie')
+  const response = await request('/api/institution-accounts/resend-setup', {
+    method: 'POST', body: JSON.stringify({ email: input.email, institution_id: input.institution_id }),
+  })
+  // Descartar setup_url incluso en pruebas; solo interesa el estado de entrega.
+  return setupDelivery(response, true) as SetupDelivery
+}

@@ -7,7 +7,7 @@ use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 
-class StoreInstitutionAccountRequest extends FormRequest
+class ResendInstitutionSetupLinkRequest extends FormRequest
 {
     public function authorize(): bool
     {
@@ -24,13 +24,9 @@ class StoreInstitutionAccountRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'name' => ['required', 'string', 'max:120'],
-            'email' => ['required', 'string', 'email', 'max:254', 'unique:users,email'],
+            'email' => ['bail', 'required', 'string', 'email', 'max:254'],
             'institution_id' => [
-                'bail',
-                'required',
-                'integer',
-                'min:1',
+                'bail', 'required', 'integer', 'min:1',
                 Rule::exists('institutions', 'id')->where('is_active', true),
             ],
         ];
@@ -39,12 +35,9 @@ class StoreInstitutionAccountRequest extends FormRequest
     public function messages(): array
     {
         return [
-            'name.required' => 'El nombre es obligatorio.',
-            'name.max' => 'El nombre no debe superar 120 caracteres.',
-            'email.required' => 'El correo electrónico es obligatorio.',
+            'email.required' => 'El correo de la cuenta pendiente es obligatorio.',
             'email.email' => 'Ingresa un correo electrónico válido.',
             'email.max' => 'El correo electrónico no debe superar 254 caracteres.',
-            'email.unique' => 'El correo electrónico ya está registrado.',
             'institution_id.required' => 'La institución es obligatoria.',
             'institution_id.integer' => 'La institución no es válida.',
             'institution_id.exists' => 'La institución no existe o no está activa.',

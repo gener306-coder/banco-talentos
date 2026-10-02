@@ -5,7 +5,7 @@ use App\Models\User;
 return [
     'defaults' => [
         'guard' => 'web',
-        'passwords' => null,
+        'passwords' => 'institution_setup',
     ],
     'guards' => [
         'web' => [
@@ -19,5 +19,12 @@ return [
             'model' => User::class,
         ],
     ],
-    'passwords' => [],
+    'passwords' => [
+        'institution_setup' => [
+            'provider' => 'users',
+            'table' => 'institution_password_setup_tokens',
+            'expire' => 60,
+            'throttle' => 60,
+        ],
+    ],
 ];

@@ -1,14 +1,24 @@
 export type ValidationErrors = Record<string, string[]>
 
+export const accessErrorMessages = {
+  ACCOUNT_INACTIVE: 'La cuenta está inactiva. No puedes acceder al sistema.',
+  INSTITUTION_INACTIVE: 'La institución está inactiva. No puedes acceder al sistema.',
+  PASSWORD_SETUP_REQUIRED: 'Debes establecer tu contraseña antes de iniciar sesión.',
+} as const
+
+export type AccessErrorCode = keyof typeof accessErrorMessages
+
 export class ApiError extends Error {
   readonly status: number
   readonly errors: ValidationErrors
+  readonly code?: AccessErrorCode
 
-  constructor(status: number, errors: ValidationErrors = {}) {
+  constructor(status: number, errors: ValidationErrors = {}, code?: AccessErrorCode) {
     super(status === 0 ? 'No pudimos conectar con el servidor.' : `Error HTTP ${status}`)
     this.name = 'ApiError'
     this.status = status
     this.errors = errors
+    this.code = code
   }
 }
 
@@ -23,18 +33,26 @@ export function csrfToken(): string | undefined {
   }
 }
 
-async function validationErrors(response: Response): Promise<ValidationErrors> {
+async function responseError(response: Response): Promise<ApiError> {
+  let errors: ValidationErrors = {}
+  let code: AccessErrorCode | undefined
   try {
     const body: unknown = await response.json()
-    if (typeof body !== 'object' || body === null || !('errors' in body) ||
-        typeof body.errors !== 'object' || body.errors === null || Array.isArray(body.errors)) return {}
-
-    return Object.fromEntries(Object.entries(body.errors).filter((entry): entry is [string, string[]] =>
-      Array.isArray(entry[1]) && entry[1].every((message: unknown) => typeof message === 'string'),
-    ))
+    if (typeof body === 'object' && body !== null) {
+      if ('code' in body && typeof body.code === 'string' && Object.hasOwn(accessErrorMessages, body.code)) {
+        code = body.code as AccessErrorCode
+      }
+      if (response.status === 422 && 'errors' in body && typeof body.errors === 'object' &&
+          body.errors !== null && !Array.isArray(body.errors)) {
+        errors = Object.fromEntries(Object.entries(body.errors).filter((entry): entry is [string, string[]] =>
+          Array.isArray(entry[1]) && entry[1].every((message: unknown) => typeof message === 'string'),
+        ))
+      }
+    }
   } catch {
-    return {}
+    // Un cuerpo vacío o inválido conserva el código HTTP original.
   }
+  return new ApiError(response.status, errors, code)
 }
 
 export async function request(path: string, options: RequestInit = {}): Promise<unknown> {
@@ -50,14 +68,14 @@ export async function request(path: string, options: RequestInit = {}): Promise<
 
   let response: Response
   try {
-    response = await fetch(path, { ...options, headers, credentials: 'include' })
+    response = await fetch(path, { referrerPolicy: 'origin', ...options, headers, credentials: 'include' })
   } catch (error) {
     if (error instanceof DOMException && error.name === 'AbortError') throw error
     throw new ApiError(0)
   }
 
   if (!response.ok) {
-    throw new ApiError(response.status, response.status === 422 ? await validationErrors(response) : {})
+    throw await responseError(response)
   }
   if (response.status === 204) return undefined
 
