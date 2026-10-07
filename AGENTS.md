@@ -6,6 +6,7 @@ empresas y Secretaría de Economía mediante un Banco de Talentos.
 
 ## Stack
 - Frontend: React + TypeScript + Vite
+- Estilos: CSS existente + Tailwind CSS v4 (tokens de marca, sin Preflight)
 - Backend: Laravel API REST
 - Autenticación: Laravel Sanctum
 - Base de datos: PostgreSQL + PostGIS
@@ -72,3 +73,7 @@ Antes de implementar una historia:
 2. Revisa sus criterios de aceptación.
 3. Limita los cambios estrictamente al alcance de esa historia.
 4. Detente y pide confirmación si una funcionalidad solicitada no está incluida en el Sprint.
+
+## Identidad visual del frontend
+
+Antes de desarrollar vistas frontend, consulta `docs/design/identidad-visual.md` y usa los tokens semánticos de marca definidos allí. No inventes una paleta ni migres los estilos existentes sin aprobación.

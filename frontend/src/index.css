@@ -1,3 +1,13 @@
+@import "tailwindcss/theme.css" layer(theme);
+@import "tailwindcss/utilities.css" layer(utilities);
+
+@theme {
+  --color-brand-primary: #991B30;
+  --color-brand-secondary: #B99058;
+  --color-brand-neutral: #57565B;
+}
+
+@layer legacy {
 :root {
   font-family: system-ui, sans-serif;
   color: #183b40;
@@ -36,3 +46,4 @@ a { color: #20545b; text-underline-offset: 0.2em; }
 
 .password-setup .field-error { margin: -0.65rem 0 0.7rem; color: #7c2921; font-size: 0.9rem; }
 .password-setup input[aria-invalid='true'] { border-color: #b74738; }
+}

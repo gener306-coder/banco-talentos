@@ -11,14 +11,14 @@ No hay registro público ni recuperación de contraseñas ya establecidas.
 ## Stack y estructura
 
 - Laravel 13 / PHP 8.4, Sanctum 4 con sesiones y CSRF, PostgreSQL 17 + PostGIS 3.5.
-- React 19 / TypeScript 5.9 / Vite 8 sobre Node 24.
+- React 19 / TypeScript 5.9 / Vite 8 sobre Node 24; Tailwind CSS 4 con los tokens de marca de [docs/design/identidad-visual.md](docs/design/identidad-visual.md).
 - Pest, Vitest + React Testing Library y Playwright/Chromium.
 
 ```text
 backend/                 API, usuarios, instituciones, cuentas institucionales y pruebas Pest
 frontend/                Sesión, instituciones, cuentas, contraseña inicial, pruebas React y E2E
 docker/                  Imágenes y configuración de desarrollo/pruebas
-docs/                    Sprint vigente y documentación técnica de cada historia
+docs/                    Sprint vigente, documentación técnica de cada historia e identidad visual (docs/design/)
 compose.yaml             Entorno de desarrollo (incluye Mailpit)
 compose.testing.yaml     Entorno aislado de pruebas
 scripts/test-backend.sh   Ejecuta Pest con PostgreSQL temporal

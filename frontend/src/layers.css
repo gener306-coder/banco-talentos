@@ -1,0 +1,2 @@
+/* Orden de capas en cascada. Se importa antes que cualquier otra hoja de estilos. */
+@layer theme, base, legacy, components, utilities;

@@ -1,3 +1,4 @@
+@layer legacy {
 main.institutions-shell { width: min(100% - 2rem, 70rem); }
 .institutions a { color: #20545b; text-underline-offset: 0.2em; }
 .institution-navigation { display: flex; gap: 1.25rem; margin-bottom: 1.75rem; }
@@ -33,3 +34,4 @@ main.institutions-shell { width: min(100% - 2rem, 70rem); }
 }
 
 .institution-account { margin-top: 2rem; padding-top: 1.5rem; border-top: 1px solid #d5e2e2; }
+}
