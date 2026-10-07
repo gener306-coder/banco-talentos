@@ -301,3 +301,25 @@ describe('sesión institucional HU-S1-03', () => {
     expect(screen.queryByRole('heading', { name: 'Sesión iniciada' })).not.toBeInTheDocument()
   })
 })
+
+describe('identidad visual', () => {
+  it('muestra un único logotipo en el formulario de login', async () => {
+    fetchMock.mockResolvedValueOnce(new Response(null, { status: 401 }))
+    renderApp('/login')
+    const login = await screen.findByRole('region', { name: 'Iniciar sesión' })
+    const logos = screen.getAllByRole('img', { name: 'Nodologístico' })
+    expect(logos).toHaveLength(1)
+    expect(login).toContainElement(logos[0])
+    expect(logos[0]).toHaveAttribute('src', '/brand/logo.png')
+  })
+
+  it('muestra el logotipo en el encabezado general fuera del login', async () => {
+    fetchMock.mockResolvedValueOnce(Response.json({ user }))
+    renderApp('/')
+    await screen.findByRole('heading', { name: 'Sesión iniciada' })
+    const header = screen.getByRole('banner')
+    const logo = screen.getByRole('img', { name: 'Nodologístico' })
+    expect(header).toContainElement(logo)
+    expect(header).toContainElement(screen.getByRole('heading', { level: 1, name: 'Banco de Talentos' }))
+  })
+})

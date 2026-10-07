@@ -3,6 +3,7 @@
 
 @theme {
   --color-brand-primary: #991B30;
+  --color-brand-primary-hover: #7A1626;
   --color-brand-secondary: #B99058;
   --color-brand-neutral: #57565B;
 }
@@ -10,8 +11,8 @@
 @layer legacy {
 :root {
   font-family: system-ui, sans-serif;
-  color: #183b40;
-  background: #f4f7f7;
+  color: var(--color-brand-neutral);
+  background: var(--color-neutral-100);
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
@@ -22,18 +23,18 @@ body { margin: 0; min-width: 320px; }
 main { width: min(100% - 2rem, 34rem); margin: 8vh auto; }
 header { margin-bottom: 2rem; }
 h1 { margin: 0.5rem 0 1rem; font-size: clamp(2rem, 6vw, 3rem); line-height: 1.15; }
-h2 { margin-top: 0; font-size: 1.4rem; }
+h2 { margin-top: 0; font-size: 1.4rem; color: var(--color-brand-primary); }
 p { line-height: 1.6; }
-.eyebrow { color: #365f66; font-weight: 600; }
-.card { background: #fff; border: 1px solid #d5e2e2; border-radius: 0.75rem; padding: 1.75rem; }
+.eyebrow { font-weight: 600; }
+.card { background: var(--color-white); border: 1px solid var(--color-neutral-200); border-radius: 0.75rem; padding: 1.75rem; }
 form { display: flex; flex-direction: column; gap: 0.65rem; }
 label, dt { font-weight: 600; }
 input, button { font: inherit; border-radius: 0.35rem; }
-input { width: 100%; padding: 0.7rem; border: 1px solid #799396; margin-bottom: 0.6rem; }
-button { padding: 0.8rem 1rem; background: #20545b; color: #fff; border: 1px solid #20545b; cursor: pointer; font-weight: 600; }
-button:hover:not(:disabled) { background: #153e43; }
-button.secondary { background: #fff; color: #20545b; }
-button.secondary:hover:not(:disabled) { background: #edf4f4; }
+input { width: 100%; padding: 0.7rem; border: 1px solid var(--color-neutral-500); margin-bottom: 0.6rem; }
+button { padding: 0.8rem 1rem; background: var(--color-brand-primary); color: var(--color-white); border: 1px solid var(--color-brand-primary); cursor: pointer; font-weight: 600; }
+button:hover:not(:disabled) { background: var(--color-brand-primary-hover); }
+button.secondary { background: var(--color-white); color: var(--color-brand-primary); }
+button.secondary:hover:not(:disabled) { background: var(--color-neutral-100); }
 button:disabled, input:disabled { opacity: 0.65; cursor: not-allowed; }
 :focus-visible { outline: 3px solid #ad620e; outline-offset: 3px; }
 .notice { color: #7c2921; background: #fff3ef; border-left: 3px solid #b74738; padding: 0.8rem; }
@@ -42,7 +43,7 @@ dt { margin-top: 1rem; }
 dd { margin: 0.3rem 0 0; overflow-wrap: anywhere; }
 .actions { display: flex; flex-wrap: wrap; gap: 0.75rem; }
 .card > nav { margin: 1rem 0; }
-a { color: #20545b; text-underline-offset: 0.2em; }
+a { color: var(--color-brand-primary); text-underline-offset: 0.2em; }
 
 .password-setup .field-error { margin: -0.65rem 0 0.7rem; color: #7c2921; font-size: 0.9rem; }
 .password-setup input[aria-invalid='true'] { border-color: #b74738; }

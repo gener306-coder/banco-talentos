@@ -55,9 +55,15 @@ function App() {
   const { pathname } = useLocation()
   return (
     <main className={pathname.startsWith('/institutions') ? 'institutions-shell' : undefined}>
-      <header>
-        <p className="eyebrow">Educación Dual</p>
-        <h1>Banco de Talentos</h1>
+      <header className="flex items-center gap-4">
+        {/* En /login el logotipo se muestra en el formulario; se evita duplicarlo. */}
+        {pathname !== '/login' && (
+          <img src="/brand/logo.png" alt="Nodologístico" width={697} height={783} className="h-14 w-auto shrink-0" />
+        )}
+        <div>
+          <p className="eyebrow text-brand-neutral">Educación Dual</p>
+          <h1 className="text-brand-primary">Banco de Talentos</h1>
+        </div>
       </header>
       <Routes>
         <Route path="/set-initial-password" element={<SetInitialPasswordPage />} />

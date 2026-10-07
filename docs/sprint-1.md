@@ -123,6 +123,7 @@ Un Administrador puede registrar y gestionar instituciones desde React; la API a
 Un Administrador puede crear una cuenta institucional vinculada a una institución existente. Esa cuenta puede iniciar sesión; la API identifica correctamente usuario, rol e institución, y rechaza sus intentos de acceder a funciones administrativas.
 
 La historia se cierra cuando sus criterios de aceptación están verificados, frontend y backend funcionan integrados, las migraciones y pruebas son reproducibles, y no se han incorporado funcionalidades de historias posteriores.
+
 ## Tareas técnicas transversales
 
 ### Identidad visual base — Nodologístico
@@ -132,3 +133,11 @@ La historia se cierra cuando sus criterios de aceptación están verificados, fr
 **Guía y verificación:** [design/identidad-visual.md](design/identidad-visual.md) · [design/informe-identidad-visual-base.md](design/informe-identidad-visual-base.md)
 
 Preparar el logotipo, los tokens de marca y Tailwind CSS v4 para las vistas futuras, sin crear pantallas, cambiar rutas ni modificar el aspecto de las vistas existentes.
+
+### Migración de las vistas existentes a la identidad visual
+
+**Estado:** Completada (7 de octubre de 2026)  
+**Origen:** requisito comunicado por el responsable del proyecto; no corresponde a una historia de Jira.  
+**Informe:** [design/informe-migracion-vistas.md](design/informe-migracion-vistas.md)
+
+Aplicar los colores de marca y el logotipo a las vistas existentes (login, sesión, contraseña inicial e instituciones) sin cambiar rutas, comportamiento ni estructura semántica.

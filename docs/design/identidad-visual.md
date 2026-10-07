@@ -5,8 +5,8 @@
 ## Alcance
 
 - Incorporar el logotipo y una paleta derivada de sus colores en las nuevas vistas del frontend.
-- No crear pantallas ni cambiar el diseño o las rutas existentes como parte de esta tarea.
-- No migrar los estilos actuales a Tailwind ni cambiar sus valores visuales.
+- No crear pantallas ni cambiar las rutas existentes.
+- Las vistas existentes se migraron a la marca el 7 de octubre de 2026 (ver «Uso en vistas»).
 
 ## Logotipo
 
@@ -16,15 +16,25 @@ Existe una única variante del logotipo:
 |---|---|---|
 | `frontend/public/brand/logo.png` | `/brand/logo.png` | Fondos claros (blanco o gris claro) |
 
-El PNG tiene fondo transparente y mide 791 × 1024 px. No hay variante blanca: no colocar el logotipo sobre fondos oscuros ni sobre el color primario vino.
+El PNG tiene fondo transparente y mide 697 × 783 px; se le retiró únicamente el margen transparente, sin alterar el dibujo. No hay variante blanca: no colocar el logotipo sobre fondos oscuros ni sobre el color primario vino.
 
-Mantener la proporción y los colores originales; no recolorear, deformar ni recortar el logotipo. Fijar sólo una dimensión (ancho o alto) al mostrarlo y proporcionar un texto alternativo, por ejemplo `alt="Nodologístico"`. El archivo conserva margen transparente alrededor del símbolo; si se necesita en tamaños pequeños, solicitar una versión recortada o vectorial (SVG) en lugar de recortarla en CSS.
+Mantener la proporción y los colores originales; no recolorear, deformar ni recortar el dibujo. Fijar sólo la altura (`h-*` con `w-auto`), declarar `width={697} height={783}` para reservar el espacio y usar `alt="Nodologístico"`.
+
+Ubicaciones actuales:
+
+| Lugar | Componente | Altura |
+|---|---|---|
+| Encabezado general, junto al título | `App.tsx` | `h-14` (56 px). No se muestra en `/login` para no duplicarlo. |
+| Parte superior del formulario de login | `pages/LoginPage.tsx` | `h-32` (128 px), centrado. |
+
+A 56 px el texto «nodologístico» del logotipo no es legible; el símbolo identifica la marca y el título textual permanece en el `h1`. Para un tamaño menor, solicitar una versión horizontal o un símbolo en SVG.
 
 ## Paleta y tokens
 
 | Token | Color | HEX muestreado | Uso previsto |
 |---|---|---|---|
-| `brand-primary` | Vino | `#991B30` | Acciones primarias, acentos principales y texto destacado |
+| `brand-primary` | Vino | `#991B30` | Acciones primarias, enlaces, títulos `h1`/`h2` y bordes de botones secundarios |
+| `brand-primary-hover` | Vino oscuro | `#7A1626` | Únicamente estado hover de acciones primarias (definido para el proyecto, no muestreado) |
 | `brand-secondary` | Dorado | `#B99058` | Exclusivamente decorativo: bordes, separadores y detalles |
 | `brand-neutral` | Gris grafito | `#57565B` | Texto y elementos neutros |
 
@@ -35,6 +45,7 @@ Los tokens están definidos con Tailwind CSS v4 en `frontend/src/index.css`:
 ```css
 @theme {
   --color-brand-primary: #991B30;
+  --color-brand-primary-hover: #7A1626;
   --color-brand-secondary: #B99058;
   --color-brand-neutral: #57565B;
 }
@@ -43,6 +54,12 @@ Los tokens están definidos con Tailwind CSS v4 en `frontend/src/index.css`:
 Clases resultantes, entre otras: `bg-brand-primary`, `text-brand-neutral`, `border-brand-secondary`.
 
 No introducir nuevos colores de marca ni valores hexadecimales dispersos en vistas.
+
+### Neutros y colores semánticos
+
+- **Neutros:** escala `neutral` de Tailwind: `neutral-100` (fondo de la aplicación, hover de botones secundarios, encabezado de tablas), `neutral-200` (bordes de tarjetas, tablas y separadores) y `neutral-500` (borde de campos, contraste 4.74:1 sobre blanco, por encima del 3:1 que exige WCAG para componentes). Blanco: `--color-white`. Sustituyen a los grises con tinte verde azulado anteriores.
+- **Semánticos, sin cambios:** error (`#7c2921`, `#b74738`, `#fff3ef`), éxito (`#155b36`, `#e4f3e9`, `#327a4a`), insignias ACTIVA/INACTIVA y foco (`#ad620e`, 4.64:1 sobre blanco). No son colores de marca y mantienen su significado.
+- El rojo de error y el vino de marca tienen luminancia casi igual (1.16:1 entre sí). Los avisos de error se distinguen por su fondo, borde izquierdo y `role="alert"`; no usar el vino para comunicar errores.
 
 ## Accesibilidad
 
@@ -57,6 +74,7 @@ Contraste calculado con la fórmula de luminancia relativa de WCAG:
 | Grafito `#57565B` sobre blanco | 7.27:1 | Sí |
 | Grafito sobre `#F4F7F7` | 6.75:1 | Sí |
 | Blanco sobre vino | 8.22:1 | Sí |
+| Blanco sobre vino oscuro `#7A1626` | 10.66:1 | Sí |
 | Dorado `#B99058` sobre blanco | 2.92:1 | **No** |
 | Dorado sobre vino | 2.82:1 | **No** |
 
@@ -74,15 +92,18 @@ Reglas derivadas:
 
 ## Uso en vistas
 
-- Las vistas nuevas usan los tokens `brand-*` para los colores de marca.
-- Las vistas actuales conservan sus estilos CSS existentes, incluidos los colores legados.
-- La presencia y ubicación del logotipo en una pantalla concreta se determina en su historia aprobada.
+Enfoque híbrido:
+
+- **Estilos globales por etiqueta** (`button`, `a`, `input`, `h2`, `.card`) y clases existentes de `institutions.css`: siguen en `@layer legacy`, pero sus colores usan variables (`var(--color-brand-primary)`, `var(--color-neutral-200)`, …) en lugar de HEX. Así no se repiten clases en cada botón.
+- **Elementos propios de una vista** (encabezado, logotipo, `h1`): clases de Tailwind en el JSX (`text-brand-primary`, `text-brand-neutral`, `h-14`, `flex`, …).
+- Vistas nuevas: preferir clases de Tailwind; los estilos globales ya aplican la marca a botones, enlaces y campos.
+- Tailwind sólo emite en el CSS final las variables de tema que se usan en utilidades o en CSS procesado por Tailwind (`index.css`). Si `institutions.css` u otra hoja sin `@import "tailwindcss"` necesita una variable no usada en `index.css`, comprobar que aparezca en `dist/assets/*.css` tras `npm run build`.
 
 ## Criterios de aceptación de esta base
 
 1. El tema Tailwind expone los tres tokens de marca con los valores indicados.
 2. Tailwind genera utilidades de tema y utilidades visuales sin activar Preflight.
-3. Los estilos legados mantienen sus declaraciones y valores dentro de la capa `legacy`; las utilidades de Tailwind pueden prevalecer sobre ellos.
-4. `frontend/public/brand/logo.png` está versionado con fondo transparente.
+3. Los estilos legados están dentro de la capa `legacy` y sus colores de marca y neutros usan variables del tema, sin HEX fijos; las utilidades de Tailwind pueden prevalecer sobre ellos.
+4. `frontend/public/brand/logo.png` está versionado con fondo transparente y se muestra en el encabezado y en el login.
 5. `AGENTS.md` instruye a los agentes frontend a consultar este documento y no inventar una paleta.
-6. No se agregan pantallas ni se cambian rutas, y no se migran los estilos existentes a tokens.
+6. No se agregan pantallas ni se cambian rutas ni la estructura semántica de los componentes.

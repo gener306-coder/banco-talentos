@@ -1,25 +1,25 @@
 @layer legacy {
 main.institutions-shell { width: min(100% - 2rem, 70rem); }
-.institutions a { color: #20545b; text-underline-offset: 0.2em; }
+.institutions a { color: var(--color-brand-primary); text-underline-offset: 0.2em; }
 .institution-navigation { display: flex; gap: 1.25rem; margin-bottom: 1.75rem; }
 .institution-toolbar { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1rem; margin-bottom: 1.5rem; }
 .institution-toolbar p { margin: 0; }
-.institutions .institution-button { display: inline-flex; align-items: center; justify-content: center; padding: 0.8rem 1rem; border: 1px solid #20545b; border-radius: 0.35rem; color: #fff; background: #20545b; font-weight: 600; text-decoration: none; }
-.institutions .institution-button:hover { background: #153e43; }
-.institutions .institution-button.secondary { background: #fff; color: #20545b; }
-.institutions .institution-button.secondary:hover { background: #edf4f4; }
+.institutions .institution-button { display: inline-flex; align-items: center; justify-content: center; padding: 0.8rem 1rem; border: 1px solid var(--color-brand-primary); border-radius: 0.35rem; color: var(--color-white); background: var(--color-brand-primary); font-weight: 600; text-decoration: none; }
+.institutions .institution-button:hover { background: var(--color-brand-primary-hover); }
+.institutions .institution-button.secondary { background: var(--color-white); color: var(--color-brand-primary); }
+.institutions .institution-button.secondary:hover { background: var(--color-neutral-100); }
 .institution-table-wrapper { overflow-x: auto; }
 .institution-table { width: 100%; border-collapse: collapse; text-align: left; font-size: 0.95rem; }
-.institution-table th, .institution-table td { padding: 1rem 0.8rem; border-bottom: 1px solid #d5e2e2; vertical-align: top; overflow-wrap: anywhere; }
+.institution-table th, .institution-table td { padding: 1rem 0.8rem; border-bottom: 1px solid var(--color-neutral-200); vertical-align: top; overflow-wrap: break-word; }
 .institution-table th[scope='row'] { min-width: 10rem; }
-.institution-table thead { background: #edf4f4; }
+.institution-table thead { background: var(--color-neutral-100); }
 .institution-table td:last-child { min-width: 7rem; }
-.institution-status { display: inline-block; border-radius: 1rem; padding: 0.2rem 0.7rem; font-size: 0.8rem; font-weight: 700; }
+.institution-status { display: inline-block; white-space: nowrap; border-radius: 1rem; padding: 0.2rem 0.7rem; font-size: 0.8rem; font-weight: 700; }
 .institution-status.active { color: #155b36; background: #e4f3e9; }
 .institution-status.inactive { color: #5d4b36; background: #f2ebdf; }
 .institution-details { max-width: 45rem; }
 .institutions form { max-width: 38rem; }
-.institutions .field-help { margin: -0.2rem 0 0; color: #365f66; font-size: 0.9rem; }
+.institutions .field-help { margin: -0.2rem 0 0; color: var(--color-brand-neutral); font-size: 0.9rem; }
 .institutions .field-error { margin: -0.65rem 0 0.7rem; color: #7c2921; font-size: 0.9rem; }
 .institutions input[aria-invalid='true'] { border-color: #b74738; }
 .institution-success { padding: 0.8rem; background: #e4f3e9; color: #155b36; border-left: 3px solid #327a4a; }
@@ -33,5 +33,5 @@ main.institutions-shell { width: min(100% - 2rem, 70rem); }
   .institution-table th, .institution-table td { padding: 0.8rem 0.6rem; }
 }
 
-.institution-account { margin-top: 2rem; padding-top: 1.5rem; border-top: 1px solid #d5e2e2; }
+.institution-account { margin-top: 2rem; padding-top: 1.5rem; border-top: 1px solid var(--color-neutral-200); }
 }
