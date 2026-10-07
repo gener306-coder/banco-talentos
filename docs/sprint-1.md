@@ -1,22 +1,26 @@
 # Sprint 1
 
 ## HU-S1-01 — Autenticación y control de acceso
-**Estado:** Completada 
 
-# HU-S1-02 — Gestión de instituciones
+**Estado:** Completada (27 de septiembre de 2026)  
+**Criterios de aceptación y evidencia:** [HU-S1-01.md](HU-S1-01.md)
 
+## HU-S1-02 — Gestión de instituciones
+
+**Estado:** Completada (30 de septiembre de 2026)  
+**Diseño técnico y verificación:** [HU-S1-02.md](HU-S1-02.md)  
 **Tipo Jira:** Story  
 **Story Points:** 8  
 **Prioridad:** Alta  
 **Dependencia:** HU-S1-01 — Autenticación y control de acceso
 
-## Historia de usuario
+### Historia de usuario
 
 **COMO** Administrador  
 **QUIERO** registrar, consultar, modificar y cambiar el estado de las instituciones educativas  
 **PARA** administrar las instituciones que participan en el Banco de Talentos sin perder su información histórica.
 
-## Criterios de aceptación
+### Criterios de aceptación
 
 - **CA-01.** Solamente un usuario con rol `ADMIN` puede acceder a la gestión administrativa de instituciones.
 - **CA-02.** El Administrador puede consultar el listado de instituciones registradas.
@@ -33,13 +37,13 @@
 - **CA-13.** Si una solicitud contiene información inválida, el sistema no almacena información parcial.
 - **CA-14.** Un usuario sin rol `ADMIN` no puede registrar, modificar ni cambiar el estado de instituciones, incluso mediante solicitudes directas a la API.
 
-## Decisión de diseño y límite de alcance
+### Decisión de diseño y límite de alcance
 
 No implementar `DELETE /institutions` como operación funcional. La institución permanece registrada y su disponibilidad se controla mediante `ACTIVA` / `INACTIVA`, para conservar las futuras relaciones con usuarios, alumnos, solicitudes, vinculaciones y procesos de Educación Dual.
 
 Esta historia gestiona **instituciones**. La creación de sus cuentas de acceso pertenece a **HU-S1-03**. Antes de implementar CA-04 y CA-05, documentar en el diseño técnico cuáles serán los campos obligatorios y la regla concreta de unicidad; no asumirlos sin definirlos.
 
-## Subtareas técnicas
+### Subtareas técnicas
 
 - **S1-02-T01 — Diseñar entidad Institution:** definir la estructura inicial de institución.
 - **S1-02-T02 — Crear migración de instituciones:** incluir estado `ACTIVA` / `INACTIVA` y las restricciones de datos acordadas.
@@ -57,24 +61,26 @@ Esta historia gestiona **instituciones**. La creación de sus cuentas de acceso 
 - **S1-02-T14 — Pruebas frontend:** verificar listado, formularios y presentación de errores.
 - **S1-02-T15 — Prueba E2E:** Administrador registra institución → consulta → modifica → inactiva → reactiva.
 
-## Resultado esperado
+### Resultado esperado
 
 Un Administrador puede registrar y gestionar instituciones desde React; la API aplica las mismas reglas de autorización y validación; PostgreSQL conserva los registros cuando pasan a `INACTIVA`.
 
-# HU-S1-03 — Creación de cuentas institucionales
+## HU-S1-03 — Creación de cuentas institucionales
 
+**Estado:** Completada (1 de octubre de 2026)  
+**Diseño técnico y verificación:** [HU-S1-03.md](HU-S1-03.md)  
 **Tipo Jira:** Story  
 **Story Points:** 5  
 **Prioridad:** Alta  
 **Dependencias:** HU-S1-01 — Autenticación y control de acceso; HU-S1-02 — Gestión de instituciones
 
-## Historia de usuario
+### Historia de usuario
 
 **COMO** Administrador  
 **QUIERO** crear cuentas de acceso asociadas a instituciones registradas  
 **PARA** permitir que cada institución acceda posteriormente a las funciones que le correspondan dentro del Banco de Talentos.
 
-## Criterios de aceptación
+### Criterios de aceptación
 
 - **CA-01.** Solamente un usuario con rol `ADMIN` puede crear una cuenta institucional.
 - **CA-02.** Para crear una cuenta debe existir previamente la institución asociada.
@@ -87,9 +93,10 @@ Un Administrador puede registrar y gestionar instituciones desde React; la API a
 - **CA-09.** Un usuario `INSTITUTION` no puede acceder a funciones exclusivas de `ADMIN`.
 - **CA-10.** Intentar acceder directamente a endpoints administrativos devuelve una respuesta de acceso denegado.
 - **CA-11.** La existencia de los roles `COMPANY` y `SECRETARY` en el modelo no habilita funcionalidades para ellos en este Sprint.
-- **CA-12:** Si una institución pasa a estado INACTIVA, ninguna de sus cuentas vinculadas podrá iniciar sesión ni consumir la API autenticada (la sesión se invalida inmediatamente).
-- **CA-13:** ADMIN puede reenviar el enlace de configuración únicamente para cuentas que sigan pendientes. El reenvío se hace al correo ya registrado, invalida el token anterior, y el ADMIN nunca tiene acceso visual al enlace.
-## Decisiones de diseño y límites de alcance
+- **CA-12.** Si una institución pasa a estado INACTIVA, ninguna de sus cuentas vinculadas podrá iniciar sesión ni consumir la API autenticada (la sesión se invalida inmediatamente).
+- **CA-13.** ADMIN puede reenviar el enlace de configuración únicamente para cuentas que sigan pendientes. El reenvío se hace al correo ya registrado, invalida el token anterior, y el ADMIN nunca tiene acceso visual al enlace.
+
+### Decisiones de diseño y límites de alcance
 
 - Reutilizar el modelo de usuarios, la autenticación con Sanctum y el control de roles establecidos en HU-S1-01; reutilizar la entidad y la clave `institutions.id` de HU-S1-02.
 - El rol se asigna desde el servidor como `INSTITUTION`; el formulario o una petición HTTP manipulada no pueden elegir otro rol.
@@ -98,7 +105,7 @@ Un Administrador puede registrar y gestionar instituciones desde React; la API a
 - La historia aprobada no fija cómo establece la institución su contraseña inicial ni cómo recibe el acceso. Antes de programar ese flujo, definir una opción segura en el plan técnico. El Administrador no debe conocer ni establecer la contraseña del usuario institucional.
 - Conforme al CA-12, una institución `INACTIVA` bloquea el inicio de sesión y el acceso autenticado de todas sus cuentas vinculadas. No se crean cuentas para instituciones inactivas. Inactivar conserva los usuarios y sus datos; el detalle técnico se documenta en `docs/HU-S1-03.md`.
 
-## Subtareas técnicas
+### Subtareas técnicas
 
 - **S1-03-T01 — Relacionar User con Institution:** definir la relación en base de datos y modelos, de modo que cada cuenta institucional pertenezca a una institución.
 - **S1-03-T02 — Implementar creación administrativa de cuentas:** crear un endpoint protegido para el alta de cuentas institucionales.
@@ -111,7 +118,7 @@ Un Administrador puede registrar y gestionar instituciones desde React; la API a
 - **S1-03-T09 — Pruebas de autorización:** comprobar accesos permitidos y denegados, incluidos intentos directos de usar endpoints administrativos o de alterar el rol.
 - **S1-03-T10 — Prueba E2E:** **Administrador → institución registrada → crear cuenta → iniciar sesión como institución.**
 
-## Resultado esperado
+### Resultado esperado
 
 Un Administrador puede crear una cuenta institucional vinculada a una institución existente. Esa cuenta puede iniciar sesión; la API identifica correctamente usuario, rol e institución, y rechaza sus intentos de acceder a funciones administrativas.
 

@@ -42,7 +42,9 @@ Los alumnos son administrados por su institución.
 - Nunca incluir secretos en Git.
 
 ## Desarrollo
-Implementar únicamente historias aprobadas en Jira.
+Las historias se gestionan en Jira. Solo se consideran aprobadas
+para implementación las que el responsable copia en el archivo
+del Sprint vigente.
 
 No agregar funcionalidades que no pertenezcan
 al Sprint actual sin indicarlo.
@@ -56,14 +58,17 @@ Cada historia debe:
 
 ## Desarrollo por Sprint
 
-La fuente de verdad del Sprint actual es:
-docs/sprint-1.md
+Sprint vigente: docs/sprint-1.md
 
-Solo pueden implementarse historias contenidas en ese archivo.
+Ese archivo es la única fuente de verdad mientras dure el Sprint.
+Los archivos de Sprints anteriores (docs/sprint-N.md) son históricos:
+sirven como contexto, pero no autorizan nuevo desarrollo.
+
+Solo pueden implementarse historias contenidas en el archivo del Sprint vigente.
 Si una solicitud no aparece ahí, no debe desarrollarse sin confirmación.
 
 Antes de implementar una historia:
-1. Verifica que exista en docs/sprint-1.md.
+1. Verifica que exista en el archivo del Sprint vigente.
 2. Revisa sus criterios de aceptación.
 3. Limita los cambios estrictamente al alcance de esa historia.
 4. Detente y pide confirmación si una funcionalidad solicitada no está incluida en el Sprint.

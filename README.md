@@ -1,6 +1,12 @@
 # Banco de Talentos – Educación Dual
 
-Monolito modular con **HU-S1-01 — Autenticación y control de acceso** y **HU-S1-02 — Gestión de instituciones**. ADMIN puede listar, registrar, consultar, editar y activar o inactivar instituciones desde React. Las cuentas institucionales pertenecen a HU-S1-03; no hay registro público.
+Monolito modular con las historias del [Sprint 1](docs/sprint-1.md):
+
+- **HU-S1-01 — Autenticación y control de acceso** ([detalle](docs/HU-S1-01.md)).
+- **HU-S1-02 — Gestión de instituciones**: ADMIN lista, registra, consulta, edita y activa o inactiva instituciones ([detalle](docs/HU-S1-02.md)).
+- **HU-S1-03 — Creación de cuentas institucionales**: ADMIN crea cuentas `INSTITUTION` vinculadas a una institución activa; la persona titular establece su contraseña mediante un enlace enviado por correo ([detalle](docs/HU-S1-03.md)).
+
+No hay registro público ni recuperación de contraseñas ya establecidas.
 
 ## Stack y estructura
 
@@ -9,10 +15,11 @@ Monolito modular con **HU-S1-01 — Autenticación y control de acceso** y **HU-
 - Pest, Vitest + React Testing Library y Playwright/Chromium.
 
 ```text
-backend/                 API, usuarios, autorización y pruebas Pest
-frontend/                Sesión, gestión de instituciones, pruebas React y E2E
+backend/                 API, usuarios, instituciones, cuentas institucionales y pruebas Pest
+frontend/                Sesión, instituciones, cuentas, contraseña inicial, pruebas React y E2E
 docker/                  Imágenes y configuración de desarrollo/pruebas
-compose.yaml             Entorno de desarrollo
+docs/                    Sprint vigente y documentación técnica de cada historia
+compose.yaml             Entorno de desarrollo (incluye Mailpit)
 compose.testing.yaml     Entorno aislado de pruebas
 scripts/test-backend.sh   Ejecuta Pest con PostgreSQL temporal
 scripts/test-e2e.sh       Ejecuta Chromium con API y base de pruebas reales
@@ -46,8 +53,9 @@ docker compose exec backend php artisan auth:create-user
 | API | <http://localhost:8000> |
 | Salud | <http://localhost:8000/up> |
 | PostgreSQL | `localhost:5432` |
+| Mailpit (buzón local) | <http://localhost:8025> |
 
-Los puertos se publican sólo en `127.0.0.1` y se configuran mediante `FRONTEND_PORT`, `BACKEND_PORT` y `DB_PORT`. Utiliza de forma consistente `localhost` o `127.0.0.1`; sus cookies son distintas. Vite reenvía `/api`, `/sanctum` y `/up` al backend. Compose ajusta los dominios de Sanctum al puerto del frontend.
+Los puertos se publican sólo en `127.0.0.1` y se configuran mediante `FRONTEND_PORT`, `BACKEND_PORT`, `DB_PORT` y `MAILPIT_PORT`. El SMTP de Mailpit (`mailpit:1025`) sólo es accesible dentro de la red Docker. Utiliza de forma consistente `localhost` o `127.0.0.1`; sus cookies son distintas. Vite reenvía `/api`, `/sanctum` y `/up` al backend. Compose ajusta los dominios de Sanctum al puerto del frontend.
 
 El backend instala dependencias, crea `backend/.env` y genera `APP_KEY` cuando faltan. El frontend ejecuta `npm ci`. **Las migraciones se aplican explícitamente**, no durante el arranque.
 
@@ -57,11 +65,19 @@ La SPA consulta `GET /api/me` al cargar. Para iniciar sesión obtiene primero `G
 
 La cookie de sesión es `HttpOnly`, de dominio local y `SameSite=Lax`. El cliente envía el token CSRF mediante `X-XSRF-TOKEN`. El identificador de sesión se regenera al autenticar; el cierre de sesión impide reutilizar la cookie anterior. Las sesiones locales expiran tras 120 minutos de inactividad. Las opciones de cookies y duración están en `backend/.env.example`.
 
-Los roles son `ADMIN`, `INSTITUTION`, `COMPANY` y `SECRETARY`. Todos requieren una cuenta activa. ADMIN dispone además de la gestión de instituciones; los demás roles conservan identidad y logout. El acceso se restringe tanto en las rutas React como en la API con Sanctum y `role:ADMIN`.
+Los roles son `ADMIN`, `INSTITUTION`, `COMPANY` y `SECRETARY`. Todos requieren una cuenta activa. Las cuentas `INSTITUTION` requieren además que su institución esté activa. ADMIN dispone de la gestión de instituciones y de cuentas institucionales; `INSTITUTION` ve su institución vinculada; los demás roles conservan identidad y logout. El acceso se restringe tanto en las rutas React como en la API con Sanctum y `role:ADMIN`.
 
 Después de iniciar sesión como ADMIN, abre **Instituciones**. El listado incluye instituciones activas e inactivas. El registro y la edición solicitan nombre, CCT y correo de contacto; el detalle ofrece la acción para activar o inactivar. El CCT es único incluso entre instituciones inactivas y no existe eliminación. Consulta el contrato y la matriz de pruebas en [docs/HU-S1-02.md](docs/HU-S1-02.md).
 
-Las credenciales incorrectas y las cuentas inactivas producen el mismo mensaje. La API devuelve errores JSON controlados: `401` sin sesión válida, `403` por autorización, `419` por CSRF, `422` por validación y `429` al superar el límite de login. Una cuenta desactivada durante la sesión pierde acceso en su siguiente petición protegida. El frontend trata errores de red sin afirmar que un logout fallido haya cerrado la sesión.
+## Cuentas institucionales
+
+En el detalle de una institución activa, ADMIN crea una cuenta indicando nombre y correo de acceso. El servidor asigna el rol `INSTITUTION` y la institución; ADMIN nunca define ni ve la contraseña. El backend envía al correo registrado un enlace de un solo uso que caduca en 60 minutos. La persona titular lo abre en `/set-initial-password`, establece su contraseña (de 12 caracteres a 72 bytes) y después inicia sesión.
+
+En local los correos llegan a Mailpit (<http://localhost:8025>); inícialo con `docker compose up -d mailpit`. Mientras la cuenta siga pendiente, ADMIN puede reenviar el enlace desde el mismo detalle; el reenvío invalida el enlace anterior. Tras iniciar sesión, `GET /api/me` incluye la institución vinculada.
+
+Si una institución pasa a `INACTIVA`, sus cuentas no pueden iniciar sesión y las sesiones abiertas se invalidan en la siguiente petición. Contrato, flujo de contraseña inicial y cobertura en [docs/HU-S1-03.md](docs/HU-S1-03.md).
+
+Las credenciales incorrectas y las cuentas inactivas producen el mismo mensaje. Con credenciales correctas, una institución inactiva responde `401` con código `INSTITUTION_INACTIVE` y una cuenta pendiente de contraseña inicial con `PASSWORD_SETUP_REQUIRED`. La API devuelve errores JSON controlados: `401` sin sesión válida, `403` por autorización, `419` por CSRF, `422` por validación y `429` al superar los límites de login, configuración o reenvío del enlace. Una cuenta desactivada durante la sesión pierde acceso en su siguiente petición protegida. El frontend trata errores de red sin afirmar que un logout fallido haya cerrado la sesión.
 
 Consulta [backend/README.md](backend/README.md) para detalles del contrato HTTP y del alta local. La matriz de aceptación, los resultados y el inventario de cambios están en [docs/HU-S1-01.md](docs/HU-S1-01.md).
 
@@ -70,16 +86,16 @@ Consulta [backend/README.md](backend/README.md) para detalles del contrato HTTP 
 Ejecuta desde la raíz:
 
 ```bash
-# PostgreSQL temporal: autenticación, autorización y API de instituciones
+# PostgreSQL temporal: autenticación, autorización, instituciones y cuentas institucionales
 sh scripts/test-backend.sh
 
-# Clientes HTTP, sesión y pantallas administrativas de instituciones
+# Clientes HTTP, sesión, instituciones, cuentas y configuración de contraseña inicial
 # Requiere el servicio frontend de desarrollo iniciado.
 docker compose exec frontend npm run test
 docker compose exec frontend npm run lint
 docker compose exec frontend npm run build
 
-# Chromium + API real: autenticación y flujo administrativo de instituciones
+# Chromium + API real: autenticación, instituciones y alta de cuenta → contraseña inicial → login
 sh scripts/test-e2e.sh
 ```
 
