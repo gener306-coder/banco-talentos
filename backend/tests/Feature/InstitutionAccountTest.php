@@ -7,6 +7,7 @@ use App\Notifications\SetInitialPassword;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Notification;
 use Tests\Support\InteractsWithCookieSessions;
 
@@ -134,6 +135,11 @@ it('validates institutional account fields without partial writes', function (ar
     'missing institution' => [['institution_id' => null], ['institution_id']],
     'non-integer institution' => [['institution_id' => 'invalid'], ['institution_id']],
     'array institution' => [['institution_id' => []], ['institution_id']],
+    'unknown delivery method' => [['delivery_method' => 'sms'], ['delivery_method']],
+    'blank delivery method' => [['delivery_method' => ''], ['delivery_method']],
+    'non-string delivery method' => [['delivery_method' => 123], ['delivery_method']],
+    'array delivery method' => [['delivery_method' => ['manual']], ['delivery_method']],
+    'uppercase delivery method' => [['delivery_method' => 'MANUAL'], ['delivery_method']],
 ]);
 
 it('normalizes account emails and rejects duplicates across roles including inactive accounts', function (UserRole $role) {
@@ -251,7 +257,7 @@ it('returns institutional identity without exposing password hashes or setup cre
         ->assertForbidden();
 });
 
-it('delivers the setup link without exposing it in local or production JSON', function (string $environment) {
+it('delivers the setup link by email without exposing it in local or production JSON (HU-S2-01 CA-02)', function (string $environment, ?string $method) {
     Notification::fake();
     $institution = Institution::factory()->create();
     $this->loginWithCookies(User::factory()->role(UserRole::ADMIN)->create())->assertOk();
@@ -260,7 +266,12 @@ it('delivers the setup link without exposing it in local or production JSON', fu
     $this->app->detectEnvironment(fn () => $environment);
 
     try {
-        $response = $this->browserRequest('POST', '/api/institution-accounts', accountPayload(['institution_id' => $institution->id]))
+        Log::spy();
+        $payload = accountPayload(['institution_id' => $institution->id]);
+        if ($method !== null) {
+            $payload['delivery_method'] = $method;
+        }
+        $response = $this->browserRequest('POST', '/api/institution-accounts', $payload)
             ->assertCreated()
             ->assertJsonPath('setup_delivery', 'sent')
             ->assertJsonMissingPath('setup_url')
@@ -276,7 +287,91 @@ it('delivers the setup link without exposing it in local or production JSON', fu
 
             return in_array('mail', $channels, true);
         });
+        Log::shouldNotHaveReceived('notice');
+    } finally {
+        $this->app->detectEnvironment(fn () => 'testing');
+    }
+})->with(['local', 'production'])->with(['default' => [null], 'explicit email' => ['email']]);
+
+it('returns the one-time setup link for manual delivery without sending any mail (HU-S2-01 CA-01, CA-03)', function (string $environment) {
+    Notification::fake();
+    Log::spy();
+    $institution = Institution::factory()->create();
+    $admin = User::factory()->role(UserRole::ADMIN)->create();
+    $this->loginWithCookies($admin)->assertOk();
+    $this->app->detectEnvironment(fn () => $environment);
+
+    try {
+        $response = $this->browserRequest('POST', '/api/institution-accounts', accountPayload([
+            'institution_id' => $institution->id,
+            'delivery_method' => 'manual',
+        ]))->assertCreated()
+            ->assertHeader('Cache-Control', 'no-store, private')
+            ->assertJsonPath('setup_delivery', 'manual')
+            ->assertJsonMissingPath('data.password')
+            ->assertJsonMissingPath('data.delivery_method');
+
+        $user = User::findOrFail($response->json('data.id'));
+        expect($user->password_setup_required)->toBeTrue();
+        $setupUrl = $response->json('setup_url');
+        expect(str_starts_with($setupUrl, rtrim(config('app.frontend_url'), '/').'/set-initial-password?'))->toBeTrue();
+        parse_str(parse_url($setupUrl, PHP_URL_QUERY), $query);
+        expect($query['email'])->toBe($user->email);
+        $stored = DB::table('institution_password_setup_tokens')->where('email', $user->email)->value('token');
+        expect($stored)->not->toBe($query['token']);
+        expect(Hash::check($query['token'], $stored))->toBeTrue();
+        expect($response->getContent())->not->toContain($user->password, $stored);
+
+        Notification::assertNothingSent();
+        Log::shouldHaveReceived('notice')->once()->withArgs(function (string $message, array $context) use ($admin, $user, $query): bool {
+            return $message === 'Enlace de configuración inicial generado para entrega manual.'
+                && $context === ['admin_id' => $admin->id, 'user_id' => $user->id]
+                && ! str_contains(json_encode($context), $query['token']);
+        });
     } finally {
         $this->app->detectEnvironment(fn () => 'testing');
     }
 })->with(['local', 'production']);
+
+it('keeps the manual link single-use and valid for 60 minutes (HU-S2-01 CA-05)', function (bool $expired) {
+    Notification::fake();
+    Log::spy();
+    $institution = Institution::factory()->create();
+    $this->loginWithCookies(User::factory()->role(UserRole::ADMIN)->create())->assertOk();
+    $response = $this->browserRequest('POST', '/api/institution-accounts', accountPayload([
+        'institution_id' => $institution->id,
+        'delivery_method' => 'manual',
+    ]))->assertCreated();
+    parse_str(parse_url($response->json('setup_url'), PHP_URL_QUERY), $query);
+    $payload = [...$query, 'password' => 'TitularPassword123!', 'password_confirmation' => 'TitularPassword123!'];
+
+    $this->replaceBrowserCookies([]);
+    $this->startCookieSession();
+    if ($expired) {
+        $this->travel(61)->minutes();
+        $this->browserRequest('POST', '/api/institution-accounts/password-setup', $payload)
+            ->assertUnprocessable()->assertJsonValidationErrors('token');
+        expect(User::findOrFail($response->json('data.id'))->password_setup_required)->toBeTrue();
+
+        return;
+    }
+
+    $this->browserRequest('POST', '/api/institution-accounts/password-setup', $payload)->assertNoContent();
+    $this->browserRequest('POST', '/api/institution-accounts/password-setup', array_replace($payload, [
+        'password' => 'OtraContrasena456!', 'password_confirmation' => 'OtraContrasena456!',
+    ]))->assertUnprocessable()->assertJsonValidationErrors('token');
+    $this->loginWithCookies(User::findOrFail($response->json('data.id')), ['password' => 'TitularPassword123!'])->assertOk();
+})->with(['single use' => [false], 'expired' => [true]]);
+
+it('never returns a manual link to non-admin roles', function (UserRole $role) {
+    $institution = Institution::factory()->create();
+    $this->loginWithCookies(User::factory()->role($role)->create())->assertOk();
+
+    $response = $this->browserRequest('POST', '/api/institution-accounts', accountPayload([
+        'institution_id' => $institution->id,
+        'delivery_method' => 'manual',
+    ]))->assertForbidden()->assertJsonMissingPath('setup_url');
+
+    expect($response->getContent())->not->toContain('set-initial-password');
+    $this->assertDatabaseCount('institution_password_setup_tokens', 0);
+})->with('institution account unauthorized roles');

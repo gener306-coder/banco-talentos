@@ -5,6 +5,9 @@ use App\Models\Institution;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Password;
 use Tests\Support\InteractsWithCookieSessions;
 
@@ -81,11 +84,11 @@ it('normalizes the lookup email and ignores forged recipient and password fields
     expect($this->pendingUser->fresh()->getAttributes())->toBe($original);
 });
 
-it('rejects accounts outside pending active institutional setup', function (array $attributes) {
+it('rejects accounts outside pending active institutional setup', function (array $attributes, string $method) {
     $this->pendingUser->forceFill($attributes)->save();
     $original = $this->pendingUser->fresh()->getAttributes();
-    $this->browserRequest('POST', '/api/institution-accounts/resend-setup', $this->resendPayload)
-        ->assertUnprocessable()->assertJsonValidationErrors('email');
+    $this->browserRequest('POST', '/api/institution-accounts/resend-setup', [...$this->resendPayload, 'delivery_method' => $method])
+        ->assertUnprocessable()->assertJsonValidationErrors('email')->assertJsonMissingPath('setup_url');
     expect($this->pendingUser->fresh()->getAttributes())->toBe($original);
     expect(Password::broker('institution_setup')->tokenExists($this->pendingUser, $this->oldToken))->toBeTrue();
 })->with([
@@ -95,7 +98,7 @@ it('rejects accounts outside pending active institutional setup', function (arra
     'admin role' => [['role' => UserRole::ADMIN]],
     'company role' => [['role' => UserRole::COMPANY]],
     'secretary role' => [['role' => UserRole::SECRETARY]],
-]);
+])->with(['email', 'manual']);
 
 it('rejects a different institution or unknown account without issuing a token', function (bool $differentInstitution) {
     $data = $this->resendPayload;
@@ -130,6 +133,9 @@ it('validates resend fields without issuing tokens', function (array $changes, s
     'institution array' => [['institution_id' => []], 'institution_id'],
     'institution noninteger' => [['institution_id' => 'invalid'], 'institution_id'],
     'institution missing' => [['institution_id' => 99999999], 'institution_id'],
+    'unknown delivery method' => [['delivery_method' => 'whatsapp'], 'delivery_method'],
+    'blank delivery method' => [['delivery_method' => ''], 'delivery_method'],
+    'array delivery method' => [['delivery_method' => ['manual']], 'delivery_method'],
 ]);
 
 it('rejects unauthenticated resend even with valid CSRF', function () {
@@ -139,11 +145,12 @@ it('rejects unauthenticated resend even with valid CSRF', function () {
     expect(Password::broker('institution_setup')->tokenExists($this->pendingUser, $this->oldToken))->toBeTrue();
 });
 
-it('rejects resend for every non-admin role', function (UserRole $role) {
+it('rejects resend for every non-admin role', function (UserRole $role, string $method) {
     $this->loginWithCookies(User::factory()->role($role)->create())->assertOk();
-    $this->browserRequest('POST', '/api/institution-accounts/resend-setup', $this->resendPayload)->assertForbidden();
+    $this->browserRequest('POST', '/api/institution-accounts/resend-setup', [...$this->resendPayload, 'delivery_method' => $method])
+        ->assertForbidden()->assertJsonMissingPath('setup_url');
     expect(Password::broker('institution_setup')->tokenExists($this->pendingUser, $this->oldToken))->toBeTrue();
-})->with([UserRole::INSTITUTION, UserRole::COMPANY, UserRole::SECRETARY]);
+})->with([UserRole::INSTITUTION, UserRole::COMPANY, UserRole::SECRETARY])->with(['email', 'manual']);
 
 it('requires real CSRF protection to resend', function (?string $token) {
     $this->browserRequest('POST', '/api/institution-accounts/resend-setup', $this->resendPayload,
@@ -174,5 +181,43 @@ it('limits aggregate resend attempts by administrator', function () {
     }
     $this->browserRequest('POST', '/api/institution-accounts/resend-setup', $this->resendPayload)
         ->assertTooManyRequests()->assertHeader('Retry-After');
+    expect(Password::broker('institution_setup')->tokenExists($this->pendingUser, $this->oldToken))->toBeTrue();
+});
+
+it('renews the link for manual delivery without sending mail and invalidates the previous one (HU-S2-01 CA-03)', function (string $environment) {
+    Notification::fake();
+    Log::spy();
+    $original = $this->pendingUser->fresh()->getAttributes();
+    $this->app->detectEnvironment(fn () => $environment);
+
+    try {
+        $response = $this->browserRequest('POST', '/api/institution-accounts/resend-setup', [...$this->resendPayload, 'delivery_method' => 'manual'])
+            ->assertOk()->assertHeader('Cache-Control', 'no-store, private')
+            ->assertJsonPath('setup_delivery', 'manual');
+        expect(array_keys($response->json()))->toEqualCanonicalizing(['setup_delivery', 'setup_url']);
+        $setupUrl = $response->json('setup_url');
+        expect(str_starts_with($setupUrl, rtrim(config('app.frontend_url'), '/').'/set-initial-password?'))->toBeTrue();
+        parse_str(parse_url($setupUrl, PHP_URL_QUERY), $query);
+        expect($query['email'])->toBe($this->pendingUser->email);
+        expect($query['token'])->not->toBe($this->oldToken);
+        expect(Password::broker('institution_setup')->tokenExists($this->pendingUser, $this->oldToken))->toBeFalse();
+        expect(Password::broker('institution_setup')->tokenExists($this->pendingUser, $query['token']))->toBeTrue();
+        expect(Hash::check($query['token'], DB::table('institution_password_setup_tokens')->value('token')))->toBeTrue();
+        expect($this->pendingUser->fresh()->getAttributes())->toBe($original);
+
+        Notification::assertNothingSent();
+        Log::shouldHaveReceived('notice')->once()->withArgs(fn (string $message, array $context): bool => $message === 'Enlace de configuración inicial generado para entrega manual.'
+            && array_keys($context) === ['admin_id', 'user_id']
+            && $context['user_id'] === $this->pendingUser->id);
+    } finally {
+        $this->app->detectEnvironment(fn () => 'testing');
+    }
+})->with(['local', 'production']);
+
+it('applies the sixty-second cooldown to manual delivery without rotating or exposing the token (HU-S2-01 CA-05)', function () {
+    DB::table('institution_password_setup_tokens')->where('email', $this->pendingUser->email)
+        ->update(['created_at' => now()]);
+    $this->browserRequest('POST', '/api/institution-accounts/resend-setup', [...$this->resendPayload, 'delivery_method' => 'manual'])
+        ->assertTooManyRequests()->assertHeader('Retry-After', '60')->assertJsonMissingPath('setup_url');
     expect(Password::broker('institution_setup')->tokenExists($this->pendingUser, $this->oldToken))->toBeTrue();
 });

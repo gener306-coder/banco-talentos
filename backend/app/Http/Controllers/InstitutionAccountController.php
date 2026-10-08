@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\SetupDeliveryMethod;
 use App\Enums\UserRole;
 use App\Http\Requests\StoreInstitutionAccountRequest;
 use App\Models\Institution;
@@ -18,6 +19,8 @@ class InstitutionAccountController extends Controller
     public function store(StoreInstitutionAccountRequest $request, InitialPasswordLink $links): JsonResponse
     {
         $data = $request->validated();
+        $method = SetupDeliveryMethod::from($data['delivery_method'] ?? SetupDeliveryMethod::EMAIL->value);
+        unset($data['delivery_method']);
 
         try {
             [$user, $setupUrl] = DB::transaction(function () use ($data, $links): array {
@@ -53,9 +56,10 @@ class InstitutionAccountController extends Controller
             ]);
         }
 
-        // La cuenta y el token ya están confirmados antes de contactar al transporte.
+        // La cuenta y el token ya están confirmados antes de contactar al transporte o
+        // de devolver el enlace manual.
         $response = [
-            'setup_delivery' => $links->deliverAfterCommit($user, $setupUrl),
+            ...$links->deliver($user, $setupUrl, $method, $request->user()->id),
             'data' => [
                 'id' => $user->id,
                 'name' => $user->name,
@@ -68,9 +72,6 @@ class InstitutionAccountController extends Controller
                 ],
             ],
         ];
-        if (app()->environment('testing')) {
-            $response['setup_url'] = $setupUrl;
-        }
 
         return response()->json($response, 201)->header('Cache-Control', 'no-store, private');
     }

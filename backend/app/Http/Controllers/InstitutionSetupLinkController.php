@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\SetupDeliveryMethod;
 use App\Enums\UserRole;
 use App\Http\Requests\ResendInstitutionSetupLinkRequest;
 use App\Models\Institution;
@@ -18,6 +19,7 @@ class InstitutionSetupLinkController extends Controller
     public function store(ResendInstitutionSetupLinkRequest $request, InitialPasswordLink $links): JsonResponse
     {
         $data = $request->validated();
+        $method = SetupDeliveryMethod::from($data['delivery_method'] ?? SetupDeliveryMethod::EMAIL->value);
         [$user, $setupUrl] = DB::transaction(function () use ($data, $links): array {
             // Mismo orden de bloqueos que al consumir el enlace: usuario e institución.
             $user = User::query()->where('email', $data['email'])->lockForUpdate()->first();
@@ -43,11 +45,6 @@ class InstitutionSetupLinkController extends Controller
             return [$user, $links->issue($user)];
         });
 
-        $response = ['setup_delivery' => $links->deliverAfterCommit($user, $setupUrl)];
-        if (app()->environment('testing')) {
-            $response['setup_url'] = $setupUrl;
-        }
-
-        return response()->json($response)->header('Cache-Control', 'no-store, private');
+        return response()->json($links->deliver($user, $setupUrl, $method, $request->user()->id))->header('Cache-Control', 'no-store, private');
     }
 }

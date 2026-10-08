@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests;
 
+use App\Enums\SetupDeliveryMethod;
 use App\Enums\UserRole;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Support\Str;
@@ -33,6 +34,8 @@ class StoreInstitutionAccountRequest extends FormRequest
                 'min:1',
                 Rule::exists('institutions', 'id')->where('is_active', true),
             ],
+            // Opcional: sin valor se usa el correo (comportamiento del Sprint 1).
+            'delivery_method' => ['sometimes', 'string', Rule::enum(SetupDeliveryMethod::class)],
         ];
     }
 
@@ -48,6 +51,7 @@ class StoreInstitutionAccountRequest extends FormRequest
             'institution_id.required' => 'La institución es obligatoria.',
             'institution_id.integer' => 'La institución no es válida.',
             'institution_id.exists' => 'La institución no existe o no está activa.',
+            'delivery_method.*' => 'El método de entrega debe ser email o manual.',
         ];
     }
 }

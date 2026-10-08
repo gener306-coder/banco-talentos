@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Enums\SetupDeliveryMethod;
 use App\Models\User;
 use App\Notifications\SetInitialPassword;
 use Illuminate\Support\Facades\DB;
@@ -19,6 +20,32 @@ class InitialPasswordLink
             'email' => $user->email,
             'token' => $token,
         ], '', '&', PHP_QUERY_RFC3986);
+    }
+
+    /**
+     * Campos de entrega para la respuesta HTTP del alta o del reenvío.
+     *
+     * Manual (HU-S2-01): no se programa ningún correo y el enlace se devuelve al ADMIN
+     * para que lo comparta; se audita quién lo pidió, sin registrar el token ni la URL.
+     * Email: comportamiento del Sprint 1; el enlace solo se devuelve en testing (E2E).
+     */
+    public function deliver(User $user, string $setupUrl, SetupDeliveryMethod $method, int $adminId): array
+    {
+        if ($method === SetupDeliveryMethod::MANUAL) {
+            Log::notice('Enlace de configuración inicial generado para entrega manual.', [
+                'admin_id' => $adminId,
+                'user_id' => $user->id,
+            ]);
+
+            return ['setup_delivery' => 'manual', 'setup_url' => $setupUrl];
+        }
+
+        $fields = ['setup_delivery' => $this->deliverAfterCommit($user, $setupUrl)];
+        if (app()->environment('testing')) {
+            $fields['setup_url'] = $setupUrl;
+        }
+
+        return $fields;
     }
 
     public function deliverAfterCommit(User $user, string $setupUrl): string

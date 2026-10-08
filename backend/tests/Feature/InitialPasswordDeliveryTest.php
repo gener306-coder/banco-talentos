@@ -123,3 +123,33 @@ it('delays mail until the outermost transaction has committed', function () {
         $this->app->detectEnvironment(fn () => 'testing');
     }
 });
+
+it('never schedules mail for manual delivery after committing creation and resend (HU-S2-01)', function (string $environment) {
+    $this->app->detectEnvironment(fn () => $environment);
+    // Ni siquiera tras confirmar la transacción debe intentarse un envío.
+    Notification::shouldReceive('send')->never();
+    Log::spy();
+
+    try {
+        $payload = ['name' => 'Cuenta manual', 'email' => 'manual@example.test', 'institution_id' => $this->institution->id, 'delivery_method' => 'manual'];
+        $created = $this->browserRequest('POST', '/api/institution-accounts', $payload)
+            ->assertCreated()->assertJsonPath('setup_delivery', 'manual');
+        expect(DB::transactionLevel())->toBe(0);
+        $user = User::findOrFail($created->json('data.id'));
+        parse_str(parse_url($created->json('setup_url'), PHP_URL_QUERY), $first);
+        expect(Password::broker('institution_setup')->tokenExists($user, $first['token']))->toBeTrue();
+
+        $this->travel(61)->seconds();
+        $resent = $this->browserRequest('POST', '/api/institution-accounts/resend-setup', [
+            'email' => $user->email, 'institution_id' => $this->institution->id, 'delivery_method' => 'manual',
+        ])->assertOk()->assertJsonPath('setup_delivery', 'manual');
+        parse_str(parse_url($resent->json('setup_url'), PHP_URL_QUERY), $second);
+        expect(Password::broker('institution_setup')->tokenExists($user, $first['token']))->toBeFalse();
+        expect(Password::broker('institution_setup')->tokenExists($user, $second['token']))->toBeTrue();
+
+        Log::shouldHaveReceived('notice')->twice();
+        Log::shouldNotHaveReceived('warning');
+    } finally {
+        $this->app->detectEnvironment(fn () => 'testing');
+    }
+})->with(['local', 'production']);
