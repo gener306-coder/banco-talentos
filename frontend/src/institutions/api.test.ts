@@ -136,7 +136,7 @@ describe('cliente de cuentas institucionales', () => {
 describe('entrega del enlace de cuentas pendientes', () => {
   const input = { email: 'titular@example.test', institution_id: 7 }
 
-  it.each(['sent', 'pending', 'testing'] as const)('conserva el estado %s del alta sin conservar el enlace', async (delivery) => {
+  it.each(['sent', 'pending'] as const)('conserva el estado %s del alta sin conservar el enlace', async (delivery) => {
     const accountInput = { ...input, name: 'Titular' }
     const account = { id: 9, name: 'Titular', email: input.email, role: 'INSTITUTION', is_active: true, institution: { id: 7, name: 'Instituto' } }
     fetchMock.mockImplementationOnce(csrfResponse).mockResolvedValueOnce(Response.json({
@@ -155,7 +155,7 @@ describe('entrega del enlace de cuentas pendientes', () => {
     expect(new Headers(fetchMock.mock.calls[1][1]?.headers).get('X-XSRF-TOKEN')).toBe('renovado+=')
   })
 
-  it.each([{}, { setup_delivery: null }, { setup_delivery: 'delivered' }, { setup_delivery: 1 }])('rechaza un estado de reenvío inválido', async (body) => {
+  it.each([{}, { setup_delivery: null }, { setup_delivery: 'delivered' }, { setup_delivery: 'testing' }, { setup_delivery: 1 }])('rechaza un estado de reenvío inválido', async (body) => {
     fetchMock.mockImplementationOnce(csrfResponse).mockResolvedValueOnce(Response.json(body))
     await expect(resendInstitutionAccountSetup(input)).rejects.toMatchObject({ status: 502 })
   })
@@ -219,9 +219,9 @@ describe('entrega manual del enlace HU-S2-01', () => {
   })
 
   it('descarta el enlace cuando la entrega es por correo aunque el servidor lo incluya', async () => {
-    fetchMock.mockImplementationOnce(csrfResponse).mockResolvedValueOnce(Response.json({ setup_delivery: 'testing', setup_url: link }))
+    fetchMock.mockImplementationOnce(csrfResponse).mockResolvedValueOnce(Response.json({ setup_delivery: 'sent', setup_url: link }))
     await expect(resendInstitutionAccountSetup({ email: account.email, institution_id: 7, delivery_method: 'email' }))
-      .resolves.toEqual({ delivery: 'testing' })
+      .resolves.toEqual({ delivery: 'sent' })
   })
 
   it.each([

@@ -50,7 +50,7 @@ Descritas en [HU-S1-03](../docs/HU-S1-03.md):
 
 ADMIN no define la contraseña y, con entrega por correo, tampoco recibe el enlace. Con `delivery_method: manual` no se envía correo: la respuesta incluye `setup_url` para que ADMIN lo comparta y se registra una auditoría (`admin_id`, `user_id`). El token se guarda como
 hash, caduca en 60 minutos y es de un solo uso. El correo se envía después del
-commit; en local se entrega a Mailpit y en `testing` no se envía. Mientras la
+commit; en local y en E2E se entrega a Mailpit y en Pest al mailer `array`. Mientras la
 cuenta tenga la configuración pendiente, el login responde 401
 (`PASSWORD_SETUP_REQUIRED`).
 

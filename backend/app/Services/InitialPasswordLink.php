@@ -27,7 +27,8 @@ class InitialPasswordLink
      *
      * Manual (HU-S2-01): no se programa ningún correo y el enlace se devuelve al ADMIN
      * para que lo comparta; se audita quién lo pidió, sin registrar el token ni la URL.
-     * Email: comportamiento del Sprint 1; el enlace solo se devuelve en testing (E2E).
+     * Email: el correo se envía después del commit y el enlace nunca se devuelve, en ningún
+     * entorno (en Pest llega al mailer array y en E2E a Mailpit).
      */
     public function deliver(User $user, string $setupUrl, SetupDeliveryMethod $method, int $adminId): array
     {
@@ -40,20 +41,11 @@ class InitialPasswordLink
             return ['setup_delivery' => 'manual', 'setup_url' => $setupUrl];
         }
 
-        $fields = ['setup_delivery' => $this->deliverAfterCommit($user, $setupUrl)];
-        if (app()->environment('testing')) {
-            $fields['setup_url'] = $setupUrl;
-        }
-
-        return $fields;
+        return ['setup_delivery' => $this->deliverAfterCommit($user, $setupUrl)];
     }
 
     public function deliverAfterCommit(User $user, string $setupUrl): string
     {
-        if (app()->environment('testing')) {
-            return 'testing';
-        }
-
         $status = 'pending';
         DB::afterCommit(function () use ($user, $setupUrl, &$status): void {
             try {

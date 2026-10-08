@@ -33,6 +33,7 @@ dataset('institution account unauthorized roles', [
 ]);
 
 it('creates a pending institutional account without an administrator-provided password', function () {
+    Notification::fake();
     $institution = Institution::factory()->create();
     $this->loginWithCookies(User::factory()->role(UserRole::ADMIN)->create())->assertOk();
 
@@ -47,7 +48,9 @@ it('creates a pending institutional account without an administrator-provided pa
         ->assertJsonPath('data.institution.name', $institution->name)
         ->assertJsonMissingPath('data.password')
         ->assertJsonMissingPath('data.remember_token')
-        ->assertJsonMissingPath('data.password_setup_required');
+        ->assertJsonMissingPath('data.password_setup_required')
+        ->assertJsonPath('setup_delivery', 'sent')
+        ->assertJsonMissingPath('setup_url');
 
     $user = User::findOrFail($response->json('data.id'));
     expect($user->password_setup_required)->toBeTrue();
@@ -56,11 +59,11 @@ it('creates a pending institutional account without an administrator-provided pa
     expect(password_get_info($user->password)['algoName'])->toBe('bcrypt');
     expect($response->getContent())->not->toContain($user->password);
 
-    $setupUrl = $response->json('setup_url');
-    expect($setupUrl)->toBeString();
+    $setupUrl = Notification::sent($user, SetInitialPassword::class)->last()->setupUrl;
     expect(parse_url($setupUrl, PHP_URL_PATH))->toBe('/set-initial-password');
-    parse_str(parse_url($setupUrl, PHP_URL_QUERY), $query);
+    $query = sentSetupLinkQuery($user);
     expect($query['email'])->toBe($user->email);
+    expect($response->getContent())->not->toContain($query['token']);
     expect($query['token'])->toBeString()->not->toBeEmpty();
 
     $storedToken = DB::table('institution_password_setup_tokens')->where('email', $user->email)->value('token');
@@ -257,7 +260,7 @@ it('returns institutional identity without exposing password hashes or setup cre
         ->assertForbidden();
 });
 
-it('delivers the setup link by email without exposing it in local or production JSON (HU-S2-01 CA-02)', function (string $environment, ?string $method) {
+it('delivers the setup link by email without exposing it in JSON in any environment (HU-S2-01 CA-02)', function (string $environment, ?string $method) {
     Notification::fake();
     $institution = Institution::factory()->create();
     $this->loginWithCookies(User::factory()->role(UserRole::ADMIN)->create())->assertOk();
@@ -291,7 +294,7 @@ it('delivers the setup link by email without exposing it in local or production 
     } finally {
         $this->app->detectEnvironment(fn () => 'testing');
     }
-})->with(['local', 'production'])->with(['default' => [null], 'explicit email' => ['email']]);
+})->with(['testing', 'local', 'production'])->with(['default' => [null], 'explicit email' => ['email']]);
 
 it('returns the one-time setup link for manual delivery without sending any mail (HU-S2-01 CA-01, CA-03)', function (string $environment) {
     Notification::fake();

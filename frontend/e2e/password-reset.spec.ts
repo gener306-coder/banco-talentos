@@ -1,6 +1,7 @@
 import { randomBytes } from 'node:crypto'
 import { expect, test } from '@playwright/test'
-import type { APIRequestContext, BrowserContext, Page } from '@playwright/test'
+import type { BrowserContext, Page } from '@playwright/test'
+import { linkFromMail } from './support/mailpit'
 
 const adminEmail = process.env.E2E_ADMIN_EMAIL
 const adminPassword = process.env.E2E_ADMIN_PASSWORD
@@ -28,23 +29,6 @@ async function choosePassword(page: Page, password: string, button: string, endp
   return response
 }
 
-// Lee el enlace del correo más reciente enviado a la cuenta, sin imprimirlo en las aserciones.
-async function resetLinkFromMail(request: APIRequestContext, recipient: string): Promise<string> {
-  let link: string | undefined
-  await expect.poll(async () => {
-    const search = await request.get(`${mailpitUrl}/api/v1/search`, { params: { query: `to:"${recipient}"` } })
-    const { messages } = await search.json() as { messages: { ID: string; Subject: string }[] }
-    const message = messages.find((candidate) => candidate.Subject.startsWith('Restablece tu contraseña'))
-    if (!message) return false
-    const body = await (await request.get(`${mailpitUrl}/api/v1/message/${message.ID}`)).json() as { Text: string }
-    link = body.Text.match(/https?:\/\/\S+\/reset-password\?[^\s)\]>]+/)?.[0]
-
-    return link !== undefined
-  }, { message: 'correo de restablecimiento recibido' }).toBe(true)
-
-  return link!
-}
-
 async function me(context: BrowserContext, baseURL: string) {
   return (await context.request.get('/api/me', { headers: { Origin: baseURL } })).status()
 }
@@ -69,14 +53,13 @@ test('ADMIN inicia el restablecimiento → la persona titular establece su nueva
   await page.getByLabel('Correo de contacto', { exact: true }).fill(institution.email)
   await page.getByRole('button', { name: 'Crear institución', exact: true }).click()
   await expect(page).toHaveURL(/\/institutions\/\d+$/)
-  await page.getByLabel('Nombre de la cuenta', { exact: true }).fill(account.name)
-  await page.getByLabel('Correo de acceso', { exact: true }).fill(account.email)
-  const createdResponse = page.waitForResponse((response) =>
-    response.url().endsWith('/api/institution-accounts') && response.request().method() === 'POST')
-  await page.getByRole('button', { name: 'Crear cuenta institucional', exact: true }).click()
-  const created = await createdResponse
-  expect(created.status()).toBe(201)
-  const { setup_url: setupUrl } = await created.json() as { setup_url: string }
+  // La preparación usa la entrega manual (HU-S2-01) para obtener el enlace sin correo.
+  const creation = page.getByRole('region', { name: 'Crear cuenta institucional' })
+  await creation.getByLabel('Nombre de la cuenta', { exact: true }).fill(account.name)
+  await creation.getByLabel('Correo de acceso', { exact: true }).fill(account.email)
+  await creation.getByRole('radio', { name: /Generar un enlace para compartirlo/ }).check()
+  await creation.getByRole('button', { name: 'Crear cuenta institucional', exact: true }).click()
+  const setupUrl = await creation.getByLabel('Enlace de configuración', { exact: true }).inputValue()
 
   // Sesión abierta del titular con su contraseña inicial: debe cerrarse al restablecer (CA-13).
   const oldSession = await browser.newContext({ baseURL })
@@ -107,7 +90,7 @@ test('ADMIN inicia el restablecimiento → la persona titular establece su nueva
     expect(await me(oldSession, baseURL!)).toBe(200)
 
     // T07: el titular abre el enlace recibido por correo en otro navegador.
-    const link = new URL(await resetLinkFromMail(request, account.email))
+    const link = new URL(await linkFromMail(request, account.email, 'Restablece tu contraseña', '/reset-password'))
     expect(link.origin).toBe(baseURL)
     expect(link.pathname).toBe('/reset-password')
     const holder = await holderContext.newPage()

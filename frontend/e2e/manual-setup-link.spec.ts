@@ -1,5 +1,6 @@
 import { randomBytes } from 'node:crypto'
 import { expect, test } from '@playwright/test'
+import { mailCount } from './support/mailpit'
 
 const adminEmail = process.env.E2E_ADMIN_EMAIL
 const adminPassword = process.env.E2E_ADMIN_PASSWORD
@@ -46,13 +47,13 @@ test('HU-S2-01: ADMIN genera el enlace manual sin correo → la persona titular 
   const link = await field.inputValue()
   await creation.getByRole('button', { name: 'Copiar enlace', exact: true }).click()
   await expect(creation.getByRole('status').filter({ hasText: 'Enlace copiado al portapapeles.' })).toBeVisible()
-  expect(await page.evaluate(() => navigator.clipboard.readText()) === link).toBe(true)
+  // Se evalúa en el navegador; los E2E se compilan solo con los tipos de Node.
+  expect(await page.evaluate('navigator.clipboard.readText()') === link).toBe(true)
   await expect(page.locator('a[href*="set-initial-password"]')).toHaveCount(0)
 
-  // Ningún correo llegó al buzón. En testing el método email tampoco envía; la garantía de que
-  // manual no programa correos en local/production la cubren las pruebas Pest.
-  const search = await request.get(`${mailpitUrl}/api/v1/search`, { params: { query: `to:"${account.email}"` } })
-  expect((await search.json() as { messages: unknown[] }).messages).toHaveLength(0)
+  // CA-03: ningún correo llegó a Mailpit. El envío es síncrono tras el commit, así que con el
+  // método email ya estaría en el buzón al recibir la respuesta.
+  expect(await mailCount(request, account.email)).toBe(0)
 
   const holderContext = await browser.newContext({ baseURL })
   try {

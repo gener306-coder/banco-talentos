@@ -14,6 +14,7 @@ use Tests\Support\InteractsWithCookieSessions;
 uses(RefreshDatabase::class, InteractsWithCookieSessions::class);
 
 beforeEach(function () {
+    Notification::fake();
     $this->initializeCookieBrowser();
     $this->institution = Institution::factory()->create();
     $this->pendingUser = User::factory()->forInstitution($this->institution)->create(['password_setup_required' => true]);
@@ -27,8 +28,8 @@ beforeEach(function () {
 it('renews only the pending link and lets its holder finish setup without changing account identity', function () {
     $original = $this->pendingUser->fresh()->getAttributes();
     $response = $this->browserRequest('POST', '/api/institution-accounts/resend-setup', $this->resendPayload)
-        ->assertOk()->assertJsonPath('setup_delivery', 'testing')->assertJsonMissingPath('password');
-    parse_str(parse_url($response->json('setup_url'), PHP_URL_QUERY), $query);
+        ->assertOk()->assertJsonPath('setup_delivery', 'sent')->assertJsonMissingPath('password')->assertJsonMissingPath('setup_url');
+    $query = sentSetupLinkQuery($this->pendingUser);
     expect($query['token'])->not->toBe($this->oldToken);
     expect($query['email'])->toBe($this->pendingUser->email);
     expect($this->pendingUser->fresh()->getAttributes())->toBe($original);
@@ -63,7 +64,7 @@ it('recovers pending accounts whose original token is expired or absent', functi
     }
     $password = $this->pendingUser->fresh()->password;
     $response = $this->browserRequest('POST', '/api/institution-accounts/resend-setup', $this->resendPayload)->assertOk();
-    parse_str(parse_url($response->json('setup_url'), PHP_URL_QUERY), $query);
+    $query = sentSetupLinkQuery($this->pendingUser);
     expect(Password::broker('institution_setup')->tokenExists($this->pendingUser, $query['token']))->toBeTrue();
     expect($this->pendingUser->fresh()->password)->toBe($password);
 })->with(['missing' => [true], 'expired' => [false]]);
@@ -78,7 +79,7 @@ it('normalizes the lookup email and ignores forged recipient and password fields
         'role' => 'ADMIN',
         'password_setup_required' => false,
     ])->assertOk();
-    parse_str(parse_url($response->json('setup_url'), PHP_URL_QUERY), $query);
+    $query = sentSetupLinkQuery($this->pendingUser);
     expect($query['email'])->toBe($this->pendingUser->email);
     expect($response->getContent())->not->toContain('attacker@example.test', 'AdministratorSecret!');
     expect($this->pendingUser->fresh()->getAttributes())->toBe($original);
@@ -168,7 +169,7 @@ it('enforces the persisted sixty-second cooldown without rotating the token', fu
 
     $this->travel(61)->seconds();
     $response = $this->browserRequest('POST', '/api/institution-accounts/resend-setup', $this->resendPayload)->assertOk();
-    parse_str(parse_url($response->json('setup_url'), PHP_URL_QUERY), $query);
+    $query = sentSetupLinkQuery($this->pendingUser);
     $this->browserRequest('POST', '/api/institution-accounts/resend-setup', $this->resendPayload)
         ->assertTooManyRequests();
     expect(Password::broker('institution_setup')->tokenExists($this->pendingUser, $query['token']))->toBeTrue();

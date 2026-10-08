@@ -84,18 +84,18 @@ export interface InstitutionAccountInput {
   delivery_method?: DeliveryMethod
 }
 
-export type SetupDelivery = 'sent' | 'pending' | 'testing' | 'manual'
+export type SetupDelivery = 'sent' | 'pending' | 'manual'
 
 function setupDelivery(response: unknown, required = false): SetupDelivery | undefined {
   if (typeof response !== 'object' || response === null) throw new ApiError(502)
   const value = 'setup_delivery' in response ? response.setup_delivery : undefined
   if (value === undefined && !required) return undefined
-  if (value !== 'sent' && value !== 'pending' && value !== 'testing' && value !== 'manual') throw new ApiError(502)
+  if (value !== 'sent' && value !== 'pending' && value !== 'manual') throw new ApiError(502)
   return value
 }
 
 // Solo la entrega manual (HU-S2-01) conserva el enlace, y únicamente si es un enlace de configuración válido.
-// Con correo se descarta siempre, incluso el setup_url que el backend añade en testing.
+// Con correo se descarta siempre cualquier setup_url que llegara en la respuesta.
 function manualSetupLink(response: unknown, delivery: SetupDelivery | undefined): string | undefined {
   if (delivery !== 'manual') return undefined
   const value = typeof response === 'object' && response !== null && 'setup_url' in response ? response.setup_url : undefined
@@ -150,7 +150,7 @@ export async function createInstitutionAccount(input: InstitutionAccountInput): 
       data.institution.id !== input.institution_id ||
       !('name' in data.institution) || typeof data.institution.name !== 'string') throw new ApiError(502)
 
-  // El enlace de testing nunca se conserva; el manual se devuelve para que el ADMIN lo comparta.
+  // Con correo el enlace nunca se conserva; el manual se devuelve para que el ADMIN lo comparta.
   return {
     id: data.id, name: data.name, email: data.email, role: data.role, is_active: data.is_active,
     institution: { id: data.institution.id, name: data.institution.name },

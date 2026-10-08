@@ -1,16 +1,17 @@
 import { randomBytes } from 'node:crypto'
 import { expect, test } from '@playwright/test'
+import { linkFromMail } from './support/mailpit'
 
 const adminEmail = process.env.E2E_ADMIN_EMAIL
 const adminPassword = process.env.E2E_ADMIN_PASSWORD
 
 test.beforeAll(() => {
-  if (!adminEmail || !adminPassword) {
+  if (!adminEmail || !adminPassword || !process.env.MAILPIT_URL) {
     throw new Error('Ejecuta sh scripts/test-e2e.sh desde la raíz del repositorio.')
   }
 })
 
-test('ADMIN crea una cuenta sin contraseña; su titular la establece y pierde acceso al inactivar la institución', async ({ page, browser, baseURL }) => {
+test('ADMIN crea una cuenta sin contraseña; su titular la establece y pierde acceso al inactivar la institución', async ({ page, browser, baseURL, request }) => {
   const suffix = randomBytes(8).toString('hex')
   const institution = {
     name: `Instituto cuentas E2E ${suffix}`,
@@ -50,14 +51,16 @@ test('ADMIN crea una cuenta sin contraseña; su titular la establece y pierde ac
   expect((created.request().postDataJSON() as { delivery_method: string }).delivery_method).toBe('email')
   const result = await created.json() as {
     data: { id: number; email: string; role: string; institution: { id: number; name: string } }
-    setup_url: string
+    setup_delivery: string
   }
   expect(result.data.email).toBe(account.email)
   expect(result.data.role).toBe('INSTITUTION')
   expect(result.data.institution.name).toBe(institution.name)
   expect(Object.hasOwn(result.data, 'password')).toBe(false)
-  expect(typeof result.setup_url).toBe('string')
-  const setupUrl = new URL(result.setup_url, baseURL)
+  // Con entrega por correo el enlace nunca viaja en la respuesta: se lee del correo en Mailpit.
+  expect(result.setup_delivery).toBe('sent')
+  expect(Object.hasOwn(result, 'setup_url')).toBe(false)
+  const setupUrl = new URL(await linkFromMail(request, account.email, 'Establece tu contraseña', '/set-initial-password'))
   expect(setupUrl.origin).toBe(baseURL)
 
   // Un contexto independiente representa al titular; no comparte las cookies del ADMIN.
