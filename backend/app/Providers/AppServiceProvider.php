@@ -31,6 +31,19 @@ class AppServiceProvider extends ServiceProvider
             ];
         });
 
+        RateLimiter::for('password-reset', function (Request $request): array {
+            $email = $request->input('email');
+            $email = is_string($email) ? Str::lower(trim($email)) : '';
+
+            return [
+                Limit::perMinute(10)->by('reset-ip:'.$request->ip()),
+                Limit::perMinute(5)->by('reset-email:'.hash('sha256', $email)),
+            ];
+        });
+
+        RateLimiter::for('institution-password-reset', fn (Request $request) => Limit::perMinute(10)->by('reset-start-admin:'.$request->user()->id)
+        );
+
         RateLimiter::for('institution-setup-resend', fn (Request $request) => Limit::perMinute(10)->by('setup-resend-admin:'.$request->user()->id)
         );
 

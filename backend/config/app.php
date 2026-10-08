@@ -56,6 +56,9 @@ return [
 
     'frontend_url' => env('FRONTEND_URL', 'http://localhost:5173'),
 
+    // Ruta de la SPA que recibe el enlace de restablecimiento de contraseña (HU-S1-04).
+    'password_reset_path' => env('FRONTEND_PASSWORD_RESET_PATH', '/reset-password'),
+
     /*
     |--------------------------------------------------------------------------
     | Application Timezone

@@ -2,10 +2,12 @@
 
 namespace App\Exceptions;
 
+use Illuminate\Contracts\Debug\ShouldntReport;
 use Illuminate\Http\JsonResponse;
 use RuntimeException;
 
-class AccountAccessDenied extends RuntimeException
+// Denegación de acceso esperada: se responde al cliente, no es un error de la aplicación.
+class AccountAccessDenied extends RuntimeException implements ShouldntReport
 {
     public function __construct(public readonly string $reason, private readonly int $status = 401)
     {

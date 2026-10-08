@@ -141,3 +141,119 @@ Preparar el logotipo, los tokens de marca y Tailwind CSS v4 para las vistas futu
 **Informe:** [design/informe-migracion-vistas.md](design/informe-migracion-vistas.md)
 
 Aplicar los colores de marca y el logotipo a las vistas existentes (login, sesión, contraseña inicial e instituciones) sin cambiar rutas, comportamiento ni estructura semántica.
+
+# HU-S1-04 — Inicio seguro de restablecimiento de contraseña
+
+**Tipo Jira:** Story  
+**Story Points:** 3  
+**Prioridad:** Alta  
+**Dependencias:** HU-S1-01, HU-S1-03
+
+### Historia
+
+**COMO** Administrador  
+**QUIERO** iniciar un proceso seguro de restablecimiento de contraseña para una cuenta institucional  
+**PARA** permitir que la institución recupere su acceso sin que el Administrador conozca ni establezca su contraseña.
+
+### Criterios de aceptación
+
+**CA-01.** Solamente un usuario `ADMIN` puede iniciar administrativamente el proceso para una cuenta institucional.
+
+**CA-02.** El Administrador nunca puede consultar la contraseña actual del usuario.
+
+**CA-03.** El Administrador nunca puede escribir, seleccionar ni establecer la nueva contraseña del usuario.
+
+**CA-04.** Al iniciar el proceso, el sistema genera un mecanismo seguro y temporal de restablecimiento.
+
+**CA-05.** El mecanismo de restablecimiento solamente puede ser utilizado por la cuenta para la cual fue generado.
+
+**CA-06.** El mecanismo de restablecimiento tiene una vigencia limitada.
+
+**CA-07.** Una vez utilizado correctamente, no puede utilizarse nuevamente.
+
+**CA-08.** Es el usuario institucional quien establece su nueva contraseña.
+
+**CA-09.** La nueva contraseña debe cumplir las reglas de seguridad definidas por el sistema.
+
+**CA-10.** La nueva contraseña se almacena mediante hash.
+
+**CA-11.** La API nunca devuelve contraseñas, hashes o información sensible relacionada con ellas.
+
+**CA-12.** Una cuenta `INSTITUTION` no puede iniciar un restablecimiento administrativo para otra cuenta.
+
+**CA-13.** Al restablecerse la contraseña, todas las sesiones de la cuenta autenticadas mediante cookie quedan invalidadas: una cookie de sesión anterior ya no autentica en la API. Los tokens Bearer, si se llegaran a emitir, requieren una revocación aparte; actualmente la SPA no emite ni acepta tokens Bearer.
+
+### Flujo esperado
+
+**Administrador**
+
+→ selecciona cuenta institucional  
+→ solicita restablecimiento  
+→ sistema genera proceso seguro
+
+**Usuario institucional**
+
+→ recibe/accede al mecanismo de recuperación  
+→ establece personalmente su nueva contraseña  
+→ token queda invalidado  
+→ puede iniciar sesión con la nueva contraseña.
+
+### Subtareas técnicas
+
+**S1-04-T01 — Implementar mecanismo de password reset**
+
+Utilizar mecanismo seguro basado en tokens temporales.
+
+**S1-04-T02 — Generar token de un solo uso**
+
+Configurar expiración e invalidación.
+
+**S1-04-T03 — Endpoint administrativo de inicio**
+
+El endpoint únicamente inicia el proceso.
+
+No recibe una nueva contraseña.
+
+**S1-04-T04 — Implementar flujo de establecimiento de contraseña**
+
+El usuario final introduce personalmente su nueva contraseña.
+
+**S1-04-T05 — Configurar notificación de recuperación**
+
+Preparar el mecanismo necesario para entregar el enlace/token de recuperación al usuario correspondiente.
+
+En desarrollo local puede utilizarse un servicio de correo de prueba, evitando dependencia de un servicio productivo durante el Sprint.
+
+**S1-04-T06 — Interfaz Administrador**
+
+Acción:
+
+**“Iniciar restablecimiento de contraseña”.**
+
+Nunca mostrar campos:
+
+**Nueva contraseña**  
+**Confirmar contraseña**
+
+al Administrador.
+
+**S1-04-T07 — Interfaz de recuperación**
+
+Formulario exclusivo para que el propietario de la cuenta establezca la contraseña.
+
+**S1-04-T08 — Pruebas de seguridad**
+
+Probar:
+
+- token válido;
+- token inválido;
+- token expirado;
+- token reutilizado;
+- usuario incorrecto.
+
+**S1-04-T09 — Prueba E2E**
+
+Flujo:
+
+**Administrador inicia recuperación → usuario restablece contraseña → login exitoso.**
+

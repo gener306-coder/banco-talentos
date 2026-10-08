@@ -26,5 +26,11 @@ return [
             'expire' => 60,
             'throttle' => 60,
         ],
+        'institution_reset' => [
+            'provider' => 'users',
+            'table' => 'institution_password_reset_tokens',
+            'expire' => 60,
+            'throttle' => 60,
+        ],
     ],
 ];

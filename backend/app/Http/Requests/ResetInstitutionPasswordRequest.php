@@ -6,7 +6,7 @@ use App\Http\Requests\Concerns\InstitutionPasswordRules;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Support\Str;
 
-class SetInitialPasswordRequest extends FormRequest
+class ResetInstitutionPasswordRequest extends FormRequest
 {
     use InstitutionPasswordRules;
 
@@ -34,9 +34,9 @@ class SetInitialPasswordRequest extends FormRequest
     public function messages(): array
     {
         return [
-            'email.required' => 'El enlace de configuración no es válido.',
-            'email.email' => 'El enlace de configuración no es válido.',
-            'token.*' => 'El enlace de configuración no es válido o ha expirado.',
+            'email.required' => 'El enlace de restablecimiento no es válido.',
+            'email.email' => 'El enlace de restablecimiento no es válido.',
+            'token.*' => 'El enlace de restablecimiento no es válido o ha expirado.',
             ...$this->passwordMessages(),
         ];
     }
