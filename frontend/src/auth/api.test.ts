@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { ApiError, currentUser, login, logout, setInitialPassword } from './api'
+import { ApiError, currentUser, login, logout, resetPassword, setInitialPassword } from './api'
 
 const user = { id: 1, name: 'Ana', email: 'ana@example.test', role: 'ADMIN', institution: null }
 const fetchMock = vi.fn<typeof fetch>()
@@ -146,5 +146,36 @@ describe('contraseña inicial e institución en la sesión', () => {
       .mockResolvedValueOnce(Response.json({ code: 'UNRECOGNIZED', message: 'Mensaje arbitrario' }, { status: 403 }))
     await expect(currentUser()).rejects.toMatchObject({ status: 401, code: 'INSTITUTION_INACTIVE' })
     await expect(currentUser()).rejects.toMatchObject({ status: 403, code: undefined })
+  })
+})
+
+describe('restablecimiento de contraseña HU-S1-04', () => {
+  const input = { email: 'titular@example.test', token: 'token-de-un-solo-uso', password: 'Nueva-contraseña-2026', password_confirmation: 'Nueva-contraseña-2026' }
+
+  it('envía solo correo, token y contraseñas con CSRF y sin Referer', async () => {
+    fetchMock.mockImplementationOnce(async () => {
+      document.cookie = 'XSRF-TOKEN=csrf%3D; Path=/'
+      return new Response(null, { status: 204 })
+    }).mockResolvedValueOnce(new Response(null, { status: 204 }))
+    await expect(resetPassword({ ...input, ...{ role: 'ADMIN', institution_id: 7 } })).resolves.toBeUndefined()
+    expect(fetchMock.mock.calls.map(([url]) => url)).toEqual(['/sanctum/csrf-cookie', '/api/institution-accounts/password-reset'])
+    for (const [, init] of fetchMock.mock.calls) expect(init?.referrerPolicy).toBe('no-referrer')
+    const options = fetchMock.mock.calls[1][1]
+    expect(options).toMatchObject({ method: 'POST', credentials: 'include' })
+    expect(JSON.parse(options?.body as string)).toEqual(input)
+    expect(new Headers(options?.headers).get('X-XSRF-TOKEN')).toBe('csrf=')
+  })
+
+  it('conserva los errores de validación y los códigos de acceso conocidos', async () => {
+    const csrf = async () => {
+      document.cookie = 'XSRF-TOKEN=csrf; Path=/'
+      return new Response(null, { status: 204 })
+    }
+    fetchMock.mockImplementationOnce(csrf)
+      .mockResolvedValueOnce(Response.json({ errors: { token: ['El enlace de restablecimiento no es válido o ha expirado.'] } }, { status: 422 }))
+      .mockImplementationOnce(csrf)
+      .mockResolvedValueOnce(Response.json({ code: 'INSTITUTION_INACTIVE' }, { status: 403 }))
+    await expect(resetPassword(input)).rejects.toMatchObject({ status: 422, errors: { token: ['El enlace de restablecimiento no es válido o ha expirado.'] } })
+    await expect(resetPassword(input)).rejects.toMatchObject({ status: 403, code: 'INSTITUTION_INACTIVE' })
   })
 })

@@ -1,6 +1,7 @@
 import { useCallback, useState } from 'react'
 import { Link, useLocation, useParams } from 'react-router'
 import { InstitutionAccountForm } from './InstitutionAccountForm'
+import { InstitutionAccountPasswordResetForm } from './InstitutionAccountPasswordResetForm'
 import { InstitutionAccountSetupLinkForm } from './InstitutionAccountSetupLinkForm'
 import { getInstitution, setInstitutionStatus } from './api'
 import { InstitutionLayout, InstitutionRequestError, InstitutionStatus } from './InstitutionLayout'
@@ -49,6 +50,7 @@ function InstitutionDetail({ id }: { id: string }) {
               ? <>
                 <InstitutionAccountForm institutionId={data.id} disabled={mutation.pending} />
                 <InstitutionAccountSetupLinkForm institutionId={data.id} disabled={mutation.pending} />
+                <InstitutionAccountPasswordResetForm institutionId={data.id} disabled={mutation.pending} />
               </>
               : <p className="notice">Activa la institución para crear una cuenta institucional.</p>}
           </>

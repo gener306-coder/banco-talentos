@@ -50,7 +50,7 @@ describe('alta administrativa de cuentas institucionales', () => {
     accountRequest.mockResolvedValueOnce(Response.json({ data: account, setup_url: 'http://localhost/set-initial-password?token=secreto' }, { status: 201 }))
     renderApp()
     await fillForm()
-    expect(screen.queryByLabelText(/contraseña/i)).not.toBeInTheDocument()
+    expect(screen.queryByLabelText(/contraseña/i, { selector: 'input' })).not.toBeInTheDocument()
     expect(screen.queryByRole('combobox')).not.toBeInTheDocument()
     fireEvent.click(screen.getByRole('button', { name: 'Crear cuenta institucional' }))
     expect(await screen.findByText(successMessage)).toHaveAttribute('role', 'status')

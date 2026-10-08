@@ -45,12 +45,19 @@ Descritas en [HU-S1-03](../docs/HU-S1-03.md):
 | `POST /api/institution-accounts` | ADMIN | Alta con `name`, `email` e `institution_id`; el rol se asigna en servidor. |
 | `POST /api/institution-accounts/resend-setup` | ADMIN | Reenvía el enlace a una cuenta pendiente e invalida el anterior. |
 | `POST /api/institution-accounts/password-setup` | Público con token y CSRF | La persona titular establece su contraseña inicial. |
+| `POST /api/institution-accounts/password-reset/start` | ADMIN | Inicia el restablecimiento con `email` e `institution_id` ([HU-S1-04](../docs/HU-S1-04.md)); responde solo `reset_delivery`. |
+| `POST /api/institution-accounts/password-reset` | Público con token y CSRF | La persona titular establece su nueva contraseña; cierra las sesiones abiertas de la cuenta. |
 
 ADMIN no define ni recibe la contraseña ni el enlace. El token se guarda como
 hash, caduca en 60 minutos y es de un solo uso. El correo se envía después del
 commit; en local se entrega a Mailpit y en `testing` no se envía. Mientras la
 cuenta tenga la configuración pendiente, el login responde 401
 (`PASSWORD_SETUP_REQUIRED`).
+
+El restablecimiento usa el broker `institution_reset` con su propia tabla de
+tokens (hash, 60 minutos, uso único). `AuthenticateSession` de Sanctum invalida
+las sesiones por cookie cuando cambia el hash de la contraseña. El enlace apunta
+a `FRONTEND_URL` + `FRONTEND_PASSWORD_RESET_PATH` (por defecto `/reset-password`).
 
 ## Crear cuentas locales
 
@@ -65,8 +72,8 @@ interactiva. Solicita nombre, correo, un rol explícito, el estado activo y una
 contraseña oculta con confirmación. No recibe contraseñas como argumentos,
 no tiene valores predeterminados de privilegio y no crea cuentas conocidas.
 
-No hay registro público, recuperación de contraseñas ya establecidas ni datos
-de usuarios precargados. Este comando no asigna institución: las cuentas
+No hay registro público, recuperación de contraseña iniciada por la propia
+cuenta ni datos de usuarios precargados. Este comando no asigna institución: las cuentas
 institucionales se crean desde la interfaz ADMIN. `UserFactory` proporciona
 solamente cuentas para pruebas.
 

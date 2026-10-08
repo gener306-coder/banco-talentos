@@ -63,7 +63,7 @@ describe('reenvío administrativo del enlace inicial', () => {
     expect(JSON.parse(options?.body as string)).toEqual({ email, institution_id: 7 })
     expect(document.body.textContent).not.toContain('token=secret')
     expect(document.querySelector('a[href*="private.example.test"]')).not.toBeInTheDocument()
-    expect(screen.queryByLabelText(/contraseña/i)).not.toBeInTheDocument()
+    expect(screen.queryByLabelText(/contraseña/i, { selector: 'input' })).not.toBeInTheDocument()
     expect(localStorage.length).toBe(0)
     expect(sessionStorage.length).toBe(0)
   })

@@ -5,8 +5,9 @@ Monolito modular con las historias del [Sprint 1](docs/sprint-1.md):
 - **HU-S1-01 — Autenticación y control de acceso** ([detalle](docs/HU-S1-01.md)).
 - **HU-S1-02 — Gestión de instituciones**: ADMIN lista, registra, consulta, edita y activa o inactiva instituciones ([detalle](docs/HU-S1-02.md)).
 - **HU-S1-03 — Creación de cuentas institucionales**: ADMIN crea cuentas `INSTITUTION` vinculadas a una institución activa; la persona titular establece su contraseña mediante un enlace enviado por correo ([detalle](docs/HU-S1-03.md)).
+- **HU-S1-04 — Inicio seguro de restablecimiento de contraseña**: ADMIN inicia el restablecimiento de una cuenta `INSTITUTION`; la persona titular establece su nueva contraseña mediante un enlace enviado por correo ([detalle](docs/HU-S1-04.md)).
 
-No hay registro público ni recuperación de contraseñas ya establecidas.
+No hay registro público ni recuperación de contraseña iniciada por la propia cuenta.
 
 ## Stack y estructura
 
@@ -16,7 +17,7 @@ No hay registro público ni recuperación de contraseñas ya establecidas.
 
 ```text
 backend/                 API, usuarios, instituciones, cuentas institucionales y pruebas Pest
-frontend/                Sesión, instituciones, cuentas, contraseña inicial, pruebas React y E2E
+frontend/                Sesión, instituciones, cuentas, contraseña inicial y restablecimiento, pruebas React y E2E
 docker/                  Imágenes y configuración de desarrollo/pruebas
 docs/                    Sprint vigente, documentación técnica de cada historia e identidad visual (docs/design/)
 compose.yaml             Entorno de desarrollo (incluye Mailpit)
@@ -57,7 +58,7 @@ docker compose exec backend php artisan auth:create-user
 
 Los puertos se publican sólo en `127.0.0.1` y se configuran mediante `FRONTEND_PORT`, `BACKEND_PORT`, `DB_PORT` y `MAILPIT_PORT`. El SMTP de Mailpit (`mailpit:1025`) sólo es accesible dentro de la red Docker. Utiliza de forma consistente `localhost` o `127.0.0.1`; sus cookies son distintas. Vite reenvía `/api`, `/sanctum` y `/up` al backend. Compose ajusta los dominios de Sanctum al puerto del frontend.
 
-El backend instala dependencias, crea `backend/.env` y genera `APP_KEY` cuando faltan. El frontend ejecuta `npm ci`. **Las migraciones se aplican explícitamente**, no durante el arranque.
+El backend instala dependencias, crea `backend/.env` y genera `APP_KEY` cuando faltan. El frontend ejecuta `npm ci`. **Las migraciones se aplican explícitamente**, no durante el arranque: tras actualizar el código ejecuta `docker compose exec backend php artisan migrate` (por ejemplo, HU-S1-04 añade la tabla `institution_password_reset_tokens`).
 
 ## Autenticación y roles
 
@@ -77,7 +78,11 @@ En local los correos llegan a Mailpit (<http://localhost:8025>); inícialo con `
 
 Si una institución pasa a `INACTIVA`, sus cuentas no pueden iniciar sesión y las sesiones abiertas se invalidan en la siguiente petición. Contrato, flujo de contraseña inicial y cobertura en [docs/HU-S1-03.md](docs/HU-S1-03.md).
 
-Las credenciales incorrectas y las cuentas inactivas producen el mismo mensaje. Con credenciales correctas, una institución inactiva responde `401` con código `INSTITUTION_INACTIVE` y una cuenta pendiente de contraseña inicial con `PASSWORD_SETUP_REQUIRED`. La API devuelve errores JSON controlados: `401` sin sesión válida, `403` por autorización, `419` por CSRF, `422` por validación y `429` al superar los límites de login, configuración o reenvío del enlace. Una cuenta desactivada durante la sesión pierde acceso en su siguiente petición protegida. El frontend trata errores de red sin afirmar que un logout fallido haya cerrado la sesión.
+### Restablecimiento de contraseña
+
+En el mismo detalle, **Iniciar restablecimiento de contraseña** solicita solo el correo de una cuenta institucional activa que ya estableció su contraseña. ADMIN nunca ve ni escribe contraseñas. El backend envía al correo registrado un enlace de un solo uso que caduca en 60 minutos; la persona titular lo abre en `/reset-password` y establece su nueva contraseña. La contraseña actual sigue vigente hasta entonces; al cambiarla, **todas las sesiones abiertas de esa cuenta se cierran**. Entre dos inicios para la misma cuenta hay que esperar 60 segundos. Las cuentas pendientes de su primera contraseña usan el reenvío del enlace de configuración. Contrato y cobertura en [docs/HU-S1-04.md](docs/HU-S1-04.md).
+
+Las credenciales incorrectas y las cuentas inactivas producen el mismo mensaje. Con credenciales correctas, una institución inactiva responde `401` con código `INSTITUTION_INACTIVE` y una cuenta pendiente de contraseña inicial con `PASSWORD_SETUP_REQUIRED`. La API devuelve errores JSON controlados: `401` sin sesión válida, `403` por autorización, `419` por CSRF, `422` por validación y `429` al superar los límites de login, configuración, reenvío o restablecimiento. Una cuenta desactivada durante la sesión pierde acceso en su siguiente petición protegida. El frontend trata errores de red sin afirmar que un logout fallido haya cerrado la sesión.
 
 Consulta [backend/README.md](backend/README.md) para detalles del contrato HTTP y del alta local. La matriz de aceptación, los resultados y el inventario de cambios están en [docs/HU-S1-01.md](docs/HU-S1-01.md).
 
@@ -95,11 +100,12 @@ docker compose exec frontend npm run test
 docker compose exec frontend npm run lint
 docker compose exec frontend npm run build
 
-# Chromium + API real: autenticación, instituciones y alta de cuenta → contraseña inicial → login
+# Chromium + API real: autenticación, instituciones, alta de cuenta → contraseña inicial → login
+# y restablecimiento iniciado por ADMIN → correo en Mailpit → nueva contraseña → login
 sh scripts/test-e2e.sh
 ```
 
-Los scripts usan el proyecto Compose independiente `banco-talentos-tests`, sin puertos publicados ni el volumen PostgreSQL de desarrollo. PostgreSQL utiliza almacenamiento temporal; Pest y E2E tienen bases distintas. Las sesiones, cachés y clave de aplicación de ese entorno también son independientes. Las pruebas Pest comprueban la base de destino antes de aplicar migraciones destructivas.
+Los scripts usan el proyecto Compose independiente `banco-talentos-tests`, sin puertos publicados ni el volumen PostgreSQL de desarrollo. PostgreSQL utiliza almacenamiento temporal; Pest y E2E tienen bases distintas. Las sesiones, cachés y clave de aplicación de ese entorno también son independientes. Las pruebas Pest comprueban la base de destino antes de aplicar migraciones destructivas. El E2E incluye un Mailpit efímero, sin puertos publicados, del que lee los correos que envía el backend; Pest no lo utiliza y conserva el mailer `array`.
 
 Cada script limpia sus contenedores y red al terminar; el volumen `test_vendor` conserva sólo dependencias. Ejecuta los dos scripts secuencialmente, porque comparten el proyecto de pruebas. El E2E genera credenciales efímeras separadas para ADMIN e INSTITUTION, no las imprime y no guarda trazas de red. Chromium y sus bibliotecas se instalan en la imagen de pruebas, no en tu equipo ni en el contenedor de desarrollo. La primera construcción requiere Internet y puede tardar varios minutos.
 

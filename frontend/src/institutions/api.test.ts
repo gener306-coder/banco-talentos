@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { createInstitution, createInstitutionAccount, getInstitution, listInstitutions, resendInstitutionAccountSetup, setInstitutionStatus, updateInstitution } from './api'
+import { createInstitution, createInstitutionAccount, getInstitution, listInstitutions, resendInstitutionAccountSetup, setInstitutionStatus, startInstitutionPasswordReset, updateInstitution } from './api'
 
 const input = { name: 'Instituto Dual', cct: '09DIT0001A', contact_email: 'contacto@example.test' }
 const record = { ...input, id: 7, is_active: true, created_at: '2026-09-30T12:00:00Z', updated_at: '2026-09-30T12:00:00Z' }
@@ -169,6 +169,33 @@ describe('entrega del enlace de cuentas pendientes', () => {
   it.each([401, 403, 422, 429, 500])('conserva el error %i y no reintenta automáticamente', async (status) => {
     fetchMock.mockImplementationOnce(csrfResponse).mockResolvedValueOnce(new Response(null, { status }))
     await expect(resendInstitutionAccountSetup(input)).rejects.toMatchObject({ status })
+    expect(fetchMock).toHaveBeenCalledTimes(2)
+  })
+})
+
+describe('inicio administrativo del restablecimiento HU-S1-04', () => {
+  const input = { email: 'titular@example.test', institution_id: 7 }
+
+  it.each(['sent', 'pending'] as const)('envía solo correo e institución y devuelve el estado %s sin conservar secretos', async (delivery) => {
+    fetchMock.mockImplementationOnce(csrfResponse).mockResolvedValueOnce(Response.json({
+      reset_delivery: delivery, reset_url: 'https://private.example.test/reset-password?token=secreto', token: 'secreto',
+    }))
+    await expect(startInstitutionPasswordReset({ ...input, ...{ password: 'no enviar', password_confirmation: 'no enviar' } })).resolves.toBe(delivery)
+    expect(fetchMock.mock.calls.map(([url]) => url)).toEqual(['/sanctum/csrf-cookie', '/api/institution-accounts/password-reset/start'])
+    const options = fetchMock.mock.calls[1][1]
+    expect(options).toMatchObject({ method: 'POST', credentials: 'include' })
+    expect(JSON.parse(options?.body as string)).toEqual(input)
+    expect(new Headers(options?.headers).get('X-XSRF-TOKEN')).toBe('renovado+=')
+  })
+
+  it.each([{}, { reset_delivery: 'testing' }, { reset_delivery: null }])('rechaza una respuesta inesperada %j', async (body) => {
+    fetchMock.mockImplementationOnce(csrfResponse).mockResolvedValueOnce(Response.json(body))
+    await expect(startInstitutionPasswordReset(input)).rejects.toMatchObject({ status: 502 })
+  })
+
+  it.each([401, 403, 419, 422, 429, 500])('conserva el error %i y no reintenta automáticamente', async (status) => {
+    fetchMock.mockImplementationOnce(csrfResponse).mockResolvedValueOnce(new Response(null, { status }))
+    await expect(startInstitutionPasswordReset(input)).rejects.toMatchObject({ status })
     expect(fetchMock).toHaveBeenCalledTimes(2)
   })
 })

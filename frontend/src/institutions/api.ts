@@ -136,3 +136,17 @@ export async function resendInstitutionAccountSetup(input: { email: string; inst
   // Descartar setup_url incluso en pruebas; solo interesa el estado de entrega.
   return setupDelivery(response, true) as SetupDelivery
 }
+
+export type ResetDelivery = 'sent' | 'pending'
+
+export async function startInstitutionPasswordReset(input: { email: string; institution_id: number }): Promise<ResetDelivery> {
+  await request('/sanctum/csrf-cookie')
+  // Solo identifica la cuenta: el ADMIN nunca envía ni recibe contraseñas, tokens o enlaces.
+  const response = await request('/api/institution-accounts/password-reset/start', {
+    method: 'POST', body: JSON.stringify({ email: input.email, institution_id: input.institution_id }),
+  })
+  const value = typeof response === 'object' && response !== null && 'reset_delivery' in response
+    ? response.reset_delivery : undefined
+  if (value !== 'sent' && value !== 'pending') throw new ApiError(502)
+  return value
+}

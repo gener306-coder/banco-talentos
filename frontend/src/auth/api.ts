@@ -82,9 +82,10 @@ export interface InitialPasswordInput {
   password_confirmation: string
 }
 
-export async function setInitialPassword(input: InitialPasswordInput): Promise<void> {
+// Ni la cookie CSRF ni el envío exponen la página del enlace (con su token) como Referer.
+async function submitNewPassword(path: string, input: InitialPasswordInput): Promise<void> {
   await request('/sanctum/csrf-cookie', { referrerPolicy: 'no-referrer' })
-  await request('/api/institution-accounts/password-setup', {
+  await request(path, {
     method: 'POST',
     referrerPolicy: 'no-referrer',
     body: JSON.stringify({
@@ -92,4 +93,12 @@ export async function setInitialPassword(input: InitialPasswordInput): Promise<v
       password: input.password, password_confirmation: input.password_confirmation,
     }),
   })
+}
+
+export function setInitialPassword(input: InitialPasswordInput): Promise<void> {
+  return submitNewPassword('/api/institution-accounts/password-setup', input)
+}
+
+export function resetPassword(input: InitialPasswordInput): Promise<void> {
+  return submitNewPassword('/api/institution-accounts/password-reset', input)
 }

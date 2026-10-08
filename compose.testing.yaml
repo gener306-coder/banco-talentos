@@ -18,6 +18,15 @@ services:
       timeout: 5s
       retries: 30
 
+  # Buzón efímero para leer los correos que envía el backend durante E2E; sin puertos en el host.
+  mailpit:
+    image: docker.io/axllent/mailpit:v1.30.5
+    healthcheck:
+      test: ["CMD", "/mailpit", "readyz"]
+      interval: 2s
+      timeout: 5s
+      retries: 30
+
   backend:
     image: banco-talentos-backend-testing
     build:
@@ -73,12 +82,15 @@ services:
     environment:
       CI: "true"
       API_PROXY_TARGET: http://backend:8000
+      MAILPIT_URL: http://mailpit:8025
       E2E_EMAIL: ${E2E_EMAIL:-}
       E2E_PASSWORD: ${E2E_PASSWORD:-}
       E2E_ADMIN_EMAIL: ${E2E_ADMIN_EMAIL:-}
       E2E_ADMIN_PASSWORD: ${E2E_ADMIN_PASSWORD:-}
     depends_on:
       backend:
+        condition: service_healthy
+      mailpit:
         condition: service_healthy
 
 volumes:

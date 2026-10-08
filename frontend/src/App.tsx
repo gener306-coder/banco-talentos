@@ -4,6 +4,7 @@ import { ProtectedRoute } from './auth/ProtectedRoute'
 import { useAuth } from './auth/useAuth'
 import { LoginPage } from './pages/LoginPage'
 import { SessionPage } from './pages/SessionPage'
+import { ResetPasswordPage } from './pages/ResetPasswordPage'
 import { SetInitialPasswordPage } from './pages/SetInitialPasswordPage'
 import { InstitutionsPage } from './institutions/InstitutionsPage'
 import { InstitutionCreatePage } from './institutions/InstitutionCreatePage'
@@ -67,6 +68,7 @@ function App() {
       </header>
       <Routes>
         <Route path="/set-initial-password" element={<SetInitialPasswordPage />} />
+        <Route path="/reset-password" element={<ResetPasswordPage />} />
         <Route path="*" element={<AuthProvider><AuthRoutes /></AuthProvider>} />
       </Routes>
     </main>

@@ -25,6 +25,9 @@ composer install --no-interaction --prefer-dist --no-progress
 
 if [ "${1:-}" = serve-e2e ]; then
     export DB_DATABASE=banco_talentos_e2e_testing
+    # Solo E2E entrega correos reales al buzón efímero; Pest conserva el mailer array.
+    export MAIL_MAILER=smtp MAIL_HOST=mailpit MAIL_PORT=1025 MAIL_TIMEOUT=10 \
+        MAIL_FROM_ADDRESS=no-reply@banco-talentos.test
     php artisan migrate --force --no-interaction
     php tests/Fixtures/seed-e2e.php
     exec php artisan serve --host=0.0.0.0 --port=8000 --no-reload
