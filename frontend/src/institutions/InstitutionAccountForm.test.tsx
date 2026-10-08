@@ -1,4 +1,4 @@
-import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { MemoryRouter } from 'react-router'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import App from '../App'
@@ -46,19 +46,20 @@ beforeEach(() => {
 afterEach(() => vi.unstubAllGlobals())
 
 describe('alta administrativa de cuentas institucionales', () => {
-  it('envía solamente nombre, correo e institución; nunca pide ni muestra contraseña o enlace', async () => {
+  it('por defecto envía por correo solo nombre, correo e institución; nunca pide contraseña ni muestra el enlace', async () => {
     accountRequest.mockResolvedValueOnce(Response.json({ data: account, setup_url: 'http://localhost/set-initial-password?token=secreto' }, { status: 201 }))
     renderApp()
     await fillForm()
     expect(screen.queryByLabelText(/contraseña/i, { selector: 'input' })).not.toBeInTheDocument()
     expect(screen.queryByRole('combobox')).not.toBeInTheDocument()
+    expect(within(screen.getByRole('region', { name: 'Crear cuenta institucional' })).getByRole('radio', { name: 'Enviar por correo a la persona titular' })).toBeChecked()
     fireEvent.click(screen.getByRole('button', { name: 'Crear cuenta institucional' }))
     expect(await screen.findByText(successMessage)).toHaveAttribute('role', 'status')
     expect(accountRequest).toHaveBeenCalledTimes(1)
     const [url, options] = accountRequest.mock.calls[0]
     expect(url).toBe('/api/institution-accounts')
     expect(options?.method).toBe('POST')
-    expect(JSON.parse(options?.body as string)).toEqual(input)
+    expect(JSON.parse(options?.body as string)).toEqual({ ...input, delivery_method: 'email' })
     expect(screen.getByLabelText('Nombre de la cuenta')).toHaveValue('')
     expect(screen.getByLabelText('Correo de acceso')).toHaveValue('')
     expect(document.body.textContent).not.toContain('token=secreto')
@@ -173,5 +174,61 @@ describe('alta administrativa de cuentas institucionales', () => {
     expect(await screen.findByRole('heading', { name: 'Acceso denegado' })).toBeInTheDocument()
     expect(screen.queryByLabelText('Nombre de la cuenta')).not.toBeInTheDocument()
     expect(accountRequest).not.toHaveBeenCalled()
+  })
+})
+
+describe('enlace manual en el alta HU-S2-01', () => {
+  const link = 'http://localhost:5173/set-initial-password?email=titular%40example.test&token=token-manual'
+
+  async function createManually() {
+    accountRequest.mockResolvedValueOnce(Response.json({ data: account, setup_delivery: 'manual', setup_url: link }, { status: 201 }))
+    renderApp()
+    await fillForm()
+    fireEvent.click(within(screen.getByRole('region', { name: 'Crear cuenta institucional' })).getByRole('radio', { name: /Generar un enlace para compartirlo/ }))
+    fireEvent.click(screen.getByRole('button', { name: 'Crear cuenta institucional' }))
+    return screen.findByLabelText('Enlace de configuración')
+  }
+
+  it('muestra el enlace de solo lectura, sin vínculo clicable ni almacenamiento (CA-01, CA-03)', async () => {
+    const field = await createManually()
+    expect(JSON.parse(accountRequest.mock.calls[0][1]?.body as string)).toEqual({ ...input, delivery_method: 'manual' })
+    expect(screen.getByText('Cuenta creada. Copia el enlace de configuración y compártelo con la persona titular.')).toHaveAttribute('role', 'status')
+    expect(field).toHaveValue(link)
+    expect(field).toHaveAttribute('readonly')
+    expect(field).toHaveAccessibleDescription(/caduca en 60 minutos, solo puede usarse una vez/)
+    expect(document.querySelector('a[href*="set-initial-password"]')).not.toBeInTheDocument()
+    expect(localStorage.length).toBe(0)
+    expect(sessionStorage.length).toBe(0)
+  })
+
+  it('copia el enlace al portapapeles (CA-04)', async () => {
+    const writeText = vi.fn().mockResolvedValue(undefined)
+    vi.stubGlobal('navigator', { ...navigator, clipboard: { writeText } })
+    await createManually()
+    fireEvent.click(screen.getByRole('button', { name: 'Copiar enlace' }))
+    expect(await screen.findByText('Enlace copiado al portapapeles.')).toHaveAttribute('role', 'status')
+    expect(writeText).toHaveBeenCalledWith(link)
+  })
+
+  it('selecciona el enlace y lo indica si no se puede copiar automáticamente', async () => {
+    vi.stubGlobal('navigator', { ...navigator, clipboard: { writeText: vi.fn().mockRejectedValue(new Error('denegado')) } })
+    const field = await createManually() as HTMLInputElement
+    fireEvent.click(screen.getByRole('button', { name: 'Copiar enlace' }))
+    expect(await screen.findByRole('alert')).toHaveTextContent('No se pudo copiar automáticamente')
+    expect(field.selectionStart).toBe(0)
+    expect(field.selectionEnd).toBe(link.length)
+  })
+
+  it('retira el enlace anterior al crear otra cuenta', async () => {
+    await createManually()
+    let resolve!: (response: Response) => void
+    accountRequest.mockReturnValueOnce(new Promise<Response>((done) => { resolve = done }))
+    fireEvent.change(screen.getByLabelText('Nombre de la cuenta'), { target: { value: 'Otra cuenta' } })
+    fireEvent.change(screen.getByLabelText('Correo de acceso'), { target: { value: 'otra@example.test' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Crear cuenta institucional' }))
+    await waitFor(() => expect(screen.queryByLabelText('Enlace de configuración')).not.toBeInTheDocument())
+    await act(async () => { resolve(Response.json({ data: { ...account, email: 'otra@example.test' }, setup_delivery: 'sent' }, { status: 201 })) })
+    expect(await screen.findByText(successMessage)).toBeInTheDocument()
+    expect(screen.queryByLabelText('Enlace de configuración')).not.toBeInTheDocument()
   })
 })

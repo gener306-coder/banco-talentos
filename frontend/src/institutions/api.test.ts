@@ -149,7 +149,7 @@ describe('entrega del enlace de cuentas pendientes', () => {
     fetchMock.mockImplementationOnce(csrfResponse).mockResolvedValueOnce(Response.json({
       setup_delivery: 'sent', setup_url: 'https://private.example.test?token=secret',
     }))
-    await expect(resendInstitutionAccountSetup({ ...input, ...{ password: 'omitido', email_to: 'otro@example.test' } })).resolves.toBe('sent')
+    await expect(resendInstitutionAccountSetup({ ...input, ...{ password: 'omitido', email_to: 'otro@example.test' } })).resolves.toEqual({ delivery: 'sent' })
     expect(fetchMock.mock.calls.map(([url]) => url)).toEqual(['/sanctum/csrf-cookie', '/api/institution-accounts/resend-setup'])
     expect(JSON.parse(fetchMock.mock.calls[1][1]?.body as string)).toEqual(input)
     expect(new Headers(fetchMock.mock.calls[1][1]?.headers).get('X-XSRF-TOKEN')).toBe('renovado+=')
@@ -197,5 +197,42 @@ describe('inicio administrativo del restablecimiento HU-S1-04', () => {
     fetchMock.mockImplementationOnce(csrfResponse).mockResolvedValueOnce(new Response(null, { status }))
     await expect(startInstitutionPasswordReset(input)).rejects.toMatchObject({ status })
     expect(fetchMock).toHaveBeenCalledTimes(2)
+  })
+})
+
+describe('entrega manual del enlace HU-S2-01', () => {
+  const link = 'http://localhost:5173/set-initial-password?email=titular%40example.test&token=abc123'
+  const account = { id: 9, name: 'Titular', email: 'titular@example.test', role: 'INSTITUTION', is_active: true, institution: { id: 7, name: 'Instituto' } }
+
+  it('envía el método manual en el alta y conserva el enlace de configuración', async () => {
+    fetchMock.mockImplementationOnce(csrfResponse).mockResolvedValueOnce(Response.json({ data: account, setup_delivery: 'manual', setup_url: link }, { status: 201 }))
+    await expect(createInstitutionAccount({ name: 'Titular', email: account.email, institution_id: 7, delivery_method: 'manual' }))
+      .resolves.toEqual({ ...account, setup_delivery: 'manual', setup_link: link })
+    expect(JSON.parse(fetchMock.mock.calls[1][1]?.body as string)).toEqual({ name: 'Titular', email: account.email, institution_id: 7, delivery_method: 'manual' })
+  })
+
+  it('envía el método manual en el reenvío y devuelve el enlace nuevo', async () => {
+    fetchMock.mockImplementationOnce(csrfResponse).mockResolvedValueOnce(Response.json({ setup_delivery: 'manual', setup_url: link }))
+    await expect(resendInstitutionAccountSetup({ email: account.email, institution_id: 7, delivery_method: 'manual' }))
+      .resolves.toEqual({ delivery: 'manual', setupLink: link })
+    expect(JSON.parse(fetchMock.mock.calls[1][1]?.body as string)).toEqual({ email: account.email, institution_id: 7, delivery_method: 'manual' })
+  })
+
+  it('descarta el enlace cuando la entrega es por correo aunque el servidor lo incluya', async () => {
+    fetchMock.mockImplementationOnce(csrfResponse).mockResolvedValueOnce(Response.json({ setup_delivery: 'testing', setup_url: link }))
+    await expect(resendInstitutionAccountSetup({ email: account.email, institution_id: 7, delivery_method: 'email' }))
+      .resolves.toEqual({ delivery: 'testing' })
+  })
+
+  it.each([
+    ['sin enlace', undefined],
+    ['enlace no textual', 42],
+    ['enlace mal formado', 'no es una url'],
+    ['otra ruta', 'http://localhost:5173/reset-password?email=a%40b.test&token=abc'],
+    ['sin token', 'http://localhost:5173/set-initial-password?email=a%40b.test'],
+    ['esquema no http', 'javascript:alert(1)//set-initial-password?email=a&token=b'],
+  ])('rechaza una entrega manual con %s', async (_case, setupUrl) => {
+    fetchMock.mockImplementationOnce(csrfResponse).mockResolvedValueOnce(Response.json({ setup_delivery: 'manual', ...(setupUrl === undefined ? {} : { setup_url: setupUrl }) }))
+    await expect(resendInstitutionAccountSetup({ email: account.email, institution_id: 7, delivery_method: 'manual' })).rejects.toMatchObject({ status: 502 })
   })
 })

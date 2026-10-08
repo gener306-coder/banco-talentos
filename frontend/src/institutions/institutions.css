@@ -34,4 +34,11 @@ main.institutions-shell { width: min(100% - 2rem, 70rem); }
 }
 
 .institution-account { margin-top: 2rem; padding-top: 1.5rem; border-top: 1px solid var(--color-neutral-200); }
+.delivery-method { border: 1px solid var(--color-neutral-200); border-radius: 0.35rem; padding: 0.6rem 0.9rem; margin: 0.2rem 0 0.6rem; }
+.delivery-method legend { padding: 0 0.3rem; font-weight: 600; }
+.delivery-method div { display: flex; align-items: center; gap: 0.5rem; margin: 0.3rem 0; }
+.delivery-method input[type='radio'] { width: auto; margin: 0; accent-color: var(--color-brand-primary); }
+.delivery-method label { font-weight: 400; }
+.manual-setup-link { margin: 1rem 0; padding: 0.9rem; border: 1px solid var(--color-neutral-200); border-radius: 0.35rem; background: var(--color-neutral-100); }
+.manual-setup-link input { font-family: ui-monospace, monospace; font-size: 0.85rem; background: var(--color-white); }
 }

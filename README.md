@@ -1,11 +1,12 @@
 # Banco de Talentos – Educación Dual
 
-Monolito modular con las historias del [Sprint 1](docs/sprint-1.md):
+Monolito modular. Sprint vigente: [Sprint 2](docs/sprint-2.md); historias del [Sprint 1](docs/sprint-1.md) y del Sprint 2:
 
 - **HU-S1-01 — Autenticación y control de acceso** ([detalle](docs/HU-S1-01.md)).
 - **HU-S1-02 — Gestión de instituciones**: ADMIN lista, registra, consulta, edita y activa o inactiva instituciones ([detalle](docs/HU-S1-02.md)).
 - **HU-S1-03 — Creación de cuentas institucionales**: ADMIN crea cuentas `INSTITUTION` vinculadas a una institución activa; la persona titular establece su contraseña mediante un enlace enviado por correo ([detalle](docs/HU-S1-03.md)).
 - **HU-S1-04 — Inicio seguro de restablecimiento de contraseña**: ADMIN inicia el restablecimiento de una cuenta `INSTITUTION`; la persona titular establece su nueva contraseña mediante un enlace enviado por correo ([detalle](docs/HU-S1-04.md)).
+- **HU-S2-01 — Enlace de invitación manual**: al crear la cuenta o reenviar su enlace, ADMIN puede generarlo para copiarlo y compartirlo (por ejemplo, por WhatsApp) en lugar de enviarlo por correo ([detalle](docs/HU-S2-01.md)).
 
 No hay registro público ni recuperación de contraseña iniciada por la propia cuenta.
 
@@ -74,7 +75,9 @@ Después de iniciar sesión como ADMIN, abre **Instituciones**. El listado inclu
 
 En el detalle de una institución activa, ADMIN crea una cuenta indicando nombre y correo de acceso. El servidor asigna el rol `INSTITUTION` y la institución; ADMIN nunca define ni ve la contraseña. El backend envía al correo registrado un enlace de un solo uso que caduca en 60 minutos. La persona titular lo abre en `/set-initial-password`, establece su contraseña (de 12 caracteres a 72 bytes) y después inicia sesión.
 
-En local los correos llegan a Mailpit (<http://localhost:8025>); inícialo con `docker compose up -d mailpit`. Mientras la cuenta siga pendiente, ADMIN puede reenviar el enlace desde el mismo detalle; el reenvío invalida el enlace anterior. Tras iniciar sesión, `GET /api/me` incluye la institución vinculada.
+En local los correos llegan a Mailpit (<http://localhost:8025>); inícialo con `docker compose up -d mailpit`. Mientras la cuenta siga pendiente, ADMIN puede reenviar el enlace desde el mismo detalle; el reenvío invalida el enlace anterior.
+
+En el alta y en el reenvío, **Entrega del enlace de configuración** permite elegir entre el correo (predeterminado) y **generar un enlace para compartirlo**: no se envía correo y el enlace aparece como texto de solo lectura con el botón **Copiar enlace**. Es el mismo enlace de un solo uso y 60 minutos; compártelo solo con la persona titular. Cada enlace manual queda registrado en el log con el ADMIN que lo generó ([docs/HU-S2-01.md](docs/HU-S2-01.md)). Tras iniciar sesión, `GET /api/me` incluye la institución vinculada.
 
 Si una institución pasa a `INACTIVA`, sus cuentas no pueden iniciar sesión y las sesiones abiertas se invalidan en la siguiente petición. Contrato, flujo de contraseña inicial y cobertura en [docs/HU-S1-03.md](docs/HU-S1-03.md).
 

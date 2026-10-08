@@ -1,14 +1,17 @@
 import { useState } from 'react'
 import type { FormEvent } from 'react'
 import { createInstitutionAccount } from './api'
-import type { SetupDelivery } from './api'
+import type { DeliveryMethod, SetupDelivery } from './api'
 import { InstitutionRequestError } from './InstitutionLayout'
+import { DeliveryMethodField, ManualSetupLink } from './SetupLinkDelivery'
 import { useInstitutionMutation } from './useInstitutionRequest'
 
 export function InstitutionAccountForm({ institutionId, disabled = false }: { institutionId: number; disabled?: boolean }) {
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
+  const [method, setMethod] = useState<DeliveryMethod>('email')
   const [created, setCreated] = useState<SetupDelivery | 'unknown' | null>(null)
+  const [setupLink, setSetupLink] = useState<string | null>(null)
   const [localErrors, setLocalErrors] = useState<Record<string, string[]>>({})
   const mutation = useInstitutionMutation()
   const errors = { ...mutation.failure?.errors, ...localErrors }
@@ -18,7 +21,8 @@ export function InstitutionAccountForm({ institutionId, disabled = false }: { in
     event.preventDefault()
     if (pending) return
     setCreated(null)
-    const input = { name: name.trim(), email: email.trim(), institution_id: institutionId }
+    setSetupLink(null)
+    const input = { name: name.trim(), email: email.trim(), institution_id: institutionId, delivery_method: method }
     const requiredErrors: Record<string, string[]> = {}
     if (!input.name) requiredErrors.name = ['El nombre de la cuenta es obligatorio.']
     if (!input.email) requiredErrors.email = ['El correo de acceso es obligatorio.']
@@ -26,6 +30,7 @@ export function InstitutionAccountForm({ institutionId, disabled = false }: { in
     if (Object.keys(requiredErrors).length || !event.currentTarget.reportValidity()) return
     await mutation.submit(() => createInstitutionAccount(input), (account) => {
       setCreated(account.setup_delivery ?? 'unknown')
+      setSetupLink(account.setup_link ?? null)
       setName('')
       setEmail('')
     })
@@ -38,7 +43,10 @@ export function InstitutionAccountForm({ institutionId, disabled = false }: { in
       <p>Todos los campos son obligatorios.</p>
       {created && <p className="institution-success" role="status">{created === 'pending'
         ? 'Cuenta creada. No se confirmó el envío del correo. Puedes reenviar el enlace de configuración para completar el alta.'
-        : 'Cuenta creada. La persona titular debe establecer su contraseña desde el enlace de configuración.'}</p>}
+        : created === 'manual'
+          ? 'Cuenta creada. Copia el enlace de configuración y compártelo con la persona titular.'
+          : 'Cuenta creada. La persona titular debe establecer su contraseña desde el enlace de configuración.'}</p>}
+      {setupLink && <ManualSetupLink idPrefix="account" link={setupLink} />}
       {mutation.failure && <InstitutionRequestError failure={mutation.failure} />}
       {errors.institution_id?.length > 0 && <p className="notice" role="alert">{errors.institution_id.join(' ')}</p>}
       {Object.keys(localErrors).length > 0 && <p className="notice" role="alert">Revisa los campos indicados.</p>}
@@ -55,6 +63,8 @@ export function InstitutionAccountForm({ institutionId, disabled = false }: { in
           aria-describedby={errors.email?.length ? 'account-email-error' : undefined}
           onChange={(event) => setEmail(event.target.value)} />
         {errors.email?.length > 0 && <p id="account-email-error" className="field-error">{errors.email.join(' ')}</p>}
+        <DeliveryMethodField idPrefix="account" value={method} disabled={pending} onChange={setMethod} />
+        {errors.delivery_method?.length > 0 && <p className="field-error">{errors.delivery_method.join(' ')}</p>}
         <div className="actions">
           <button type="submit" disabled={pending}>{mutation.pending ? 'Creando cuenta…' : 'Crear cuenta institucional'}</button>
         </div>

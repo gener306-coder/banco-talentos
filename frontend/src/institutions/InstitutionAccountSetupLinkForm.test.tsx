@@ -1,4 +1,4 @@
-import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { MemoryRouter } from 'react-router'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import App from '../App'
@@ -60,7 +60,7 @@ describe('reenvío administrativo del enlace inicial', () => {
     const [path, options] = resendRequest.mock.calls[0]
     expect(path).toBe('/api/institution-accounts/resend-setup')
     expect(options?.method).toBe('POST')
-    expect(JSON.parse(options?.body as string)).toEqual({ email, institution_id: 7 })
+    expect(JSON.parse(options?.body as string)).toEqual({ email, institution_id: 7, delivery_method: 'email' })
     expect(document.body.textContent).not.toContain('token=secret')
     expect(document.querySelector('a[href*="private.example.test"]')).not.toBeInTheDocument()
     expect(screen.queryByLabelText(/contraseña/i, { selector: 'input' })).not.toBeInTheDocument()
@@ -152,5 +152,30 @@ describe('reenvío administrativo del enlace inicial', () => {
     expect(await screen.findByRole('heading', { name: 'Acceso denegado' })).toBeInTheDocument()
     expect(screen.queryByLabelText('Correo de la cuenta pendiente')).not.toBeInTheDocument()
     expect(resendRequest).not.toHaveBeenCalled()
+  })
+})
+
+describe('reenvío manual del enlace HU-S2-01', () => {
+  const link = 'http://localhost:5173/set-initial-password?email=titular%40example.test&token=token-renovado'
+
+  it('genera un enlace nuevo para compartir y permite copiarlo (CA-01, CA-03, CA-04)', async () => {
+    const writeText = vi.fn().mockResolvedValue(undefined)
+    vi.stubGlobal('navigator', { ...navigator, clipboard: { writeText } })
+    resendRequest.mockResolvedValueOnce(Response.json({ setup_delivery: 'manual', setup_url: link }))
+    renderApp()
+    await fillForm()
+    const region = screen.getByRole('region', { name: 'Reenviar enlace de configuración' })
+    expect(within(region).getByRole('radio', { name: 'Enviar por correo a la persona titular' })).toBeChecked()
+    fireEvent.click(within(region).getByRole('radio', { name: /Generar un enlace para compartirlo/ }))
+    fireEvent.click(screen.getByRole('button', { name: 'Reenviar enlace de configuración' }))
+    expect(await within(region).findByText(/Nuevo enlace de configuración generado; el anterior ya no es válido/)).toHaveAttribute('role', 'status')
+    expect(JSON.parse(resendRequest.mock.calls[0][1]?.body as string)).toEqual({ email, institution_id: 7, delivery_method: 'manual' })
+    expect(within(region).getByLabelText('Enlace de configuración')).toHaveValue(link)
+    fireEvent.click(within(region).getByRole('button', { name: 'Copiar enlace' }))
+    expect(await within(region).findByText('Enlace copiado al portapapeles.')).toBeInTheDocument()
+    expect(writeText).toHaveBeenCalledWith(link)
+    expect(document.querySelector('a[href*="set-initial-password"]')).not.toBeInTheDocument()
+    expect(localStorage.length).toBe(0)
+    expect(sessionStorage.length).toBe(0)
   })
 })

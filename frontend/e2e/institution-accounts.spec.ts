@@ -46,7 +46,8 @@ test('ADMIN crea una cuenta sin contraseña; su titular la establece y pierde ac
   const created = await createdResponse
   expect(created.status()).toBe(201)
   expect(Object.keys(created.request().postDataJSON() as Record<string, unknown>).sort())
-    .toEqual(['email', 'institution_id', 'name'])
+    .toEqual(['delivery_method', 'email', 'institution_id', 'name'])
+  expect((created.request().postDataJSON() as { delivery_method: string }).delivery_method).toBe('email')
   const result = await created.json() as {
     data: { id: number; email: string; role: string; institution: { id: number; name: string } }
     setup_url: string
