@@ -29,7 +29,8 @@ test('HU-S2-01: ADMIN genera el enlace manual sin correo → la persona titular 
   await page.getByRole('button', { name: 'Crear institución', exact: true }).click()
   await expect(page).toHaveURL(/\/institutions\/\d+$/)
 
-  const creation = page.getByRole('region', { name: 'Crear cuenta institucional' })
+  await page.getByRole('button', { name: 'Nueva cuenta institucional', exact: true }).click()
+  const creation = page.getByRole('dialog', { name: 'Crear cuenta institucional' })
   await creation.getByLabel('Nombre de la cuenta', { exact: true }).fill(account.name)
   await creation.getByLabel('Correo de acceso', { exact: true }).fill(account.email)
   await creation.getByRole('radio', { name: /Generar un enlace para compartirlo/ }).check()

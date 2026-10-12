@@ -7,7 +7,8 @@ import { getInstitution, setInstitutionStatus } from './api'
 import { InstitutionLayout, InstitutionRequestError, InstitutionStatus } from './InstitutionLayout'
 import { useInstitutionMutation, useInstitutionRequest } from './useInstitutionRequest'
 import { ConfirmDialog } from '../ui/ConfirmDialog'
-import { ChevronLeftIcon } from '../ui/icons'
+import { ChevronLeftIcon, PlusIcon } from '../ui/icons'
+import { Sheet } from '../ui/Sheet'
 import { LoadingState } from '../ui/StateMessage'
 
 function InstitutionDetail({ id }: { id: string }) {
@@ -22,6 +23,9 @@ function InstitutionDetail({ id }: { id: string }) {
 
   const statusButton = useRef<HTMLButtonElement>(null)
   const [confirming, setConfirming] = useState(false)
+  // Los formularios de cuentas viven en hojas: la vista muestra solo los datos y las acciones.
+  const [sheet, setSheet] = useState<'create' | 'resend' | 'reset' | null>(null)
+  const closeSheet = useCallback(() => setSheet(null), [])
 
   // Inactivar bloquea el acceso de las cuentas: se confirma. Activar no tiene consecuencias que confirmar.
   function requestStatusChange() {
@@ -62,9 +66,24 @@ function InstitutionDetail({ id }: { id: string }) {
             </div>
             {data.is_active
               ? <>
-                <InstitutionAccountForm institutionId={data.id} disabled={mutation.pending} />
-                <InstitutionAccountSetupLinkForm institutionId={data.id} disabled={mutation.pending} />
-                <InstitutionAccountPasswordResetForm institutionId={data.id} disabled={mutation.pending} />
+                <section className="institution-accounts" aria-labelledby="institution-accounts-title">
+                  <h3 id="institution-accounts-title">Cuentas institucionales</h3>
+                  <p>Crea cuentas vinculadas a esta institución y gestiona sus enlaces de acceso.</p>
+                  <div className="actions">
+                    <button type="button" disabled={mutation.pending} onClick={() => setSheet('create')}><PlusIcon />Nueva cuenta institucional</button>
+                    <button type="button" className="secondary" disabled={mutation.pending} onClick={() => setSheet('resend')}>Reenviar enlace</button>
+                    <button type="button" className="secondary" disabled={mutation.pending} onClick={() => setSheet('reset')}>Restablecer contraseña</button>
+                  </div>
+                </section>
+                <Sheet open={sheet === 'create'} onClose={closeSheet} labelledBy="institution-account-title">
+                  <InstitutionAccountForm institutionId={data.id} disabled={mutation.pending} />
+                </Sheet>
+                <Sheet open={sheet === 'resend'} onClose={closeSheet} labelledBy="institution-account-setup-link-title">
+                  <InstitutionAccountSetupLinkForm institutionId={data.id} disabled={mutation.pending} />
+                </Sheet>
+                <Sheet open={sheet === 'reset'} onClose={closeSheet} labelledBy="institution-account-password-reset-title">
+                  <InstitutionAccountPasswordResetForm institutionId={data.id} disabled={mutation.pending} />
+                </Sheet>
               </>
               : <p className="notice">Activa la institución para crear una cuenta institucional.</p>}
           </>

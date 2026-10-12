@@ -39,6 +39,10 @@ test('ADMIN crea una cuenta sin contraseña; su titular la establece y pierde ac
   await expect(page.getByText(institution.name, { exact: true })).toBeVisible()
 
   await expect(page.locator('input[type="password"]')).toHaveCount(0)
+  // Los formularios de cuentas se abren en una hoja desde el detalle.
+  await page.getByRole('button', { name: 'Nueva cuenta institucional', exact: true }).click()
+  await expect(page.getByRole('dialog', { name: 'Crear cuenta institucional' })).toBeVisible()
+  await expect(page.locator('input[type="password"]')).toHaveCount(0)
   await page.getByLabel('Nombre de la cuenta', { exact: true }).fill(account.name)
   await page.getByLabel('Correo de acceso', { exact: true }).fill(account.email)
   const createdResponse = page.waitForResponse((response) =>
@@ -122,6 +126,7 @@ test('ADMIN crea una cuenta sin contraseña; su titular la establece y pierde ac
     await holder.goto('/institutions')
     await expect(holder.getByRole('heading', { name: 'Acceso denegado', exact: true })).toBeVisible()
 
+    await page.getByRole('dialog', { name: 'Crear cuenta institucional' }).getByRole('button', { name: 'Cerrar', exact: true }).click()
     await page.getByRole('button', { name: 'Inactivar institución', exact: true }).click()
     await page.getByRole('alertdialog', { name: '¿Inactivar la institución?' })
       .getByRole('button', { name: 'Inactivar', exact: true }).click()

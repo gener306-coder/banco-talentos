@@ -121,3 +121,27 @@ body.modal-open { overflow: hidden; }
   button.secondary, .tinted, .pill-link { border: 1px solid var(--color-brand-primary); }
 }
 }
+
+/* Hojas: inferior y arrastrable en pantallas estrechas, panel centrado en anchas (ui/Sheet.tsx). */
+@layer components {
+.sheet-layer { position: fixed; inset: 0; z-index: 40; }
+/* `display` de las variantes anula el `hidden` del navegador: una hoja cerrada no debe capturar clics. */
+.sheet-layer[hidden] { display: none !important; }
+.sheet-scrim { position: absolute; inset: 0; background: color-mix(in srgb, var(--ink) 32%, transparent); animation: fade-in 200ms ease both; }
+.sheet-panel { background: var(--color-white); box-shadow: 0 -12px 36px rgba(0, 0, 0, 0.14); overflow: auto; overscroll-behavior: contain; }
+.sheet-layer.wide { display: grid; place-items: center; padding: 1rem; }
+.sheet-layer.wide .sheet-panel { position: relative; width: min(36rem, 100%); max-height: min(85vh, 52rem); border-radius: 16px; box-shadow: 0 20px 48px rgba(0, 0, 0, 0.18); animation: materialize var(--spring-duration) var(--spring) both; }
+.sheet-layer.compact .sheet-panel { position: absolute; left: 0; right: 0; bottom: 0; max-height: 92%; border-radius: 16px 16px 0 0; padding-bottom: env(safe-area-inset-bottom, 0px); will-change: transform; }
+.sheet-header { position: sticky; top: 0; z-index: 1; display: flex; justify-content: flex-end; padding: 0.5rem 0.75rem 0; background: var(--color-white); }
+.sheet-layer.compact .sheet-header { padding-top: 1.1rem; touch-action: none; cursor: grab; }
+.sheet-layer.compact .sheet-header:active { cursor: grabbing; }
+.sheet-handle { position: absolute; left: 50%; top: 0.5rem; width: 40px; height: 5px; border-radius: 3px; background: var(--color-neutral-500); transform: translateX(-50%); }
+.sheet-body { padding: 0 1.3rem 1.3rem; }
+.sheet-body .institution-account { margin: 0; padding: 0; border: 0; }
+.sheet-body h3 { margin-top: 0; }
+.sheet-body form { max-width: none; }
+.institution-accounts { margin-top: 2rem; padding-top: 1.5rem; border-top: 1px solid var(--color-neutral-200); }
+@media (prefers-reduced-motion: reduce) {
+  .sheet-layer.wide .sheet-panel, .sheet-layer.compact .sheet-panel { animation: fade-in 160ms ease both; }
+}
+}

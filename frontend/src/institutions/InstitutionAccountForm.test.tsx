@@ -17,6 +17,11 @@ function renderApp() {
   return render(<MemoryRouter initialEntries={['/institutions/7']}><App /></MemoryRouter>)
 }
 
+// Los formularios de cuentas viven en una hoja del detalle: se abre antes de usarlos.
+async function openSheet() {
+  fireEvent.click(await screen.findByRole('button', { name: 'Nueva cuenta institucional' }))
+}
+
 async function fillForm() {
   await screen.findByLabelText('Nombre de la cuenta')
   fireEvent.change(screen.getByLabelText('Nombre de la cuenta'), { target: { value: input.name } })
@@ -49,6 +54,7 @@ describe('alta administrativa de cuentas institucionales', () => {
   it('por defecto envía por correo solo nombre, correo e institución; nunca pide contraseña ni muestra el enlace', async () => {
     accountRequest.mockResolvedValueOnce(Response.json({ data: account, setup_url: 'http://localhost/set-initial-password?token=secreto' }, { status: 201 }))
     renderApp()
+    await openSheet()
     await fillForm()
     expect(screen.queryByLabelText(/contraseña/i, { selector: 'input' })).not.toBeInTheDocument()
     expect(screen.queryByRole('combobox')).not.toBeInTheDocument()
@@ -71,16 +77,19 @@ describe('alta administrativa de cuentas institucionales', () => {
   it('confirma la cuenta creada aunque falle el correo y ofrece un reenvío recuperable', async () => {
     accountRequest.mockResolvedValueOnce(Response.json({ data: account, setup_delivery: 'pending' }, { status: 201 }))
     renderApp()
+    await openSheet()
     await fillForm()
     fireEvent.click(screen.getByRole('button', { name: 'Crear cuenta institucional' }))
     expect(await screen.findByText('Cuenta creada. No se confirmó el envío del correo. Puedes reenviar el enlace de configuración para completar el alta.')).toHaveAttribute('role', 'status')
     expect(screen.getByLabelText('Nombre de la cuenta')).toHaveValue('')
-    expect(screen.getByRole('button', { name: 'Reenviar enlace de configuración' })).toBeEnabled()
+    // El reenvío sigue disponible desde el detalle, en su propia hoja.
+    expect(screen.getByRole('button', { name: 'Reenviar enlace' })).toBeEnabled()
     expect(accountRequest).toHaveBeenCalledTimes(1)
   })
 
   it('valida campos obligatorios y correo antes de enviar', async () => {
     renderApp()
+    await openSheet()
     const button = await screen.findByRole('button', { name: 'Crear cuenta institucional' })
     fireEvent.click(button)
     expect(screen.getByLabelText('Nombre de la cuenta')).toBeInvalid()
@@ -94,6 +103,7 @@ describe('alta administrativa de cuentas institucionales', () => {
 
   it('rechaza un nombre formado por espacios', async () => {
     renderApp()
+    await openSheet()
     await fillForm()
     fireEvent.change(screen.getByLabelText('Nombre de la cuenta'), { target: { value: '   ' } })
     fireEvent.click(screen.getByRole('button', { name: 'Crear cuenta institucional' }))
@@ -104,6 +114,7 @@ describe('alta administrativa de cuentas institucionales', () => {
   it('conserva valores y presenta el correo duplicado como error accesible', async () => {
     accountRequest.mockResolvedValueOnce(Response.json({ errors: { email: ['El correo ya está registrado.'] } }, { status: 422 }))
     renderApp()
+    await openSheet()
     await fillForm()
     fireEvent.click(screen.getByRole('button', { name: 'Crear cuenta institucional' }))
     expect(await screen.findByText('El correo ya está registrado.')).toBeInTheDocument()
@@ -116,6 +127,7 @@ describe('alta administrativa de cuentas institucionales', () => {
   it('muestra la validación de institución si se inactiva antes de terminar el alta', async () => {
     accountRequest.mockResolvedValueOnce(Response.json({ errors: { institution_id: ['La institución debe estar activa.'] } }, { status: 422 }))
     renderApp()
+    await openSheet()
     await fillForm()
     fireEvent.click(screen.getByRole('button', { name: 'Crear cuenta institucional' }))
     expect(await screen.findByText('La institución debe estar activa.')).toBeInTheDocument()
@@ -126,6 +138,7 @@ describe('alta administrativa de cuentas institucionales', () => {
     let resolve!: (response: Response) => void
     accountRequest.mockReturnValueOnce(new Promise<Response>((done) => { resolve = done }))
     renderApp()
+    await openSheet()
     await fillForm()
     const button = screen.getByRole('button', { name: 'Crear cuenta institucional' })
     fireEvent.click(button)
@@ -140,6 +153,7 @@ describe('alta administrativa de cuentas institucionales', () => {
   it.each([403, 419, 500])('no anuncia éxito ante HTTP %i y conserva los datos', async (status) => {
     accountRequest.mockResolvedValueOnce(new Response(null, { status }))
     renderApp()
+    await openSheet()
     await fillForm()
     fireEvent.click(screen.getByRole('button', { name: 'Crear cuenta institucional' }))
     expect(await screen.findByRole('alert')).toBeInTheDocument()
@@ -152,6 +166,7 @@ describe('alta administrativa de cuentas institucionales', () => {
   it('finaliza la sesión local ante una respuesta de institución inactiva', async () => {
     accountRequest.mockResolvedValueOnce(Response.json({ code: 'INSTITUTION_INACTIVE', message: 'Texto no confiable' }, { status: 401 }))
     renderApp()
+    await openSheet()
     await fillForm()
     fireEvent.click(screen.getByRole('button', { name: 'Crear cuenta institucional' }))
     expect(await screen.findByRole('heading', { name: 'Iniciar sesión' })).toBeInTheDocument()
@@ -183,6 +198,7 @@ describe('enlace manual en el alta HU-S2-01', () => {
   async function createManually() {
     accountRequest.mockResolvedValueOnce(Response.json({ data: account, setup_delivery: 'manual', setup_url: link }, { status: 201 }))
     renderApp()
+    await openSheet()
     await fillForm()
     fireEvent.click(within(screen.getByRole('region', { name: 'Crear cuenta institucional' })).getByRole('radio', { name: /Generar un enlace para compartirlo/ }))
     fireEvent.click(screen.getByRole('button', { name: 'Crear cuenta institucional' }))
@@ -239,6 +255,7 @@ describe('enlace manual en el alta HU-S2-01', () => {
 describe('validación en línea del alta', () => {
   it('avisa de un correo con formato inválido al salir del campo, sin el aviso general del envío', async () => {
     renderApp()
+    await openSheet()
     const field = await screen.findByLabelText('Correo de acceso')
     fireEvent.change(field, { target: { value: 'titular-sin-arroba' } })
     fireEvent.blur(field)

@@ -139,6 +139,20 @@ La validación del correo se hace al salir del campo (`ui/validation.ts`); la ob
 - Encabezado fijo translúcido (`backdrop-filter`), con borde de scroll suave solo cuando hay contenido debajo.
 - `ConfirmDialog` (`ui/ConfirmDialog.tsx`) para acciones con consecuencias, hoy solo inactivar una institución: scrim, origen en el botón que lo abre, foco inicial en «Cancelar», Esc, fondo `inert` y foco devuelto al cerrar (`ui/modal.ts`).
 
+### Hojas
+
+`Sheet` (`ui/Sheet.tsx`, física en `ui/spring.ts`) presenta formularios secundarios sin saturar la vista. Hoy se usa en el detalle de institución para crear una cuenta, reenviar el enlace de configuración y restablecer una contraseña; la vista muestra solo los datos y la sección «Cuentas institucionales» con sus tres acciones.
+
+| Ancho | Presentación |
+|---|---|
+| Hasta 640 px | Hoja inferior. Se arrastra solo desde su barra superior (el contenido se desplaza normalmente): seguimiento 1:1, velocidad de suelta, proyección del impulso (deceleración 0.998), resistencia progresiva al tirar hacia arriba y resorte (amortiguamiento 1, o 0.8 tras un gesto con impulso; respuesta 0.3 s). Las animaciones son interrumpibles. |
+| Más de 640 px | Panel centrado de hasta 36 rem que se materializa; sin arrastre. |
+
+- Diálogo modal (`role="dialog"`, `aria-modal`) nombrado por el título del formulario; botón «Cerrar», Esc y clic en el fondo; foco inicial en el primer campo; fondo `inert` y foco devuelto al botón que la abrió.
+- El contenido sigue montado al cerrarse: lo escrito y un enlace manual generado no se pierden al reabrir mientras se permanece en la vista.
+- Una hoja cerrada lleva `hidden` y `display: none !important`: no debe capturar clics.
+- Con reducir movimiento, la hoja solo se funde.
+
 ### Accesibilidad
 
 - `prefers-reduced-motion`: sin escala al presionar, sin animación del esqueleto y del indicador; los paneles solo se funden.

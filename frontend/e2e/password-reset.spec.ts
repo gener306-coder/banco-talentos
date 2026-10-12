@@ -54,7 +54,8 @@ test('ADMIN inicia el restablecimiento → la persona titular establece su nueva
   await page.getByRole('button', { name: 'Crear institución', exact: true }).click()
   await expect(page).toHaveURL(/\/institutions\/\d+$/)
   // La preparación usa la entrega manual (HU-S2-01) para obtener el enlace sin correo.
-  const creation = page.getByRole('region', { name: 'Crear cuenta institucional' })
+  await page.getByRole('button', { name: 'Nueva cuenta institucional', exact: true }).click()
+  const creation = page.getByRole('dialog', { name: 'Crear cuenta institucional' })
   await creation.getByLabel('Nombre de la cuenta', { exact: true }).fill(account.name)
   await creation.getByLabel('Correo de acceso', { exact: true }).fill(account.email)
   await creation.getByRole('radio', { name: /Generar un enlace para compartirlo/ }).check()
@@ -73,6 +74,8 @@ test('ADMIN inicia el restablecimiento → la persona titular establece su nueva
     expect(await me(oldSession, baseURL!)).toBe(200)
 
     // T06: el ADMIN solo identifica la cuenta; nunca ve ni escribe una contraseña.
+    await creation.getByRole('button', { name: 'Cerrar', exact: true }).click()
+    await page.getByRole('button', { name: 'Restablecer contraseña', exact: true }).click()
     await expect(page.locator('input[type="password"]')).toHaveCount(0)
     await page.getByLabel('Correo de la cuenta institucional', { exact: true }).fill(account.email)
     const startResponse = page.waitForResponse((response) =>

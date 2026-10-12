@@ -24,7 +24,10 @@ export function useModal(open: boolean, layer: RefObject<HTMLElement | null>, on
     background.forEach((el) => el.setAttribute('inert', ''))
     document.body.classList.add('modal-open')
 
-    const initial = node.querySelector<HTMLElement>('[data-autofocus]') ?? focusables(node)[0] ?? node
+    // Foco inicial: el marcado explícitamente, si no el primer campo, si no el primer control.
+    const initial = node.querySelector<HTMLElement>('[data-autofocus]')
+      ?? focusables(node).find((el) => el.matches('input, select, textarea'))
+      ?? focusables(node)[0] ?? node
     initial.focus({ preventScroll: true })
 
     function onKeyDown(event: KeyboardEvent) {

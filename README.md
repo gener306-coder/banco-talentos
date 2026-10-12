@@ -73,7 +73,7 @@ Después de iniciar sesión como ADMIN, abre **Instituciones**. El listado inclu
 
 ## Cuentas institucionales
 
-En el detalle de una institución activa, ADMIN crea una cuenta indicando nombre y correo de acceso. El servidor asigna el rol `INSTITUTION` y la institución; ADMIN nunca define ni ve la contraseña. El backend envía al correo registrado un enlace de un solo uso que caduca en 60 minutos. La persona titular lo abre en `/set-initial-password`, establece su contraseña (de 12 caracteres a 72 bytes) y después inicia sesión.
+En el detalle de una institución activa, la sección **Cuentas institucionales** abre cada formulario en una hoja (inferior y arrastrable en móvil, panel centrado en escritorio): **Nueva cuenta institucional**, **Reenviar enlace** y **Restablecer contraseña**. ADMIN crea una cuenta indicando nombre y correo de acceso. El servidor asigna el rol `INSTITUTION` y la institución; ADMIN nunca define ni ve la contraseña. El backend envía al correo registrado un enlace de un solo uso que caduca en 60 minutos. La persona titular lo abre en `/set-initial-password`, establece su contraseña (de 12 caracteres a 72 bytes) y después inicia sesión.
 
 En local los correos llegan a Mailpit (<http://localhost:8025>); inícialo con `docker compose up -d mailpit`. Mientras la cuenta siga pendiente, ADMIN puede reenviar el enlace desde el mismo detalle; el reenvío invalida el enlace anterior.
 

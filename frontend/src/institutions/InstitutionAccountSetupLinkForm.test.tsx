@@ -14,6 +14,11 @@ function renderApp() {
   return render(<MemoryRouter initialEntries={['/institutions/7']}><App /></MemoryRouter>)
 }
 
+// Los formularios de cuentas viven en una hoja del detalle: se abre antes de usarlos.
+async function openSheet() {
+  fireEvent.click(await screen.findByRole('button', { name: 'Reenviar enlace' }))
+}
+
 async function fillForm() {
   fireEvent.change(await screen.findByLabelText('Correo de la cuenta pendiente'), { target: { value: email } })
 }
@@ -43,9 +48,11 @@ afterEach(() => vi.unstubAllGlobals())
 describe('reenvío administrativo del enlace inicial', () => {
   it('permanece disponible al volver al detalle sin necesitar una creación previa', async () => {
     const view = renderApp()
+    await openSheet()
     expect(await screen.findByRole('button', { name: 'Reenviar enlace de configuración' })).toBeEnabled()
     view.unmount()
     renderApp()
+    await openSheet()
     expect(await screen.findByRole('button', { name: 'Reenviar enlace de configuración' })).toBeEnabled()
     expect(resendRequest).not.toHaveBeenCalled()
   })
@@ -53,6 +60,7 @@ describe('reenvío administrativo del enlace inicial', () => {
   it('envía correo e institución y nunca muestra ni almacena el enlace', async () => {
     resendRequest.mockResolvedValueOnce(Response.json({ setup_delivery: 'sent', setup_url: 'https://private.example.test?token=secret' }))
     renderApp()
+    await openSheet()
     await fillForm()
     fireEvent.click(screen.getByRole('button', { name: 'Reenviar enlace de configuración' }))
     expect(await screen.findByText(/Enlace de configuración solicitado/)).toHaveAttribute('role', 'status')
@@ -72,6 +80,7 @@ describe('reenvío administrativo del enlace inicial', () => {
     resendRequest.mockResolvedValueOnce(Response.json({ setup_delivery: 'pending' }))
       .mockResolvedValueOnce(Response.json({ setup_delivery: 'sent' }))
     renderApp()
+    await openSheet()
     await fillForm()
     fireEvent.click(screen.getByRole('button', { name: 'Reenviar enlace de configuración' }))
     expect(await screen.findByText(/El envío del correo sigue sin confirmarse/)).toHaveAttribute('role', 'status')
@@ -84,6 +93,7 @@ describe('reenvío administrativo del enlace inicial', () => {
 
   it('valida el correo antes de solicitar el reenvío', async () => {
     renderApp()
+    await openSheet()
     const button = await screen.findByRole('button', { name: 'Reenviar enlace de configuración' })
     fireEvent.click(button)
     expect(screen.getByLabelText('Correo de la cuenta pendiente')).toBeInvalid()
@@ -96,6 +106,7 @@ describe('reenvío administrativo del enlace inicial', () => {
   it('muestra una cuenta no elegible junto al campo de correo', async () => {
     resendRequest.mockResolvedValueOnce(Response.json({ errors: { email: ['La cuenta no está pendiente.'] } }, { status: 422 }))
     renderApp()
+    await openSheet()
     await fillForm()
     fireEvent.click(screen.getByRole('button', { name: 'Reenviar enlace de configuración' }))
     expect(await screen.findByText('La cuenta no está pendiente.')).toBeInTheDocument()
@@ -107,6 +118,7 @@ describe('reenvío administrativo del enlace inicial', () => {
   it('explica el límite de un minuto sin reintentar automáticamente', async () => {
     resendRequest.mockResolvedValueOnce(new Response(null, { status: 429 }))
     renderApp()
+    await openSheet()
     await fillForm()
     fireEvent.click(screen.getByRole('button', { name: 'Reenviar enlace de configuración' }))
     expect(await screen.findByRole('alert')).toHaveTextContent('Espera al menos un minuto')
@@ -118,6 +130,7 @@ describe('reenvío administrativo del enlace inicial', () => {
     let resolve!: (response: Response) => void
     resendRequest.mockReturnValueOnce(new Promise<Response>((done) => { resolve = done }))
     renderApp()
+    await openSheet()
     await fillForm()
     const button = screen.getByRole('button', { name: 'Reenviar enlace de configuración' })
     fireEvent.click(button)
@@ -131,6 +144,7 @@ describe('reenvío administrativo del enlace inicial', () => {
   it.each([403, 419, 500])('conserva el correo sin anunciar éxito ante HTTP %i', async (status) => {
     resendRequest.mockResolvedValueOnce(new Response(null, { status }))
     renderApp()
+    await openSheet()
     await fillForm()
     fireEvent.click(screen.getByRole('button', { name: 'Reenviar enlace de configuración' }))
     expect(await screen.findByRole('alert')).toBeInTheDocument()
@@ -163,6 +177,7 @@ describe('reenvío manual del enlace HU-S2-01', () => {
     vi.stubGlobal('navigator', { ...navigator, clipboard: { writeText } })
     resendRequest.mockResolvedValueOnce(Response.json({ setup_delivery: 'manual', setup_url: link }))
     renderApp()
+    await openSheet()
     await fillForm()
     const region = screen.getByRole('region', { name: 'Reenviar enlace de configuración' })
     expect(within(region).getByRole('radio', { name: 'Enviar por correo a la persona titular' })).toBeChecked()

@@ -25,7 +25,8 @@ Sprint vigente desde el 8 de octubre de 2026. Sprint anterior: [sprint-1.md](spr
 
 ### Lenguaje visual e interacción apple-design
 
-**Estado:** En curso: paso 1 completado (11 de octubre de 2026)  
+**Estado:** Completada (11 de octubre de 2026)  
+**Informe:** [design/informe-apple-design.md](design/informe-apple-design.md)  
 **Origen:** requisito comunicado por el responsable del proyecto tras revisar un prototipo; no corresponde a una historia de Jira.  
 **Referencia:** skill `apple-design` (github.com/emilkowalski/skills) y prototipo interactivo privado (Artifact «Prototipo estilo fluido»).
 

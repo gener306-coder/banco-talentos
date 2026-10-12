@@ -14,6 +14,11 @@ function renderApp() {
   return render(<MemoryRouter initialEntries={['/institutions/7']}><App /></MemoryRouter>)
 }
 
+// Los formularios de cuentas viven en una hoja del detalle: se abre antes de usarlos.
+async function openSheet() {
+  fireEvent.click(await screen.findByRole('button', { name: 'Restablecer contraseña' }))
+}
+
 async function fillForm() {
   fireEvent.change(await screen.findByLabelText('Correo de la cuenta institucional'), { target: { value: email } })
 }
@@ -43,9 +48,11 @@ afterEach(() => vi.unstubAllGlobals())
 describe('inicio administrativo del restablecimiento HU-S1-04', () => {
   it('está disponible en el detalle de una institución activa', async () => {
     const view = renderApp()
+    await openSheet()
     expect(await screen.findByRole('button', { name: 'Iniciar restablecimiento de contraseña' })).toBeEnabled()
     view.unmount()
     renderApp()
+    await openSheet()
     expect(await screen.findByRole('button', { name: 'Iniciar restablecimiento de contraseña' })).toBeEnabled()
     expect(resetRequest).not.toHaveBeenCalled()
   })
@@ -53,6 +60,7 @@ describe('inicio administrativo del restablecimiento HU-S1-04', () => {
   it('envía solo correo e institución, sin campos de contraseña, y nunca muestra ni almacena el enlace (CA-02, CA-03)', async () => {
     resetRequest.mockResolvedValueOnce(Response.json({ reset_delivery: 'sent', reset_url: 'https://private.example.test/reset-password?token=secret' }))
     renderApp()
+    await openSheet()
     await fillForm()
     fireEvent.click(screen.getByRole('button', { name: 'Iniciar restablecimiento de contraseña' }))
     expect(await screen.findByText(/Se envió el enlace de restablecimiento/)).toHaveAttribute('role', 'status')
@@ -74,6 +82,7 @@ describe('inicio administrativo del restablecimiento HU-S1-04', () => {
     resetRequest.mockResolvedValueOnce(Response.json({ reset_delivery: 'pending' }))
       .mockResolvedValueOnce(Response.json({ reset_delivery: 'sent' }))
     renderApp()
+    await openSheet()
     await fillForm()
     fireEvent.click(screen.getByRole('button', { name: 'Iniciar restablecimiento de contraseña' }))
     expect(await screen.findByText(/El envío del correo sigue sin confirmarse. Espera un minuto/)).toHaveAttribute('role', 'status')
@@ -86,6 +95,7 @@ describe('inicio administrativo del restablecimiento HU-S1-04', () => {
 
   it('valida el correo antes de iniciar el restablecimiento', async () => {
     renderApp()
+    await openSheet()
     const button = await screen.findByRole('button', { name: 'Iniciar restablecimiento de contraseña' })
     fireEvent.click(button)
     expect(screen.getByLabelText('Correo de la cuenta institucional')).toBeInvalid()
@@ -98,6 +108,7 @@ describe('inicio administrativo del restablecimiento HU-S1-04', () => {
   it('muestra una cuenta no elegible, incluida una pendiente de configuración, junto al campo de correo', async () => {
     resetRequest.mockResolvedValueOnce(Response.json({ errors: { email: ['La cuenta aún no ha establecido su contraseña inicial. Reenvía el enlace de configuración.'] } }, { status: 422 }))
     renderApp()
+    await openSheet()
     await fillForm()
     fireEvent.click(screen.getByRole('button', { name: 'Iniciar restablecimiento de contraseña' }))
     expect(await screen.findByText('La cuenta aún no ha establecido su contraseña inicial. Reenvía el enlace de configuración.')).toBeInTheDocument()
@@ -109,6 +120,7 @@ describe('inicio administrativo del restablecimiento HU-S1-04', () => {
   it('explica el límite de un minuto sin reintentar automáticamente', async () => {
     resetRequest.mockResolvedValueOnce(new Response(null, { status: 429 }))
     renderApp()
+    await openSheet()
     await fillForm()
     fireEvent.click(screen.getByRole('button', { name: 'Iniciar restablecimiento de contraseña' }))
     expect(await screen.findByRole('alert')).toHaveTextContent('Espera al menos un minuto')
@@ -120,6 +132,7 @@ describe('inicio administrativo del restablecimiento HU-S1-04', () => {
     let resolve!: (response: Response) => void
     resetRequest.mockReturnValueOnce(new Promise<Response>((done) => { resolve = done }))
     renderApp()
+    await openSheet()
     await fillForm()
     const button = screen.getByRole('button', { name: 'Iniciar restablecimiento de contraseña' })
     fireEvent.click(button)
@@ -133,6 +146,7 @@ describe('inicio administrativo del restablecimiento HU-S1-04', () => {
   it.each([403, 419, 500])('conserva el correo sin anunciar éxito ante HTTP %i', async (status) => {
     resetRequest.mockResolvedValueOnce(new Response(null, { status }))
     renderApp()
+    await openSheet()
     await fillForm()
     fireEvent.click(screen.getByRole('button', { name: 'Iniciar restablecimiento de contraseña' }))
     expect(await screen.findByRole('alert')).toBeInTheDocument()
