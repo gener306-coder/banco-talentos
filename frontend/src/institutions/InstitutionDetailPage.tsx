@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react'
+import { useCallback, useRef, useState } from 'react'
 import { Link, useLocation, useParams } from 'react-router'
 import { InstitutionAccountForm } from './InstitutionAccountForm'
 import { InstitutionAccountPasswordResetForm } from './InstitutionAccountPasswordResetForm'
@@ -6,6 +6,9 @@ import { InstitutionAccountSetupLinkForm } from './InstitutionAccountSetupLinkFo
 import { getInstitution, setInstitutionStatus } from './api'
 import { InstitutionLayout, InstitutionRequestError, InstitutionStatus } from './InstitutionLayout'
 import { useInstitutionMutation, useInstitutionRequest } from './useInstitutionRequest'
+import { ConfirmDialog } from '../ui/ConfirmDialog'
+import { ChevronLeftIcon } from '../ui/icons'
+import { LoadingState } from '../ui/StateMessage'
 
 function InstitutionDetail({ id }: { id: string }) {
   const load = useCallback((signal: AbortSignal) => getInstitution(id, signal), [id])
@@ -17,7 +20,18 @@ function InstitutionDetail({ id }: { id: string }) {
     return state && typeof state === 'object' && 'notice' in state && typeof state.notice === 'string' ? state.notice : null
   })
 
+  const statusButton = useRef<HTMLButtonElement>(null)
+  const [confirming, setConfirming] = useState(false)
+
+  // Inactivar bloquea el acceso de las cuentas: se confirma. Activar no tiene consecuencias que confirmar.
+  function requestStatusChange() {
+    if (!data || mutation.pending) return
+    if (data.is_active) setConfirming(true)
+    else void changeStatus()
+  }
+
   async function changeStatus() {
+    setConfirming(false)
     if (!data || mutation.pending) return
     setNotice(null)
     await mutation.submit(() => setInstitutionStatus(id, !data.is_active), (updated) => {
@@ -28,8 +42,8 @@ function InstitutionDetail({ id }: { id: string }) {
 
   return (
     <InstitutionLayout title="Detalle de institución">
-      {loading ? <p role="status">Cargando institución…</p>
-        : failure ? <InstitutionRequestError failure={failure} retry={refresh} />
+      {loading ? <LoadingState label="Cargando institución…" variant="details" />
+        : failure ? <InstitutionRequestError failure={failure} retry={refresh} page />
         : data && (
           <>
             {notice && <p className="institution-success" role="status">{notice}</p>}
@@ -42,7 +56,7 @@ function InstitutionDetail({ id }: { id: string }) {
             </dl>
             <div className="actions" aria-busy={mutation.pending}>
               <Link className="institution-button secondary" to={`/institutions/${data.id}/edit`}>Editar institución</Link>
-              <button type="button" disabled={mutation.pending} onClick={() => { void changeStatus() }}>
+              <button type="button" ref={statusButton} disabled={mutation.pending} onClick={requestStatusChange}>
                 {mutation.pending ? 'Guardando estado…' : data.is_active ? 'Inactivar institución' : 'Activar institución'}
               </button>
             </div>
@@ -55,7 +69,11 @@ function InstitutionDetail({ id }: { id: string }) {
               : <p className="notice">Activa la institución para crear una cuenta institucional.</p>}
           </>
         )}
-      <p className="institution-back"><Link to="/institutions">Volver a instituciones</Link></p>
+      <ConfirmDialog open={confirming} origin={statusButton}
+        title="¿Inactivar la institución?"
+        description="Sus cuentas no podrán iniciar sesión y las sesiones abiertas se cerrarán. Podrás reactivarla después."
+        confirmLabel="Inactivar" onConfirm={() => { void changeStatus() }} onCancel={() => setConfirming(false)} />
+      <p className="institution-back"><Link className="plain" to="/institutions"><ChevronLeftIcon />Volver a instituciones</Link></p>
     </InstitutionLayout>
   )
 }

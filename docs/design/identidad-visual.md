@@ -24,10 +24,10 @@ Ubicaciones actuales:
 
 | Lugar | Componente | Altura |
 |---|---|---|
-| Encabezado general, junto al título | `App.tsx` | `h-14` (56 px). No se muestra en `/login` para no duplicarlo. |
+| Encabezado general translúcido, junto al título | `App.tsx` | `h-11` (44 px). No se muestra en `/login` para no duplicarlo. |
 | Parte superior del formulario de login | `pages/LoginPage.tsx` | `h-32` (128 px), centrado. |
 
-A 56 px el texto «nodologístico» del logotipo no es legible; el símbolo identifica la marca y el título textual permanece en el `h1`. Para un tamaño menor, solicitar una versión horizontal o un símbolo en SVG.
+A 44 px el texto «nodologístico» del logotipo no es legible; el símbolo identifica la marca y el título textual permanece en el `h1`. Para un tamaño menor, solicitar una versión horizontal o un símbolo en SVG.
 
 ## Paleta y tokens
 
@@ -98,6 +98,52 @@ Enfoque híbrido:
 - **Elementos propios de una vista** (encabezado, logotipo, `h1`): clases de Tailwind en el JSX (`text-brand-primary`, `text-brand-neutral`, `h-14`, `flex`, …).
 - Vistas nuevas: preferir clases de Tailwind; los estilos globales ya aplican la marca a botones, enlaces y campos.
 - Tailwind sólo emite en el CSS final las variables de tema que se usan en utilidades o en CSS procesado por Tailwind (`index.css`). Si `institutions.css` u otra hoja sin `@import "tailwindcss"` necesita una variable no usada en `index.css`, comprobar que aparezca en `dist/assets/*.css` tras `npm run build`.
+
+## Lenguaje de interacción (apple-design)
+
+Adoptado el 11 de octubre de 2026 como cambio transversal del Sprint 2 (`docs/sprint-2.md`), a partir de la skill `apple-design`. Las reglas viven en `frontend/src/ui/ui.css` (capa `components`, que prevalece sobre `legacy`) y en los componentes de `frontend/src/ui/`.
+
+### Botones
+
+| Nivel | Uso | Estilo |
+|---|---|---|
+| Relleno | Acción principal de la vista o del formulario | `brand-primary`; hover `brand-primary-hover` |
+| Tintado | Acciones secundarias (`button.secondary`, `.institution-button.secondary`, `.tinted`) | Fondo `--tint` (vino al 8 %, 14 % en hover), texto vino |
+| Plano | Navegación y regreso (`.plain`) | Sin fondo; `--fill` (grafito al 8 %) en hover |
+| Píldora | Acción por fila de tabla (`.pill-link`, «Ver detalle ›») | Tintado redondeado con chevron |
+
+- Radio de 10 px en botones y 8 px en campos. Los iconos (`ui/icons.tsx`) son SVG de trazo, `aria-hidden`; el texto del control lo nombra.
+- Respuesta inmediata: escala 0.97 al presionar (100 ms).
+- Navegación: «‹ Inicio» conserva el nombre accesible «Volver al inicio»; el enlace de la sección actual lleva `aria-current="page"`.
+- En tablas, toda la fila abre el detalle con el puntero; el enlace «Ver detalle de …» sigue siendo el control accesible.
+- Los tintes se derivan con `color-mix()` de los tokens; no son colores nuevos. Vino sobre tinte: entre 5.7:1 y 7.3:1.
+
+### Estados
+
+| Estado | Componente | Comportamiento |
+|---|---|---|
+| Carga | `LoadingState` | Anuncia el texto en `role="status"` de inmediato y muestra el esqueleto solo si la espera supera 300 ms. |
+| Vacío | `StateMessage kind="empty"` | Icono, título, explicación y la siguiente acción posible. |
+| Error de vista | `InstitutionRequestError page` | Icono, título según el código (404, 403 u otro), el mensaje y «Reintentar» cuando procede. |
+| Error de acción | `InstitutionRequestError` | Aviso compacto junto a la acción, como hasta ahora. |
+| Acción en curso | `PendingLabel` | Indicador de progreso en el botón, que queda deshabilitado. |
+| Hover | `ui.css` | Solo con `@media (hover: hover)`: fondos tintados, fila resaltada, chevron que avanza 2 px y sombra suave. |
+
+La validación del correo se hace al salir del campo (`ui/validation.ts`); la obligatoriedad se sigue comprobando al enviar.
+
+### Movimiento, materiales y diálogos
+
+- Curva `--spring`: resorte críticamente amortiguado (respuesta 0.35 s, sin rebote) muestreado con `linear()` en 500 ms.
+- Materializar: avisos, errores de campo, estados y el enlace manual aparecen con opacidad, escala 0.97 y desenfoque.
+- Consistencia espacial: al profundizar en las rutas la vista entra desde la derecha y al volver desde la izquierda (`App.tsx`), sin desmontar componentes.
+- Encabezado fijo translúcido (`backdrop-filter`), con borde de scroll suave solo cuando hay contenido debajo.
+- `ConfirmDialog` (`ui/ConfirmDialog.tsx`) para acciones con consecuencias, hoy solo inactivar una institución: scrim, origen en el botón que lo abre, foco inicial en «Cancelar», Esc, fondo `inert` y foco devuelto al cerrar (`ui/modal.ts`).
+
+### Accesibilidad
+
+- `prefers-reduced-motion`: sin escala al presionar, sin animación del esqueleto y del indicador; los paneles solo se funden.
+- `prefers-reduced-transparency` y `prefers-contrast: more`: encabezado blanco sólido; con más contraste, bordes `neutral-500` y contorno en los botones tintados.
+- Sin `backdrop-filter`, el encabezado es blanco sólido.
 
 ## Criterios de aceptación de esta base
 

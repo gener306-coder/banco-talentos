@@ -2,6 +2,7 @@ import { useState } from 'react'
 import type { FormEvent } from 'react'
 import { Navigate } from 'react-router'
 import { useAuth } from '../auth/useAuth'
+import { PendingLabel } from '../ui/forms'
 
 export function LoginPage() {
   const { user, signIn, pending, message } = useAuth()
@@ -36,7 +37,7 @@ export function LoginPage() {
           required value={password} disabled={pending}
           onChange={(event) => setPassword(event.target.value)} />
         <button type="submit" disabled={pending}>
-          {pending ? 'Iniciando sesión…' : 'Iniciar sesión'}
+          <PendingLabel pending={pending} label="Iniciar sesión" pendingLabel="Iniciando sesión…" />
         </button>
       </form>
     </section>

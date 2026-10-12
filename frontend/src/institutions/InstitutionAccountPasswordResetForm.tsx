@@ -4,6 +4,8 @@ import { startInstitutionPasswordReset } from './api'
 import type { ResetDelivery } from './api'
 import { InstitutionRequestError } from './InstitutionLayout'
 import { useInstitutionMutation } from './useInstitutionRequest'
+import { PendingLabel } from '../ui/forms'
+import { emailErrorOnBlur, INVALID_EMAIL } from '../ui/validation'
 
 // El ADMIN solo identifica la cuenta: este formulario nunca incluye campos de contraseña.
 export function InstitutionAccountPasswordResetForm({ institutionId, disabled = false }: { institutionId: number; disabled?: boolean }) {
@@ -38,10 +40,14 @@ export function InstitutionAccountPasswordResetForm({ institutionId, disabled = 
         <input id="password-reset-account-email" name="email" type="email" autoComplete="email" required maxLength={254}
           value={email} disabled={pending} aria-invalid={Boolean(emailErrors?.length)}
           aria-describedby={emailErrors?.length ? 'password-reset-account-email-error' : undefined}
+          onBlur={(event) => {
+            const error = emailErrorOnBlur(event)
+            setRequiredError((current) => error ?? (current === INVALID_EMAIL ? null : current))
+          }}
           onChange={(event) => setEmail(event.target.value)} />
         {emailErrors?.length && <p id="password-reset-account-email-error" className="field-error">{emailErrors.join(' ')}</p>}
         <div className="actions">
-          <button type="submit" disabled={pending}>{mutation.pending ? 'Iniciando restablecimiento…' : 'Iniciar restablecimiento de contraseña'}</button>
+          <button type="submit" disabled={pending}><PendingLabel pending={mutation.pending} label="Iniciar restablecimiento de contraseña" pendingLabel="Iniciando restablecimiento…" /></button>
         </div>
       </form>
     </section>

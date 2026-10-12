@@ -5,6 +5,8 @@ import type { DeliveryMethod, SetupDelivery } from './api'
 import { InstitutionRequestError } from './InstitutionLayout'
 import { DeliveryMethodField, ManualSetupLink } from './SetupLinkDelivery'
 import { useInstitutionMutation } from './useInstitutionRequest'
+import { PendingLabel } from '../ui/forms'
+import { emailErrorOnBlur, INVALID_EMAIL } from '../ui/validation'
 
 export function InstitutionAccountForm({ institutionId, disabled = false }: { institutionId: number; disabled?: boolean }) {
   const [name, setName] = useState('')
@@ -49,7 +51,7 @@ export function InstitutionAccountForm({ institutionId, disabled = false }: { in
       {setupLink && <ManualSetupLink idPrefix="account" link={setupLink} />}
       {mutation.failure && <InstitutionRequestError failure={mutation.failure} />}
       {errors.institution_id?.length > 0 && <p className="notice" role="alert">{errors.institution_id.join(' ')}</p>}
-      {Object.keys(localErrors).length > 0 && <p className="notice" role="alert">Revisa los campos indicados.</p>}
+      {Object.values(localErrors).some((messages) => messages[0] !== INVALID_EMAIL) && <p className="notice" role="alert">Revisa los campos indicados.</p>}
       <form onSubmit={(event) => { void submit(event) }} aria-busy={pending}>
         <label htmlFor="account-name">Nombre de la cuenta</label>
         <input id="account-name" name="name" type="text" autoComplete="name" required maxLength={120}
@@ -61,12 +63,21 @@ export function InstitutionAccountForm({ institutionId, disabled = false }: { in
         <input id="account-email" name="email" type="email" autoComplete="email" required maxLength={254}
           value={email} disabled={pending} aria-invalid={Boolean(errors.email?.length)}
           aria-describedby={errors.email?.length ? 'account-email-error' : undefined}
+          onBlur={(event) => {
+            const error = emailErrorOnBlur(event)
+            setLocalErrors((current) => {
+              const next = { ...current }
+              if (error) next.email = [error]
+              else if (current.email?.[0] === INVALID_EMAIL) delete next.email
+              return next
+            })
+          }}
           onChange={(event) => setEmail(event.target.value)} />
         {errors.email?.length > 0 && <p id="account-email-error" className="field-error">{errors.email.join(' ')}</p>}
         <DeliveryMethodField idPrefix="account" value={method} disabled={pending} onChange={setMethod} />
         {errors.delivery_method?.length > 0 && <p className="field-error">{errors.delivery_method.join(' ')}</p>}
         <div className="actions">
-          <button type="submit" disabled={pending}>{mutation.pending ? 'Creando cuenta…' : 'Crear cuenta institucional'}</button>
+          <button type="submit" disabled={pending}><PendingLabel pending={mutation.pending} label="Crear cuenta institucional" pendingLabel="Creando cuenta…" /></button>
         </div>
       </form>
     </section>

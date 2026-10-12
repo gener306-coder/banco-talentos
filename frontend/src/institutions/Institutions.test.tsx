@@ -366,6 +366,11 @@ describe('registro y edición de instituciones', () => {
   })
 })
 
+async function confirmInactivation() {
+  const dialog = await screen.findByRole('alertdialog', { name: '¿Inactivar la institución?' })
+  fireEvent.click(within(dialog).getByRole('button', { name: 'Inactivar' }))
+}
+
 describe('activación e inactivación sin eliminación', () => {
   it.each([
     [true, 'Inactivar institución', 'INACTIVA', 'Institución inactivada correctamente.'],
@@ -375,6 +380,9 @@ describe('activación e inactivación sin eliminación', () => {
       .mockResolvedValueOnce(Response.json({ data: { ...institution, is_active: !isActive } }))
     renderApp('/institutions/27')
     fireEvent.click(await screen.findByRole('button', { name: action }))
+    // Solo inactivar pide confirmación; activar no tiene consecuencias que confirmar.
+    if (isActive) await confirmInactivation()
+    else expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument()
     expect(await screen.findByText(state)).toBeInTheDocument()
     expect(screen.getByText(notice)).toHaveAttribute('role', 'status')
     expect(screen.getByText(institution.name)).toBeInTheDocument()
@@ -396,8 +404,10 @@ describe('activación e inactivación sin eliminación', () => {
     renderApp('/institutions/27')
     const submit = await screen.findByRole('button', { name: 'Inactivar institución' })
     fireEvent.click(submit)
+    await confirmInactivation()
     fireEvent.click(submit)
     await waitFor(() => expect(writes()).toHaveLength(1))
+    expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument()
     expect(submit).toBeDisabled()
     expect(screen.getByText('ACTIVA')).toBeInTheDocument()
     expect(screen.queryByText('INACTIVA')).not.toBeInTheDocument()
@@ -414,12 +424,103 @@ describe('activación e inactivación sin eliminación', () => {
       .mockResolvedValueOnce(Response.json({ data: { ...institution, is_active: false } }))
     renderApp('/institutions/27')
     fireEvent.click(await screen.findByRole('button', { name: 'Inactivar institución' }))
+    await confirmInactivation()
     expect(await screen.findByRole('alert')).toHaveTextContent('No pudimos completar')
     expect(screen.getByText('ACTIVA')).toBeInTheDocument()
     expect(screen.queryByText('INACTIVA')).not.toBeInTheDocument()
     expect(screen.queryByText('Institución inactivada correctamente.')).not.toBeInTheDocument()
     fireEvent.click(screen.getByRole('button', { name: 'Inactivar institución' }))
+    await confirmInactivation()
     expect(await screen.findByText('INACTIVA')).toBeInTheDocument()
     expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+  })
+
+  it('confirma la inactivación en un diálogo accesible que se puede cancelar sin escribir', async () => {
+    apiMock.mockResolvedValueOnce(Response.json({ data: institution }))
+    const view = renderApp('/institutions/27')
+    const trigger = await screen.findByRole('button', { name: 'Inactivar institución' })
+    trigger.focus()
+    fireEvent.click(trigger)
+    const dialog = await screen.findByRole('alertdialog', { name: '¿Inactivar la institución?' })
+    expect(dialog).toHaveAttribute('aria-modal', 'true')
+    expect(dialog).toHaveAccessibleDescription(/no podrán iniciar sesión/)
+    expect(within(dialog).getByRole('button', { name: 'Cancelar' })).toHaveFocus()
+    expect(view.container).toHaveAttribute('inert')
+
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Cancelar' }))
+    expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument()
+    expect(view.container).not.toHaveAttribute('inert')
+    expect(trigger).toHaveFocus()
+
+    fireEvent.click(trigger)
+    fireEvent.keyDown(await screen.findByRole('alertdialog'), { key: 'Escape' })
+    expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument()
+    expect(screen.getByText('ACTIVA')).toBeInTheDocument()
+    expect(writes()).toHaveLength(0)
+  })
+})
+
+describe('estados y navegación del listado (apple-design)', () => {
+  it('anuncia la carga de inmediato y muestra el esqueleto solo si la espera supera 300 ms', async () => {
+    const response = deferredResponse()
+    apiMock.mockReturnValueOnce(response.promise)
+    renderApp()
+    expect(await screen.findByText('Cargando instituciones…')).toHaveAttribute('role', 'status')
+    expect(screen.queryByTestId('skeleton')).not.toBeInTheDocument()
+    expect(await screen.findByTestId('skeleton', {}, { timeout: 1000 })).toHaveAttribute('aria-hidden', 'true')
+    await act(async () => { response.resolve(Response.json({ data: [institution] })) })
+    expect(screen.queryByTestId('skeleton')).not.toBeInTheDocument()
+    expect(screen.getByText(institution.name)).toBeInTheDocument()
+  })
+
+  it('no muestra el esqueleto cuando la respuesta llega antes de 300 ms', async () => {
+    apiMock.mockResolvedValueOnce(Response.json({ data: [institution] }))
+    renderApp()
+    expect(await screen.findByText(institution.name)).toBeInTheDocument()
+    expect(screen.queryByTestId('skeleton')).not.toBeInTheDocument()
+  })
+
+  it('ofrece en el estado vacío la acción de registrar la primera institución', async () => {
+    apiMock.mockResolvedValueOnce(Response.json({ data: [] }))
+    renderApp()
+    const heading = await screen.findByRole('heading', { name: 'No hay instituciones registradas.' })
+    const empty = heading.closest<HTMLElement>('[role="status"]')!
+    expect(empty).toBeInTheDocument()
+    expect(within(empty).getByRole('link', { name: 'Registrar la primera institución' })).toHaveAttribute('href', '/institutions/new')
+  })
+
+  it('presenta el fallo de carga como estado de página con título, explicación y reintento', async () => {
+    apiMock.mockResolvedValueOnce(new Response(null, { status: 500 }))
+    renderApp()
+    const alert = await screen.findByRole('alert')
+    expect(within(alert).getByRole('heading', { name: 'No pudimos cargar la información' })).toBeInTheDocument()
+    expect(alert).toHaveTextContent('No pudimos completar la solicitud.')
+    expect(within(alert).getByRole('button', { name: 'Reintentar' })).toBeEnabled()
+  })
+
+  it('nombra el 404 del detalle y ofrece volver al listado', async () => {
+    apiMock.mockResolvedValueOnce(new Response(null, { status: 404 }))
+    renderApp('/institutions/27')
+    const alert = await screen.findByRole('alert')
+    expect(within(alert).getByRole('heading', { name: 'No encontramos esta institución' })).toBeInTheDocument()
+    expect(within(alert).queryByRole('button', { name: 'Reintentar' })).not.toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Volver a instituciones' })).toHaveAttribute('href', '/institutions')
+  })
+
+  it('abre el detalle al pulsar cualquier parte de la fila, sin perder el enlace accesible', async () => {
+    apiMock.mockResolvedValueOnce(Response.json({ data: [institution] }))
+      .mockResolvedValueOnce(Response.json({ data: institution }))
+    renderApp()
+    fireEvent.click(await screen.findByText(institution.cct))
+    expect(await screen.findByRole('heading', { name: 'Detalle de institución' })).toBeInTheDocument()
+    expect(screen.getByLabelText('Ruta actual').textContent).toBe('/institutions/27')
+  })
+
+  it('usa botones planos de regreso que conservan sus nombres accesibles', async () => {
+    apiMock.mockResolvedValueOnce(Response.json({ data: [institution] }))
+    renderApp()
+    const nav = await screen.findByRole('navigation', { name: 'Navegación de instituciones' })
+    expect(within(nav).getByRole('link', { name: 'Volver al inicio' })).toHaveTextContent('Inicio')
+    expect(within(nav).getByRole('link', { name: 'Instituciones' })).toHaveAttribute('aria-current', 'page')
   })
 })

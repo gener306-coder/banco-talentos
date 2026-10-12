@@ -5,6 +5,8 @@ import type { DeliveryMethod, SetupResult } from './api'
 import { InstitutionRequestError } from './InstitutionLayout'
 import { DeliveryMethodField, ManualSetupLink } from './SetupLinkDelivery'
 import { useInstitutionMutation } from './useInstitutionRequest'
+import { PendingLabel } from '../ui/forms'
+import { emailErrorOnBlur, INVALID_EMAIL } from '../ui/validation'
 
 export function InstitutionAccountSetupLinkForm({ institutionId, disabled = false }: { institutionId: number; disabled?: boolean }) {
   const [email, setEmail] = useState('')
@@ -42,12 +44,16 @@ export function InstitutionAccountSetupLinkForm({ institutionId, disabled = fals
         <input id="pending-account-email" name="email" type="email" autoComplete="email" required maxLength={254}
           value={email} disabled={pending} aria-invalid={Boolean(emailErrors?.length)}
           aria-describedby={emailErrors?.length ? 'pending-account-email-error' : undefined}
+          onBlur={(event) => {
+            const error = emailErrorOnBlur(event)
+            setRequiredError((current) => error ?? (current === INVALID_EMAIL ? null : current))
+          }}
           onChange={(event) => setEmail(event.target.value)} />
         {emailErrors?.length && <p id="pending-account-email-error" className="field-error">{emailErrors.join(' ')}</p>}
         <DeliveryMethodField idPrefix="pending-account" value={method} disabled={pending} onChange={setMethod} />
         {mutation.failure?.errors.delivery_method?.length && <p className="field-error">{mutation.failure.errors.delivery_method.join(' ')}</p>}
         <div className="actions">
-          <button type="submit" disabled={pending}>{mutation.pending ? 'Reenviando enlace…' : 'Reenviar enlace de configuración'}</button>
+          <button type="submit" disabled={pending}><PendingLabel pending={mutation.pending} label="Reenviar enlace de configuración" pendingLabel="Reenviando enlace…" /></button>
         </div>
       </form>
     </section>

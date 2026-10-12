@@ -208,6 +208,9 @@ describe('enlace manual en el alta HU-S2-01', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Copiar enlace' }))
     expect(await screen.findByText('Enlace copiado al portapapeles.')).toHaveAttribute('role', 'status')
     expect(writeText).toHaveBeenCalledWith(link)
+    // El botón confirma la acción en su propia etiqueta y luego vuelve a su texto original.
+    expect(screen.getByRole('button', { name: 'Copiado' })).toBeInTheDocument()
+    expect(await screen.findByRole('button', { name: 'Copiar enlace' }, { timeout: 2500 })).toBeInTheDocument()
   })
 
   it('selecciona el enlace y lo indica si no se puede copiar automáticamente', async () => {
@@ -230,5 +233,22 @@ describe('enlace manual en el alta HU-S2-01', () => {
     await act(async () => { resolve(Response.json({ data: { ...account, email: 'otra@example.test' }, setup_delivery: 'sent' }, { status: 201 })) })
     expect(await screen.findByText(successMessage)).toBeInTheDocument()
     expect(screen.queryByLabelText('Enlace de configuración')).not.toBeInTheDocument()
+  })
+})
+
+describe('validación en línea del alta', () => {
+  it('avisa de un correo con formato inválido al salir del campo, sin el aviso general del envío', async () => {
+    renderApp()
+    const field = await screen.findByLabelText('Correo de acceso')
+    fireEvent.change(field, { target: { value: 'titular-sin-arroba' } })
+    fireEvent.blur(field)
+    expect(field).toHaveAttribute('aria-invalid', 'true')
+    expect(field).toHaveAccessibleDescription('Ingresa un correo electrónico válido.')
+    expect(screen.queryByText('Revisa los campos indicados.')).not.toBeInTheDocument()
+
+    fireEvent.change(field, { target: { value: 'titular@example.test' } })
+    fireEvent.blur(field)
+    expect(field).not.toHaveAttribute('aria-invalid', 'true')
+    expect(accountRequest).not.toHaveBeenCalled()
   })
 })

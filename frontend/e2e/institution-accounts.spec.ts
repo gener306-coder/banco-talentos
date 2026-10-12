@@ -123,6 +123,8 @@ test('ADMIN crea una cuenta sin contraseña; su titular la establece y pierde ac
     await expect(holder.getByRole('heading', { name: 'Acceso denegado', exact: true })).toBeVisible()
 
     await page.getByRole('button', { name: 'Inactivar institución', exact: true }).click()
+    await page.getByRole('alertdialog', { name: '¿Inactivar la institución?' })
+      .getByRole('button', { name: 'Inactivar', exact: true }).click()
     await expect(page.getByText('INACTIVA', { exact: true })).toBeVisible()
     const revoked = await holderContext.request.get('/api/me', { headers: { Origin: baseURL! } })
     expect(revoked.status()).toBe(401)

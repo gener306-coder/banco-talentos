@@ -1,3 +1,5 @@
+import { useEffect, useLayoutEffect, useRef, useState } from 'react'
+import type { RefObject } from 'react'
 import { Navigate, Route, Routes, useLocation } from 'react-router'
 import { AuthProvider } from './auth/AuthProvider'
 import { ProtectedRoute } from './auth/ProtectedRoute'
@@ -10,6 +12,7 @@ import { InstitutionsPage } from './institutions/InstitutionsPage'
 import { InstitutionCreatePage } from './institutions/InstitutionCreatePage'
 import { InstitutionDetailPage } from './institutions/InstitutionDetailPage'
 import { InstitutionEditPage } from './institutions/InstitutionEditPage'
+import { prefersReducedMotion } from './ui/modal'
 
 function AuthRoutes() {
   const { status, message, pending, restore, signOut } = useAuth()
@@ -52,26 +55,73 @@ function AuthRoutes() {
   )
 }
 
+// Resorte críticamente amortiguado (ver --spring en ui/ui.css).
+const SPRING_EASING = 'linear(0, 0.075, 0.227, 0.39, 0.536, 0.656, 0.75, 0.821, 0.873, 0.911, 0.938, 0.957, 0.971, 0.98, 0.986, 0.991, 0.994, 0.996, 0.997, 0.998, 1)'
+const depth = (path: string) => path.split('/').filter(Boolean).length
+
+/**
+ * Consistencia espacial: al profundizar (listado → detalle) la vista entra desde la derecha y al
+ * volver, desde la izquierda. Se anima el contenedor sin desmontarlo, para no repetir la sesión.
+ */
+function useRouteTransition(element: RefObject<HTMLElement | null>, pathname: string) {
+  const previous = useRef(pathname)
+  useLayoutEffect(() => {
+    const from = previous.current
+    previous.current = pathname
+    const node = element.current
+    if (from === pathname || !node || typeof node.animate !== 'function') return
+    const reduced = prefersReducedMotion()
+    const offset = Math.sign(depth(pathname) - depth(from)) * 24
+    const frames = reduced ? [{ opacity: 0 }, { opacity: 1 }] : [{ opacity: 0, transform: `translateX(${offset}px)` }, { opacity: 1, transform: 'none' }]
+    try {
+      node.animate(frames, { duration: reduced ? 160 : 500, easing: reduced ? 'ease' : SPRING_EASING })
+    } catch {
+      node.animate(frames, { duration: 300, easing: 'ease-out' })
+    }
+  }, [element, pathname])
+}
+
+/** El borde suave bajo el encabezado solo aparece cuando hay contenido debajo. */
+function useScrolled() {
+  const [scrolled, setScrolled] = useState(false)
+  useEffect(() => {
+    const update = () => setScrolled(window.scrollY > 4)
+    update()
+    window.addEventListener('scroll', update, { passive: true })
+    return () => window.removeEventListener('scroll', update)
+  }, [])
+  return scrolled
+}
+
 function App() {
   const { pathname } = useLocation()
+  const wide = pathname.startsWith('/institutions')
+  const main = useRef<HTMLElement>(null)
+  const scrolled = useScrolled()
+  useRouteTransition(main, pathname)
+
   return (
-    <main className={pathname.startsWith('/institutions') ? 'institutions-shell' : undefined}>
-      <header className="flex items-center gap-4">
-        {/* En /login el logotipo se muestra en el formulario; se evita duplicarlo. */}
-        {pathname !== '/login' && (
-          <img src="/brand/logo.png" alt="Nodologístico" width={697} height={783} className="h-14 w-auto shrink-0" />
-        )}
-        <div>
-          <p className="eyebrow text-brand-neutral">Educación Dual</p>
-          <h1 className="text-brand-primary">Banco de Talentos</h1>
+    <>
+      <header className="app-bar" data-scrolled={scrolled}>
+        <div className={`app-bar-inner${wide ? ' wide' : ''}`}>
+          {/* En /login el logotipo se muestra en el formulario; se evita duplicarlo. */}
+          {pathname !== '/login' && (
+            <img src="/brand/logo.png" alt="Nodologístico" width={697} height={783} className="h-11 w-auto shrink-0" />
+          )}
+          <div>
+            <p className="eyebrow text-brand-neutral">Educación Dual</p>
+            <h1 className="text-brand-primary">Banco de Talentos</h1>
+          </div>
         </div>
       </header>
-      <Routes>
-        <Route path="/set-initial-password" element={<SetInitialPasswordPage />} />
-        <Route path="/reset-password" element={<ResetPasswordPage />} />
-        <Route path="*" element={<AuthProvider><AuthRoutes /></AuthProvider>} />
-      </Routes>
-    </main>
+      <main ref={main} className={wide ? 'institutions-shell' : undefined}>
+        <Routes>
+          <Route path="/set-initial-password" element={<SetInitialPasswordPage />} />
+          <Route path="/reset-password" element={<ResetPasswordPage />} />
+          <Route path="*" element={<AuthProvider><AuthRoutes /></AuthProvider>} />
+        </Routes>
+      </main>
+    </>
   )
 }
 

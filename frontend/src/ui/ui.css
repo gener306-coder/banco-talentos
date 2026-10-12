@@ -1,0 +1,123 @@
+/*
+ * Lenguaje de interacción apple-design (docs/design/identidad-visual.md, «Lenguaje de interacción»).
+ * Capa components: prevalece sobre `legacy` y cede ante las utilidades de Tailwind.
+ * Solo usa tokens del tema y mezclas de ellos; no introduce colores de marca nuevos.
+ */
+@layer components {
+:root {
+  --tint: color-mix(in srgb, var(--color-brand-primary) 8%, transparent);
+  --tint-hover: color-mix(in srgb, var(--color-brand-primary) 14%, transparent);
+  --fill: color-mix(in srgb, var(--color-brand-neutral) 8%, transparent);
+  --glass: color-mix(in srgb, var(--color-white) 72%, transparent);
+  --ink: color-mix(in srgb, var(--color-brand-neutral) 70%, black);
+  /* Resorte críticamente amortiguado (respuesta 0.35 s, sin rebote) muestreado en 500 ms. */
+  --spring: linear(0, 0.075, 0.227, 0.39, 0.536, 0.656, 0.75, 0.821, 0.873, 0.911, 0.938, 0.957, 0.971, 0.98, 0.986, 0.991, 0.994, 0.996, 0.997, 0.998, 1);
+  --spring-duration: 500ms;
+}
+
+/* Tipografía por tamaño: tracking negativo y peso en títulos; el cuerpo no cambia. */
+h1 { font-weight: 600; letter-spacing: -0.025em; line-height: 1.05; }
+h2 { font-weight: 600; letter-spacing: -0.015em; line-height: 1.2; }
+h3 { font-weight: 600; letter-spacing: -0.01em; color: var(--ink); }
+.eyebrow { font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.08em; }
+:root { font-optical-sizing: auto; }
+
+/* Encabezado general translúcido: el contenido pasa por debajo. */
+.app-bar { position: sticky; top: 0; z-index: 10; margin: 0 0 1.5rem; background: var(--glass);
+  -webkit-backdrop-filter: blur(20px) saturate(180%); backdrop-filter: blur(20px) saturate(180%);
+  border-top: 1px solid color-mix(in srgb, var(--color-white) 60%, transparent); }
+.app-bar-inner { width: min(100% - 2rem, 34rem); margin: 0 auto; display: flex; align-items: center; gap: 0.9rem; padding: 0.7rem 0; }
+.app-bar-inner.wide { width: min(100% - 2rem, 70rem); }
+.app-bar h1 { margin: 0.1rem 0 0; font-size: 1.5rem; }
+.app-bar .eyebrow { margin: 0; }
+/* Borde de scroll suave: aparece solo cuando hay contenido bajo el encabezado. */
+.app-bar::after { content: ''; position: absolute; left: 0; right: 0; top: 100%; height: 14px; pointer-events: none;
+  background: linear-gradient(to bottom, color-mix(in srgb, var(--color-neutral-100) 90%, transparent), transparent);
+  opacity: 0; transition: opacity 160ms; }
+.app-bar[data-scrolled='true']::after { opacity: 1; }
+main { margin-top: 0; }
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) { .app-bar { background: var(--color-white); } }
+
+/* Botones: relleno (principal), tintado (secundario), plano (navegación). */
+button, .institutions .institution-button, .tinted, .plain, .pill-link {
+  border-radius: 10px; display: inline-flex; align-items: center; justify-content: center; gap: 0.4rem;
+  transition: transform 100ms ease-out, background-color 150ms, box-shadow 150ms; }
+button.secondary, .institutions .institution-button.secondary, .tinted {
+  background: var(--tint); border-color: transparent; color: var(--color-brand-primary); }
+button.secondary:hover:not(:disabled), .institutions .institution-button.secondary:hover, .tinted:hover { background: var(--tint-hover); }
+.plain, .institutions a.plain { padding: 0.4rem 0.6rem; border: 0; background: transparent; color: var(--color-brand-primary);
+  font-weight: 500; text-decoration: none; cursor: pointer; }
+button.plain:hover:not(:disabled) { background: var(--fill); }
+.pill-link, .institutions a.pill-link { padding: 0.35rem 0.7rem 0.35rem 0.85rem; border-radius: 999px; background: var(--tint);
+  color: var(--color-brand-primary); font-size: 0.88rem; font-weight: 600; text-decoration: none; white-space: nowrap; }
+.pill-link .icon { transition: transform 150ms ease-out; }
+.icon { width: 1em; height: 1em; flex-shrink: 0; }
+/* Respuesta inmediata: se hunde al presionar, no al soltar. */
+button:active:not(:disabled), .institutions .institution-button:active, .plain:active, .pill-link:active { transform: scale(0.97); }
+button:disabled, input:disabled { opacity: 0.5; }
+input { border-radius: 8px; }
+
+/* Estados hover: solo con puntero, para que en táctil no queden fijos. */
+@media (hover: hover) {
+  button:not(:disabled):not(.plain):hover, .institutions .institution-button:hover { box-shadow: 0 1px 0 rgba(0, 0, 0, 0.06), 0 4px 12px color-mix(in srgb, var(--color-brand-primary) 14%, transparent); }
+  .plain:hover, .institutions a.plain:hover { background: var(--fill); }
+  .pill-link:hover { background: var(--tint-hover); }
+  .pill-link:hover .icon, .institution-table tbody tr:hover .pill-link .icon { transform: translateX(2px); }
+  .institution-table tbody tr[data-href] { cursor: pointer; }
+  .institution-table tbody tr[data-href]:hover > * { background: var(--color-neutral-100); }
+  input:hover:not(:focus):not(:disabled) { border-color: var(--color-brand-neutral); }
+}
+
+/* Navegación de instituciones con botones planos. */
+.institution-navigation { gap: 0.1rem; margin-left: -0.6rem; }
+.institution-navigation [aria-current='page'] { color: var(--color-brand-neutral); }
+.institution-back { margin-left: -0.6rem; }
+
+/* Estados de carga, vacío y error. */
+.skeleton { display: grid; gap: 0.9rem; padding: 0.4rem 0; }
+.skeleton-row { display: grid; grid-template-columns: 2.2fr 1fr 2fr 0.8fr 0.9fr; gap: 1rem; align-items: center; }
+.skeleton-details { display: grid; gap: 0.55rem; margin: 1rem 0; max-width: 26rem; }
+.skeleton-details .bone:nth-child(odd) { width: 35%; height: 0.75rem; }
+.skeleton-details .bone:nth-child(even) { width: 80%; margin-bottom: 0.5rem; }
+.bone { display: block; height: 0.85rem; border-radius: 6px; background: linear-gradient(90deg, var(--color-neutral-200) 25%, var(--color-neutral-100) 40%, var(--color-neutral-200) 60%); background-size: 300% 100%; animation: shimmer 1.4s ease-in-out infinite; }
+.bone.pill { height: 1.3rem; border-radius: 999px; }
+@keyframes shimmer { from { background-position: 100% 0; } to { background-position: 0 0; } }
+.state-message { display: grid; justify-items: center; text-align: center; gap: 0.45rem; padding: 2.2rem 1rem; }
+.state-message h3 { margin: 0.4rem 0 0; font-size: 1.1rem; }
+.state-message p { margin: 0 0 0.6rem; max-width: 42ch; }
+.state-badge { width: 3rem; height: 3rem; border-radius: 50%; display: grid; place-items: center; font-size: 1.5rem; }
+.state-message.empty .state-badge { background: var(--tint); color: var(--color-brand-primary); }
+.state-message.error .state-badge { background: #fff3ef; color: #b74738; }
+.state-message.error h3 { color: #7c2921; }
+.spinner { width: 1em; height: 1em; border: 2px solid currentColor; border-right-color: transparent; border-radius: 50%; animation: spin 0.7s linear infinite; flex-shrink: 0; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* Materializar: los paneles llegan con desenfoque, escala y opacidad. */
+.institution-success, .manual-setup-link, .state-message, .field-error, .notice, .copy-status {
+  animation: materialize var(--spring-duration) var(--spring) both; }
+@keyframes materialize { from { opacity: 0; transform: scale(0.97); filter: blur(6px); } to { opacity: 1; transform: none; filter: none; } }
+
+/* Diálogo de confirmación con scrim. */
+.modal-layer { position: fixed; inset: 0; z-index: 50; display: grid; place-items: center; padding: 1rem; }
+.modal-scrim { position: absolute; inset: 0; background: color-mix(in srgb, var(--ink) 32%, transparent); animation: fade-in 200ms ease both; }
+.modal-dialog { position: relative; width: min(24rem, 100%); background: var(--color-white); border-radius: 14px; padding: 1.3rem;
+  box-shadow: 0 20px 48px rgba(0, 0, 0, 0.18); display: grid; gap: 0.8rem; animation: dialog-in var(--spring-duration) var(--spring) both; }
+.modal-dialog h2 { margin: 0; font-size: 1.15rem; color: var(--ink); }
+.modal-dialog p { margin: 0; }
+@keyframes fade-in { from { opacity: 0; } }
+@keyframes dialog-in { from { opacity: 0; transform: scale(0.6); } }
+body.modal-open { overflow: hidden; }
+
+/* Accesibilidad: alternativas sin movimiento, sin transparencia y con más contraste. */
+@media (prefers-reduced-motion: reduce) {
+  button:active:not(:disabled), .institutions .institution-button:active, .plain:active, .pill-link:active { transform: none; }
+  .bone, .spinner { animation: none; }
+  .institution-success, .manual-setup-link, .state-message, .field-error, .notice, .copy-status, .modal-dialog { animation: fade-in 160ms ease both; }
+}
+@media (prefers-reduced-transparency: reduce) { .app-bar { background: var(--color-white); -webkit-backdrop-filter: none; backdrop-filter: none; } }
+@media (prefers-contrast: more) {
+  .app-bar { background: var(--color-white); -webkit-backdrop-filter: none; backdrop-filter: none; border-bottom: 1px solid var(--color-neutral-500); }
+  .card { border: 2px solid var(--color-neutral-500); }
+  button.secondary, .tinted, .pill-link { border: 1px solid var(--color-brand-primary); }
+}
+}

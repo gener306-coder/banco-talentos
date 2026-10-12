@@ -66,6 +66,8 @@ test('ADMIN registra, consulta, edita, inactiva y reactiva una institución cons
   await expect(page.getByText(updated.contactEmail, { exact: true })).toBeVisible()
 
   await page.getByRole('button', { name: 'Inactivar institución', exact: true }).click()
+  await page.getByRole('alertdialog', { name: '¿Inactivar la institución?' })
+    .getByRole('button', { name: 'Inactivar', exact: true }).click()
   await expect(page.getByText('INACTIVA', { exact: true })).toBeVisible()
   await page.reload()
   await expect(page).toHaveURL(institutionUrl)

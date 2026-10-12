@@ -1,4 +1,5 @@
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
+import { CheckIcon, CopyIcon } from '../ui/icons'
 import type { DeliveryMethod } from './api'
 
 /** Elección del método de entrega del enlace de configuración inicial (HU-S2-01). */
@@ -36,11 +37,20 @@ export function ManualSetupLink({ idPrefix, link }: { idPrefix: string; link: st
   const input = useRef<HTMLInputElement>(null)
   const inputId = `${idPrefix}-setup-link`
 
+  // «Copiado» vuelve a «Copiar enlace» tras un momento; el aviso de estado se mantiene.
+  const [justCopied, setJustCopied] = useState(false)
+  useEffect(() => {
+    if (!justCopied) return
+    const timer = setTimeout(() => setJustCopied(false), 1600)
+    return () => clearTimeout(timer)
+  }, [justCopied])
+
   async function copyLink() {
     try {
       if (!navigator.clipboard) throw new Error('Portapapeles no disponible')
       await navigator.clipboard.writeText(link)
       setCopy('copied')
+      setJustCopied(true)
     } catch {
       input.current?.select()
       setCopy('failed')
@@ -54,9 +64,11 @@ export function ManualSetupLink({ idPrefix, link }: { idPrefix: string; link: st
         onFocus={(event) => event.currentTarget.select()} />
       <p id={`${inputId}-warning`}>Compártelo solo con la persona titular de la cuenta: caduca en 60 minutos, solo puede usarse una vez y quien lo abra podrá establecer la contraseña.</p>
       <div className="actions">
-        <button type="button" className="secondary" onClick={() => { void copyLink() }}>Copiar enlace</button>
+        <button type="button" className="secondary" onClick={() => { void copyLink() }}>
+          {justCopied ? <><CheckIcon />Copiado</> : <><CopyIcon />Copiar enlace</>}
+        </button>
       </div>
-      {copy === 'copied' && <p role="status">Enlace copiado al portapapeles.</p>}
+      {copy === 'copied' && <p className="copy-status" role="status">Enlace copiado al portapapeles.</p>}
       {copy === 'failed' && <p className="notice" role="alert">No se pudo copiar automáticamente. El enlace quedó seleccionado: cópialo manualmente.</p>}
     </div>
   )

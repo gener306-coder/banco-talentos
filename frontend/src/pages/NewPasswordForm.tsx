@@ -3,6 +3,7 @@ import type { FormEvent } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router'
 import { accessErrorMessages, ApiError } from '../lib/http'
 import type { ValidationErrors } from '../lib/http'
+import { PendingLabel } from '../ui/forms'
 
 export interface NewPasswordInput {
   email: string
@@ -133,7 +134,7 @@ export function NewPasswordForm({
             aria-describedby={errors.password_confirmation?.length ? 'password-confirmation-error' : undefined}
             onChange={(event) => setConfirmation(event.target.value)} />
           {errors.password_confirmation?.length > 0 && <p className="field-error" id="password-confirmation-error">{errors.password_confirmation.join(' ')}</p>}
-          <button type="submit" disabled={pending}>{pending ? pendingLabel : submitLabel}</button>
+          <button type="submit" disabled={pending}><PendingLabel pending={pending} label={submitLabel} pendingLabel={pendingLabel} /></button>
         </form>
       </>}
     </section>

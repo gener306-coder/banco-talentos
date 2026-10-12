@@ -4,6 +4,8 @@ import { getInstitution, updateInstitution } from './api'
 import { InstitutionForm } from './InstitutionForm'
 import { InstitutionLayout, InstitutionRequestError } from './InstitutionLayout'
 import { useInstitutionMutation, useInstitutionRequest } from './useInstitutionRequest'
+import { ChevronLeftIcon } from '../ui/icons'
+import { LoadingState } from '../ui/StateMessage'
 
 function InstitutionEdit({ id }: { id: string }) {
   const navigate = useNavigate()
@@ -13,8 +15,8 @@ function InstitutionEdit({ id }: { id: string }) {
 
   return (
     <InstitutionLayout title="Editar institución">
-      {loading ? <p role="status">Cargando institución…</p>
-        : failure ? <InstitutionRequestError failure={failure} retry={refresh} />
+      {loading ? <LoadingState label="Cargando institución…" variant="details" />
+        : failure ? <InstitutionRequestError failure={failure} retry={refresh} page />
         : data && (
           <InstitutionForm initialValue={data} pending={mutation.pending} failure={mutation.failure}
             submitLabel="Guardar cambios" cancelTo={`/institutions/${data.id}`}
@@ -22,7 +24,7 @@ function InstitutionEdit({ id }: { id: string }) {
               void navigate(`/institutions/${institution.id}`, { replace: true, state: { notice: 'Institución actualizada correctamente.' } })
             })} />
         )}
-      <p className="institution-back"><Link to="/institutions">Volver a instituciones</Link></p>
+      <p className="institution-back"><Link className="plain" to="/institutions"><ChevronLeftIcon />Volver a instituciones</Link></p>
     </InstitutionLayout>
   )
 }

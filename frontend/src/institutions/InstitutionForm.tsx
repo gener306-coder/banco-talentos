@@ -4,6 +4,8 @@ import { Link } from 'react-router'
 import type { InstitutionInput } from './api'
 import { InstitutionRequestError } from './InstitutionLayout'
 import type { InstitutionFailure } from './useInstitutionRequest'
+import { PendingLabel } from '../ui/forms'
+import { emailErrorOnBlur, INVALID_EMAIL } from '../ui/validation'
 
 interface InstitutionFormProps {
   initialValue?: InstitutionInput
@@ -43,7 +45,7 @@ export function InstitutionForm({ initialValue = emptyInstitution, submitLabel, 
     <>
       <p>Todos los campos son obligatorios.</p>
       {failure && <InstitutionRequestError failure={failure} />}
-      {Object.keys(localErrors).length > 0 && <p className="notice" role="alert">Revisa los campos indicados.</p>}
+      {Object.values(localErrors).some((messages) => messages[0] !== INVALID_EMAIL) && <p className="notice" role="alert">Revisa los campos indicados.</p>}
       <form onSubmit={(event) => { void submit(event) }} aria-busy={pending}>
         <label htmlFor="institution-name">Nombre</label>
         <input id="institution-name" name="name" type="text" autoComplete="organization"
@@ -64,11 +66,20 @@ export function InstitutionForm({ initialValue = emptyInstitution, submitLabel, 
         <input id="institution-contact-email" name="contact_email" type="email" autoComplete="email"
           required maxLength={254} value={values.contact_email} disabled={pending}
           aria-invalid={Boolean(errors.contact_email?.length)} aria-describedby={errors.contact_email?.length ? 'institution-email-error' : undefined}
+          onBlur={(event) => {
+            const error = emailErrorOnBlur(event)
+            setLocalErrors((current) => {
+              const next = { ...current }
+              if (error) next.contact_email = [error]
+              else if (current.contact_email?.[0] === INVALID_EMAIL) delete next.contact_email
+              return next
+            })
+          }}
           onChange={(event) => setValues({ ...values, contact_email: event.target.value })} />
         {errors.contact_email?.length > 0 && <p className="field-error" id="institution-email-error">{errors.contact_email.join(' ')}</p>}
 
         <div className="actions">
-          <button type="submit" disabled={pending}>{pending ? 'Guardando…' : submitLabel}</button>
+          <button type="submit" disabled={pending}><PendingLabel pending={pending} label={submitLabel} pendingLabel="Guardando…" /></button>
           <Link className="institution-button secondary" to={cancelTo}>Cancelar</Link>
         </div>
       </form>
