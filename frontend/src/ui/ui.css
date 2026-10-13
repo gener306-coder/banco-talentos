@@ -145,3 +145,23 @@ body.modal-open { overflow: hidden; }
   .sheet-layer.wide .sheet-panel, .sheet-layer.compact .sheet-panel { animation: fade-in 160ms ease both; }
 }
 }
+
+/* Tablas y paginación genéricas para módulos nuevos (alumnos). Instituciones conserva sus clases. */
+@layer components {
+.page-navigation { display: flex; gap: 0.1rem; margin: 0 0 1.4rem -0.6rem; }
+.page-toolbar { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1rem; margin-bottom: 1.5rem; }
+.page-toolbar p { margin: 0; max-width: 46ch; }
+.data-table-wrapper { overflow-x: auto; }
+.data-table { width: 100%; border-collapse: collapse; text-align: left; font-size: 0.95rem; }
+.data-table th, .data-table td { padding: 0.9rem 0.8rem; border-bottom: 1px solid var(--color-neutral-200); vertical-align: top; overflow-wrap: break-word; }
+.data-table thead { background: var(--color-neutral-100); }
+.data-table td.mono { font-family: ui-monospace, monospace; font-size: 0.88rem; white-space: nowrap; }
+.pager { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.75rem; margin-top: 1rem; }
+.pager p { margin: 0; font-size: 0.9rem; font-variant-numeric: tabular-nums; }
+.privacy-note { font-size: 0.88rem; color: var(--color-brand-neutral); }
+@media (max-width: 600px) {
+  .page-toolbar { align-items: stretch; }
+  .page-toolbar > button { width: 100%; }
+  .data-table th, .data-table td { padding: 0.75rem 0.55rem; }
+}
+}

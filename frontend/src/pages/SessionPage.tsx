@@ -19,6 +19,9 @@ export function SessionPage() {
       {user.role === 'ADMIN' && (
         <nav aria-label="Administración"><Link to="/institutions">Instituciones</Link></nav>
       )}
+      {user.role === 'INSTITUTION' && user.institution && (
+        <nav aria-label="Institución"><Link to="/students">Alumnos</Link></nav>
+      )}
       <button type="button" disabled={pending} onClick={() => { void signOut() }}>
         {pending ? 'Cerrando sesión…' : 'Cerrar sesión'}
       </button>

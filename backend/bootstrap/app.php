@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Middleware\EnsureInstitutionMember;
 use App\Http\Middleware\EnsureRole;
 use App\Http\Middleware\EnsureUserIsActive;
 use Illuminate\Auth\AuthenticationException;
@@ -23,6 +24,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias([
             'active' => EnsureUserIsActive::class,
             'role' => EnsureRole::class,
+            'institution.member' => EnsureInstitutionMember::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

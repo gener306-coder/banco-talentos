@@ -6,6 +6,7 @@ use App\Http\Controllers\InstitutionAccountController;
 use App\Http\Controllers\InstitutionController;
 use App\Http\Controllers\InstitutionPasswordResetController;
 use App\Http\Controllers\InstitutionSetupLinkController;
+use App\Http\Controllers\StudentController;
 use App\Models\Institution;
 use Illuminate\Support\Facades\Route;
 
@@ -39,3 +40,12 @@ Route::post('/institution-accounts/resend-setup', [InstitutionSetupLinkControlle
 
 Route::post('/institution-accounts/password-reset/start', [InstitutionPasswordResetController::class, 'start'])
     ->middleware(['auth:sanctum', 'active', 'role:'.UserRole::ADMIN->value, 'throttle:institution-password-reset']);
+
+// Padrón estudiantil de la institución de la sesión (HU-S2-02); sin DELETE (baja lógica en HU-S2-04).
+Route::middleware(['auth:sanctum', 'active', 'role:'.UserRole::INSTITUTION->value, 'institution.member'])
+    ->prefix('students')
+    ->name('students.')
+    ->group(function (): void {
+        Route::get('/', [StudentController::class, 'index'])->name('index');
+        Route::post('/', [StudentController::class, 'store'])->name('store');
+    });

@@ -89,12 +89,16 @@ Las credenciales incorrectas y las cuentas inactivas producen el mismo mensaje. 
 
 Consulta [backend/README.md](backend/README.md) para detalles del contrato HTTP y del alta local. La matriz de aceptación, los resultados y el inventario de cambios están en [docs/HU-S1-01.md](docs/HU-S1-01.md).
 
+## Alumnos
+
+Una cuenta `INSTITUTION` con institución vinculada ve **Alumnos** en su página de sesión. El padrón (`/students`) lista solo los alumnos de su institución, 50 por página, ordenados por apellidos. **Registrar alumno** abre una hoja que pide matrícula o control interno, nombre(s), primer apellido y segundo apellido opcional; tras guardar queda lista para el siguiente. La matrícula es única dentro de la institución sin distinguir mayúsculas. El servidor asigna la institución, y la matrícula y el nombre se guardan aparte (`student_identities`) como datos de uso exclusivo de la institución. No existe eliminación. Tras actualizar el código aplica la migración con `docker compose exec backend php artisan migrate`. Contrato y cobertura en [docs/HU-S2-02.md](docs/HU-S2-02.md).
+
 ## Pruebas
 
 Ejecuta desde la raíz:
 
 ```bash
-# PostgreSQL temporal: autenticación, autorización, instituciones y cuentas institucionales
+# PostgreSQL temporal: autenticación, autorización, instituciones, cuentas institucionales y alumnos
 sh scripts/test-backend.sh
 
 # Clientes HTTP, sesión, instituciones, cuentas y configuración de contraseña inicial

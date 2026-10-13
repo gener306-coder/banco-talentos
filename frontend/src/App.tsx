@@ -12,6 +12,7 @@ import { InstitutionsPage } from './institutions/InstitutionsPage'
 import { InstitutionCreatePage } from './institutions/InstitutionCreatePage'
 import { InstitutionDetailPage } from './institutions/InstitutionDetailPage'
 import { InstitutionEditPage } from './institutions/InstitutionEditPage'
+import { StudentsPage } from './students/StudentsPage'
 import { prefersReducedMotion } from './ui/modal'
 
 function AuthRoutes() {
@@ -49,6 +50,9 @@ function AuthRoutes() {
         <Route path="/institutions/new" element={<InstitutionCreatePage />} />
         <Route path="/institutions/:id" element={<InstitutionDetailPage />} />
         <Route path="/institutions/:id/edit" element={<InstitutionEditPage />} />
+      </Route>
+      <Route element={<ProtectedRoute role="INSTITUTION" deniedMessage="No tienes permiso para acceder al padrón de alumnos." />}>
+        <Route path="/students" element={<StudentsPage />} />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
@@ -95,7 +99,7 @@ function useScrolled() {
 
 function App() {
   const { pathname } = useLocation()
-  const wide = pathname.startsWith('/institutions')
+  const wide = pathname.startsWith('/institutions') || pathname.startsWith('/students')
   const main = useRef<HTMLElement>(null)
   const scrolled = useScrolled()
   useRouteTransition(main, pathname)
