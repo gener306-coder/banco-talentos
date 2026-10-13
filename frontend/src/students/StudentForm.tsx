@@ -3,20 +3,31 @@ import type { FocusEvent, FormEvent } from 'react'
 import { useApiMutation } from '../lib/useApiRequest'
 import { PendingLabel } from '../ui/forms'
 import { InstitutionRequestError } from '../institutions/InstitutionLayout'
-import { createStudent } from './api'
-import type { Student, StudentInput } from './api'
+import { createStudent, fullName, updateStudentIdentity } from './api'
+import type { Student, StudentDetail, StudentInput } from './api'
 import { studentMessages } from './messages'
 
 const emptyStudent = { enrollment_number: '', given_names: '', first_surname: '', second_surname: '' }
 const ENROLLMENT_PATTERN = /^[A-Za-z0-9][A-Za-z0-9./-]*$/
 const ENROLLMENT_FORMAT = 'La matrícula solo admite letras, números, guion, punto y diagonal, sin espacios.'
 
+type StudentFormProps =
+  | { student?: undefined; onCreated: (student: Student) => void }
+  | { student: StudentDetail; onUpdated: (student: StudentDetail) => void }
+
 /**
- * Alta de un alumno en el padrón interno. Tras guardar, queda listo para capturar el siguiente.
+ * Identidad interna del alumno. Sin `student`, da de alta y queda listo para capturar el siguiente
+ * (HU-S2-02); con `student`, corrige su matrícula y nombre (HU-S2-03 CA-07).
  * La institución la asigna el servidor (HU-S2-02 CA-03); el formulario no la envía.
  */
-export function StudentForm({ onCreated }: { onCreated: (student: Student) => void }) {
-  const [values, setValues] = useState(emptyStudent)
+export function StudentForm(props: StudentFormProps) {
+  const editing = props.student
+  const [values, setValues] = useState(() => editing
+    ? {
+        enrollment_number: editing.enrollment_number, given_names: editing.given_names,
+        first_surname: editing.first_surname, second_surname: editing.second_surname ?? '',
+      }
+    : emptyStudent)
   const [localErrors, setLocalErrors] = useState<Record<string, string[]>>({})
   const [created, setCreated] = useState<Student | null>(null)
   const mutation = useApiMutation(studentMessages)
@@ -56,6 +67,12 @@ export function StudentForm({ onCreated }: { onCreated: (student: Student) => vo
     setLocalErrors(required)
     if (Object.keys(required).length) return
 
+    if (props.student) {
+      const { id } = props.student
+      await mutation.submit(() => updateStudentIdentity(id, input), props.onUpdated)
+      return
+    }
+    const { onCreated } = props
     await mutation.submit(() => createStudent(input), (student) => {
       setCreated(student)
       setValues(emptyStudent)
@@ -71,10 +88,10 @@ export function StudentForm({ onCreated }: { onCreated: (student: Student) => vo
 
   return (
     <section className="institution-account" aria-labelledby="student-form-title">
-      <h3 id="student-form-title">Registrar alumno</h3>
+      <h3 id="student-form-title">{editing ? 'Corregir identidad' : 'Registrar alumno'}</h3>
       <p className="privacy-note" id="student-privacy">La matrícula y el nombre son de uso exclusivo de tu institución y no se mostrarán a las empresas.</p>
       {created && <p className="institution-success" role="status">
-        Alumno registrado: {[created.given_names, created.first_surname, created.second_surname].filter(Boolean).join(' ')}. Puedes registrar el siguiente.
+        Alumno registrado: {fullName(created)}. Puedes registrar el siguiente.
       </p>}
       {mutation.failure && mutation.failure.status !== 422 && <InstitutionRequestError failure={mutation.failure} />}
       <form onSubmit={(event) => { void submit(event) }} aria-busy={mutation.pending} noValidate>
@@ -101,7 +118,9 @@ export function StudentForm({ onCreated }: { onCreated: (student: Student) => vo
         {fieldError('second_surname')}
         <div className="actions">
           <button type="submit" disabled={mutation.pending}>
-            <PendingLabel pending={mutation.pending} label="Registrar alumno" pendingLabel="Registrando alumno…" />
+            {editing
+              ? <PendingLabel pending={mutation.pending} label="Guardar identidad" pendingLabel="Guardando identidad…" />
+              : <PendingLabel pending={mutation.pending} label="Registrar alumno" pendingLabel="Registrando alumno…" />}
           </button>
         </div>
       </form>

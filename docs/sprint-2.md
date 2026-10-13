@@ -45,7 +45,8 @@ Sprint vigente desde el 8 de octubre de 2026. Sprint anterior: [sprint-1.md](spr
 
 ## HU-S2-03 — Expediente académico, profesional y geográfico
 
-**Estado:** Pendiente  
+**Estado:** Completada (13 de octubre de 2026)  
+**Diseño técnico y verificación:** [HU-S2-03.md](HU-S2-03.md)  
 **Story Points:** 8  
 **Rol:** `INSTITUTION`
 

@@ -2,6 +2,8 @@
 
 namespace App\Models;
 
+use App\Enums\AcademicPeriodType;
+use App\Enums\MexicanState;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -14,6 +16,22 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
 class Student extends Model
 {
     use HasFactory;
+
+    /** Expediente público (HU-S2-03); la institución nunca se asigna desde la petición. */
+    public const PROFILE_ATTRIBUTES = ['program', 'period_type', 'period_number', 'dual_available', 'state_code', 'municipality', 'can_relocate'];
+
+    protected $fillable = self::PROFILE_ATTRIBUTES;
+
+    protected function casts(): array
+    {
+        return [
+            'period_type' => AcademicPeriodType::class,
+            'period_number' => 'integer',
+            'dual_available' => 'boolean',
+            'state_code' => MexicanState::class,
+            'can_relocate' => 'boolean',
+        ];
+    }
 
     public function institution(): BelongsTo
     {

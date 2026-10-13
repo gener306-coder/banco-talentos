@@ -3,6 +3,8 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\StoreStudentRequest;
+use App\Http\Requests\UpdateStudentIdentityRequest;
+use App\Http\Requests\UpdateStudentProfileRequest;
 use App\Models\Student;
 use App\Models\StudentIdentity;
 use Illuminate\Database\UniqueConstraintViolationException;
@@ -12,8 +14,8 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
 /**
- * Padrón estudiantil de la institución de la sesión (HU-S2-02). Todas las consultas se acotan
- * al institution_id del usuario autenticado; el cliente nunca lo elige.
+ * Padrón estudiantil (HU-S2-02) y expediente (HU-S2-03) de la institución de la sesión. Todas las
+ * consultas se acotan al institution_id del usuario autenticado; el cliente nunca lo elige.
  */
 class StudentController extends Controller
 {
@@ -76,11 +78,63 @@ class StudentController extends Controller
             ->header('Cache-Control', 'no-store, private');
     }
 
-    private function enrollmentTaken(int $institutionId, string $enrollment): bool
+    public function show(Request $request, string $student): JsonResponse
+    {
+        return $this->detail($this->owned($request, $student));
+    }
+
+    public function updateProfile(UpdateStudentProfileRequest $request, string $student): JsonResponse
+    {
+        $record = $this->owned($request, $student);
+        // Solo columnas del expediente: la identidad y la institución no cambian por esta vía.
+        $record->fill($request->validated())->save();
+
+        return $this->detail($record);
+    }
+
+    public function updateIdentity(UpdateStudentIdentityRequest $request, string $student): JsonResponse
+    {
+        $record = $this->owned($request, $student);
+        $identity = $record->identity;
+
+        if ($this->enrollmentTaken($record->institution_id, $request->validated('enrollment_number'), $record->id)) {
+            $this->duplicateEnrollment();
+        }
+
+        try {
+            DB::transaction(fn () => $identity->fill($request->validated())->save());
+        } catch (UniqueConstraintViolationException $exception) {
+            if ($exception->index !== 'student_identities_institution_enrollment_unique') {
+                throw $exception;
+            }
+            $this->duplicateEnrollment();
+        }
+
+        return $this->detail($record);
+    }
+
+    /**
+     * Anti-IDOR (HU-S2-03 CA-05): el alumno se busca siempre dentro de la institución de la sesión.
+     * Uno ajeno responde igual que uno inexistente, para no revelar que existe.
+     */
+    private function owned(Request $request, string $id): Student
+    {
+        $student = Student::query()
+            ->where('institution_id', $request->user()->institution_id)
+            ->with('identity')
+            ->find((int) $id);
+
+        abort_if($student === null, 404, 'El alumno no existe.');
+
+        return $student;
+    }
+
+    private function enrollmentTaken(int $institutionId, string $enrollment, ?int $exceptStudentId = null): bool
     {
         return StudentIdentity::query()
             ->where('institution_id', $institutionId)
             ->whereRaw('lower(enrollment_number) = lower(?)', [$enrollment])
+            ->when($exceptStudentId, fn ($query) => $query->where('student_id', '!=', $exceptStudentId))
             ->exists();
     }
 
@@ -101,5 +155,21 @@ class StudentController extends Controller
             'second_surname' => $student->identity->second_surname,
             'created_at' => $student->created_at?->toISOString(),
         ];
+    }
+
+    private function detail(Student $student): JsonResponse
+    {
+        return response()->json(['data' => [
+            ...$this->present($student),
+            'profile' => [
+                'program' => $student->program,
+                'period_type' => $student->period_type?->value,
+                'period_number' => $student->period_number,
+                'dual_available' => $student->dual_available,
+                'state_code' => $student->state_code?->value,
+                'municipality' => $student->municipality,
+                'can_relocate' => $student->can_relocate,
+            ],
+        ]])->header('Cache-Control', 'no-store, private');
     }
 }

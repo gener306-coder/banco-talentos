@@ -41,11 +41,16 @@ Route::post('/institution-accounts/resend-setup', [InstitutionSetupLinkControlle
 Route::post('/institution-accounts/password-reset/start', [InstitutionPasswordResetController::class, 'start'])
     ->middleware(['auth:sanctum', 'active', 'role:'.UserRole::ADMIN->value, 'throttle:institution-password-reset']);
 
-// Padrón estudiantil de la institución de la sesión (HU-S2-02); sin DELETE (baja lógica en HU-S2-04).
+// Padrón (HU-S2-02) y expediente (HU-S2-03) de la institución de la sesión; sin DELETE (baja lógica en HU-S2-04).
 Route::middleware(['auth:sanctum', 'active', 'role:'.UserRole::INSTITUTION->value, 'institution.member'])
     ->prefix('students')
     ->name('students.')
+    // Identificador acotado a un bigint: fuera de rango responde 404 sin llegar a PostgreSQL.
+    ->where(['student' => '[1-9][0-9]{0,17}'])
     ->group(function (): void {
         Route::get('/', [StudentController::class, 'index'])->name('index');
         Route::post('/', [StudentController::class, 'store'])->name('store');
+        Route::get('{student}', [StudentController::class, 'show'])->name('show');
+        Route::put('{student}/profile', [StudentController::class, 'updateProfile'])->name('profile.update');
+        Route::put('{student}/identity', [StudentController::class, 'updateIdentity'])->name('identity.update');
     });

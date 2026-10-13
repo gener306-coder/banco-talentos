@@ -220,12 +220,12 @@ it('offers no physical deletion of students', function () {
     $student = Student::factory()->for($this->institution)->withIdentity()->create();
     signInInstitution($this);
     $this->browserRequest('DELETE', '/api/students')->assertStatus(405);
-    $this->browserRequest('DELETE', '/api/students/'.$student->id)->assertNotFound();
+    $this->browserRequest('DELETE', '/api/students/'.$student->id)->assertStatus(405);
     $this->assertDatabaseHas('students', ['id' => $student->id]);
 });
 
 it('keeps the protected identity outside the public students table (CA-05)', function () {
-    expect(Schema::getColumnListing('students'))->toEqualCanonicalizing(['id', 'institution_id', 'created_at', 'updated_at']);
+    expect(Schema::getColumnListing('students'))->toEqualCanonicalizing(['id', 'institution_id', 'created_at', 'updated_at', ...Student::PROFILE_ATTRIBUTES]);
     foreach (StudentIdentity::PROTECTED_ATTRIBUTES as $column) {
         expect(Schema::hasColumn('student_identities', $column))->toBeTrue();
         expect(Schema::hasColumn('students', $column))->toBeFalse();

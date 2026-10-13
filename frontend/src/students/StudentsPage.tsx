@@ -47,7 +47,7 @@ export function StudentsPage() {
                   {data.students.map((student) => (
                     <tr key={student.id}>
                       <td className="mono">{student.enrollment_number}</td>
-                      <th scope="row">{surnames(student)}</th>
+                      <th scope="row"><Link to={`/students/${student.id}`}>{surnames(student)}</Link></th>
                       <td>{student.given_names}</td>
                     </tr>
                   ))}
