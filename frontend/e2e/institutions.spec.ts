@@ -1,13 +1,7 @@
 import { expect, test } from '@playwright/test'
+import { ADMIN_STATE } from './support/admin'
 
-const email = process.env.E2E_ADMIN_EMAIL
-const password = process.env.E2E_ADMIN_PASSWORD
-
-test.beforeAll(() => {
-  if (!email || !password) {
-    throw new Error('Ejecuta sh scripts/test-e2e.sh desde la raíz del repositorio.')
-  }
-})
+test.use({ storageState: ADMIN_STATE })
 
 test('ADMIN registra, consulta, edita, inactiva y reactiva una institución conservando sus datos', async ({ page }) => {
   const suffix = Date.now().toString()
@@ -22,10 +16,8 @@ test('ADMIN registra, consulta, edita, inactiva y reactiva una institución cons
     contactEmail: `direccion-${suffix}@example.test`,
   }
 
-  await page.goto('/login')
-  await page.getByLabel('Correo electrónico').fill(email!)
-  await page.getByLabel('Contraseña', { exact: true }).fill(password!)
-  await page.getByRole('button', { name: 'Iniciar sesión', exact: true }).click()
+  // La sesión ADMIN ya viene de admin.setup.ts: se parte del área protegida.
+  await page.goto('/')
   await page.getByRole('link', { name: 'Instituciones', exact: true }).click()
   await expect(page).toHaveURL(/\/institutions$/)
   await expect(page.getByRole('heading', { name: 'Instituciones', exact: true })).toBeVisible()

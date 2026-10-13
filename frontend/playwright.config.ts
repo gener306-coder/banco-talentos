@@ -11,9 +11,12 @@ export default defineConfig({
     trace: 'off',
   },
   projects: [
+    // Un único login de ADMIN cuya sesión reutilizan los escenarios de administración.
+    { name: 'setup', testMatch: /.*\.setup\.ts/, use: { ...devices['Desktop Chrome'] } },
     {
       name: 'chromium',
       use: { ...devices['Desktop Chrome'] },
+      dependencies: ['setup'],
     },
   ],
   webServer: {

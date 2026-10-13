@@ -1,12 +1,12 @@
 import { randomBytes } from 'node:crypto'
 import { expect, test } from '@playwright/test'
+import { ADMIN_STATE, NO_SESSION } from './support/admin'
 import { linkFromMail } from './support/mailpit'
 
-const adminEmail = process.env.E2E_ADMIN_EMAIL
-const adminPassword = process.env.E2E_ADMIN_PASSWORD
+test.use({ storageState: ADMIN_STATE })
 
 test.beforeAll(() => {
-  if (!adminEmail || !adminPassword || !process.env.MAILPIT_URL) {
+  if (!process.env.MAILPIT_URL) {
     throw new Error('Ejecuta sh scripts/test-e2e.sh desde la raíz del repositorio.')
   }
 })
@@ -25,10 +25,8 @@ test('ADMIN crea una cuenta sin contraseña; su titular la establece y pierde ac
     password: randomBytes(24).toString('hex'),
   }
 
-  await page.goto('/login')
-  await page.getByLabel('Correo electrónico').fill(adminEmail!)
-  await page.getByLabel('Contraseña', { exact: true }).fill(adminPassword!)
-  await page.getByRole('button', { name: 'Iniciar sesión', exact: true }).click()
+  // La sesión ADMIN ya viene de admin.setup.ts: se parte del área protegida.
+  await page.goto('/')
   await page.getByRole('link', { name: 'Instituciones', exact: true }).click()
   await page.getByRole('link', { name: 'Nueva institución', exact: true }).click()
   await page.getByLabel('Nombre', { exact: true }).fill(institution.name)
@@ -68,7 +66,7 @@ test('ADMIN crea una cuenta sin contraseña; su titular la establece y pierde ac
   expect(setupUrl.origin).toBe(baseURL)
 
   // Un contexto independiente representa al titular; no comparte las cookies del ADMIN.
-  const holderContext = await browser.newContext({ baseURL })
+  const holderContext = await browser.newContext({ baseURL, ...NO_SESSION })
   try {
     const holder = await holderContext.newPage()
     const setupDocument = await holder.goto(setupUrl.toString())

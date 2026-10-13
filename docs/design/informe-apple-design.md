@@ -30,7 +30,7 @@ Aplicar al frontend los principios de la skill `apple-design` (github.com/emilko
 ## Hallazgos durante la implementación
 
 - **Hoja cerrada que capturaba clics.** `.sheet-layer.wide { display: grid }` anulaba el `display: none` del atributo `hidden`; la capa invisible quedaba encima de la página. Lo detectó E2E (jsdom no aplica CSS). Se corrigió con `.sheet-layer[hidden] { display: none !important }`.
-- **Límite de intentos de login en E2E.** Cinco escenarios inician sesión con el mismo ADMIN y el límite es de 5 por minuto por correo; un sexto escenario con ADMIN fallaría con 429. Conviene, en un cambio aparte, reutilizar la sesión (`storageState` de Playwright) o usar cuentas ADMIN distintas por escenario.
+- **Límite de intentos de login en E2E (resuelto el 12 de octubre de 2026).** Cinco escenarios iniciaban sesión con el mismo ADMIN y el límite es de 5 por minuto por correo (y 20 por IP); un sexto habría fallado con 429. Ahora `e2e/admin.setup.ts` inicia sesión una sola vez y los escenarios de administración reutilizan su sesión (`storageState`). Los contextos de la persona titular se crean con `NO_SESSION`, porque `browser.newContext()` hereda la sesión ADMIN de `test.use`; sin vaciarla, su cierre se bloqueaba hasta agotar el tiempo de la prueba.
 
 ## Validación
 

@@ -1,14 +1,16 @@
 import { randomBytes } from 'node:crypto'
 import { expect, test } from '@playwright/test'
 import type { BrowserContext, Page } from '@playwright/test'
+import { ADMIN_STATE, NO_SESSION } from './support/admin'
 import { linkFromMail } from './support/mailpit'
 
-const adminEmail = process.env.E2E_ADMIN_EMAIL
-const adminPassword = process.env.E2E_ADMIN_PASSWORD
 const mailpitUrl = process.env.MAILPIT_URL
 
+// Solo la página del ADMIN reutiliza su sesión; los contextos del titular se crean limpios.
+test.use({ storageState: ADMIN_STATE })
+
 test.beforeAll(() => {
-  if (!adminEmail || !adminPassword || !mailpitUrl) {
+  if (!mailpitUrl) {
     throw new Error('Ejecuta sh scripts/test-e2e.sh desde la raíz del repositorio.')
   }
 })
@@ -45,7 +47,7 @@ test('ADMIN inicia el restablecimiento → la persona titular establece su nueva
   }
 
   // Preparación: institución y cuenta configurada con el flujo de HU-S1-03.
-  await signIn(page, adminEmail!, adminPassword!)
+  await page.goto('/')
   await page.getByRole('link', { name: 'Instituciones', exact: true }).click()
   await page.getByRole('link', { name: 'Nueva institución', exact: true }).click()
   await page.getByLabel('Nombre', { exact: true }).fill(institution.name)
@@ -63,8 +65,8 @@ test('ADMIN inicia el restablecimiento → la persona titular establece su nueva
   const setupUrl = await creation.getByLabel('Enlace de configuración', { exact: true }).inputValue()
 
   // Sesión abierta del titular con su contraseña inicial: debe cerrarse al restablecer (CA-13).
-  const oldSession = await browser.newContext({ baseURL })
-  const holderContext = await browser.newContext({ baseURL })
+  const oldSession = await browser.newContext({ baseURL, ...NO_SESSION })
+  const holderContext = await browser.newContext({ baseURL, ...NO_SESSION })
   try {
     const oldPage = await oldSession.newPage()
     await oldPage.goto(new URL(setupUrl, baseURL).toString())

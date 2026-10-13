@@ -1,17 +1,9 @@
 import { randomBytes } from 'node:crypto'
 import { expect, test } from '@playwright/test'
 import type { Locator, Page } from '@playwright/test'
+import { ADMIN_STATE } from './support/admin'
 
-const adminEmail = process.env.E2E_ADMIN_EMAIL
-const adminPassword = process.env.E2E_ADMIN_PASSWORD
-
-test.use({ viewport: { width: 375, height: 812 } })
-
-test.beforeAll(() => {
-  if (!adminEmail || !adminPassword) {
-    throw new Error('Ejecuta sh scripts/test-e2e.sh desde la raíz del repositorio.')
-  }
-})
+test.use({ viewport: { width: 375, height: 812 }, storageState: ADMIN_STATE })
 
 // Arrastra la barra superior de la hoja con el puntero, en pocos pasos rápidos.
 async function dragHeader(page: Page, sheet: Locator, distance: number) {
@@ -27,10 +19,8 @@ async function dragHeader(page: Page, sheet: Locator, distance: number) {
 test('en móvil, los formularios del detalle se abren en hojas arrastrables que conservan su contenido', async ({ page }) => {
   const suffix = randomBytes(6).toString('hex')
 
-  await page.goto('/login')
-  await page.getByLabel('Correo electrónico').fill(adminEmail!)
-  await page.getByLabel('Contraseña', { exact: true }).fill(adminPassword!)
-  await page.getByRole('button', { name: 'Iniciar sesión', exact: true }).click()
+  // La sesión ADMIN ya viene de admin.setup.ts: se parte del área protegida.
+  await page.goto('/')
   await page.getByRole('link', { name: 'Instituciones', exact: true }).click()
   await page.getByRole('link', { name: 'Nueva institución', exact: true }).click()
   await page.getByLabel('Nombre', { exact: true }).fill(`Instituto hojas E2E ${suffix}`)
