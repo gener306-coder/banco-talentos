@@ -68,6 +68,8 @@ Sprint vigente desde el 8 de octubre de 2026. Sprint anterior: [sprint-1.md](spr
 
 > **Nota (13 de octubre de 2026):** CA-02 se reformuló («Estatus» → disponibilidad para el programa dual) y se añadió CA-07, ambos por decisión del responsable del proyecto, para evitar confundirlo con la baja lógica de HU-S2-04 y permitir corregir la identidad.
 
+> **Tarea técnica autorizada (13 de octubre de 2026):** a solicitud del cliente y del responsable del proyecto, la ubicación del expediente se guarda además como punto PostGIS (`geography(Point, 4326)`) para preparar el futuro buscador por radio de las empresas. Fase A: el servidor deriva el punto del estado (punto de referencia por entidad); la API no acepta coordenadas del cliente y la interfaz no cambia. La Fase B (catálogo INEGI de municipios con su punto) queda para la historia del buscador. Detalle en [HU-S2-03.md](HU-S2-03.md#ubicación-espacial-postgis-fase-a).
+
 ## HU-S2-04 — Inactivación de perfil estudiantil (Baja lógica)
 
 **Estado:** Pendiente  

@@ -17,6 +17,7 @@ class UpdateStudentProfileRequest extends FormRequest
 
     public function rules(): array
     {
+        // Sin latitude/longitude: el punto de PostGIS lo deriva el servidor del estado; lo que envíe el cliente se descarta.
         return [
             'program' => ['required', 'string', 'max:150'],
             'period_type' => ['required', 'string', Rule::enum(AcademicPeriodType::class)],

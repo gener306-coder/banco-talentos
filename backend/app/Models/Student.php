@@ -22,6 +22,9 @@ class Student extends Model
 
     protected $fillable = self::PROFILE_ATTRIBUTES;
 
+    // Punto aproximado (PostGIS) derivado del estado en el servidor; no forma parte de ninguna respuesta.
+    protected $hidden = ['location'];
+
     protected function casts(): array
     {
         return [

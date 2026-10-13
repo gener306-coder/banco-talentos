@@ -1,5 +1,6 @@
 <?php
 
+use App\Enums\MexicanState;
 use App\Enums\UserRole;
 use App\Models\Institution;
 use App\Models\Student;
@@ -48,6 +49,14 @@ beforeEach(function () {
         'enrollment_number' => 'AJENO-1', 'given_names' => 'Ajeno', 'first_surname' => 'Externo',
     ])->create();
 });
+
+/** [latitud, longitud, SRID] del punto guardado, o null si no hay ubicación. */
+function studentPoint(Student $student): ?array
+{
+    $row = DB::selectOne('SELECT ST_Y(location::geometry) AS lat, ST_X(location::geometry) AS lng, ST_SRID(location) AS srid FROM students WHERE id = ?', [$student->id]);
+
+    return $row->lat === null ? null : [round((float) $row->lat, 4), round((float) $row->lng, 4), (int) $row->srid];
+}
 
 function signInProfileInstitution($test): void
 {
@@ -116,6 +125,7 @@ it('validates the profile without writing it (CA-06)', function (array $override
     $this->browserRequest('PUT', '/api/students/'.$this->student->id.'/profile', profilePayload($overrides))
         ->assertUnprocessable()->assertJsonValidationErrors($field);
     expect($this->student->fresh()->only(Student::PROFILE_ATTRIBUTES))->each->toBeNull();
+    expect(studentPoint($this->student))->toBeNull();
 })->with([
     'missing program' => [['program' => null], 'program'],
     'blank program' => [['program' => '   '], 'program'],
@@ -293,3 +303,75 @@ it('enforces the profile rules in the database', function (array $values) {
     'period number without type' => [['period_number' => 3]],
     'unknown state' => [['state_code' => '33']],
 ]);
+
+it('stores the location as a PostGIS geography point with a spatial index', function () {
+    $type = DB::selectOne("SELECT format_type(atttypid, atttypmod) AS type FROM pg_attribute WHERE attrelid = 'students'::regclass AND attname = 'location'");
+    expect($type->type)->toBe('geography(Point,4326)');
+    expect(DB::selectOne("SELECT indexdef FROM pg_indexes WHERE tablename = 'students' AND indexname = 'students_location_gist'")->indexdef)
+        ->toContain('USING gist (location)');
+});
+
+it('has no location until the profile is saved', function () {
+    expect(studentPoint($this->student))->toBeNull();
+});
+
+it('derives the location from the state reference point on the server', function () {
+    signInProfileInstitution($this);
+    $this->browserRequest('PUT', '/api/students/'.$this->student->id.'/profile', profilePayload(['state_code' => '28']))->assertOk();
+    expect(studentPoint($this->student))->toBe([23.7369, -99.1411, 4326]);
+
+    // Al cambiar de estado se recalcula: el punto nunca queda desfasado del estado guardado.
+    $this->browserRequest('PUT', '/api/students/'.$this->student->id.'/profile', profilePayload(['state_code' => '19']))->assertOk();
+    expect(studentPoint($this->student))->toBe([25.6866, -100.3161, 4326]);
+});
+
+it('ignores coordinates sent by the client, so an exact location can never be stored (CA-03)', function (array $forged) {
+    signInProfileInstitution($this);
+    $this->browserRequest('PUT', '/api/students/'.$this->student->id.'/profile', profilePayload(['state_code' => '09', ...$forged]))
+        ->assertOk()
+        ->assertJsonMissingPath('data.location')
+        ->assertJsonMissingPath('data.profile.location')
+        ->assertJsonMissingPath('data.profile.latitude')
+        ->assertJsonMissingPath('data.profile.longitude');
+    expect(studentPoint($this->student))->toBe([19.4326, -99.1332, 4326]);
+})->with([
+    'exact address' => [['latitude' => 19.35612, 'longitude' => -99.16233]],
+    'location field' => [['location' => 'SRID=4326;POINT(-99.16233 19.35612)']],
+    'out of range' => [['latitude' => 999, 'longitude' => 'x']],
+]);
+
+it('never exposes the location in the detail', function () {
+    signInProfileInstitution($this);
+    $this->browserRequest('PUT', '/api/students/'.$this->student->id.'/profile', profilePayload())->assertOk();
+    $this->browserRequest('GET', '/api/students/'.$this->student->id)->assertOk()
+        ->assertJsonMissingPath('data.location')->assertJsonMissingPath('data.profile.location');
+    expect($this->student->fresh()->toArray())->not->toHaveKey('location');
+});
+
+it('leaves the location untouched for a foreign student (CA-05)', function () {
+    signInProfileInstitution($this);
+    $this->browserRequest('PUT', '/api/students/'.$this->foreign->id.'/profile', profilePayload())->assertNotFound();
+    expect(studentPoint($this->foreign))->toBeNull();
+});
+
+it('places every state reference point inside Mexico', function (MexicanState $state) {
+    [$latitude, $longitude] = $state->referencePoint();
+    expect($latitude)->toBeGreaterThan(14.5)->toBeLessThan(32.8);
+    expect($longitude)->toBeGreaterThan(-118.5)->toBeLessThan(-86.7);
+})->with(MexicanState::cases());
+
+it('supports radius searches in meters with ST_DWithin', function () {
+    $monterrey = Student::factory()->for($this->institution)->withIdentity(['enrollment_number' => 'MTY-1'])->create();
+    signInProfileInstitution($this);
+    $this->browserRequest('PUT', '/api/students/'.$this->student->id.'/profile', profilePayload(['state_code' => '28']))->assertOk();
+    $this->browserRequest('PUT', '/api/students/'.$monterrey->id.'/profile', profilePayload(['state_code' => '19']))->assertOk();
+
+    // Desde Ciudad Victoria: Monterrey está a unos 250 km.
+    $within = fn (int $meters): array => collect(DB::select(
+        'SELECT id FROM students WHERE ST_DWithin(location, ST_SetSRID(ST_MakePoint(?, ?), 4326)::geography, ?) ORDER BY id',
+        [-99.1411, 23.7369, $meters],
+    ))->pluck('id')->all();
+
+    expect($within(100_000))->toBe([$this->student->id]);
+    expect($within(400_000))->toBe([$this->student->id, $monterrey->id]);
+});

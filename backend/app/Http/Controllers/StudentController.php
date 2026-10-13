@@ -86,8 +86,12 @@ class StudentController extends Controller
     public function updateProfile(UpdateStudentProfileRequest $request, string $student): JsonResponse
     {
         $record = $this->owned($request, $student);
-        // Solo columnas del expediente: la identidad y la institución no cambian por esta vía.
-        $record->fill($request->validated())->save();
+
+        DB::transaction(function () use ($record, $request): void {
+            // Solo columnas del expediente: la identidad y la institución no cambian por esta vía.
+            $record->fill($request->validated())->save();
+            $this->locate($record);
+        });
 
         return $this->detail($record);
     }
@@ -111,6 +115,21 @@ class StudentController extends Controller
         }
 
         return $this->detail($record);
+    }
+
+    /**
+     * Ubicación aproximada para búsquedas por radio: el punto de referencia del estado guardado.
+     * El cliente nunca envía coordenadas, así que no puede registrar una ubicación exacta (CA-03).
+     */
+    private function locate(Student $student): void
+    {
+        [$latitude, $longitude] = $student->state_code->referencePoint();
+
+        // PostGIS recibe longitud y latitud, en ese orden.
+        DB::update(
+            'UPDATE students SET location = ST_SetSRID(ST_MakePoint(?, ?), 4326)::geography WHERE id = ?',
+            [$longitude, $latitude, $student->id],
+        );
     }
 
     /**
