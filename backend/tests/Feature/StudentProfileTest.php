@@ -74,6 +74,7 @@ it('shows an own student with its identity and an empty profile (CA-01)', functi
             'given_names' => 'María Fernanda',
             'first_surname' => 'López',
             'second_surname' => 'García',
+            'is_active' => true,
             'created_at' => $this->student->created_at->toISOString(),
             'profile' => [
                 'program' => null, 'period_type' => null, 'period_number' => null, 'dual_available' => null,

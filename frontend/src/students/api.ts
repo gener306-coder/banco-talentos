@@ -12,6 +12,8 @@ export interface StudentInput {
 
 export interface Student extends StudentInput {
   id: number
+  /** Baja lógica (HU-S2-04): un alumno inactivo no aparece en el Banco de Talentos. */
+  is_active: boolean
   created_at: string
 }
 
@@ -49,13 +51,15 @@ function student(data: unknown): Student {
       !('given_names' in data) || !isText(data.given_names) ||
       !('first_surname' in data) || !isText(data.first_surname) ||
       !('second_surname' in data) || (data.second_surname !== null && !isText(data.second_surname)) ||
+      !('is_active' in data) || typeof data.is_active !== 'boolean' ||
       !('created_at' in data) || !isText(data.created_at)) {
     throw new ApiError(502)
   }
   // Solo se conservan los campos del contrato.
   return {
     id: data.id, enrollment_number: data.enrollment_number, given_names: data.given_names,
-    first_surname: data.first_surname, second_surname: data.second_surname, created_at: data.created_at,
+    first_surname: data.first_surname, second_surname: data.second_surname, is_active: data.is_active,
+    created_at: data.created_at,
   }
 }
 
@@ -139,6 +143,12 @@ export async function updateStudentIdentity(id: number, input: StudentInput): Pr
       first_surname: input.first_surname, second_surname: input.second_surname,
     }),
   }))
+}
+
+/** Inactiva o reactiva a un alumno propio (HU-S2-04); no existe borrado. */
+export async function setStudentStatus(id: number, active: boolean): Promise<StudentDetail> {
+  await request('/sanctum/csrf-cookie')
+  return detail(await request(`${studentPath(id)}/status`, { method: 'PATCH', body: JSON.stringify({ is_active: active }) }))
 }
 
 /** «López García, María Fernanda»: apellidos primero, como en un padrón. */

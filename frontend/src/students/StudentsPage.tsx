@@ -8,6 +8,7 @@ import { LoadingState, StateMessage } from '../ui/StateMessage'
 import { listStudents, surnames } from './api'
 import { studentMessages } from './messages'
 import { StudentForm } from './StudentForm'
+import { StudentStatus } from './StudentStatus'
 
 /** Padrón interno de la institución de la sesión (HU-S2-02). */
 export function StudentsPage() {
@@ -42,13 +43,14 @@ export function StudentsPage() {
             <div className="data-table-wrapper" role="region" aria-label="Padrón de alumnos" tabIndex={0}>
               <table className="data-table">
                 <caption className="visually-hidden">Alumnos registrados</caption>
-                <thead><tr><th scope="col">Matrícula</th><th scope="col">Apellidos</th><th scope="col">Nombre(s)</th></tr></thead>
+                <thead><tr><th scope="col">Matrícula</th><th scope="col">Apellidos</th><th scope="col">Nombre(s)</th><th scope="col">Estado</th></tr></thead>
                 <tbody>
                   {data.students.map((student) => (
                     <tr key={student.id}>
                       <td className="mono">{student.enrollment_number}</td>
                       <th scope="row"><Link to={`/students/${student.id}`}>{surnames(student)}</Link></th>
                       <td>{student.given_names}</td>
+                      <td><StudentStatus active={student.is_active} /></td>
                     </tr>
                   ))}
                 </tbody>

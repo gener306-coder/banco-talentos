@@ -1,11 +1,11 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { createStudent, fullName, getStudent, listStudents, surnames, updateStudentIdentity, updateStudentProfile } from './api'
+import { createStudent, fullName, getStudent, listStudents, setStudentStatus, surnames, updateStudentIdentity, updateStudentProfile } from './api'
 import { MEXICAN_STATES, periodLabel, stateName } from './catalogs'
 
 const fetchMock = vi.fn<typeof fetch>()
 const emptyProfile = { program: null, period_type: null, period_number: null, dual_available: null, state_code: null, municipality: null, can_relocate: null }
 const fullProfile = { program: 'Ingeniería', period_type: 'semester', period_number: 6, dual_available: true, state_code: '28', municipality: 'Victoria', can_relocate: false } as const
-const record = { id: 3, enrollment_number: 'A-001', given_names: 'María', first_surname: 'López', second_surname: null, created_at: '2026-10-13T12:00:00Z' }
+const record = { id: 3, enrollment_number: 'A-001', given_names: 'María', first_surname: 'López', second_surname: null, is_active: true, created_at: '2026-10-13T12:00:00Z' }
 
 beforeEach(() => {
   fetchMock.mockReset()
@@ -31,6 +31,8 @@ describe('cliente del padrón de alumnos', () => {
     [{ data: {}, meta: { current_page: 1, last_page: 1, total: 0 } }],
     [{ data: [{ ...record, id: 'x' }], meta: { current_page: 1, last_page: 1, total: 1 } }],
     [{ data: [], meta: { current_page: 0, last_page: 1, total: 0 } }],
+    [{ data: [{ ...record, is_active: 'true' }], meta: { current_page: 1, last_page: 1, total: 1 } }],
+    [{ data: [{ ...record, is_active: undefined }], meta: { current_page: 1, last_page: 1, total: 1 } }],
   ])('rechaza una respuesta de listado inesperada', async (body) => {
     fetchMock.mockResolvedValueOnce(Response.json(body))
     await expect(listStudents(1)).rejects.toMatchObject({ status: 502 })
@@ -96,5 +98,15 @@ describe('cliente del expediente HU-S2-03', () => {
     expect(stateName('28')).toBe('Tamaulipas')
     expect(periodLabel('semester', 6)).toBe('6.º semestre')
     expect(periodLabel('four_month', 1)).toBe('1.º cuatrimestre')
+  })
+})
+
+describe('cliente de la baja lógica HU-S2-04', () => {
+  it.each([false, true])('cambia el estado a %s con CSRF enviando solo is_active', async (active) => {
+    fetchMock.mockImplementationOnce(csrf).mockResolvedValueOnce(Response.json({ data: { ...record, is_active: active, profile: emptyProfile } }))
+    await expect(setStudentStatus(3, active)).resolves.toEqual({ ...record, is_active: active, profile: emptyProfile })
+    expect(fetchMock.mock.calls[1][0]).toBe('/api/students/3/status')
+    expect(fetchMock.mock.calls[1][1]?.method).toBe('PATCH')
+    expect(JSON.parse(fetchMock.mock.calls[1][1]?.body as string)).toEqual({ is_active: active })
   })
 })

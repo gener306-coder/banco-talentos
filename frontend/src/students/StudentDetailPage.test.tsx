@@ -10,7 +10,7 @@ let user: Record<string, unknown>
 const emptyProfile = { program: null, period_type: null, period_number: null, dual_available: null, state_code: null, municipality: null, can_relocate: null }
 const savedProfile = { program: 'Ingeniería en Sistemas', period_type: 'semester', period_number: 6, dual_available: true, state_code: '28', municipality: 'Victoria', can_relocate: false }
 const detail = (profile: Record<string, unknown> = emptyProfile, identity: Record<string, unknown> = {}) => ({
-  data: { id: 3, enrollment_number: 'A-001', given_names: 'María Fernanda', first_surname: 'López', second_surname: 'García', created_at: '2026-10-13T12:00:00Z', ...identity, profile },
+  data: { id: 3, enrollment_number: 'A-001', given_names: 'María Fernanda', first_surname: 'López', second_surname: 'García', is_active: true, created_at: '2026-10-13T12:00:00Z', ...identity, profile },
 })
 
 function Location() {
@@ -178,5 +178,82 @@ describe('expediente del alumno HU-S2-03', () => {
     renderApp()
     expect(await screen.findByRole('heading', { name: 'Acceso denegado' })).toBeInTheDocument()
     expect(apiMock).not.toHaveBeenCalled()
+  })
+})
+
+describe('baja lógica del alumno HU-S2-04', () => {
+  const patches = () => apiMock.mock.calls.filter(([, options]) => options?.method === 'PATCH')
+  const inactive = () => detail(savedProfile, { is_active: false })
+
+  it('muestra el estado ACTIVO por defecto (CA-01)', async () => {
+    apiMock.mockResolvedValueOnce(Response.json(detail()))
+    renderApp()
+    const section = await screen.findByRole('region', { name: 'Estado en el Banco de Talentos' })
+    expect(within(section).getByText('ACTIVO')).toBeInTheDocument()
+    expect(within(section).getByText(/visible para las empresas/)).toBeInTheDocument()
+  })
+
+  it('inactiva al alumno tras confirmar y conserva el expediente (CA-02)', async () => {
+    apiMock.mockResolvedValueOnce(Response.json(detail(savedProfile))).mockResolvedValueOnce(Response.json(inactive()))
+    renderApp()
+    fireEvent.click(await screen.findByRole('button', { name: 'Inactivar alumno' }))
+    const confirm = screen.getByRole('alertdialog', { name: '¿Inactivar al alumno?' })
+    expect(confirm).toHaveAccessibleDescription(/Su expediente se conserva/)
+    expect(within(confirm).getByRole('button', { name: 'Cancelar' })).toHaveFocus()
+    expect(patches()).toHaveLength(0)
+    fireEvent.click(within(confirm).getByRole('button', { name: 'Inactivar' }))
+    const section = screen.getByRole('region', { name: 'Estado en el Banco de Talentos' })
+    expect(await within(section).findByRole('status')).toHaveTextContent('Alumno inactivado correctamente.')
+    expect(patches()[0][0]).toBe('/api/students/3/status')
+    expect(JSON.parse(patches()[0][1]?.body as string)).toEqual({ is_active: false })
+    expect(within(section).getByText('INACTIVO')).toBeInTheDocument()
+    expect(within(section).getByText(/puedes seguir editándolo/)).toBeInTheDocument()
+    expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument()
+    expect(screen.getByLabelText('Carrera o programa educativo')).toHaveValue('Ingeniería en Sistemas')
+    expect(screen.getByRole('button', { name: 'Guardar expediente' })).toBeEnabled()
+  })
+
+  it('no cambia nada si se cancela la confirmación', async () => {
+    apiMock.mockResolvedValueOnce(Response.json(detail()))
+    renderApp()
+    fireEvent.click(await screen.findByRole('button', { name: 'Inactivar alumno' }))
+    fireEvent.click(within(screen.getByRole('alertdialog')).getByRole('button', { name: 'Cancelar' }))
+    expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument()
+    expect(patches()).toHaveLength(0)
+    expect(within(screen.getByRole('region', { name: 'Estado en el Banco de Talentos' })).getByText('ACTIVO')).toBeInTheDocument()
+  })
+
+  it('reactiva sin confirmación', async () => {
+    apiMock.mockResolvedValueOnce(Response.json(inactive())).mockResolvedValueOnce(Response.json(detail(savedProfile)))
+    renderApp()
+    fireEvent.click(await screen.findByRole('button', { name: 'Reactivar alumno' }))
+    expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument()
+    expect(await screen.findByText('Alumno reactivado correctamente.')).toBeInTheDocument()
+    expect(JSON.parse(patches()[0][1]?.body as string)).toEqual({ is_active: true })
+    expect(screen.getByRole('button', { name: 'Inactivar alumno' })).toBeInTheDocument()
+  })
+
+  it('bloquea el botón mientras espera y no repite el envío', async () => {
+    let resolve!: (response: Response) => void
+    apiMock.mockResolvedValueOnce(Response.json(inactive())).mockReturnValueOnce(new Promise<Response>((done) => { resolve = done }))
+    renderApp()
+    const button = await screen.findByRole('button', { name: 'Reactivar alumno' })
+    fireEvent.click(button)
+    fireEvent.click(button)
+    await waitFor(() => expect(patches()).toHaveLength(1))
+    expect(screen.getByRole('button', { name: 'Guardando estado…' })).toBeDisabled()
+    await act(async () => { resolve(Response.json(detail(savedProfile))) })
+    expect(await screen.findByText('Alumno reactivado correctamente.')).toBeInTheDocument()
+  })
+
+  it('informa un fallo del servidor sin cambiar el estado mostrado', async () => {
+    apiMock.mockResolvedValueOnce(Response.json(detail())).mockResolvedValueOnce(Response.json({ message: 'El alumno no existe.' }, { status: 404 }))
+    renderApp()
+    fireEvent.click(await screen.findByRole('button', { name: 'Inactivar alumno' }))
+    fireEvent.click(within(screen.getByRole('alertdialog')).getByRole('button', { name: 'Inactivar' }))
+    const section = screen.getByRole('region', { name: 'Estado en el Banco de Talentos' })
+    expect(await within(section).findByText('El alumno no existe.')).toBeInTheDocument()
+    expect(within(section).getByText('ACTIVO')).toBeInTheDocument()
+    expect(screen.queryByText('Alumno inactivado correctamente.')).not.toBeInTheDocument()
   })
 })

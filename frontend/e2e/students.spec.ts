@@ -1,23 +1,16 @@
 import { randomBytes } from 'node:crypto'
 import { expect, test } from '@playwright/test'
+import { INSTITUTION_STATE } from './support/institution'
 
-const email = process.env.E2E_EMAIL
-const password = process.env.E2E_PASSWORD
-
-test.beforeAll(() => {
-  if (!email || !password) throw new Error('Ejecuta sh scripts/test-e2e.sh desde la raíz del repositorio.')
-})
+// La cuenta INSTITUTION del seed está vinculada a «Institución E2E»; su sesión la crea institution.setup.ts.
+test.use({ storageState: INSTITUTION_STATE })
 
 test('HU-S2-02: la institución registra alumnos en su padrón y la matrícula es única', async ({ page }) => {
   const suffix = randomBytes(4).toString('hex').toUpperCase()
   const first = { enrollment: `ITE-${suffix}-1`, given: 'María Fernanda', firstSurname: 'López', secondSurname: 'García' }
   const second = { enrollment: `ITE-${suffix}-2`, given: 'Luis', firstSurname: 'Báez', secondSurname: '' }
 
-  // La cuenta INSTITUTION del seed está vinculada a «Institución E2E».
-  await page.goto('/login')
-  await page.getByLabel('Correo electrónico').fill(email!)
-  await page.getByLabel('Contraseña', { exact: true }).fill(password!)
-  await page.getByRole('button', { name: 'Iniciar sesión', exact: true }).click()
+  await page.goto('/')
   await page.getByRole('link', { name: 'Alumnos', exact: true }).click()
   await expect(page).toHaveURL(/\/students$/)
   await expect(page.getByRole('heading', { name: 'Alumnos', exact: true })).toBeVisible()
@@ -69,10 +62,7 @@ test('HU-S2-03: la institución completa el expediente y corrige la identidad de
   const enrollment = `EXP-${suffix}`
   const surname = `Expediente${suffix}`
 
-  await page.goto('/login')
-  await page.getByLabel('Correo electrónico').fill(email!)
-  await page.getByLabel('Contraseña', { exact: true }).fill(password!)
-  await page.getByRole('button', { name: 'Iniciar sesión', exact: true }).click()
+  await page.goto('/')
   await page.getByRole('link', { name: 'Alumnos', exact: true }).click()
 
   await page.getByRole('button', { name: /Registrar (el primer )?alumno/ }).first().click()
@@ -126,4 +116,63 @@ test('HU-S2-03: la institución completa el expediente y corrige la identidad de
   // CA-05: un identificador ajeno o inexistente no revela nada.
   await page.goto('/students/999999999')
   await expect(page.getByText('El alumno no existe.')).toBeVisible()
+})
+
+test('HU-S2-04: la institución inactiva y reactiva a un alumno propio sin borrarlo', async ({ page }) => {
+  const suffix = randomBytes(4).toString('hex').toUpperCase()
+  const enrollment = `BAJA-${suffix}`
+  const surname = `Baja${suffix}`
+
+  await page.goto('/')
+  await page.getByRole('link', { name: 'Alumnos', exact: true }).click()
+
+  await page.getByRole('button', { name: /Registrar (el primer )?alumno/ }).first().click()
+  const register = page.getByRole('dialog', { name: 'Registrar alumno' })
+  await register.getByLabel('Matrícula o control interno', { exact: true }).fill(enrollment)
+  await register.getByLabel('Nombre(s)', { exact: true }).fill('Iván')
+  await register.getByLabel('Primer apellido', { exact: true }).fill(surname)
+  await register.getByRole('button', { name: 'Registrar alumno', exact: true }).click()
+  await expect(register.getByRole('status')).toContainText('Alumno registrado')
+  await register.getByRole('button', { name: 'Cerrar', exact: true }).click()
+
+  // CA-01: todo alumno nuevo es ACTIVO.
+  const table = page.getByRole('table', { name: 'Alumnos registrados' })
+  await expect(table.getByRole('row', { name: new RegExp(enrollment) }).getByText('ACTIVO', { exact: true })).toBeVisible()
+  await page.getByRole('link', { name: surname, exact: true }).click()
+  const studentId = new URL(page.url()).pathname.split('/').pop()!
+  const status = page.getByRole('region', { name: 'Estado en el Banco de Talentos' })
+  await expect(status.getByText('ACTIVO', { exact: true })).toBeVisible()
+
+  // CA-02: inactivar se confirma; cancelar no cambia nada.
+  await status.getByRole('button', { name: 'Inactivar alumno' }).click()
+  const confirm = page.getByRole('alertdialog', { name: '¿Inactivar al alumno?' })
+  await confirm.getByRole('button', { name: 'Cancelar' }).click()
+  await expect(confirm).toBeHidden()
+  await expect(status.getByText('ACTIVO', { exact: true })).toBeVisible()
+
+  await status.getByRole('button', { name: 'Inactivar alumno' }).click()
+  const inactivated = page.waitForResponse((response) => response.url().endsWith(`/api/students/${studentId}/status`))
+  await confirm.getByRole('button', { name: 'Inactivar', exact: true }).click()
+  const response = await inactivated
+  expect(response.status()).toBe(200)
+  expect(response.request().method()).toBe('PATCH')
+  expect(response.request().postDataJSON()).toEqual({ is_active: false })
+  await expect(page.getByText('Alumno inactivado correctamente.')).toBeVisible()
+
+  // El estado se conserva al recargar y el alumno sigue en el padrón (CA-03: baja lógica).
+  await page.reload()
+  await expect(status).toContainText('INACTIVO')
+  await page.getByRole('link', { name: 'Volver a alumnos' }).click()
+  await expect(table.getByRole('row', { name: new RegExp(enrollment) })).toContainText('INACTIVO')
+
+  // CA-03: no existe borrado físico.
+  const origin = new URL(page.url()).origin
+  const deletion = await page.context().request.delete(`/api/students/${studentId}`, { headers: { Origin: origin } })
+  expect(deletion.status()).toBe(405)
+
+  // Reactivar no pide confirmación.
+  await page.getByRole('link', { name: surname, exact: true }).click()
+  await status.getByRole('button', { name: 'Reactivar alumno' }).click()
+  await expect(page.getByText('Alumno reactivado correctamente.')).toBeVisible()
+  await expect(status.getByText('ACTIVO', { exact: true })).toBeVisible()
 })

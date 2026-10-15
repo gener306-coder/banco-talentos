@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Http\Requests\StoreStudentRequest;
 use App\Http\Requests\UpdateStudentIdentityRequest;
 use App\Http\Requests\UpdateStudentProfileRequest;
+use App\Http\Requests\UpdateStudentStatusRequest;
 use App\Models\Student;
 use App\Models\StudentIdentity;
 use Illuminate\Database\UniqueConstraintViolationException;
@@ -14,7 +15,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
 /**
- * Padrón estudiantil (HU-S2-02) y expediente (HU-S2-03) de la institución de la sesión. Todas las
+ * Padrón estudiantil (HU-S2-02), expediente (HU-S2-03) y baja lógica (HU-S2-04) de la institución de la sesión. Todas las
  * consultas se acotan al institution_id del usuario autenticado; el cliente nunca lo elige.
  */
 class StudentController extends Controller
@@ -118,6 +119,19 @@ class StudentController extends Controller
     }
 
     /**
+     * Baja lógica (HU-S2-04): inactivar oculta al alumno del Banco de Talentos sin borrar su expediente.
+     * No existe DELETE; la pertenencia se verifica igual que en el resto del expediente (CA-04).
+     */
+    public function updateStatus(UpdateStudentStatusRequest $request, string $student): JsonResponse
+    {
+        $record = $this->owned($request, $student);
+        $record->is_active = $request->validated('is_active');
+        $record->save();
+
+        return $this->detail($record);
+    }
+
+    /**
      * Ubicación aproximada para búsquedas por radio: el punto de referencia del estado guardado.
      * El cliente nunca envía coordenadas, así que no puede registrar una ubicación exacta (CA-03).
      */
@@ -172,6 +186,7 @@ class StudentController extends Controller
             'given_names' => $student->identity->given_names,
             'first_surname' => $student->identity->first_surname,
             'second_surname' => $student->identity->second_surname,
+            'is_active' => $student->is_active,
             'created_at' => $student->created_at?->toISOString(),
         ];
     }

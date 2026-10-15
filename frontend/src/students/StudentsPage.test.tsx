@@ -9,7 +9,7 @@ const apiMock = vi.fn<typeof fetch>()
 let user: Record<string, unknown>
 const meta = (total: number, page = 1, last = 1) => ({ current_page: page, last_page: last, total })
 const row = (id: number, enrollment: string, given: string, first: string, second: string | null = null) =>
-  ({ id, enrollment_number: enrollment, given_names: given, first_surname: first, second_surname: second, created_at: '2026-10-13T12:00:00Z' })
+  ({ id, enrollment_number: enrollment, given_names: given, first_surname: first, second_surname: second, is_active: true, created_at: '2026-10-13T12:00:00Z' })
 
 function Location() {
   return <output aria-label="Ruta actual">{useLocation().pathname}</output>
@@ -58,6 +58,15 @@ describe('padrón de alumnos HU-S2-02', () => {
     expect(screen.getByText('Página 1 de 1 · 2 alumnos')).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: /Siguiente/ })).not.toBeInTheDocument()
     expect(apiMock.mock.calls[0][0]).toBe('/api/students?page=1')
+  })
+
+  it('muestra el estado de cada alumno sin ocultar a los inactivos (HU-S2-04)', async () => {
+    apiMock.mockResolvedValueOnce(Response.json({ data: [row(1, 'A-001', 'Ana', 'Ruiz'), { ...row(2, 'A-002', 'Luis', 'Báez'), is_active: false }], meta: meta(2) }))
+    renderApp()
+    const table = await screen.findByRole('table', { name: 'Alumnos registrados' })
+    expect(within(table).getByRole('columnheader', { name: 'Estado' })).toBeInTheDocument()
+    expect(within(within(table).getByRole('row', { name: /Ruiz/ })).getByText('ACTIVO')).toBeInTheDocument()
+    expect(within(within(table).getByRole('row', { name: /Báez/ })).getByText('INACTIVO')).toBeInTheDocument()
   })
 
   it('pagina el padrón con Anterior y Siguiente', async () => {

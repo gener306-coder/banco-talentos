@@ -72,7 +72,8 @@ Sprint vigente desde el 8 de octubre de 2026. Sprint anterior: [sprint-1.md](spr
 
 ## HU-S2-04 — Inactivación de perfil estudiantil (Baja lógica)
 
-**Estado:** Pendiente  
+**Estado:** Completada (15 de octubre de 2026)  
+**Diseño técnico y verificación:** [HU-S2-04.md](HU-S2-04.md)  
 **Story Points:** 3  
 **Rol:** `INSTITUTION`
 

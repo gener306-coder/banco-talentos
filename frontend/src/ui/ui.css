@@ -177,6 +177,10 @@ select[aria-invalid='true'], .student-section input[aria-invalid='true'], .sheet
 .student-identity { max-width: 45rem; margin: 1rem 0; }
 .student-identity dd { margin: 0.2rem 0 0; }
 .student-identity dd.mono { font-family: ui-monospace, monospace; }
+/* Estado del alumno (HU-S2-04): mismos colores de estado que .institution-status. */
+.student-status { display: inline-block; white-space: nowrap; border-radius: 1rem; padding: 0.2rem 0.7rem; font-size: 0.8rem; font-weight: 700; }
+.student-status.active { color: #155b36; background: #e4f3e9; }
+.student-status.inactive { color: #5d4b36; background: #f2ebdf; }
 @media (max-width: 600px) {
   .page-toolbar { align-items: stretch; }
   .page-toolbar > button { width: 100%; }

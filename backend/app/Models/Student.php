@@ -25,6 +25,9 @@ class Student extends Model
     // Punto aproximado (PostGIS) derivado del estado en el servidor; no forma parte de ninguna respuesta.
     protected $hidden = ['location'];
 
+    // Igual que el DEFAULT de la columna, para que un alumno recién creado lo refleje sin recargarse.
+    protected $attributes = ['is_active' => true];
+
     protected function casts(): array
     {
         return [
@@ -33,6 +36,8 @@ class Student extends Model
             'dual_available' => 'boolean',
             'state_code' => MexicanState::class,
             'can_relocate' => 'boolean',
+            // Baja lógica (HU-S2-04); fuera de $fillable: solo cambia por PATCH /students/{id}/status.
+            'is_active' => 'boolean',
         ];
     }
 

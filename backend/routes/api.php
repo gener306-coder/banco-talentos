@@ -41,7 +41,7 @@ Route::post('/institution-accounts/resend-setup', [InstitutionSetupLinkControlle
 Route::post('/institution-accounts/password-reset/start', [InstitutionPasswordResetController::class, 'start'])
     ->middleware(['auth:sanctum', 'active', 'role:'.UserRole::ADMIN->value, 'throttle:institution-password-reset']);
 
-// Padrón (HU-S2-02) y expediente (HU-S2-03) de la institución de la sesión; sin DELETE (baja lógica en HU-S2-04).
+// Padrón (HU-S2-02), expediente (HU-S2-03) y baja lógica (HU-S2-04) de la institución de la sesión; sin DELETE.
 Route::middleware(['auth:sanctum', 'active', 'role:'.UserRole::INSTITUTION->value, 'institution.member'])
     ->prefix('students')
     ->name('students.')
@@ -53,4 +53,5 @@ Route::middleware(['auth:sanctum', 'active', 'role:'.UserRole::INSTITUTION->valu
         Route::get('{student}', [StudentController::class, 'show'])->name('show');
         Route::put('{student}/profile', [StudentController::class, 'updateProfile'])->name('profile.update');
         Route::put('{student}/identity', [StudentController::class, 'updateIdentity'])->name('identity.update');
+        Route::patch('{student}/status', [StudentController::class, 'updateStatus'])->name('status');
     });
