@@ -9,10 +9,39 @@
 }
 
 @layer legacy {
+/*
+ * Tokens semánticos (docs/design/identidad-visual.md, «Tokens semánticos»): nombran la función del color,
+ * no el color. Las hojas de estilo solo usan estos tokens; un tema futuro (por ejemplo, oscuro) solo
+ * redefine este bloque. Es el único lugar, junto con @theme, donde se escriben valores de color.
+ */
+:root {
+  --surface: var(--color-white);
+  --surface-muted: var(--color-neutral-100);
+  --text: var(--color-brand-neutral);
+  --border: var(--color-neutral-200);
+  --border-strong: var(--color-neutral-500);
+  --accent: var(--color-brand-primary);
+  --accent-hover: var(--color-brand-primary-hover);
+  --on-accent: var(--color-white);
+  --accent-secondary: var(--color-brand-secondary);
+  --accent-secondary-text: #6b4f22;
+  --focus-ring: #ad620e;
+  --danger-text: #7c2921;
+  --danger-surface: #fff3ef;
+  --danger-border: #b74738;
+  --success-text: #155b36;
+  --success-surface: #e4f3e9;
+  --success-border: #327a4a;
+  --status-off-text: #5d4b36;
+  --status-off-surface: #f2ebdf;
+  --shadow: #000;
+}
+/* Fin de los tokens semánticos. */
+
 :root {
   font-family: system-ui, sans-serif;
-  color: var(--color-brand-neutral);
-  background: var(--color-neutral-100);
+  color: var(--text);
+  background: var(--surface-muted);
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
@@ -23,28 +52,28 @@ body { margin: 0; min-width: 320px; }
 main { width: min(100% - 2rem, 34rem); margin: 8vh auto; }
 header { margin-bottom: 2rem; }
 h1 { margin: 0.5rem 0 1rem; font-size: clamp(2rem, 6vw, 3rem); line-height: 1.15; }
-h2 { margin-top: 0; font-size: 1.4rem; color: var(--color-brand-primary); }
+h2 { margin-top: 0; font-size: 1.4rem; color: var(--accent); }
 p { line-height: 1.6; }
 .eyebrow { font-weight: 600; }
-.card { background: var(--color-white); border: 1px solid var(--color-neutral-200); border-radius: 0.75rem; padding: 1.75rem; }
+.card { background: var(--surface); border: 1px solid var(--border); border-radius: 0.75rem; padding: 1.75rem; }
 form { display: flex; flex-direction: column; gap: 0.65rem; }
 label, dt { font-weight: 600; }
 input, button { font: inherit; border-radius: 0.35rem; }
-input { width: 100%; padding: 0.7rem; border: 1px solid var(--color-neutral-500); margin-bottom: 0.6rem; }
-button { padding: 0.8rem 1rem; background: var(--color-brand-primary); color: var(--color-white); border: 1px solid var(--color-brand-primary); cursor: pointer; font-weight: 600; }
-button:hover:not(:disabled) { background: var(--color-brand-primary-hover); }
-button.secondary { background: var(--color-white); color: var(--color-brand-primary); }
-button.secondary:hover:not(:disabled) { background: var(--color-neutral-100); }
+input { width: 100%; padding: 0.7rem; border: 1px solid var(--border-strong); margin-bottom: 0.6rem; }
+button { padding: 0.8rem 1rem; background: var(--accent); color: var(--on-accent); border: 1px solid var(--accent); cursor: pointer; font-weight: 600; }
+button:hover:not(:disabled) { background: var(--accent-hover); }
+button.secondary { background: var(--surface); color: var(--accent); }
+button.secondary:hover:not(:disabled) { background: var(--surface-muted); }
 button:disabled, input:disabled { opacity: 0.65; cursor: not-allowed; }
-:focus-visible { outline: 3px solid #ad620e; outline-offset: 3px; }
-.notice { color: #7c2921; background: #fff3ef; border-left: 3px solid #b74738; padding: 0.8rem; }
+:focus-visible { outline: 3px solid var(--focus-ring); outline-offset: 3px; }
+.notice { color: var(--danger-text); background: var(--danger-surface); border-left: 3px solid var(--danger-border); padding: 0.8rem; }
 dl { margin: 1.5rem 0; }
 dt { margin-top: 1rem; }
 dd { margin: 0.3rem 0 0; overflow-wrap: anywhere; }
 .actions { display: flex; flex-wrap: wrap; gap: 0.75rem; }
 .card > nav { margin: 1rem 0; }
-a { color: var(--color-brand-primary); text-underline-offset: 0.2em; }
+a { color: var(--accent); text-underline-offset: 0.2em; }
 
-.password-setup .field-error { margin: -0.65rem 0 0.7rem; color: #7c2921; font-size: 0.9rem; }
-.password-setup input[aria-invalid='true'] { border-color: #b74738; }
+.password-setup .field-error { margin: -0.65rem 0 0.7rem; color: var(--danger-text); font-size: 0.9rem; }
+.password-setup input[aria-invalid='true'] { border-color: var(--danger-border); }
 }

@@ -65,6 +65,33 @@ No introducir nuevos colores de marca ni valores hexadecimales dispersos en vist
 - **Semánticos, sin cambios:** error (`#7c2921`, `#b74738`, `#fff3ef`), éxito (`#155b36`, `#e4f3e9`, `#327a4a`), insignias ACTIVA/INACTIVA y foco (`#ad620e`, 4.64:1 sobre blanco). No son colores de marca y mantienen su significado.
 - El rojo de error y el vino de marca tienen luminancia casi igual (1.16:1 entre sí). Los avisos de error se distinguen por su fondo, borde izquierdo y `role="alert"`; no usar el vino para comunicar errores.
 
+### Tokens semánticos
+
+Las hojas de estilo no usan los colores de la marca ni valores HEX directamente: usan tokens que nombran la **función** del color. Se definen una sola vez en `frontend/src/index.css` (bloque `:root` que termina en `/* Fin de los tokens semánticos. */`). Un tema futuro, por ejemplo oscuro, solo tendría que redefinir ese bloque. Los valores son exactamente los anteriores: el cambio no altera nada visible.
+
+| Token | Valor actual | Función |
+|---|---|---|
+| `--surface` | `--color-white` | Tarjetas, paneles, hojas, campos |
+| `--surface-muted` | `--color-neutral-100` | Fondo de la aplicación, encabezados de tabla, hover de botones secundarios |
+| `--text` | `--color-brand-neutral` | Texto y elementos neutros |
+| `--border` | `--color-neutral-200` | Bordes de tarjetas, tablas y separadores |
+| `--border-strong` | `--color-neutral-500` | Borde de campos y la barra de arrastre de las hojas |
+| `--accent` / `--accent-hover` | `--color-brand-primary` / `-hover` | Acciones primarias, enlaces, títulos |
+| `--on-accent` | `--color-white` | Texto sobre el acento |
+| `--accent-secondary` | `--color-brand-secondary` | Decoración dorada (etiquetas de habilidades blandas) |
+| `--accent-secondary-text` | `#6b4f22` | Texto sobre el dorado tintado |
+| `--focus-ring` | `#ad620e` | Contorno de foco |
+| `--danger-text` / `--danger-surface` / `--danger-border` | `#7c2921` / `#fff3ef` / `#b74738` | Errores |
+| `--success-text` / `--success-surface` / `--success-border` | `#155b36` / `#e4f3e9` / `#327a4a` | Éxito, estado ACTIVO y certificación revisada |
+| `--status-off-text` / `--status-off-surface` | `#5d4b36` / `#f2ebdf` | Estado INACTIVO y «Sin revisar» |
+| `--shadow` | `#000` | Base de sombras y de `--ink`, en mezclas `color-mix(… N%, transparent)` |
+
+Los derivados de apple-design en `ui/ui.css` (`--tint`, `--tint-hover`, `--fill`, `--glass`, `--ink`) se calculan sobre estos tokens.
+
+**Regla:** en una hoja de estilos nueva, usar solo tokens semánticos. `src/ui/tokens.test.ts` falla si alguna hoja (fuera de `@theme` y del bloque de tokens) escribe un HEX, `rgb()`, `hsl()`, `black`/`white` o un `var(--color-…)` directamente. Las clases de Tailwind en el JSX (`text-brand-primary` del encabezado) siguen usando `@theme`.
+
+**Modo oscuro (pendiente, fuera del Sprint):** con los tokens listos, faltan variantes de los dos logotipos para fondo oscuro aprobadas por los dueños de cada marca, un vino aclarado aprobado (`#991B30` no alcanza 4.5:1 sobre fondo oscuro) y una revisión de contraste. Se planeará como historia propia.
+
 ## Accesibilidad
 
 Meta del proyecto: contraste mínimo de **4.5:1 para texto y controles interactivos** respecto a su fondo. Es el umbral del proyecto para ambos; WCAG 2.2 AA fija 4.5:1 para texto normal y otros umbrales según el tipo de contenido.
@@ -98,7 +125,7 @@ Reglas derivadas:
 
 Enfoque híbrido:
 
-- **Estilos globales por etiqueta** (`button`, `a`, `input`, `h2`, `.card`) y clases existentes de `institutions.css`: siguen en `@layer legacy`, pero sus colores usan variables (`var(--color-brand-primary)`, `var(--color-neutral-200)`, …) en lugar de HEX. Así no se repiten clases en cada botón.
+- **Estilos globales por etiqueta** (`button`, `a`, `input`, `h2`, `.card`) y clases existentes de `institutions.css`: siguen en `@layer legacy`, pero sus colores usan los tokens semánticos (`var(--accent)`, `var(--border)`, …) en lugar de HEX. Así no se repiten clases en cada botón.
 - **Elementos propios de una vista** (encabezado, logotipo, `h1`): clases de Tailwind en el JSX (`text-brand-primary`, `text-brand-neutral`, `h-14`, `flex`, …).
 - Vistas nuevas: preferir clases de Tailwind; los estilos globales ya aplican la marca a botones, enlaces y campos.
 - Tailwind sólo emite en el CSS final las variables de tema que se usan en utilidades o en CSS procesado por Tailwind (`index.css`). Si `institutions.css` u otra hoja sin `@import "tailwindcss"` necesita una variable no usada en `index.css`, comprobar que aparezca en `dist/assets/*.css` tras `npm run build`.

@@ -44,3 +44,11 @@ PARA resguardar este requisito legal interno, asegurando que nunca se exponga a 
 
 Mostrar el logotipo institucional `frontend/public/brand/sec-economia.png` en la parte superior de todas las vistas, alineado con la estructura del encabezado y con un tamaño visualmente equivalente al logotipo principal.
 
+### Tokens semánticos de color
+
+**Estado:** Completada (16 de octubre de 2026)  
+**Origen:** recomendación aprobada por el responsable al evaluar un modo oscuro; no corresponde a una historia de Jira.  
+**Detalle:** [design/identidad-visual.md](design/identidad-visual.md#tokens-semánticos)
+
+Sustituir los colores escritos a mano en las hojas de estilo por tokens que nombran su función (superficie, texto, borde, acento, error, éxito, estado), sin ningún cambio visible, para que un modo oscuro futuro solo tenga que redefinir esos tokens. El modo oscuro en sí queda fuera: requiere variantes de logotipo para fondo oscuro y un vino aclarado aprobados.
+
