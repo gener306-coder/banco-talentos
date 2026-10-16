@@ -114,12 +114,14 @@ function App() {
         <div className={`app-bar-inner${wide ? ' wide' : ''}`}>
           {/* En /login el logotipo se muestra en el formulario; se evita duplicarlo. */}
           {pathname !== '/login' && (
-            <img src="/brand/logo.png" alt="Nodologístico" width={697} height={783} className="h-11 w-auto shrink-0" />
+            <img src="/brand/logo.png" alt="Nodologístico" width={697} height={783} className="h-9 w-auto shrink-0 min-[481px]:h-11" />
           )}
           <div>
             <p className="eyebrow text-brand-neutral">Educación Dual</p>
             <h1 className="text-brand-primary">Banco de Talentos</h1>
           </div>
+          {/* Coemblema institucional: a la derecha, con la misma altura que el logotipo principal. */}
+          <img src="/brand/sec-economia.png" alt="Secretaría de Economía" width={1920} height={414} className="app-bar-partner h-[1.6rem] w-auto min-[481px]:h-11" />
         </div>
       </header>
       <main ref={main} className={wide ? 'institutions-shell' : undefined}>

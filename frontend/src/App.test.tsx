@@ -322,4 +322,17 @@ describe('identidad visual', () => {
     expect(header).toContainElement(logo)
     expect(header).toContainElement(screen.getByRole('heading', { level: 1, name: 'Banco de Talentos' }))
   })
+
+  it.each(['/', '/login'])('muestra el logotipo de la Secretaría de Economía en el encabezado de %s', async (path) => {
+    fetchMock.mockResolvedValueOnce(path === '/' ? Response.json({ user }) : new Response(null, { status: 401 }))
+    renderApp(path)
+    await screen.findByRole('heading', { name: path === '/' ? 'Sesión iniciada' : 'Iniciar sesión' })
+    const partner = screen.getByRole('img', { name: 'Secretaría de Economía' })
+    expect(screen.getByRole('banner')).toContainElement(partner)
+    expect(partner).toHaveAttribute('src', '/brand/sec-economia.png')
+    // Dimensiones intrínsecas declaradas: reservan el espacio y evitan saltos al cargar.
+    expect(partner).toHaveAttribute('width', '1920')
+    expect(partner).toHaveAttribute('height', '414')
+    expect(screen.getAllByRole('img', { name: 'Secretaría de Economía' })).toHaveLength(1)
+  })
 })

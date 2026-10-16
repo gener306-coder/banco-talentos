@@ -10,11 +10,12 @@
 
 ## Logotipo
 
-Existe una única variante del logotipo:
+Existe una única variante del logotipo, más el logotipo institucional de la Secretaría de Economía como coemblema:
 
 | Archivo | URL en el navegador | Uso |
 |---|---|---|
 | `frontend/public/brand/logo.png` | `/brand/logo.png` | Fondos claros (blanco o gris claro) |
+| `frontend/public/brand/sec-economia.png` | `/brand/sec-economia.png` | Coemblema institucional, horizontal (1920 × 414 px, fondo transparente), solo sobre fondos claros |
 
 El PNG tiene fondo transparente y mide 697 × 783 px; se le retiró únicamente el margen transparente, sin alterar el dibujo. No hay variante blanca: no colocar el logotipo sobre fondos oscuros ni sobre el color primario vino.
 
@@ -26,6 +27,9 @@ Ubicaciones actuales:
 |---|---|---|
 | Encabezado general translúcido, junto al título | `App.tsx` | `h-11` (44 px). No se muestra en `/login` para no duplicarlo. |
 | Parte superior del formulario de login | `pages/LoginPage.tsx` | `h-32` (128 px), centrado. |
+| Secretaría de Economía, extremo derecho del encabezado general | `App.tsx` (`.app-bar-partner`) | `h-11` (44 px), la misma altura que el logotipo principal y centrado con él; separado del título por un filete `neutral-200`. Se muestra en todas las vistas, también en `/login`. Hasta 480 px: `h-[1.6rem]` y el logotipo principal `h-9`, con el título a 1.15rem, para caber en una línea. |
+
+El logotipo de la Secretaría de Economía se usa tal cual: `alt="Secretaría de Economía"`, `width={1920} height={414}` y solo altura fija (`w-auto`), sin recolorear ni recortar el escudo ni el texto.
 
 A 44 px el texto «nodologístico» del logotipo no es legible; el símbolo identifica la marca y el título textual permanece en el `h1`. Para un tamaño menor, solicitar una versión horizontal o un símbolo en SVG.
 

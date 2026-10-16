@@ -32,3 +32,15 @@ PARA resguardar este requisito legal interno, asegurando que nunca se exponga a 
 ---
 ## Directrices de Arquitectura para el Agente
 - **Diseño del CV:** Evaluar si conviene normalizar este "CV" usando múltiples tablas relacionales o campos `JSONB` indexados en PostgreSQL, priorizando la facilidad para que el motor de búsqueda cruce parámetros distintos en el futuro.
+
+---
+## Tareas técnicas transversales
+
+### Logotipo de la Secretaría de Economía en el encabezado
+
+**Estado:** Completada (16 de octubre de 2026)  
+**Origen:** solicitud del responsable del proyecto; no corresponde a una historia de Jira.  
+**Detalle:** [design/identidad-visual.md](design/identidad-visual.md#logotipo)
+
+Mostrar el logotipo institucional `frontend/public/brand/sec-economia.png` en la parte superior de todas las vistas, alineado con la estructura del encabezado y con un tamaño visualmente equivalente al logotipo principal.
+

@@ -30,6 +30,14 @@ h3 { font-weight: 600; letter-spacing: -0.01em; color: var(--ink); }
 .app-bar-inner.wide { width: min(100% - 2rem, 70rem); }
 .app-bar h1 { margin: 0.1rem 0 0; font-size: 1.5rem; }
 .app-bar .eyebrow { margin: 0; }
+.app-bar-partner { margin-left: auto; padding-left: 0.9rem; border-left: 1px solid var(--color-neutral-200); flex-shrink: 1; min-width: 0; object-fit: contain; }
+/* En pantallas angostas el título se reduce (los logotipos, con h-* en App.tsx) para caber en una línea. */
+@media (max-width: 480px) {
+  .app-bar-inner { gap: 0.6rem; }
+  .app-bar h1 { font-size: 1.15rem; }
+  .app-bar .eyebrow { font-size: 0.66rem; }
+  .app-bar-partner { padding-left: 0.6rem; }
+}
 /* Borde de scroll suave: aparece solo cuando hay contenido bajo el encabezado. */
 .app-bar::after { content: ''; position: absolute; left: 0; right: 0; top: 100%; height: 14px; pointer-events: none;
   background: linear-gradient(to bottom, color-mix(in srgb, var(--color-neutral-100) 90%, transparent), transparent);
