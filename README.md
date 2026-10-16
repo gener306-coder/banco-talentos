@@ -97,7 +97,7 @@ Los apellidos de cada alumno abren su detalle (`/students/:id`). Ahí **Corregir
 
 El padrón y el detalle muestran el estado de cada alumno (`ACTIVO`/`INACTIVO`). **Inactivar alumno**, tras una confirmación, lo oculta del Banco de Talentos sin borrar nada; **Reactivar alumno** lo devuelve. Un alumno inactivo sigue en el padrón y su expediente se puede editar. No existe eliminación física. Contrato y cobertura en [docs/HU-S2-04.md](docs/HU-S2-04.md).
 
-Seguro facultativo (HU-S3-02, por ahora solo API): la institución registra el NSS de un alumno propio (`PUT /api/students/{id}/social-security`) y sube su comprobante del IMSS en PDF (`POST …/social-security/document`), que se descarga solo por `GET …/social-security/document`. El NSS se guarda cifrado con `APP_KEY` y con un índice ciego HMAC que impide repetirlo en la institución; el PDF queda en el disco privado `storage/app/private`. Nada de esto aparece en el padrón ni en el detalle. Contrato y decisiones en [docs/HU-S3-02.md](docs/HU-S3-02.md).
+En el detalle, la sección **Seguro Facultativo (IMSS)** (HU-S3-02) registra el NSS del alumno (11 dígitos con verificador) y sube su comprobante del IMSS en PDF de hasta 2 MB, que se descarga solo con la sesión de la institución. El NSS se guarda cifrado con `APP_KEY` y con un índice ciego HMAC que impide repetirlo en la institución; el PDF queda en el disco privado `storage/app/private`. Nada de esto viaja con el padrón ni con los datos del expediente que se compartirán con empresas. Contrato y decisiones en [docs/HU-S3-02.md](docs/HU-S3-02.md).
 
 ## Pruebas
 

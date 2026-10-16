@@ -176,3 +176,82 @@ test('HU-S2-04: la institución inactiva y reactiva a un alumno propio sin borra
   await expect(page.getByText('Alumno reactivado correctamente.')).toBeVisible()
   await expect(status.getByText('ACTIVO', { exact: true })).toBeVisible()
 })
+
+/** Diez dígitos aleatorios con su dígito verificador de Luhn: un NSS válido y único por ejecución. */
+function randomNss(): string {
+  const payload = Array.from(randomBytes(10), (byte) => String(byte % 10)).join('')
+  for (let digit = 0; digit <= 9; digit++) {
+    const candidate = payload + digit
+    const sum = [...candidate].reverse().reduce((total, char, position) => {
+      const value = Number(char) * (position % 2 === 1 ? 2 : 1)
+      return total + (value > 9 ? value - 9 : value)
+    }, 0)
+    if (sum % 10 === 0) return candidate
+  }
+  throw new Error('Sin dígito verificador.')
+}
+
+test('HU-S3-02: la institución guarda el NSS y sube y descarga el comprobante del IMSS', async ({ page }) => {
+  const suffix = randomBytes(4).toString('hex').toUpperCase()
+  const surname = `Imss${suffix}`
+  const nss = randomNss()
+  const pdf = Buffer.from(`%PDF-1.4\n% Comprobante E2E ${suffix}\n%%EOF\n`)
+
+  await page.goto('/')
+  await page.getByRole('link', { name: 'Alumnos', exact: true }).click()
+  await page.getByRole('button', { name: /Registrar (el primer )?alumno/ }).first().click()
+  const register = page.getByRole('dialog', { name: 'Registrar alumno' })
+  await register.getByLabel('Matrícula o control interno', { exact: true }).fill(`IMSS-${suffix}`)
+  await register.getByLabel('Nombre(s)', { exact: true }).fill('Lucía')
+  await register.getByLabel('Primer apellido', { exact: true }).fill(surname)
+  await register.getByRole('button', { name: 'Registrar alumno', exact: true }).click()
+  await expect(register.getByRole('status')).toContainText('Alumno registrado')
+  await register.getByRole('button', { name: 'Cerrar', exact: true }).click()
+  await page.getByRole('link', { name: surname, exact: true }).click()
+  const studentId = new URL(page.url()).pathname.split('/').pop()!
+
+  const security = page.getByRole('region', { name: 'Seguro Facultativo (IMSS)' })
+  await expect(security.getByText('Aún no hay comprobante.')).toBeVisible()
+
+  // NSS: se agrupa al escribir y se envía solo con dígitos.
+  const field = security.getByLabel('Número de Seguridad Social (NSS)')
+  await field.fill(`${nss.slice(0, 4)}-${nss.slice(4)}`)
+  await expect(field).toHaveValue(`${nss.slice(0, 4)} ${nss.slice(4, 8)} ${nss.slice(8)}`)
+  const savedNss = page.waitForResponse((response) => response.url().endsWith(`/api/students/${studentId}/social-security`) && response.request().method() === 'PUT')
+  await security.getByRole('button', { name: 'Guardar NSS' }).click()
+  const nssResponse = await savedNss
+  expect(nssResponse.status()).toBe(200)
+  expect(nssResponse.request().postDataJSON()).toEqual({ nss })
+  await expect(security.getByText('NSS guardado correctamente.')).toBeVisible()
+
+  // Comprobante: subida multipart al disco privado.
+  await security.getByLabel('Archivo PDF').setInputFiles({ name: `Vigencia ${suffix}.pdf`, mimeType: 'application/pdf', buffer: pdf })
+  const uploaded = page.waitForResponse((response) => response.url().endsWith(`/api/students/${studentId}/social-security/document`) && response.request().method() === 'POST')
+  await security.getByRole('button', { name: 'Subir comprobante' }).click()
+  const uploadResponse = await uploaded
+  expect(uploadResponse.status()).toBe(200)
+  expect(JSON.stringify(await uploadResponse.json())).not.toContain('imss/')
+  await expect(security.getByText('Comprobante guardado correctamente.')).toBeVisible()
+  await expect(security.getByText(`Vigencia ${suffix}.pdf`)).toBeVisible()
+
+  // Todo se conserva al recargar; la descarga devuelve el mismo archivo.
+  await page.reload()
+  await expect(security.getByLabel('Número de Seguridad Social (NSS)')).toHaveValue(`${nss.slice(0, 4)} ${nss.slice(4, 8)} ${nss.slice(8)}`)
+  const downloading = page.waitForEvent('download')
+  await security.getByRole('button', { name: 'Descargar comprobante' }).click()
+  const download = await downloading
+  expect(download.suggestedFilename()).toBe('comprobante-imss.pdf')
+  const stream = await download.createReadStream()
+  const chunks: Buffer[] = []
+  for await (const chunk of stream) chunks.push(chunk as Buffer)
+  expect(Buffer.concat(chunks).equals(pdf)).toBe(true)
+
+  // CA-01/CA-02: el detalle y el padrón no exponen nada del seguro.
+  const origin = new URL(page.url()).origin
+  for (const url of [`/api/students/${studentId}`, '/api/students']) {
+    const body = await (await page.context().request.get(url, { headers: { Origin: origin } })).text()
+    expect(body).not.toContain(nss)
+    expect(body).not.toContain('social')
+    expect(body).not.toContain('Vigencia')
+  }
+})

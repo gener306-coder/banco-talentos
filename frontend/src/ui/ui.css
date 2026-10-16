@@ -177,6 +177,20 @@ select[aria-invalid='true'], .student-section input[aria-invalid='true'], .sheet
 .student-identity { max-width: 45rem; margin: 1rem 0; }
 .student-identity dd { margin: 0.2rem 0 0; }
 .student-identity dd.mono { font-family: ui-monospace, monospace; }
+/* Seguro facultativo (HU-S3-02): dos formularios en columnas que se apilan en pantallas angostas. */
+.social-security { display: grid; grid-template-columns: repeat(auto-fit, minmax(17rem, 1fr)); gap: 1.5rem 2rem; max-width: 45rem; margin-top: 1rem; }
+.social-security-form h4 { margin: 0 0 0.6rem; font-size: 1rem; color: var(--color-brand-primary); }
+.social-security-form input.mono { font-family: ui-monospace, monospace; letter-spacing: 0.06em; margin-bottom: 0.2rem; }
+.social-security-form input[type='file'] { padding: 0.45rem; background: var(--color-white); margin-bottom: 0.2rem; }
+.social-security-form input[type='file']::file-selector-button { font: inherit; margin-right: 0.75rem; padding: 0.4rem 0.8rem; border: 0; border-radius: 8px;
+  background: var(--tint); color: var(--color-brand-primary); cursor: pointer; }
+@media (hover: hover) { .social-security-form input[type='file']::file-selector-button:hover { background: var(--tint-hover); } }
+.field-hint { margin: 0 0 0.6rem; font-size: 0.82rem; color: var(--color-brand-neutral); }
+.notice-muted { margin: 0 0 0.8rem; color: var(--color-brand-neutral); }
+.document-card { margin: 0 0 1rem; padding: 0.8rem 1rem; border: 1px solid var(--color-neutral-200); border-radius: 12px; background: var(--color-neutral-100); }
+.document-card p { margin: 0; }
+.document-name { font-weight: 600; overflow-wrap: anywhere; }
+.document-meta { font-size: 0.82rem; color: var(--color-brand-neutral); margin-bottom: 0.6rem !important; }
 /* Estado del alumno (HU-S2-04): mismos colores de estado que .institution-status. */
 .student-status { display: inline-block; white-space: nowrap; border-radius: 1rem; padding: 0.2rem 0.7rem; font-size: 0.8rem; font-weight: 700; }
 .student-status.active { color: #155b36; background: #e4f3e9; }

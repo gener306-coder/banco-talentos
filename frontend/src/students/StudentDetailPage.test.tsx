@@ -6,6 +6,8 @@ import App from '../App'
 const institutionUser = { id: 5, name: 'Coordinación', email: 'coord@example.test', role: 'INSTITUTION', institution: { id: 7, name: 'Instituto Dual' } }
 const fetchMock = vi.fn<typeof fetch>()
 const apiMock = vi.fn<typeof fetch>()
+// El seguro facultativo (HU-S3-02) se carga aparte; sus rutas no consumen las respuestas de apiMock.
+const securityMock = vi.fn<typeof fetch>()
 let user: Record<string, unknown>
 const emptyProfile = { program: null, period_type: null, period_number: null, dual_available: null, state_code: null, municipality: null, can_relocate: null }
 const savedProfile = { program: 'Ingeniería en Sistemas', period_type: 'semester', period_number: 6, dual_available: true, state_code: '28', municipality: 'Victoria', can_relocate: false }
@@ -39,6 +41,8 @@ function fillProfile(form: HTMLElement) {
 beforeEach(() => {
   user = institutionUser
   apiMock.mockReset()
+  securityMock.mockReset()
+  securityMock.mockImplementation(async () => Response.json({ data: { nss: null, document: null } }))
   fetchMock.mockReset()
   fetchMock.mockImplementation(async (path, options) => {
     if (path === '/api/me') return Response.json({ user })
@@ -46,6 +50,7 @@ beforeEach(() => {
       document.cookie = 'XSRF-TOKEN=csrf; Path=/'
       return new Response(null, { status: 204 })
     }
+    if (typeof path === 'string' && path.includes('/social-security')) return securityMock(path, options)
     return apiMock(path, options)
   })
   vi.stubGlobal('fetch', fetchMock)

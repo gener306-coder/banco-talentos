@@ -17,7 +17,7 @@ PARA que las empresas puedan evaluar y comparar talento estandarizado de cualqui
 - **CA-04 [Validación de Certificaciones]:** El sistema debe soportar un campo para `credential_url` o `credential_id` para dar certeza a las empresas sobre la autenticidad de una certificación, evaluando integraciones ligeras (tipo Credly).
 
 ## HU-S3-02 — Gestión Estricta del Seguro Facultativo (IMSS)
-**Estado:** En curso (API y pruebas Pest completas; falta la interfaz) | **Diseño técnico:** [HU-S3-02.md](HU-S3-02.md) | **Story Points:** 5 | **Rol:** `INSTITUTION`
+**Estado:** Completada (16 de octubre de 2026) | **Diseño técnico:** [HU-S3-02.md](HU-S3-02.md) | **Story Points:** 5 | **Rol:** `INSTITUTION`
 
 **Historia de usuario:**
 COMO usuario de una Institución Educativa

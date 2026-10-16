@@ -10,9 +10,10 @@ import { fullName, getStudent, setStudentStatus } from './api'
 import { studentMessages } from './messages'
 import { StudentForm } from './StudentForm'
 import { StudentProfileForm } from './StudentProfileForm'
+import { StudentSocialSecuritySection } from './StudentSocialSecuritySection'
 import { StudentStatus } from './StudentStatus'
 
-/** Detalle de un alumno propio: identidad interna y expediente público (HU-S2-03) y su estado (HU-S2-04). */
+/** Detalle de un alumno propio: identidad interna y expediente público (HU-S2-03), seguro facultativo (HU-S3-02) y estado (HU-S2-04). */
 function StudentDetailView({ id }: { id: string }) {
   const load = useCallback((signal: AbortSignal) => getStudent(id, signal), [id])
   const { data, loading, failure, refresh, setData } = useApiRequest(load, studentMessages)
@@ -68,6 +69,8 @@ function StudentDetailView({ id }: { id: string }) {
                 <button type="button" className="secondary" onClick={() => { setNotice(null); setStatusNotice(null); setOpenings((count) => count + 1); setCorrecting(true) }}>Corregir identidad</button>
               </div>
             </section>
+
+            <StudentSocialSecuritySection studentId={data.id} />
 
             <section className="student-section" aria-labelledby="student-profile-title">
               <h3 id="student-profile-title">Expediente público</h3>

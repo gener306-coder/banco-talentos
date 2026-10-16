@@ -63,7 +63,8 @@ export async function request(path: string, options: RequestInit = {}): Promise<
     const token = csrfToken()
     if (!token) throw new ApiError(419)
     headers.set('X-XSRF-TOKEN', token)
-    if (options.body) headers.set('Content-Type', 'application/json')
+    // Con FormData (archivos) el navegador fija el multipart y su boundary.
+    if (options.body && !(options.body instanceof FormData)) headers.set('Content-Type', 'application/json')
   }
 
   let response: Response
@@ -84,4 +85,20 @@ export async function request(path: string, options: RequestInit = {}): Promise<
   } catch {
     throw new ApiError(502)
   }
+}
+
+/** Descarga un archivo protegido con la sesión; los errores llegan como ApiError, igual que en request(). */
+export async function requestBlob(path: string, options: RequestInit = {}): Promise<Blob> {
+  let response: Response
+  try {
+    response = await fetch(path, { referrerPolicy: 'origin', ...options, credentials: 'include' })
+  } catch (error) {
+    if (error instanceof DOMException && error.name === 'AbortError') throw error
+    throw new ApiError(0)
+  }
+
+  if (!response.ok) {
+    throw await responseError(response)
+  }
+  return response.blob()
 }
