@@ -99,6 +99,8 @@ El padrón y el detalle muestran el estado de cada alumno (`ACTIVO`/`INACTIVO`).
 
 En el detalle, la sección **Seguro Facultativo (IMSS)** (HU-S3-02) registra el NSS del alumno (11 dígitos con verificador) y sube su comprobante del IMSS en PDF de hasta 2 MB, que se descarga solo con la sesión de la institución. El NSS se guarda cifrado con `APP_KEY` y con un índice ciego HMAC que impide repetirlo en la institución; el PDF queda en el disco privado `storage/app/private`. Nada de esto viaja con el padrón ni con los datos del expediente que se compartirán con empresas. Contrato y decisiones en [docs/HU-S3-02.md](docs/HU-S3-02.md).
 
+Desde el detalle, **CV profesional** (`/students/:id/cv`, HU-S3-01) construye un CV con el mismo formato para cualquier disciplina: titular, habilidades técnicas y blandas (etiquetas con autocompletado de un catálogo compartido), idiomas con nivel MCER o Nativo, certificaciones que la institución puede marcar como revisadas, y proyectos. Los enlaces externos y las credenciales de las certificaciones son protegidos: revelan la identidad y no se mostrarán en la búsqueda de empresas. Los textos públicos rechazan enlaces, correos y teléfonos. Contrato y decisiones en [docs/HU-S3-01.md](docs/HU-S3-01.md).
+
 ## Pruebas
 
 Ejecuta desde la raíz:

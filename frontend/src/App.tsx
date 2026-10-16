@@ -12,6 +12,7 @@ import { InstitutionsPage } from './institutions/InstitutionsPage'
 import { InstitutionCreatePage } from './institutions/InstitutionCreatePage'
 import { InstitutionDetailPage } from './institutions/InstitutionDetailPage'
 import { InstitutionEditPage } from './institutions/InstitutionEditPage'
+import { StudentCvPage } from './students/StudentCvPage'
 import { StudentDetailPage } from './students/StudentDetailPage'
 import { StudentsPage } from './students/StudentsPage'
 import { prefersReducedMotion } from './ui/modal'
@@ -55,6 +56,7 @@ function AuthRoutes() {
       <Route element={<ProtectedRoute role="INSTITUTION" deniedMessage="No tienes permiso para acceder al padrón de alumnos." />}>
         <Route path="/students" element={<StudentsPage />} />
         <Route path="/students/:id" element={<StudentDetailPage />} />
+        <Route path="/students/:id/cv" element={<StudentCvPage />} />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

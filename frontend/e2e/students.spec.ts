@@ -255,3 +255,124 @@ test('HU-S3-02: la institución guarda el NSS y sube y descarga el comprobante d
     expect(body).not.toContain('Vigencia')
   }
 })
+
+test('HU-S3-01: la institución construye el CV normalizado con datos protegidos y revisión de certificaciones', async ({ page }) => {
+  const suffix = randomBytes(4).toString('hex').toUpperCase()
+  const surname = `Cv${suffix}`
+  const skill = `Laravel ${suffix}`
+  const githubUrl = `https://github.com/alumna-${suffix.toLowerCase()}`
+  const credentialUrl = `https://www.credly.com/badges/${suffix.toLowerCase()}`
+
+  await page.goto('/')
+  await page.getByRole('link', { name: 'Alumnos', exact: true }).click()
+  await page.getByRole('button', { name: /Registrar (el primer )?alumno/ }).first().click()
+  const register = page.getByRole('dialog', { name: 'Registrar alumno' })
+  await register.getByLabel('Matrícula o control interno', { exact: true }).fill(`CV-${suffix}`)
+  await register.getByLabel('Nombre(s)', { exact: true }).fill('Renata')
+  await register.getByLabel('Primer apellido', { exact: true }).fill(surname)
+  await register.getByRole('button', { name: 'Registrar alumno', exact: true }).click()
+  await expect(register.getByRole('status')).toContainText('Alumno registrado')
+  await register.getByRole('button', { name: 'Cerrar', exact: true }).click()
+  await page.getByRole('link', { name: surname, exact: true }).click()
+  const studentId = new URL(page.url()).pathname.split('/').pop()!
+
+  // Página propia, enlazada desde el detalle.
+  await page.getByRole('link', { name: 'CV profesional' }).click()
+  await expect(page).toHaveURL(new RegExp(`/students/${studentId}/cv$`))
+  await expect(page.getByRole('heading', { level: 2, name: `Renata ${surname}` })).toBeVisible()
+
+  // Titular (CA-01) y detector de contacto (CA-02).
+  const headline = page.getByRole('region', { name: 'Titular profesional' })
+  await headline.getByLabel('Titular').fill('Desarrolladora Backend Junior')
+  await headline.getByRole('button', { name: 'Guardar titular' }).click()
+  await expect(headline.getByRole('status')).toHaveText('Titular guardado correctamente.')
+
+  // Habilidades: una nueva técnica, una blanda y el autocompletado del catálogo.
+  const skills = page.getByRole('region', { name: 'Habilidades' })
+  const search = skills.getByRole('combobox', { name: 'Agregar habilidad' })
+  await search.fill(skill)
+  await expect(skills.getByRole('option', { name: new RegExp(`Agregar «${skill}» como nueva`) })).toBeVisible()
+  await search.press('Enter')
+  await skills.getByLabel('Blanda').check()
+  await search.fill('Trabajo en equipo')
+  await search.press('Enter')
+  const savedSkills = page.waitForResponse((response) => response.url().endsWith(`/api/students/${studentId}/cv/skills`))
+  await skills.getByRole('button', { name: 'Guardar habilidades' }).click()
+  expect((await savedSkills).status()).toBe(200)
+  await expect(skills.getByRole('status')).toHaveText('Habilidades guardadas correctamente.')
+  // Ya guardada, se recupera del catálogo compartido (GET /api/skills) al quitarla y volver a buscarla.
+  await skills.getByRole('button', { name: `Quitar ${skill}` }).click()
+  const suggested = page.waitForResponse((response) => response.url().includes('/api/skills?q='))
+  await search.fill(skill.slice(0, 9).toUpperCase())
+  expect((await suggested).status()).toBe(200)
+  await expect(skills.getByRole('option', { name: new RegExp(`^${skill}\\s*Técnica$`) })).toBeVisible()
+  await search.press('Enter')
+  await expect(skills.getByRole('list', { name: 'Técnicas' })).toContainText(skill)
+
+  // Idiomas con nivel MCER.
+  const languages = page.getByRole('region', { name: 'Idiomas' })
+  await languages.getByRole('button', { name: 'Agregar idioma' }).click()
+  await languages.getByLabel('Idioma 1', { exact: true }).selectOption({ label: 'Inglés' })
+  await languages.getByLabel('Nivel de Inglés').selectOption({ label: 'B2 · Intermedio alto' })
+  await languages.getByRole('button', { name: 'Guardar idiomas' }).click()
+  await expect(languages.getByRole('status')).toHaveText('Idiomas guardados correctamente.')
+
+  // Certificación con credencial protegida y revisión de la institución (CA-04).
+  const certifications = page.getByRole('region', { name: 'Certificaciones' })
+  await certifications.getByRole('button', { name: 'Agregar certificación' }).click()
+  const certificationSheet = page.getByRole('dialog', { name: 'Agregar certificación' })
+  await certificationSheet.getByLabel('Nombre de la certificación').fill('CCNA: Introduction to Networks')
+  await certificationSheet.getByLabel('Emisor').fill('Cisco')
+  await certificationSheet.getByLabel('Fecha de emisión').fill('2025-06-15')
+  await certificationSheet.getByLabel('ID de la credencial (opcional)').fill(`CSCO-${suffix}`)
+  await certificationSheet.getByLabel('URL de verificación (opcional)').fill(credentialUrl)
+  await certificationSheet.getByRole('button', { name: 'Agregar certificación' }).click()
+  await expect(certifications.getByText('Certificación agregada correctamente.')).toBeVisible()
+  await expect(certificationSheet).toBeHidden()
+  const card = certifications.getByRole('listitem').filter({ hasText: 'CCNA' })
+  await expect(card.getByText('Sin revisar')).toBeVisible()
+  const reviewed = page.waitForResponse((response) => /\/cv\/certifications\/\d+\/verification$/.test(response.url()))
+  await card.getByRole('button', { name: /Marcar como revisada/ }).click()
+  const reviewResponse = await reviewed
+  expect(reviewResponse.request().method()).toBe('PATCH')
+  expect(reviewResponse.request().postDataJSON()).toEqual({ verified: true })
+  await expect(card.getByText('Revisada', { exact: true })).toBeVisible()
+
+  // Proyecto en una hoja.
+  const projects = page.getByRole('region', { name: 'Proyectos' })
+  await projects.getByRole('button', { name: 'Agregar proyecto' }).click()
+  const projectSheet = page.getByRole('dialog', { name: 'Agregar proyecto' })
+  await projectSheet.getByLabel('Nombre del proyecto').fill('Sistema de inventario escolar')
+  await projectSheet.getByLabel('Descripción').fill('API REST con Laravel y Vue.js para el almacén.')
+  await projectSheet.getByLabel('Año (opcional)').fill('2025')
+  await projectSheet.getByRole('button', { name: 'Agregar proyecto' }).click()
+  await expect(projects.getByText('Proyecto agregado correctamente.')).toBeVisible()
+
+  // Enlaces protegidos (CA-02).
+  const links = page.getByRole('region', { name: /Enlaces externos/ })
+  await expect(links.getByText(/no es visible en la búsqueda general de empresas/)).toBeVisible()
+  await links.getByRole('button', { name: 'Agregar enlace' }).click()
+  await links.getByLabel('Tipo del enlace 1', { exact: true }).selectOption({ label: 'GitHub' })
+  await links.getByLabel('Dirección de GitHub').fill(githubUrl)
+  await links.getByRole('button', { name: 'Guardar enlaces' }).click()
+  await expect(links.getByRole('status')).toHaveText('Enlaces guardados correctamente.')
+
+  // Todo se conserva al recargar.
+  await page.reload()
+  await expect(headline.getByLabel('Titular')).toHaveValue('Desarrolladora Backend Junior')
+  await expect(skills.getByRole('list', { name: 'Técnicas' })).toContainText(skill)
+  await expect(skills.getByRole('list', { name: 'Blandas' })).toContainText('Trabajo en equipo')
+  await expect(languages.getByLabel('Nivel de Inglés')).toHaveValue('4')
+  await expect(card.getByText('Revisada', { exact: true })).toBeVisible()
+  await expect(card.getByText(`ID CSCO-${suffix}`)).toBeVisible()
+  await expect(projects.getByText('Sistema de inventario escolar')).toBeVisible()
+  await expect(links.getByLabel('Dirección de GitHub')).toHaveValue(githubUrl)
+
+  // El detalle y el padrón no exponen los enlaces ni las credenciales.
+  const origin = new URL(page.url()).origin
+  for (const url of [`/api/students/${studentId}`, '/api/students']) {
+    const body = await (await page.context().request.get(url, { headers: { Origin: origin } })).text()
+    expect(body).not.toContain(githubUrl)
+    expect(body).not.toContain(`CSCO-${suffix}`)
+  }
+})

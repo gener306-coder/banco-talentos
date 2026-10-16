@@ -191,6 +191,62 @@ select[aria-invalid='true'], .student-section input[aria-invalid='true'], .sheet
 .document-card p { margin: 0; }
 .document-name { font-weight: 600; overflow-wrap: anywhere; }
 .document-meta { font-size: 0.82rem; color: var(--color-brand-neutral); margin-bottom: 0.6rem !important; }
+/* CV normalizado (HU-S3-01). */
+.student-cv-link { margin: -0.4rem 0 0.4rem; }
+.cv-intro { max-width: 45rem; color: var(--color-brand-neutral); }
+.cv-intro .icon, .protected-note .icon, .protected-badge .icon, .credential-line .icon { vertical-align: -0.12em; }
+.cv-section form, .cv-section .cv-cards { max-width: 45rem; }
+/* Agrupadores para deshabilitar un formulario mientras se envía: sin el borde del navegador. */
+.sheet-body form > fieldset, .cv-rows { border: 0; padding: 0; margin: 0; min-width: 0; }
+.cv-section h4 { margin: 1rem 0 0.4rem; font-size: 0.95rem; color: var(--color-brand-primary); }
+.chips { display: flex; flex-wrap: wrap; gap: 0.4rem; margin: 0 0 0.6rem; padding: 0; list-style: none; }
+.chip { display: inline-flex; align-items: center; gap: 0.15rem; padding: 0.2rem 0.2rem 0.2rem 0.75rem; border-radius: 999px;
+  background: var(--tint); color: var(--color-brand-primary); font-size: 0.9rem; font-weight: 500; }
+.chip.soft { background: color-mix(in srgb, var(--color-brand-secondary) 18%, transparent); color: #6b4f22; }
+.chip-remove { width: 1.7rem; height: 1.7rem; padding: 0; border: 0; border-radius: 50%; background: transparent; color: inherit; }
+.chip-remove .icon { width: 0.75em; height: 0.75em; }
+@media (hover: hover) { .chip-remove:hover:not(:disabled) { background: var(--tint-hover); } }
+.combobox { position: relative; }
+.combobox input { margin-bottom: 0.2rem; }
+.combobox-list { position: absolute; z-index: 5; left: 0; right: 0; top: calc(100% - 0.1rem); margin: 0; padding: 0.3rem; list-style: none;
+  background: var(--color-white); border: 1px solid var(--color-neutral-200); border-radius: 12px; box-shadow: 0 12px 28px rgba(0, 0, 0, 0.12);
+  max-height: 16rem; overflow: auto; animation: materialize var(--spring-duration) var(--spring) both; }
+.combobox-list[hidden] { display: none; }
+.combobox-list li { display: flex; align-items: center; gap: 0.5rem; padding: 0.55rem 0.7rem; border-radius: 8px; cursor: pointer; }
+.combobox-list li.active { background: var(--tint); color: var(--color-brand-primary); }
+.option-meta { margin-left: auto; font-size: 0.78rem; color: var(--color-brand-neutral); }
+.choice-group.inline div { display: inline-flex; margin-right: 1rem; }
+.cv-rows { margin-bottom: 0.6rem; }
+.cv-row { display: grid; grid-template-columns: 1fr 1fr auto; gap: 0 0.8rem; align-items: start; padding: 0.6rem 0; border-bottom: 1px solid var(--color-neutral-200); }
+.cv-row.link-row { grid-template-columns: 11rem 1fr auto; }
+.cv-row select, .cv-row input { margin-bottom: 0.2rem; }
+.row-remove { margin-top: 1.6rem; width: 2.4rem; height: 2.4rem; padding: 0; }
+.cv-cards { display: grid; gap: 0.75rem; margin: 0.6rem 0 1rem; padding: 0; list-style: none; }
+.cv-card { padding: 0.9rem 1rem; border: 1px solid var(--color-neutral-200); border-radius: 12px; background: var(--color-white); }
+.cv-card p { margin: 0 0 0.3rem; }
+.cv-card .actions { margin-top: 0.6rem; }
+.cv-card-heading { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 0.4rem; }
+.cv-card-title { font-weight: 600; }
+.cv-card-meta { font-size: 0.85rem; color: var(--color-brand-neutral); }
+.cv-card-description { white-space: pre-line; }
+.review-status { display: inline-flex; align-items: center; gap: 0.25rem; border-radius: 1rem; padding: 0.15rem 0.6rem; font-size: 0.78rem; font-weight: 700; }
+.review-status.reviewed { color: #155b36; background: #e4f3e9; }
+.review-status.pending { color: #5d4b36; background: #f2ebdf; }
+.credential-line { display: flex; flex-wrap: wrap; align-items: center; gap: 0.3rem 0.8rem; font-size: 0.88rem; }
+.protected-badge { display: inline-flex; align-items: center; gap: 0.25rem; margin-left: 0.4rem; padding: 0.15rem 0.55rem; border-radius: 1rem;
+  font-size: 0.75rem; font-weight: 700; vertical-align: middle; color: var(--color-brand-neutral); background: var(--color-neutral-100);
+  border: 1px solid var(--color-neutral-200); }
+.protected-note { display: flex; gap: 0.5rem; align-items: flex-start; max-width: 45rem; margin: 0.4rem 0 0.9rem; padding: 0.7rem 0.9rem;
+  border-radius: 12px; background: var(--color-neutral-100); color: var(--color-brand-neutral); font-size: 0.88rem; }
+.protected-note .icon { flex-shrink: 0; margin-top: 0.15rem; color: var(--color-brand-primary); }
+.protected-fields { margin-top: 0.8rem; padding-top: 0.6rem; border-top: 1px dashed var(--color-neutral-200); }
+textarea { width: 100%; padding: 0.7rem; border: 1px solid var(--color-neutral-500); border-radius: 8px; font: inherit; resize: vertical; margin-bottom: 0.2rem; }
+textarea[aria-invalid='true'] { border-color: #b74738; }
+@media (max-width: 600px) {
+  .cv-row, .cv-row.link-row { grid-template-columns: 1fr auto; }
+  .cv-row > div:nth-child(2) { grid-column: 1; }
+  .cv-row .row-remove { grid-row: 1; grid-column: 2; }
+}
 /* Estado del alumno (HU-S2-04): mismos colores de estado que .institution-status. */
 .student-status { display: inline-block; white-space: nowrap; border-radius: 1rem; padding: 0.2rem 0.7rem; font-size: 0.8rem; font-weight: 700; }
 .student-status.active { color: #155b36; background: #e4f3e9; }

@@ -19,3 +19,4 @@ export const AlertIcon = () => <Icon><path d="M8 2.5 14 13H2L8 2.5Z" /><path d="
 export const BuildingIcon = () => <Icon><path d="M3 13.5h10M4.5 13.5V5L8 2.5 11.5 5v8.5M7 13.5V10h2v3.5M6.5 6.5h.01M9.5 6.5h.01" /></Icon>
 export const SearchIcon = () => <Icon><circle cx="7" cy="7" r="4" /><path d="m10 10 3 3" /></Icon>
 export const CloseIcon = () => <Icon><path d="m4 4 8 8M12 4l-8 8" /></Icon>
+export const LockIcon = () => <Icon><rect x="3.5" y="7" width="9" height="6.5" rx="1.5" /><path d="M5.5 7V5a2.5 2.5 0 0 1 5 0v2" /></Icon>

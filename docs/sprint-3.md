@@ -3,7 +3,7 @@
 **Objetivo del Sprint:** Evolucionar el expediente básico del alumno hacia un "CV Normalizado" que estandarice el talento de cualquier disciplina (Ingeniería, Salud, Negocios). Además, implementar el resguardo estricto del Seguro Facultativo (IMSS) como requisito interno de Educación Dual.
 
 ## HU-S3-01 — Expediente Profesional (CV Normalizado)
-**Estado:** En curso (fase 1: backend y pruebas Pest completas; falta la interfaz) | **Diseño técnico:** [HU-S3-01.md](HU-S3-01.md) | **Story Points:** 8 | **Rol:** `INSTITUTION`
+**Estado:** Completada (16 de octubre de 2026) | **Diseño técnico:** [HU-S3-01.md](HU-S3-01.md) | **Story Points:** 8 | **Rol:** `INSTITUTION`
 
 **Historia de usuario:**
 COMO usuario de una Institución Educativa

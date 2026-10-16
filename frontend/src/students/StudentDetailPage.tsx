@@ -3,7 +3,7 @@ import { Link, useParams } from 'react-router'
 import { InstitutionRequestError } from '../institutions/InstitutionLayout'
 import { useApiMutation, useApiRequest } from '../lib/useApiRequest'
 import { ConfirmDialog } from '../ui/ConfirmDialog'
-import { ChevronLeftIcon } from '../ui/icons'
+import { ChevronLeftIcon, ChevronRightIcon } from '../ui/icons'
 import { Sheet } from '../ui/Sheet'
 import { LoadingState } from '../ui/StateMessage'
 import { fullName, getStudent, setStudentStatus } from './api'
@@ -56,6 +56,9 @@ function StudentDetailView({ id }: { id: string }) {
         : data && (
           <>
             <h2 id="student-title">{fullName(data)}</h2>
+            <p className="student-cv-link">
+              <Link className="pill-link" to={`/students/${data.id}/cv`}>CV profesional<ChevronRightIcon /></Link>
+            </p>
             {notice && <p className="institution-success" role="status">{notice}</p>}
 
             <section className="student-section" aria-labelledby="student-identity-title">
