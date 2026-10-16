@@ -7,6 +7,8 @@ use App\Enums\MexicanState;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 
 /**
@@ -54,5 +56,32 @@ class Student extends Model
     public function socialSecurity(): HasOne
     {
         return $this->hasOne(StudentSocialSecurity::class);
+    }
+
+    /** CV normalizado (HU-S3-01): parte pública, en el orden que eligió la institución. */
+    public function skills(): BelongsToMany
+    {
+        return $this->belongsToMany(Skill::class, 'student_skills')->withPivot('position')->orderByPivot('position');
+    }
+
+    public function languages(): HasMany
+    {
+        return $this->hasMany(StudentLanguage::class)->orderBy('position');
+    }
+
+    public function certifications(): HasMany
+    {
+        return $this->hasMany(StudentCertification::class)->orderBy('position');
+    }
+
+    public function projects(): HasMany
+    {
+        return $this->hasMany(StudentProject::class)->orderBy('position');
+    }
+
+    /** Parte protegida del CV (CA-02): nunca para empresas sin un match. */
+    public function links(): HasMany
+    {
+        return $this->hasMany(StudentLink::class)->orderBy('position');
     }
 }

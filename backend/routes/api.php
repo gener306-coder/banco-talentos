@@ -6,7 +6,9 @@ use App\Http\Controllers\InstitutionAccountController;
 use App\Http\Controllers\InstitutionController;
 use App\Http\Controllers\InstitutionPasswordResetController;
 use App\Http\Controllers\InstitutionSetupLinkController;
+use App\Http\Controllers\SkillController;
 use App\Http\Controllers\StudentController;
+use App\Http\Controllers\StudentCvController;
 use App\Http\Controllers\StudentSocialSecurityController;
 use App\Models\Institution;
 use Illuminate\Support\Facades\Route;
@@ -42,13 +44,13 @@ Route::post('/institution-accounts/resend-setup', [InstitutionSetupLinkControlle
 Route::post('/institution-accounts/password-reset/start', [InstitutionPasswordResetController::class, 'start'])
     ->middleware(['auth:sanctum', 'active', 'role:'.UserRole::ADMIN->value, 'throttle:institution-password-reset']);
 
-// Padrón (HU-S2-02), expediente (HU-S2-03), baja lógica (HU-S2-04) y seguro facultativo (HU-S3-02)
-// de la institución de la sesión; sin DELETE.
+// Padrón (HU-S2-02), expediente (HU-S2-03), baja lógica (HU-S2-04), seguro facultativo (HU-S3-02) y
+// CV normalizado (HU-S3-01) de la institución de la sesión; sin DELETE.
 Route::middleware(['auth:sanctum', 'active', 'role:'.UserRole::INSTITUTION->value, 'institution.member'])
     ->prefix('students')
     ->name('students.')
     // Identificador acotado a un bigint: fuera de rango responde 404 sin llegar a PostgreSQL.
-    ->where(['student' => '[1-9][0-9]{0,17}'])
+    ->where(['student' => '[1-9][0-9]{0,17}', 'certification' => '[1-9][0-9]{0,17}'])
     ->group(function (): void {
         Route::get('/', [StudentController::class, 'index'])->name('index');
         Route::post('/', [StudentController::class, 'store'])->name('store');
@@ -60,4 +62,16 @@ Route::middleware(['auth:sanctum', 'active', 'role:'.UserRole::INSTITUTION->valu
         Route::put('{student}/social-security', [StudentSocialSecurityController::class, 'update'])->name('social-security.update');
         Route::post('{student}/social-security/document', [StudentSocialSecurityController::class, 'storeDocument'])->name('social-security.document.store');
         Route::get('{student}/social-security/document', [StudentSocialSecurityController::class, 'downloadDocument'])->name('social-security.document.show');
+        Route::get('{student}/cv', [StudentCvController::class, 'show'])->name('cv.show');
+        Route::put('{student}/cv/headline', [StudentCvController::class, 'updateHeadline'])->name('cv.headline.update');
+        Route::put('{student}/cv/skills', [StudentCvController::class, 'updateSkills'])->name('cv.skills.update');
+        Route::put('{student}/cv/languages', [StudentCvController::class, 'updateLanguages'])->name('cv.languages.update');
+        Route::put('{student}/cv/certifications', [StudentCvController::class, 'updateCertifications'])->name('cv.certifications.update');
+        Route::patch('{student}/cv/certifications/{certification}/verification', [StudentCvController::class, 'updateVerification'])->name('cv.certifications.verification');
+        Route::put('{student}/cv/projects', [StudentCvController::class, 'updateProjects'])->name('cv.projects.update');
+        Route::put('{student}/cv/links', [StudentCvController::class, 'updateLinks'])->name('cv.links.update');
     });
+
+// Catálogo de habilidades del CV (HU-S3-01) para autocompletar.
+Route::get('/skills', [SkillController::class, 'index'])
+    ->middleware(['auth:sanctum', 'active', 'role:'.UserRole::INSTITUTION->value, 'institution.member']);
