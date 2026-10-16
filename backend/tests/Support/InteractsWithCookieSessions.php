@@ -44,6 +44,7 @@ trait InteractsWithCookieSessions
         array $data = [],
         bool $csrf = true,
         array $headers = [],
+        array $files = [],
     ): TestResponse {
         // HTTP workers do not carry a resolved guard or session store into the
         // next request. Keep the transactional DB connection, but reset these
@@ -57,13 +58,17 @@ trait InteractsWithCookieSessions
 
         $requestHeaders = [
             'Accept' => 'application/json',
-            'Content-Type' => 'application/json',
             'Origin' => 'http://localhost:5173',
             'Referer' => 'http://localhost:5173/',
         ];
 
         // Deliberately omit Sec-Fetch-Site: same-origin would bypass token
         // validation under Laravel 13 and produce a false-positive CSRF test.
+        // Con archivos, la petición viaja como multipart (formulario), igual que un FormData del navegador.
+        if ($files === []) {
+            $requestHeaders['Content-Type'] = 'application/json';
+        }
+
         if ($csrf && isset($this->browserCookies['XSRF-TOKEN'])) {
             $requestHeaders['X-XSRF-TOKEN'] = $this->browserCookies['XSRF-TOKEN'];
         }
@@ -71,11 +76,11 @@ trait InteractsWithCookieSessions
         $response = $this->call(
             $method,
             $uri,
-            [],
+            $files === [] ? [] : $data,
             $this->browserCookies,
-            [],
+            $files,
             $this->transformHeadersToServerVars(array_replace($requestHeaders, $headers)),
-            json_encode($data, JSON_THROW_ON_ERROR),
+            $files === [] ? json_encode($data, JSON_THROW_ON_ERROR) : null,
         );
 
         // Values are already encrypted by the response middleware; pass them

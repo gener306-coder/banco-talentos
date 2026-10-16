@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Controllers\Concerns\FindsOwnedStudent;
 use App\Http\Requests\StoreStudentRequest;
 use App\Http\Requests\UpdateStudentIdentityRequest;
 use App\Http\Requests\UpdateStudentProfileRequest;
@@ -20,6 +21,8 @@ use Illuminate\Validation\ValidationException;
  */
 class StudentController extends Controller
 {
+    use FindsOwnedStudent;
+
     private const PER_PAGE = 50;
 
     public function index(Request $request): JsonResponse
@@ -144,22 +147,6 @@ class StudentController extends Controller
             'UPDATE students SET location = ST_SetSRID(ST_MakePoint(?, ?), 4326)::geography WHERE id = ?',
             [$longitude, $latitude, $student->id],
         );
-    }
-
-    /**
-     * Anti-IDOR (HU-S2-03 CA-05): el alumno se busca siempre dentro de la institución de la sesión.
-     * Uno ajeno responde igual que uno inexistente, para no revelar que existe.
-     */
-    private function owned(Request $request, string $id): Student
-    {
-        $student = Student::query()
-            ->where('institution_id', $request->user()->institution_id)
-            ->with('identity')
-            ->find((int) $id);
-
-        abort_if($student === null, 404, 'El alumno no existe.');
-
-        return $student;
     }
 
     private function enrollmentTaken(int $institutionId, string $enrollment, ?int $exceptStudentId = null): bool

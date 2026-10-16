@@ -7,6 +7,7 @@ use App\Http\Controllers\InstitutionController;
 use App\Http\Controllers\InstitutionPasswordResetController;
 use App\Http\Controllers\InstitutionSetupLinkController;
 use App\Http\Controllers\StudentController;
+use App\Http\Controllers\StudentSocialSecurityController;
 use App\Models\Institution;
 use Illuminate\Support\Facades\Route;
 
@@ -41,7 +42,8 @@ Route::post('/institution-accounts/resend-setup', [InstitutionSetupLinkControlle
 Route::post('/institution-accounts/password-reset/start', [InstitutionPasswordResetController::class, 'start'])
     ->middleware(['auth:sanctum', 'active', 'role:'.UserRole::ADMIN->value, 'throttle:institution-password-reset']);
 
-// Padrón (HU-S2-02), expediente (HU-S2-03) y baja lógica (HU-S2-04) de la institución de la sesión; sin DELETE.
+// Padrón (HU-S2-02), expediente (HU-S2-03), baja lógica (HU-S2-04) y seguro facultativo (HU-S3-02)
+// de la institución de la sesión; sin DELETE.
 Route::middleware(['auth:sanctum', 'active', 'role:'.UserRole::INSTITUTION->value, 'institution.member'])
     ->prefix('students')
     ->name('students.')
@@ -54,4 +56,8 @@ Route::middleware(['auth:sanctum', 'active', 'role:'.UserRole::INSTITUTION->valu
         Route::put('{student}/profile', [StudentController::class, 'updateProfile'])->name('profile.update');
         Route::put('{student}/identity', [StudentController::class, 'updateIdentity'])->name('identity.update');
         Route::patch('{student}/status', [StudentController::class, 'updateStatus'])->name('status');
+        Route::get('{student}/social-security', [StudentSocialSecurityController::class, 'show'])->name('social-security.show');
+        Route::put('{student}/social-security', [StudentSocialSecurityController::class, 'update'])->name('social-security.update');
+        Route::post('{student}/social-security/document', [StudentSocialSecurityController::class, 'storeDocument'])->name('social-security.document.store');
+        Route::get('{student}/social-security/document', [StudentSocialSecurityController::class, 'downloadDocument'])->name('social-security.document.show');
     });

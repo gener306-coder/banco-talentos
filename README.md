@@ -1,6 +1,6 @@
 # Banco de Talentos – Educación Dual
 
-Monolito modular. Sprint vigente: [Sprint 2](docs/sprint-2.md); historias del [Sprint 1](docs/sprint-1.md) y del Sprint 2:
+Monolito modular. Sprint vigente: [Sprint 3](docs/sprint-3.md); historias del [Sprint 1](docs/sprint-1.md) y del Sprint 2:
 
 - **HU-S1-01 — Autenticación y control de acceso** ([detalle](docs/HU-S1-01.md)).
 - **HU-S1-02 — Gestión de instituciones**: ADMIN lista, registra, consulta, edita y activa o inactiva instituciones ([detalle](docs/HU-S1-02.md)).
@@ -96,6 +96,8 @@ Una cuenta `INSTITUTION` con institución vinculada ve **Alumnos** en su página
 Los apellidos de cada alumno abren su detalle (`/students/:id`). Ahí **Corregir identidad** permite cambiar la matrícula y el nombre, y el **Expediente público** guarda carrera o programa, periodo actual (semestre o cuatrimestre, del 1 al 15), disponibilidad para el programa dual, estado (catálogo INEGI) y municipio, y disponibilidad para reubicarse. Es la información con la que las empresas podrán encontrar al alumno sin conocer su identidad. Un alumno de otra institución responde igual que uno inexistente. Tras actualizar el código aplica las migraciones con `docker compose exec backend php artisan migrate`. Contrato y cobertura en [docs/HU-S2-03.md](docs/HU-S2-03.md).
 
 El padrón y el detalle muestran el estado de cada alumno (`ACTIVO`/`INACTIVO`). **Inactivar alumno**, tras una confirmación, lo oculta del Banco de Talentos sin borrar nada; **Reactivar alumno** lo devuelve. Un alumno inactivo sigue en el padrón y su expediente se puede editar. No existe eliminación física. Contrato y cobertura en [docs/HU-S2-04.md](docs/HU-S2-04.md).
+
+Seguro facultativo (HU-S3-02, por ahora solo API): la institución registra el NSS de un alumno propio (`PUT /api/students/{id}/social-security`) y sube su comprobante del IMSS en PDF (`POST …/social-security/document`), que se descarga solo por `GET …/social-security/document`. El NSS se guarda cifrado con `APP_KEY` y con un índice ciego HMAC que impide repetirlo en la institución; el PDF queda en el disco privado `storage/app/private`. Nada de esto aparece en el padrón ni en el detalle. Contrato y decisiones en [docs/HU-S3-02.md](docs/HU-S3-02.md).
 
 ## Pruebas
 

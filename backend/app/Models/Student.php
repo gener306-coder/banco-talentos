@@ -50,4 +50,9 @@ class Student extends Model
     {
         return $this->hasOne(StudentIdentity::class);
     }
+
+    public function socialSecurity(): HasOne
+    {
+        return $this->hasOne(StudentSocialSecurity::class);
+    }
 }
