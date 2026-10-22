@@ -37,8 +37,12 @@ Los alumnos son administrados por su institución.
 - Una institución nunca puede modificar alumnos de otra institución.
 - Una empresa nunca puede modificar alumnos.
 - Secretaría no administra expedientes académicos.
-- El administrador gestiona cuentas y organizaciones,
-  pero no sustituye a los actores durante una vinculación.
+- El administrador gestiona las instituciones, sus cuentas y las cuentas
+  de la Secretaría, pero no sustituye a los actores durante una vinculación.
+- La Secretaría de Economía gestiona las empresas que valida y sus cuentas,
+  y puede crear cuentas SECRETARY para su propio personal. Nunca crea
+  cuentas ADMIN ni INSTITUTION.
+- Toda cuenta registra quién la creó.
 - Nunca guardar contraseñas en texto plano.
 - Nunca incluir secretos en Git.
 
@@ -59,7 +63,7 @@ Cada historia debe:
 
 ## Desarrollo por Sprint
 
-Sprint vigente: docs/sprint-3.md
+Sprint vigente: docs/sprint-4.md
 
 Ese archivo es la única fuente de verdad mientras dure el Sprint.
 Los archivos de Sprints anteriores (docs/sprint-N.md) son históricos:
