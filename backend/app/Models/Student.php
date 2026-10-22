@@ -19,12 +19,15 @@ class Student extends Model
 {
     use HasFactory;
 
-    /** Expediente público (HU-S2-03); la institución nunca se asigna desde la petición. */
-    public const PROFILE_ATTRIBUTES = ['program', 'period_type', 'period_number', 'dual_available', 'state_code', 'municipality', 'can_relocate'];
+    /**
+     * Expediente público (HU-S2-03); la institución nunca se asigna desde la petición. Desde HU-S4-04 el municipio
+     * es una clave del catálogo INEGI; legacy_municipality conserva el texto libre anterior pendiente de confirmar.
+     */
+    public const PROFILE_ATTRIBUTES = ['program', 'period_type', 'period_number', 'dual_available', 'state_code', 'municipality_code', 'can_relocate'];
 
     protected $fillable = self::PROFILE_ATTRIBUTES;
 
-    // Punto aproximado (PostGIS) derivado del estado en el servidor; no forma parte de ninguna respuesta.
+    // Punto aproximado (PostGIS) derivado del municipio en el servidor; no forma parte de ninguna respuesta.
     protected $hidden = ['location'];
 
     // Igual que el DEFAULT de la columna, para que un alumno recién creado lo refleje sin recargarse.
@@ -46,6 +49,11 @@ class Student extends Model
     public function institution(): BelongsTo
     {
         return $this->belongsTo(Institution::class);
+    }
+
+    public function municipality(): BelongsTo
+    {
+        return $this->belongsTo(Municipality::class, 'municipality_code');
     }
 
     public function identity(): HasOne

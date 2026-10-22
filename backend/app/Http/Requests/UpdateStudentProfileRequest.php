@@ -17,14 +17,20 @@ class UpdateStudentProfileRequest extends FormRequest
 
     public function rules(): array
     {
-        // Sin latitude/longitude: el punto de PostGIS lo deriva el servidor del estado; lo que envíe el cliente se descarta.
+        // Sin latitude/longitude: el punto de PostGIS lo deriva el servidor del municipio; lo que envíe el cliente se descarta.
+        $state = $this->input('state_code');
+
         return [
             'program' => ['required', 'string', 'max:150'],
             'period_type' => ['required', 'string', Rule::enum(AcademicPeriodType::class)],
             'period_number' => ['required', 'integer', 'between:1,15'],
             'dual_available' => ['required', 'boolean'],
             'state_code' => ['required', 'string', Rule::enum(MexicanState::class)],
-            'municipality' => ['required', 'string', 'max:120'],
+            // Clave INEGI de 5 dígitos que debe pertenecer al estado enviado (HU-S4-04 CA-05).
+            'municipality_code' => [
+                'required', 'string', 'regex:/^\d{5}$/',
+                Rule::exists('municipalities', 'code')->where('state_code', is_string($state) ? $state : ''),
+            ],
             'can_relocate' => ['required', 'boolean'],
         ];
     }
@@ -46,9 +52,10 @@ class UpdateStudentProfileRequest extends FormRequest
             'state_code.required' => 'El estado es obligatorio.',
             'state_code.string' => 'El estado no es válido.',
             'state_code.enum' => 'El estado no es válido.',
-            'municipality.required' => 'El municipio es obligatorio.',
-            'municipality.string' => 'El municipio no es válido.',
-            'municipality.max' => 'El municipio no debe superar 120 caracteres.',
+            'municipality_code.required' => 'El municipio es obligatorio.',
+            'municipality_code.string' => 'El municipio no es válido.',
+            'municipality_code.regex' => 'El municipio no es válido.',
+            'municipality_code.exists' => 'El municipio no pertenece al estado seleccionado.',
             'can_relocate.required' => 'Indica si puede reubicarse.',
             'can_relocate.boolean' => 'La disponibilidad para reubicarse no es válida.',
         ];

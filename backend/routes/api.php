@@ -6,6 +6,7 @@ use App\Http\Controllers\InstitutionAccountController;
 use App\Http\Controllers\InstitutionController;
 use App\Http\Controllers\InstitutionPasswordResetController;
 use App\Http\Controllers\InstitutionSetupLinkController;
+use App\Http\Controllers\MunicipalityController;
 use App\Http\Controllers\SkillController;
 use App\Http\Controllers\StudentController;
 use App\Http\Controllers\StudentCvController;
@@ -75,3 +76,9 @@ Route::middleware(['auth:sanctum', 'active', 'role:'.UserRole::INSTITUTION->valu
 // Catálogo de habilidades del CV (HU-S3-01) para autocompletar.
 Route::get('/skills', [SkillController::class, 'index'])
     ->middleware(['auth:sanctum', 'active', 'role:'.UserRole::INSTITUTION->value, 'institution.member']);
+
+// Catálogo INEGI de municipios por estado (HU-S4-04) para cualquier rol autenticado. Una clave de estado fuera
+// de 01–32 responde 404 sin consultar la base.
+Route::get('/catalogs/states/{state}/municipalities', [MunicipalityController::class, 'index'])
+    ->middleware(['auth:sanctum', 'active', 'role:'.implode(',', UserRole::values())])
+    ->where('state', '0[1-9]|[12][0-9]|3[0-2]');

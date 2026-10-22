@@ -50,7 +50,7 @@ it('inactivates and reactivates an own student without losing its record (CA-02,
     signInStatusInstitution($this);
     $this->browserRequest('PUT', '/api/students/'.$this->student->id.'/profile', [
         'program' => 'Mecatrónica', 'period_type' => 'semester', 'period_number' => 5, 'dual_available' => true,
-        'state_code' => '28', 'municipality' => 'Victoria', 'can_relocate' => false,
+        'state_code' => '28', 'municipality_code' => '28041', 'can_relocate' => false,
     ])->assertOk();
 
     $this->browserRequest('PATCH', statusUrl($this->student), ['is_active' => false])
@@ -115,7 +115,7 @@ it('never changes the state through the profile or the identity', function () {
     signInStatusInstitution($this);
     $this->browserRequest('PUT', '/api/students/'.$this->student->id.'/profile', [
         'program' => 'Mecatrónica', 'period_type' => 'semester', 'period_number' => 5, 'dual_available' => true,
-        'state_code' => '28', 'municipality' => 'Victoria', 'can_relocate' => false, 'is_active' => false,
+        'state_code' => '28', 'municipality_code' => '28041', 'can_relocate' => false, 'is_active' => false,
     ])->assertOk()->assertJsonPath('data.is_active', true);
     $this->browserRequest('PUT', '/api/students/'.$this->student->id.'/identity', [
         'enrollment_number' => 'A2026-001', 'given_names' => 'Ana', 'first_surname' => 'Ruiz', 'is_active' => false,

@@ -93,7 +93,10 @@ class StudentController extends Controller
 
         DB::transaction(function () use ($record, $request): void {
             // Solo columnas del expediente: la identidad y la institución no cambian por esta vía.
-            $record->fill($request->validated())->save();
+            $record->fill($request->validated());
+            // El municipio ya viene del catálogo: el texto libre anterior deja de estar pendiente (HU-S4-04 CA-06).
+            $record->legacy_municipality = null;
+            $record->save();
             $this->locate($record);
         });
 
@@ -135,11 +138,20 @@ class StudentController extends Controller
     }
 
     /**
-     * Ubicación aproximada para búsquedas por radio: el punto de referencia del estado guardado.
-     * El cliente nunca envía coordenadas, así que no puede registrar una ubicación exacta (CA-03).
+     * Ubicación aproximada para búsquedas por radio: el punto de la cabecera del municipio (HU-S4-04), o el punto
+     * de referencia del estado mientras el municipio esté por confirmar. El cliente nunca envía coordenadas.
      */
     private function locate(Student $student): void
     {
+        if ($student->municipality_code !== null) {
+            DB::update(
+                'UPDATE students SET location = m.location FROM municipalities m WHERE students.id = ? AND m.code = students.municipality_code',
+                [$student->id],
+            );
+
+            return;
+        }
+
         [$latitude, $longitude] = $student->state_code->referencePoint();
 
         // PostGIS recibe longitud y latitud, en ese orden.
@@ -188,7 +200,10 @@ class StudentController extends Controller
                 'period_number' => $student->period_number,
                 'dual_available' => $student->dual_available,
                 'state_code' => $student->state_code?->value,
-                'municipality' => $student->municipality,
+                'municipality_code' => $student->municipality_code,
+                'municipality' => $student->municipality?->name,
+                // Texto libre anterior al catálogo, aún sin clave: la interfaz lo muestra «por confirmar».
+                'pending_municipality' => $student->legacy_municipality,
                 'can_relocate' => $student->can_relocate,
             ],
         ]])->header('Cache-Control', 'no-store, private');

@@ -22,9 +22,15 @@ function profilePayload(array $overrides = []): array
         'period_number' => 6,
         'dual_available' => true,
         'state_code' => '28',
-        'municipality' => 'Victoria',
+        'municipality_code' => '28041',
         'can_relocate' => false,
     ], $overrides);
+}
+
+/** Primer municipio del catálogo INEGI para el estado, para recorrer los 32. */
+function firstMunicipalityOf(string $state): string
+{
+    return DB::table('municipalities')->where('state_code', $state)->orderBy('code')->value('code');
 }
 
 function identityPayload(array $overrides = []): array
@@ -78,7 +84,8 @@ it('shows an own student with its identity and an empty profile (CA-01)', functi
             'created_at' => $this->student->created_at->toISOString(),
             'profile' => [
                 'program' => null, 'period_type' => null, 'period_number' => null, 'dual_available' => null,
-                'state_code' => null, 'municipality' => null, 'can_relocate' => null,
+                'state_code' => null, 'municipality_code' => null, 'municipality' => null, 'pending_municipality' => null,
+                'can_relocate' => null,
             ],
         ]]);
 });
@@ -91,12 +98,13 @@ it('saves the academic, geographic and mobility profile (CA-02, CA-03, CA-04)', 
         ->assertJsonPath('data.enrollment_number', 'A2026-001')
         ->assertJsonPath('data.profile', [
             'program' => 'Ingeniería en Sistemas Computacionales', 'period_type' => 'semester', 'period_number' => 6,
-            'dual_available' => true, 'state_code' => '28', 'municipality' => 'Victoria', 'can_relocate' => false,
+            'dual_available' => true, 'state_code' => '28', 'municipality_code' => '28041', 'municipality' => 'Victoria',
+            'pending_municipality' => null, 'can_relocate' => false,
         ]);
 
     $this->browserRequest('PUT', '/api/students/'.$this->student->id.'/profile', profilePayload([
         'program' => '  Licenciatura en Administración  ', 'period_type' => 'four_month', 'period_number' => 15,
-        'dual_available' => false, 'state_code' => '09', 'municipality' => 'Coyoacán', 'can_relocate' => true,
+        'dual_available' => false, 'state_code' => '09', 'municipality_code' => '09003', 'can_relocate' => true,
     ]))->assertOk();
 
     $this->browserRequest('GET', '/api/students/'.$this->student->id)->assertOk()
@@ -105,6 +113,8 @@ it('saves the academic, geographic and mobility profile (CA-02, CA-03, CA-04)', 
         ->assertJsonPath('data.profile.period_number', 15)
         ->assertJsonPath('data.profile.dual_available', false)
         ->assertJsonPath('data.profile.state_code', '09')
+        ->assertJsonPath('data.profile.municipality_code', '09003')
+        ->assertJsonPath('data.profile.municipality', 'Coyoacán')
         ->assertJsonPath('data.profile.can_relocate', true);
 });
 
@@ -147,9 +157,14 @@ it('validates the profile without writing it (CA-06)', function (array $override
     'state without leading zero' => [['state_code' => '9'], 'state_code'],
     'state as name' => [['state_code' => 'Tamaulipas'], 'state_code'],
     'numeric state' => [['state_code' => 28], 'state_code'],
-    'missing municipality' => [['municipality' => null], 'municipality'],
-    'blank municipality' => [['municipality' => '  '], 'municipality'],
-    'long municipality' => [['municipality' => str_repeat('m', 121)], 'municipality'],
+    'missing municipality' => [['municipality_code' => null], 'municipality_code'],
+    'blank municipality' => [['municipality_code' => '  '], 'municipality_code'],
+    'municipality as free text' => [['municipality_code' => 'Victoria'], 'municipality_code'],
+    'numeric municipality' => [['municipality_code' => 28041], 'municipality_code'],
+    'municipality of another state' => [['municipality_code' => '19039'], 'municipality_code'],
+    'municipality with the same name in another state' => [['municipality_code' => '11043'], 'municipality_code'],
+    'missing municipality key' => [['municipality_code' => '28999'], 'municipality_code'],
+    'state key alone' => [['municipality_code' => '28'], 'municipality_code'],
     'missing relocation' => [['can_relocate' => null], 'can_relocate'],
     'textual relocation' => [['can_relocate' => 'sí'], 'can_relocate'],
 ]);
@@ -158,8 +173,9 @@ it('accepts every state of the INEGI catalog', function () {
     signInProfileInstitution($this);
     foreach (range(1, 32) as $code) {
         $state = str_pad((string) $code, 2, '0', STR_PAD_LEFT);
-        $this->browserRequest('PUT', '/api/students/'.$this->student->id.'/profile', profilePayload(['state_code' => $state]))
-            ->assertOk()->assertJsonPath('data.profile.state_code', $state);
+        $this->browserRequest('PUT', '/api/students/'.$this->student->id.'/profile', profilePayload([
+            'state_code' => $state, 'municipality_code' => firstMunicipalityOf($state),
+        ]))->assertOk()->assertJsonPath('data.profile.state_code', $state);
     }
 });
 
@@ -303,6 +319,8 @@ it('enforces the profile rules in the database', function (array $values) {
     'period type without number' => [['period_type' => 'semester']],
     'period number without type' => [['period_number' => 3]],
     'unknown state' => [['state_code' => '33']],
+    'unknown municipality' => [['state_code' => '28', 'municipality_code' => '28999']],
+    'municipality of another state' => [['state_code' => '28', 'municipality_code' => '19039']],
 ]);
 
 it('stores the location as a PostGIS geography point with a spatial index', function () {
@@ -316,25 +334,29 @@ it('has no location until the profile is saved', function () {
     expect(studentPoint($this->student))->toBeNull();
 });
 
-it('derives the location from the state reference point on the server', function () {
+it('derives the location from the municipal seat on the server (HU-S4-04 CA-04)', function () {
     signInProfileInstitution($this);
-    $this->browserRequest('PUT', '/api/students/'.$this->student->id.'/profile', profilePayload(['state_code' => '28']))->assertOk();
-    expect(studentPoint($this->student))->toBe([23.7369, -99.1411, 4326]);
+    $this->browserRequest('PUT', '/api/students/'.$this->student->id.'/profile', profilePayload())->assertOk();
+    // Cabecera de Victoria, Tamaulipas (Ciudad Victoria), no el punto de referencia del estado.
+    expect(studentPoint($this->student))->toBe([23.7311, -99.1513, 4326]);
 
-    // Al cambiar de estado se recalcula: el punto nunca queda desfasado del estado guardado.
-    $this->browserRequest('PUT', '/api/students/'.$this->student->id.'/profile', profilePayload(['state_code' => '19']))->assertOk();
-    expect(studentPoint($this->student))->toBe([25.6866, -100.3161, 4326]);
+    // Al cambiar de municipio se recalcula, también dentro del mismo estado.
+    $this->browserRequest('PUT', '/api/students/'.$this->student->id.'/profile', profilePayload(['municipality_code' => '28032']))->assertOk();
+    expect(studentPoint($this->student))->toBe([26.0924, -98.2781, 4326]);
+
+    $this->browserRequest('PUT', '/api/students/'.$this->student->id.'/profile', profilePayload(['state_code' => '19', 'municipality_code' => '19039']))->assertOk();
+    expect(studentPoint($this->student))->toBe([25.6647, -100.3109, 4326]);
 });
 
 it('ignores coordinates sent by the client, so an exact location can never be stored (CA-03)', function (array $forged) {
     signInProfileInstitution($this);
-    $this->browserRequest('PUT', '/api/students/'.$this->student->id.'/profile', profilePayload(['state_code' => '09', ...$forged]))
+    $this->browserRequest('PUT', '/api/students/'.$this->student->id.'/profile', profilePayload(['state_code' => '09', 'municipality_code' => '09003', ...$forged]))
         ->assertOk()
         ->assertJsonMissingPath('data.location')
         ->assertJsonMissingPath('data.profile.location')
         ->assertJsonMissingPath('data.profile.latitude')
         ->assertJsonMissingPath('data.profile.longitude');
-    expect(studentPoint($this->student))->toBe([19.4326, -99.1332, 4326]);
+    expect(studentPoint($this->student))->toBe([19.3502, -99.1621, 4326]);
 })->with([
     'exact address' => [['latitude' => 19.35612, 'longitude' => -99.16233]],
     'location field' => [['location' => 'SRID=4326;POINT(-99.16233 19.35612)']],
@@ -364,13 +386,13 @@ it('places every state reference point inside Mexico', function (MexicanState $s
 it('supports radius searches in meters with ST_DWithin', function () {
     $monterrey = Student::factory()->for($this->institution)->withIdentity(['enrollment_number' => 'MTY-1'])->create();
     signInProfileInstitution($this);
-    $this->browserRequest('PUT', '/api/students/'.$this->student->id.'/profile', profilePayload(['state_code' => '28']))->assertOk();
-    $this->browserRequest('PUT', '/api/students/'.$monterrey->id.'/profile', profilePayload(['state_code' => '19']))->assertOk();
+    $this->browserRequest('PUT', '/api/students/'.$this->student->id.'/profile', profilePayload())->assertOk();
+    $this->browserRequest('PUT', '/api/students/'.$monterrey->id.'/profile', profilePayload(['state_code' => '19', 'municipality_code' => '19039']))->assertOk();
 
     // Desde Ciudad Victoria: Monterrey está a unos 250 km.
     $within = fn (int $meters): array => collect(DB::select(
         'SELECT id FROM students WHERE ST_DWithin(location, ST_SetSRID(ST_MakePoint(?, ?), 4326)::geography, ?) ORDER BY id',
-        [-99.1411, 23.7369, $meters],
+        [-99.1513, 23.7311, $meters],
     ))->pluck('id')->all();
 
     expect($within(100_000))->toBe([$this->student->id]);
