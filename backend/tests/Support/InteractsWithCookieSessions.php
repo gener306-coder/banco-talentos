@@ -8,6 +8,7 @@ use Illuminate\Foundation\Http\Middleware\PreventRequestForgery;
 use Illuminate\Foundation\Http\Middleware\ValidateCsrfToken;
 use Illuminate\Foundation\Http\Middleware\VerifyCsrfToken;
 use Illuminate\Session\Middleware\StartSession;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Facade;
 use Illuminate\Testing\TestResponse;
 
@@ -15,16 +16,11 @@ trait InteractsWithCookieSessions
 {
     private array $browserCookies = [];
 
-    private string $sessionDirectory;
-
     public function initializeCookieBrowser(): void
     {
-        $this->sessionDirectory = sys_get_temp_dir().'/banco-talentos-testing-'.bin2hex(random_bytes(12));
-        mkdir($this->sessionDirectory, 0700, true);
-
+        // Mismo driver que producción (T-02): las sesiones viven en la tabla sessions de la base de pruebas.
         config([
-            'session.driver' => 'file',
-            'session.files' => $this->sessionDirectory,
+            'session.driver' => 'database',
             'session.lottery' => [0, 100],
             'sanctum.stateful' => ['localhost:5173'],
         ]);
@@ -32,10 +28,6 @@ trait InteractsWithCookieSessions
         $this->app->bind(PreventRequestForgery::class, EnforceRequestForgery::class);
         $this->app->bind(VerifyCsrfToken::class, EnforceRequestForgery::class);
         $this->app->bind(ValidateCsrfToken::class, EnforceRequestForgery::class);
-
-        $this->beforeApplicationDestroyed(function (): void {
-            $this->app['files']->deleteDirectory($this->sessionDirectory);
-        });
     }
 
     public function browserRequest(
@@ -128,8 +120,15 @@ trait InteractsWithCookieSessions
         ));
     }
 
-    public function sessionFile(string $sessionId): string
+    public function sessionExists(string $sessionId): bool
     {
-        return $this->sessionDirectory.'/'.$sessionId;
+        return DB::table(config('session.table'))->where('id', $sessionId)->exists();
+    }
+
+    /** Simula inactividad: retrasa la última actividad de la sesión más allá de su duración. */
+    public function ageSession(string $sessionId, int $minutes): void
+    {
+        DB::table(config('session.table'))->where('id', $sessionId)
+            ->update(['last_activity' => time() - $minutes * 60]);
     }
 }

@@ -119,7 +119,7 @@ it('rotates the anonymous session identifier at login', function () {
     ])->assertOk();
 
     expect($this->currentSessionId())->not->toBe($anonymousId);
-    expect(is_file($this->sessionFile($anonymousId)))->toBeFalse();
+    expect($this->sessionExists($anonymousId))->toBeFalse();
     $authenticatedCookies = $this->currentBrowserCookies();
 
     $this->replaceBrowserCookies($anonymousCookies);
@@ -139,20 +139,20 @@ it('invalidates the server session on logout and rejects replay of the old cooki
     $this->browserRequest('POST', '/api/logout')->assertNoContent();
 
     expect($this->currentSessionId())->not->toBe($oldId);
-    expect(is_file($this->sessionFile($oldId)))->toBeFalse();
+    expect($this->sessionExists($oldId))->toBeFalse();
     $this->browserRequest('GET', '/api/me')->assertUnauthorized();
 
     $this->replaceBrowserCookies($oldCookies);
     $this->browserRequest('GET', '/api/me')->assertUnauthorized();
 });
 
-it('rejects an expired file session even when the browser keeps its cookie', function () {
+it('rejects an expired database session even when the browser keeps its cookie', function () {
     $user = User::factory()->create();
     $this->loginWithCookies($user)->assertOk();
-    $sessionFile = $this->sessionFile($this->currentSessionId());
+    $sessionId = $this->currentSessionId();
+    expect($this->sessionExists($sessionId))->toBeTrue();
 
-    touch($sessionFile, time() - ((config('session.lifetime') + 1) * 60));
-    clearstatcache(true, $sessionFile);
+    $this->ageSession($sessionId, config('session.lifetime') + 1);
 
     $this->browserRequest('GET', '/api/me')->assertUnauthorized();
 });
@@ -169,7 +169,7 @@ it('rejects an account deactivated after successful authentication', function ()
         ->assertUnauthorized()
         ->assertJsonStructure(['message']);
 
-    expect(is_file($this->sessionFile($oldId)))->toBeFalse();
+    expect($this->sessionExists($oldId))->toBeFalse();
     $this->replaceBrowserCookies($oldCookies);
     $this->browserRequest('GET', '/api/me')->assertUnauthorized();
 });
@@ -433,7 +433,7 @@ it('invalidates an existing institutional session immediately after institution 
         'institution_id' => $institution->id,
     ])->assertUnauthorized()->assertJsonPath('code', 'INSTITUTION_INACTIVE');
 
-    expect(is_file($this->sessionFile($oldId)))->toBeFalse();
+    expect($this->sessionExists($oldId))->toBeFalse();
     expect($user->fresh()->getAttributes())->toBe($original);
     $this->assertDatabaseCount('users', 1);
 
@@ -459,5 +459,5 @@ it('rejects an authenticated session if its account becomes pending initial pass
         ->assertUnauthorized()
         ->assertJsonPath('code', 'PASSWORD_SETUP_REQUIRED');
 
-    expect(is_file($this->sessionFile($oldId)))->toBeFalse();
+    expect($this->sessionExists($oldId))->toBeFalse();
 });
