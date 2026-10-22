@@ -100,7 +100,8 @@ Por decisión del responsable del proyecto con el cliente (21 de octubre de 2026
 
 ## HU-S4-04 — Catálogo INEGI de municipios y ubicación por municipio (PostGIS, Fase B)
 
-**Estado:** En curso: backend listo el 21 de octubre de 2026; falta la interfaz (CA-08)  
+**Estado:** Completada (21 de octubre de 2026)  
+**Diseño técnico y verificación:** [HU-S4-04.md](HU-S4-04.md)  
 **Story Points:** 5  
 **Rol:** `INSTITUTION`, más un catálogo de lectura para todos los roles autenticados
 

@@ -87,7 +87,9 @@ test('HU-S2-03: la institución completa el expediente y corrige la identidad de
   await profile.getByLabel('Periodo actual').selectOption('7')
   await profile.getByLabel('Disponible', { exact: true }).check()
   await profile.getByLabel('Estado').selectOption({ label: 'Nuevo León' })
-  await profile.getByLabel('Municipio').fill('Monterrey')
+  // HU-S4-04 CA-08: el municipio se elige del catálogo INEGI del estado, con filtro por texto.
+  await profile.getByRole('combobox', { name: 'Municipio' }).fill('monterrey')
+  await profile.getByRole('option', { name: 'Monterrey', exact: true }).click()
   await profile.getByRole('group', { name: 'Disponibilidad para reubicarse' }).getByLabel('Sí', { exact: true }).check()
   const saved = page.waitForResponse((response) => response.url().endsWith(`/api/students/${studentId}/profile`))
   await profile.getByRole('button', { name: 'Guardar expediente' }).click()
@@ -111,7 +113,7 @@ test('HU-S2-03: la institución completa el expediente y corrige la identidad de
   await expect(profile.getByLabel('Tipo de periodo')).toHaveValue('four_month')
   await expect(profile.getByLabel('Periodo actual')).toHaveValue('7')
   await expect(profile.getByLabel('Estado')).toHaveValue('19')
-  await expect(profile.getByLabel('Municipio')).toHaveValue('Monterrey')
+  await expect(profile.getByRole('combobox', { name: 'Municipio' })).toHaveValue('Monterrey')
 
   // CA-05: un identificador ajeno o inexistente no revela nada.
   await page.goto('/students/999999999')

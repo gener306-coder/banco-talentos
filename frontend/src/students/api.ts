@@ -17,18 +17,25 @@ export interface Student extends StudentInput {
   created_at: string
 }
 
-/** Expediente público (HU-S2-03). Cada campo es `null` mientras no se haya capturado. */
+/** Expediente público (HU-S2-03). El municipio es una clave del catálogo INEGI (HU-S4-04). */
 export interface StudentProfileInput {
   program: string
   period_type: PeriodType
   period_number: number
   dual_available: boolean
   state_code: string
-  municipality: string
+  municipality_code: string
   can_relocate: boolean
 }
 
-export type StudentProfile = { [K in keyof StudentProfileInput]: StudentProfileInput[K] | null }
+/**
+ * Cada campo es `null` mientras no se haya capturado. `municipality` es el nombre del municipio guardado;
+ * `pending_municipality`, el texto libre anterior al catálogo que la institución aún debe confirmar.
+ */
+export type StudentProfile = { [K in keyof StudentProfileInput]: StudentProfileInput[K] | null } & {
+  municipality: string | null
+  pending_municipality: string | null
+}
 
 export interface StudentDetail extends Student {
   profile: StudentProfile
@@ -66,6 +73,7 @@ function student(data: unknown): Student {
 const nullable = <T>(check: (value: unknown) => value is T) => (value: unknown): value is T | null => value === null || check(value)
 const isBoolean = (value: unknown): value is boolean => typeof value === 'boolean'
 const isPeriodNumber = (value: unknown): value is number => isPositiveInt(value) && value <= MAX_PERIOD
+const isMunicipalityCode = (value: unknown): value is string => typeof value === 'string' && /^\d{5}$/.test(value)
 
 function profile(data: unknown): StudentProfile {
   if (typeof data !== 'object' || data === null ||
@@ -74,14 +82,16 @@ function profile(data: unknown): StudentProfile {
       !('period_number' in data) || !nullable(isPeriodNumber)(data.period_number) ||
       !('dual_available' in data) || !nullable(isBoolean)(data.dual_available) ||
       !('state_code' in data) || !nullable(isStateCode)(data.state_code) ||
+      !('municipality_code' in data) || !nullable(isMunicipalityCode)(data.municipality_code) ||
       !('municipality' in data) || !nullable(isText)(data.municipality) ||
+      !('pending_municipality' in data) || !nullable(isText)(data.pending_municipality) ||
       !('can_relocate' in data) || !nullable(isBoolean)(data.can_relocate)) {
     throw new ApiError(502)
   }
   return {
     program: data.program, period_type: data.period_type, period_number: data.period_number,
-    dual_available: data.dual_available, state_code: data.state_code, municipality: data.municipality,
-    can_relocate: data.can_relocate,
+    dual_available: data.dual_available, state_code: data.state_code, municipality_code: data.municipality_code,
+    municipality: data.municipality, pending_municipality: data.pending_municipality, can_relocate: data.can_relocate,
   }
 }
 
@@ -127,7 +137,7 @@ export async function updateStudentProfile(id: number, input: StudentProfileInpu
     method: 'PUT',
     body: JSON.stringify({
       program: input.program, period_type: input.period_type, period_number: input.period_number,
-      dual_available: input.dual_available, state_code: input.state_code, municipality: input.municipality,
+      dual_available: input.dual_available, state_code: input.state_code, municipality_code: input.municipality_code,
       can_relocate: input.can_relocate,
     }),
   }))

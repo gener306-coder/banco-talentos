@@ -4,7 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import App from '../App'
 
 const institutionUser = { id: 5, name: 'Coordinación', email: 'coord@example.test', role: 'INSTITUTION', institution: { id: 7, name: 'Instituto Dual' } }
-const emptyProfile = { program: null, period_type: null, period_number: null, dual_available: null, state_code: null, municipality: null, can_relocate: null }
+const emptyProfile = { program: null, period_type: null, period_number: null, dual_available: null, state_code: null, municipality_code: null, municipality: null, pending_municipality: null, can_relocate: null }
 const detail = { data: { id: 3, enrollment_number: 'A-001', given_names: 'María', first_surname: 'López', second_surname: null, is_active: true, created_at: '2026-10-13T12:00:00Z', profile: emptyProfile } }
 const document = { name: 'Vigencia María.pdf', size: 150 * 1024, uploaded_at: '2026-10-16T18:30:00Z' }
 const security = (nss: string | null = null, doc: typeof document | null = null) => Response.json({ data: { nss, document: doc } })

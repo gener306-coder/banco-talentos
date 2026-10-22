@@ -3,8 +3,9 @@ import { createStudent, fullName, getStudent, listStudents, setStudentStatus, su
 import { MEXICAN_STATES, periodLabel, stateName } from './catalogs'
 
 const fetchMock = vi.fn<typeof fetch>()
-const emptyProfile = { program: null, period_type: null, period_number: null, dual_available: null, state_code: null, municipality: null, can_relocate: null }
-const fullProfile = { program: 'Ingeniería', period_type: 'semester', period_number: 6, dual_available: true, state_code: '28', municipality: 'Victoria', can_relocate: false } as const
+const emptyProfile = { program: null, period_type: null, period_number: null, dual_available: null, state_code: null, municipality_code: null, municipality: null, pending_municipality: null, can_relocate: null }
+const fullInput = { program: 'Ingeniería', period_type: 'semester', period_number: 6, dual_available: true, state_code: '28', municipality_code: '28041', can_relocate: false } as const
+const fullProfile = { ...fullInput, municipality: 'Victoria', pending_municipality: null }
 const record = { id: 3, enrollment_number: 'A-001', given_names: 'María', first_surname: 'López', second_surname: null, is_active: true, created_at: '2026-10-13T12:00:00Z' }
 
 beforeEach(() => {
@@ -70,6 +71,8 @@ describe('cliente del expediente HU-S2-03', () => {
     [{ data: { ...record, profile: { ...emptyProfile, period_type: 'trimester' } } }],
     [{ data: { ...record, profile: { ...emptyProfile, period_number: 16 } } }],
     [{ data: { ...record, profile: { ...emptyProfile, dual_available: 'sí' } } }],
+    [{ data: { ...record, profile: { ...emptyProfile, municipality_code: '2804' } } }],
+    [{ data: { ...record, profile: { ...emptyProfile, pending_municipality: 7 } } }],
     [{ data: { ...record, profile: { program: null } } }],
   ])('rechaza un detalle inesperado', async (body) => {
     fetchMock.mockResolvedValueOnce(Response.json(body))
@@ -78,11 +81,11 @@ describe('cliente del expediente HU-S2-03', () => {
 
   it('guarda el expediente con CSRF enviando solo sus campos', async () => {
     fetchMock.mockImplementationOnce(csrf).mockResolvedValueOnce(Response.json({ data: { ...record, profile: fullProfile } }))
-    await expect(updateStudentProfile(3, { ...fullProfile, ...{ institution_id: 9, enrollment_number: 'X' } }))
+    await expect(updateStudentProfile(3, { ...fullInput, ...{ institution_id: 9, enrollment_number: 'X' } }))
       .resolves.toEqual({ ...record, profile: fullProfile })
     expect(fetchMock.mock.calls[1][0]).toBe('/api/students/3/profile')
     expect(fetchMock.mock.calls[1][1]?.method).toBe('PUT')
-    expect(JSON.parse(fetchMock.mock.calls[1][1]?.body as string)).toEqual(fullProfile)
+    expect(JSON.parse(fetchMock.mock.calls[1][1]?.body as string)).toEqual(fullInput)
   })
 
   it('corrige la identidad con CSRF enviando solo la identidad', async () => {

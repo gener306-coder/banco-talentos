@@ -2,15 +2,23 @@ import { act, fireEvent, render, screen, waitFor, within } from '@testing-librar
 import { MemoryRouter, useLocation } from 'react-router'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import App from '../App'
+import { clearMunicipalityCache } from './municipalities'
 
 const institutionUser = { id: 5, name: 'Coordinación', email: 'coord@example.test', role: 'INSTITUTION', institution: { id: 7, name: 'Instituto Dual' } }
 const fetchMock = vi.fn<typeof fetch>()
 const apiMock = vi.fn<typeof fetch>()
 // El seguro facultativo (HU-S3-02) se carga aparte; sus rutas no consumen las respuestas de apiMock.
 const securityMock = vi.fn<typeof fetch>()
+// El catálogo de municipios (HU-S4-04) tampoco consume las respuestas de apiMock.
+const catalogMock = vi.fn<typeof fetch>()
+const municipalitiesOf: Record<string, { code: string; name: string }[]> = {
+  '28': [{ code: '28022', name: 'Matamoros' }, { code: '28032', name: 'Reynosa' }, { code: '28041', name: 'Victoria' }],
+  '09': [{ code: '09003', name: 'Coyoacán' }, { code: '09015', name: 'Cuauhtémoc' }],
+}
 let user: Record<string, unknown>
-const emptyProfile = { program: null, period_type: null, period_number: null, dual_available: null, state_code: null, municipality: null, can_relocate: null }
-const savedProfile = { program: 'Ingeniería en Sistemas', period_type: 'semester', period_number: 6, dual_available: true, state_code: '28', municipality: 'Victoria', can_relocate: false }
+const emptyProfile = { program: null, period_type: null, period_number: null, dual_available: null, state_code: null, municipality_code: null, municipality: null, pending_municipality: null, can_relocate: null }
+const savedInput = { program: 'Ingeniería en Sistemas', period_type: 'semester', period_number: 6, dual_available: true, state_code: '28', municipality_code: '28041', can_relocate: false }
+const savedProfile = { ...savedInput, municipality: 'Victoria', pending_municipality: null }
 const detail = (profile: Record<string, unknown> = emptyProfile, identity: Record<string, unknown> = {}) => ({
   data: { id: 3, enrollment_number: 'A-001', given_names: 'María Fernanda', first_surname: 'López', second_surname: 'García', is_active: true, created_at: '2026-10-13T12:00:00Z', ...identity, profile },
 })
@@ -28,13 +36,24 @@ async function profileForm() {
   await screen.findByRole('heading', { name: 'Expediente público' })
   return screen.getByRole('region', { name: 'Expediente público' })
 }
-function fillProfile(form: HTMLElement) {
+/** Escribe en el selector de municipio y elige la opción de la lista. */
+async function chooseMunicipality(form: HTMLElement, search: string, option: string) {
+  const input = await waitFor(() => {
+    const element = within(form).getByRole('combobox', { name: 'Municipio' })
+    expect(element).toBeEnabled()
+    return element
+  })
+  fireEvent.focus(input)
+  fireEvent.change(input, { target: { value: search } })
+  fireEvent.mouseDown(await within(form).findByRole('option', { name: option }))
+}
+async function fillProfile(form: HTMLElement) {
   fireEvent.change(within(form).getByLabelText('Carrera o programa educativo'), { target: { value: '  Ingeniería en Sistemas ' } })
   fireEvent.change(within(form).getByLabelText('Tipo de periodo'), { target: { value: 'semester' } })
   fireEvent.change(within(form).getByLabelText('Periodo actual'), { target: { value: '6' } })
   fireEvent.click(within(form).getByLabelText('Disponible'))
   fireEvent.change(within(form).getByLabelText('Estado'), { target: { value: '28' } })
-  fireEvent.change(within(form).getByLabelText('Municipio'), { target: { value: 'Victoria' } })
+  await chooseMunicipality(form, 'vict', 'Victoria')
   fireEvent.click(within(within(form).getByRole('group', { name: 'Disponibilidad para reubicarse' })).getByLabelText('No'))
 }
 
@@ -43,6 +62,9 @@ beforeEach(() => {
   apiMock.mockReset()
   securityMock.mockReset()
   securityMock.mockImplementation(async () => Response.json({ data: { nss: null, document: null } }))
+  clearMunicipalityCache()
+  catalogMock.mockReset()
+  catalogMock.mockImplementation(async (path) => Response.json({ data: municipalitiesOf[String(path).split('/')[4]] ?? [] }))
   fetchMock.mockReset()
   fetchMock.mockImplementation(async (path, options) => {
     if (path === '/api/me') return Response.json({ user })
@@ -51,6 +73,7 @@ beforeEach(() => {
       return new Response(null, { status: 204 })
     }
     if (typeof path === 'string' && path.includes('/social-security')) return securityMock(path, options)
+    if (typeof path === 'string' && path.startsWith('/api/catalogs/')) return catalogMock(path, options)
     return apiMock(path, options)
   })
   vi.stubGlobal('fetch', fetchMock)
@@ -77,13 +100,13 @@ describe('expediente del alumno HU-S2-03', () => {
     renderApp()
     const form = await profileForm()
     expect(within(form).getByLabelText('Estado').querySelectorAll('option')).toHaveLength(33)
-    fillProfile(form)
+    await fillProfile(form)
     fireEvent.click(within(form).getByRole('button', { name: 'Guardar expediente' }))
     expect(await within(form).findByText('Expediente guardado correctamente.')).toHaveAttribute('role', 'status')
     expect(writes()[0][0]).toBe('/api/students/3/profile')
     fireEvent.change(within(form).getByLabelText('Municipio'), { target: { value: 'Matamoros' } })
     expect(within(form).queryByText('Expediente guardado correctamente.')).not.toBeInTheDocument()
-    expect(JSON.parse(writes()[0][1]?.body as string)).toEqual(savedProfile)
+    expect(JSON.parse(writes()[0][1]?.body as string)).toEqual(savedInput)
   })
 
   it('carga el expediente guardado en el formulario', async () => {
@@ -95,6 +118,7 @@ describe('expediente del alumno HU-S2-03', () => {
     expect(within(form).getByLabelText('Periodo actual')).toHaveValue('6')
     expect(within(form).getByLabelText('No disponible')).toBeChecked()
     expect(within(form).getByLabelText('Estado')).toHaveDisplayValue('Tamaulipas')
+    expect(within(form).getByRole('combobox', { name: 'Municipio' })).toHaveValue('Victoria')
     expect(within(within(form).getByRole('group', { name: 'Disponibilidad para reubicarse' })).getByLabelText('Sí')).toBeChecked()
   })
 
@@ -119,7 +143,7 @@ describe('expediente del alumno HU-S2-03', () => {
       .mockResolvedValueOnce(Response.json({ errors: { state_code: ['El estado no es válido.'] } }, { status: 422 }))
     renderApp()
     const form = await profileForm()
-    fillProfile(form)
+    await fillProfile(form)
     fireEvent.click(within(form).getByRole('button', { name: 'Guardar expediente' }))
     await waitFor(() => expect(within(form).getByLabelText('Estado')).toHaveAccessibleDescription('El estado no es válido.'))
     expect(screen.queryByText('Expediente guardado correctamente.')).not.toBeInTheDocument()
@@ -131,7 +155,7 @@ describe('expediente del alumno HU-S2-03', () => {
       .mockImplementationOnce(() => new Promise((done) => { resolve = done }))
     renderApp()
     const form = await profileForm()
-    fillProfile(form)
+    await fillProfile(form)
     const submit = within(form).getByRole('button', { name: 'Guardar expediente' })
     fireEvent.click(submit)
     fireEvent.click(submit)
@@ -260,5 +284,105 @@ describe('baja lógica del alumno HU-S2-04', () => {
     expect(await within(section).findByText('El alumno no existe.')).toBeInTheDocument()
     expect(within(section).getByText('ACTIVO')).toBeInTheDocument()
     expect(screen.queryByText('Alumno inactivado correctamente.')).not.toBeInTheDocument()
+  })
+})
+
+describe('municipio del catálogo INEGI HU-S4-04', () => {
+  const pendingProfile = { ...savedProfile, municipality_code: null, municipality: null, pending_municipality: 'Cd. Victoria' }
+
+  it('deshabilita el municipio hasta elegir el estado (CA-08)', async () => {
+    apiMock.mockResolvedValueOnce(Response.json(detail()))
+    renderApp()
+    const form = await profileForm()
+    const input = within(form).getByRole('combobox', { name: 'Municipio' })
+    expect(input).toBeDisabled()
+    expect(input).toHaveAccessibleDescription('Elige primero el estado.')
+    expect(catalogMock).not.toHaveBeenCalled()
+  })
+
+  it('filtra sin distinguir acentos ni mayúsculas y envía la clave INEGI (CA-08)', async () => {
+    apiMock.mockResolvedValueOnce(Response.json(detail({ ...savedProfile, state_code: '09', municipality_code: '09003', municipality: 'Coyoacán' })))
+      .mockResolvedValueOnce(Response.json(detail({ ...savedProfile, state_code: '09', municipality_code: '09015', municipality: 'Cuauhtémoc' })))
+    renderApp()
+    const form = await profileForm()
+    const input = await within(form).findByRole('combobox', { name: 'Municipio' })
+    expect(input).toHaveValue('Coyoacán')
+    await waitFor(() => expect(input).toBeEnabled())
+    fireEvent.focus(input)
+    fireEvent.change(input, { target: { value: 'CUAUHTEMOC' } })
+    expect(await within(form).findByRole('option', { name: 'Cuauhtémoc' })).toBeInTheDocument()
+    expect(within(form).queryByRole('option', { name: 'Coyoacán' })).not.toBeInTheDocument()
+    fireEvent.keyDown(input, { key: 'Enter' })
+    expect(input).toHaveValue('Cuauhtémoc')
+    fireEvent.click(within(form).getByRole('button', { name: 'Guardar expediente' }))
+    await within(form).findByText('Expediente guardado correctamente.')
+    expect(JSON.parse(writes()[0][1]?.body as string)).toMatchObject({ state_code: '09', municipality_code: '09015' })
+    expect(catalogMock.mock.calls[0][0]).toBe('/api/catalogs/states/09/municipalities')
+  })
+
+  it('limpia el municipio al cambiar de estado y carga los del nuevo estado (CA-08)', async () => {
+    apiMock.mockResolvedValueOnce(Response.json(detail(savedProfile)))
+    renderApp()
+    const form = await profileForm()
+    expect(await within(form).findByRole('combobox', { name: 'Municipio' })).toHaveValue('Victoria')
+    fireEvent.change(within(form).getByLabelText('Estado'), { target: { value: '09' } })
+    const input = within(form).getByRole('combobox', { name: 'Municipio' })
+    expect(input).toHaveValue('')
+    await waitFor(() => expect(catalogMock.mock.calls.map(([path]) => path)).toContain('/api/catalogs/states/09/municipalities'))
+    fireEvent.click(within(form).getByRole('button', { name: 'Guardar expediente' }))
+    expect(within(form).getByRole('combobox', { name: 'Municipio' })).toHaveAccessibleDescription(/El municipio es obligatorio\./)
+    expect(writes()).toHaveLength(0)
+  })
+
+  it('exige elegir de la lista un nombre que no coincide con ningún municipio', async () => {
+    apiMock.mockResolvedValueOnce(Response.json(detail(savedProfile)))
+    renderApp()
+    const form = await profileForm()
+    const input = await within(form).findByRole('combobox', { name: 'Municipio' })
+    await waitFor(() => expect(input).toBeEnabled())
+    fireEvent.change(input, { target: { value: 'Ciudad Inventada' } })
+    expect(within(form).getByText('Ningún municipio coincide con la búsqueda.')).toBeInTheDocument()
+    fireEvent.blur(input)
+    fireEvent.click(within(form).getByRole('button', { name: 'Guardar expediente' }))
+    expect(input).toHaveAccessibleDescription(/Elige un municipio de la lista\./)
+    expect(writes()).toHaveLength(0)
+  })
+
+  it('acepta un nombre escrito completo al salir del campo si coincide con un solo municipio', async () => {
+    apiMock.mockResolvedValueOnce(Response.json(detail(savedProfile))).mockResolvedValueOnce(Response.json(detail(savedProfile)))
+    renderApp()
+    const form = await profileForm()
+    const input = await within(form).findByRole('combobox', { name: 'Municipio' })
+    await waitFor(() => expect(input).toBeEnabled())
+    fireEvent.change(input, { target: { value: '  reynosa ' } })
+    fireEvent.blur(input)
+    expect(input).toHaveValue('Reynosa')
+    fireEvent.click(within(form).getByRole('button', { name: 'Guardar expediente' }))
+    await within(form).findByText('Expediente guardado correctamente.')
+    expect(JSON.parse(writes()[0][1]?.body as string)).toMatchObject({ municipality_code: '28032' })
+  })
+
+  it('avisa del municipio por confirmar hasta que se elige del catálogo y se guarda (CA-06)', async () => {
+    apiMock.mockResolvedValueOnce(Response.json(detail(pendingProfile))).mockResolvedValueOnce(Response.json(detail(savedProfile)))
+    renderApp()
+    const form = await profileForm()
+    expect(within(form).getByText('Municipio por confirmar: «Cd. Victoria». Elígelo del catálogo y guarda el expediente.')).toBeInTheDocument()
+    expect(within(form).getByRole('combobox', { name: 'Municipio' })).toHaveValue('')
+    await chooseMunicipality(form, 'victoria', 'Victoria')
+    fireEvent.click(within(form).getByRole('button', { name: 'Guardar expediente' }))
+    await within(form).findByText('Expediente guardado correctamente.')
+    expect(within(form).queryByText(/Municipio por confirmar/)).not.toBeInTheDocument()
+  })
+
+  it('permite reintentar si el catálogo no se pudo cargar', async () => {
+    catalogMock.mockResolvedValueOnce(new Response(null, { status: 500 }))
+    apiMock.mockResolvedValueOnce(Response.json(detail(savedProfile)))
+    renderApp()
+    const form = await profileForm()
+    expect(await within(form).findByRole('alert')).toHaveTextContent('No se pudieron cargar los municipios.')
+    expect(within(form).getByRole('combobox', { name: 'Municipio' })).toBeDisabled()
+    fireEvent.click(within(form).getByRole('button', { name: 'Reintentar' }))
+    await waitFor(() => expect(within(form).getByRole('combobox', { name: 'Municipio' })).toBeEnabled())
+    expect(within(form).queryByRole('alert')).not.toBeInTheDocument()
   })
 })

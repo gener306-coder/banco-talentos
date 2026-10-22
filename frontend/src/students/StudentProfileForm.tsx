@@ -7,6 +7,7 @@ import { updateStudentProfile } from './api'
 import type { StudentDetail, StudentProfileInput } from './api'
 import { isPeriodType, MAX_PERIOD, MEXICAN_STATES, PERIOD_TYPES } from './catalogs'
 import { studentMessages } from './messages'
+import { MunicipalityCombobox } from './MunicipalityCombobox'
 
 type Field = keyof StudentProfileInput
 type YesNo = '' | 'yes' | 'no'
@@ -16,7 +17,8 @@ const periods = Array.from({ length: MAX_PERIOD }, (_, index) => index + 1)
 
 /**
  * Expediente público del alumno (HU-S2-03 CA-02 a CA-04): lo que podrán filtrar las empresas
- * sin conocer su identidad. Todos los campos son obligatorios para guardarlo.
+ * sin conocer su identidad. Todos los campos son obligatorios para guardarlo. El municipio se elige
+ * del catálogo INEGI (HU-S4-04 CA-08).
  */
 export function StudentProfileForm({ student, onSaved }: { student: StudentDetail; onSaved: (student: StudentDetail) => void }) {
   const { profile } = student
@@ -26,9 +28,12 @@ export function StudentProfileForm({ student, onSaved }: { student: StudentDetai
     period_number: profile.period_number === null ? '' : String(profile.period_number),
     dual_available: toYesNo(profile.dual_available),
     state_code: profile.state_code ?? '',
-    municipality: profile.municipality ?? '',
+    municipality_code: profile.municipality_code ?? '',
     can_relocate: toYesNo(profile.can_relocate),
   })
+  // Texto libre anterior al catálogo: se avisa hasta que la institución elija el municipio y guarde.
+  const [pendingMunicipality, setPendingMunicipality] = useState(profile.pending_municipality)
+  const [municipalityTyped, setMunicipalityTyped] = useState(false)
   const [localErrors, setLocalErrors] = useState<Partial<Record<Field, string[]>>>({})
   const mutation = useApiMutation(studentMessages)
   // El aviso va junto al botón: tras un formulario largo, un aviso arriba quedaría fuera de la vista.
@@ -52,14 +57,15 @@ export function StudentProfileForm({ student, onSaved }: { student: StudentDetai
     if (mutation.pending) return
     setSaved(false)
     const program = values.program.trim()
-    const municipality = values.municipality.trim()
     const required: Partial<Record<Field, string[]>> = {}
     if (!program) required.program = ['La carrera o programa educativo es obligatorio.']
     if (!values.period_type) required.period_type = ['Indica si el periodo es semestre o cuatrimestre.']
     if (!values.period_number) required.period_number = ['El periodo actual es obligatorio.']
     if (!values.dual_available) required.dual_available = ['Indica la disponibilidad para el programa dual.']
     if (!values.state_code) required.state_code = ['El estado es obligatorio.']
-    if (!municipality) required.municipality = ['El municipio es obligatorio.']
+    if (!values.municipality_code) {
+      required.municipality_code = [municipalityTyped ? 'Elige un municipio de la lista.' : 'El municipio es obligatorio.']
+    }
     if (!values.can_relocate) required.can_relocate = ['Indica si puede reubicarse.']
     setLocalErrors(required)
     if (Object.keys(required).length || !isPeriodType(values.period_type)) return
@@ -70,10 +76,11 @@ export function StudentProfileForm({ student, onSaved }: { student: StudentDetai
       period_number: Number(values.period_number),
       dual_available: values.dual_available === 'yes',
       state_code: values.state_code,
-      municipality,
+      municipality_code: values.municipality_code,
       can_relocate: values.can_relocate === 'yes',
     }
     await mutation.submit(() => updateStudentProfile(student.id, input), (updated) => {
+      setPendingMunicipality(updated.profile.pending_municipality)
       setSaved(true)
       onSaved(updated)
     })
@@ -138,12 +145,22 @@ export function StudentProfileForm({ student, onSaved }: { student: StudentDetai
 
         <h4>Ubicación aproximada</h4>
         <p className="privacy-note">Solo estado y municipio; no registres direcciones.</p>
+        {pendingMunicipality && (
+          <p className="pending-notice" id="student-profile-pending-municipality">
+            Municipio por confirmar: «{pendingMunicipality}». Elígelo del catálogo y guarda el expediente.
+          </p>
+        )}
         <div className="field-row">
           <div>
             <label htmlFor="student-profile-state_code">Estado</label>
             <select id="student-profile-state_code" name="state_code" required value={values.state_code}
               aria-invalid={Boolean(errors.state_code?.length)} aria-describedby={describedBy('state_code')}
-              onChange={(event) => set('state_code', event.target.value)}>
+              onChange={(event) => {
+                // Cambiar de estado limpia el municipio (HU-S4-04 CA-08).
+                setValues((current) => ({ ...current, municipality_code: '' }))
+                setMunicipalityTyped(false)
+                set('state_code', event.target.value)
+              }}>
               <option value="">Selecciona…</option>
               {MEXICAN_STATES.map((state) => <option key={state.code} value={state.code}>{state.name}</option>)}
             </select>
@@ -151,10 +168,17 @@ export function StudentProfileForm({ student, onSaved }: { student: StudentDetai
           </div>
           <div>
             <label htmlFor="student-profile-municipality">Municipio</label>
-            <input id="student-profile-municipality" name="municipality" type="text" autoComplete="off" required maxLength={120}
-              value={values.municipality} aria-invalid={Boolean(errors.municipality?.length)} aria-describedby={describedBy('municipality')}
-              onChange={(event) => set('municipality', event.target.value)} />
-            {fieldError('municipality')}
+            {/* key: al cambiar de estado se vuelve a montar vacío y carga los municipios del nuevo estado. */}
+            <MunicipalityCombobox key={values.state_code} id="student-profile-municipality" state={values.state_code}
+              code={values.municipality_code}
+              initialName={values.state_code === profile.state_code && values.municipality_code === profile.municipality_code ? profile.municipality ?? '' : ''}
+              invalid={Boolean(errors.municipality_code?.length)} describedBy={describedBy('municipality_code')}
+              disabled={mutation.pending}
+              onSelect={(municipality) => {
+                setMunicipalityTyped(municipality === null)
+                set('municipality_code', municipality?.code ?? '')
+              }} />
+            {fieldError('municipality_code')}
           </div>
         </div>
 
