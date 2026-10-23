@@ -2,6 +2,7 @@
 
 use App\Enums\UserRole;
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\CompanyAccountController;
 use App\Http\Controllers\CompanyController;
 use App\Http\Controllers\InstitutionAccountController;
 use App\Http\Controllers\InstitutionController;
@@ -56,7 +57,7 @@ Route::middleware(['auth:sanctum', 'active', 'role:'.UserRole::ADMIN->value.','.
         Route::post('/resend-setup', [SecretaryAccountController::class, 'resendSetup'])->middleware('throttle:secretary-setup-resend');
     });
 
-// Empresas validadas por la Secretaría de Economía (HU-S4-02); sin DELETE.
+// Empresas validadas por la Secretaría de Economía (HU-S4-02) y sus cuentas (HU-S4-03); sin DELETE.
 Route::middleware(['auth:sanctum', 'active', 'role:'.UserRole::SECRETARY->value])
     ->prefix('companies')
     // Identificador acotado a un bigint: fuera de rango responde 404 sin llegar a PostgreSQL.
@@ -67,6 +68,10 @@ Route::middleware(['auth:sanctum', 'active', 'role:'.UserRole::SECRETARY->value]
         Route::get('{company}', [CompanyController::class, 'show']);
         Route::put('{company}', [CompanyController::class, 'update']);
         Route::patch('{company}/status', [CompanyController::class, 'updateStatus']);
+        // Cuentas de acceso de la empresa (HU-S4-03).
+        Route::get('{company}/accounts', [CompanyAccountController::class, 'index']);
+        Route::post('{company}/accounts', [CompanyAccountController::class, 'store']);
+        Route::post('{company}/accounts/resend-setup', [CompanyAccountController::class, 'resendSetup'])->middleware('throttle:company-setup-resend');
     });
 
 // Padrón (HU-S2-02), expediente (HU-S2-03), baja lógica (HU-S2-04), seguro facultativo (HU-S3-02) y

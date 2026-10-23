@@ -113,15 +113,16 @@ it('does not turn setup into password recovery for an existing account', functio
     expect($this->pendingUser->fresh()->getAttributes())->toBe($original);
 });
 
-it('does not set passwords for roles outside institutional account creation', function (UserRole $role) {
-    $this->pendingUser->update(['role' => $role]);
+it('does not set passwords for roles outside account creation with a setup link', function (UserRole $role) {
+    // HU-S4-03 CA-03: ADMIN no tiene organización; SECRETARY y COMPANY tienen sus propias pruebas.
+    $this->pendingUser->update(['role' => $role, 'institution_id' => null]);
     $original = $this->pendingUser->fresh()->getAttributes();
 
     $this->browserRequest('POST', '/api/institution-accounts/password-setup', $this->setupPayload)
         ->assertUnprocessable()->assertJsonValidationErrors('token');
 
     expect($this->pendingUser->fresh()->getAttributes())->toBe($original);
-})->with([UserRole::ADMIN, UserRole::COMPANY, UserRole::SECRETARY]);
+})->with([UserRole::ADMIN]);
 
 it('preserves the token and pending credential when the institution or account is inactive', function (string $target, string $code) {
     if ($target === 'institution') {

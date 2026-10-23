@@ -1,6 +1,7 @@
 <?php
 
 use App\Enums\UserRole;
+use App\Models\Company;
 use App\Models\Institution;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -85,8 +86,8 @@ it('normalizes the lookup email and ignores forged recipient and password fields
     expect($this->pendingUser->fresh()->getAttributes())->toBe($original);
 });
 
-it('rejects accounts outside pending active institutional setup', function (array $attributes, string $method) {
-    $this->pendingUser->forceFill($attributes)->save();
+it('rejects accounts outside pending active institutional setup', function (array|Closure $attributes, string $method) {
+    $this->pendingUser->forceFill(value($attributes))->save();
     $original = $this->pendingUser->fresh()->getAttributes();
     $this->browserRequest('POST', '/api/institution-accounts/resend-setup', [...$this->resendPayload, 'delivery_method' => $method])
         ->assertUnprocessable()->assertJsonValidationErrors('email')->assertJsonMissingPath('setup_url');
@@ -96,9 +97,10 @@ it('rejects accounts outside pending active institutional setup', function (arra
     'already configured' => [['password_setup_required' => false]],
     'inactive account' => [['is_active' => false]],
     'no institution' => [['institution_id' => null]],
-    'admin role' => [['role' => UserRole::ADMIN]],
-    'company role' => [['role' => UserRole::COMPANY]],
-    'secretary role' => [['role' => UserRole::SECRETARY]],
+    // HU-S4-03 CA-03: cada rol con la organización que le corresponde.
+    'admin role' => [['role' => UserRole::ADMIN, 'institution_id' => null]],
+    'company role' => [fn () => ['role' => UserRole::COMPANY, 'institution_id' => null, 'company_id' => Company::factory()->create()->id]],
+    'secretary role' => [['role' => UserRole::SECRETARY, 'institution_id' => null]],
 ])->with(['email', 'manual']);
 
 it('rejects a different institution or unknown account without issuing a token', function (bool $differentInstitution) {

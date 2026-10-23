@@ -47,7 +47,7 @@ docker compose exec backend php artisan migrate
 docker compose exec backend php artisan auth:create-user
 ```
 
-`auth:create-user` sólo funciona de forma interactiva en el entorno local. Solicita un rol explícito, estado activo y contraseña oculta con confirmación; no hay cuentas o contraseñas predeterminadas. Los usuarios de las pruebas se crean exclusivamente en bases de pruebas. No utilices factories para aprovisionar cuentas reales.
+`auth:create-user` sólo funciona de forma interactiva en el entorno local. Solicita un rol explícito (`ADMIN`, `INSTITUTION` o `SECRETARY`; las cuentas `COMPANY` se crean desde su empresa), estado activo y contraseña oculta con confirmación; no hay cuentas o contraseñas predeterminadas. Los usuarios de las pruebas se crean exclusivamente en bases de pruebas. No utilices factories para aprovisionar cuentas reales.
 
 | Servicio | Dirección predeterminada |
 | --- | --- |
@@ -67,7 +67,7 @@ La SPA consulta `GET /api/me` al cargar. Para iniciar sesión obtiene primero `G
 
 La cookie de sesión es `HttpOnly`, de dominio local y `SameSite=Lax`. El cliente envía el token CSRF mediante `X-XSRF-TOKEN`. El identificador de sesión se regenera al autenticar; el cierre de sesión impide reutilizar la cookie anterior. Las sesiones locales expiran tras 120 minutos de inactividad. Las opciones de cookies y duración están en `backend/.env.example`.
 
-Los roles son `ADMIN`, `INSTITUTION`, `COMPANY` y `SECRETARY`. Todos requieren una cuenta activa. Las cuentas `INSTITUTION` requieren además que su institución esté activa. ADMIN dispone de la gestión de instituciones y de cuentas institucionales; ADMIN y `SECRETARY` gestionan las cuentas de la Secretaría; `SECRETARY` gestiona las empresas; `INSTITUTION` ve su institución vinculada; `COMPANY` conserva identidad y logout. El acceso se restringe tanto en las rutas React como en la API con Sanctum y el middleware `role`.
+Los roles son `ADMIN`, `INSTITUTION`, `COMPANY` y `SECRETARY`. Todos requieren una cuenta activa. Las cuentas `INSTITUTION` requieren además que su institución esté activa. ADMIN dispone de la gestión de instituciones y de cuentas institucionales; ADMIN y `SECRETARY` gestionan las cuentas de la Secretaría; `SECRETARY` gestiona las empresas; `INSTITUTION` ve su institución vinculada; `COMPANY` ve su empresa vinculada. El acceso se restringe tanto en las rutas React como en la API con Sanctum y el middleware `role`.
 
 Después de iniciar sesión como ADMIN, abre **Instituciones**. El listado incluye instituciones activas e inactivas. El registro y la edición solicitan nombre, CCT y correo de contacto; el detalle ofrece la acción para activar o inactivar. El CCT es único incluso entre instituciones inactivas y no existe eliminación. Consulta el contrato y la matriz de pruebas en [docs/HU-S1-02.md](docs/HU-S1-02.md).
 
@@ -100,6 +100,8 @@ ADMIN y `SECRETARY` abren **Cuentas de la Secretaría** desde el inicio (`/secre
 - **Opcionales:** nombre comercial, teléfono y folio de validación.
 
 No se pide domicilio ni documentos. El servidor ubica a la empresa en la cabecera de su municipio para la futura búsqueda por distancia y registra qué cuenta la dio de alta. El detalle permite editarla e inactivarla, previa confirmación, o reactivarla; no existe eliminación. Contrato y cobertura en [docs/HU-S4-02.md](docs/HU-S4-02.md).
+
+En el mismo detalle, **Cuentas de la empresa** lista las cuentas `COMPANY` con su estado. Con la empresa activa permite crear nuevas, indicando nombre y correo, y reenviar el enlace de las pendientes. Funcionan igual que las cuentas de la Secretaría: el servidor asigna el rol y la empresa, y la titular establece su contraseña con el enlace de un solo uso. Tras iniciar sesión, la cuenta ve el nombre de su empresa. Si la Secretaría inactiva la empresa, sus cuentas reciben `401` con código `COMPANY_INACTIVE` al iniciar sesión, y las sesiones abiertas se cierran en la siguiente petición. La base de datos impide cuentas `COMPANY` sin empresa, y `auth:create-user` ya no crea cuentas de empresa. Contrato y cobertura en [docs/HU-S4-03.md](docs/HU-S4-03.md).
 
 ## Alumnos
 

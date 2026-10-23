@@ -8,14 +8,14 @@ use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 
 /**
- * Alta de una cuenta SECRETARY (HU-S4-01 CA-01). Solo nombre, correo y método de entrega: el rol lo asigna el
- * servidor y cualquier otro campo (rol, institución, empresa) queda fuera de validated().
+ * Alta de una cuenta con enlace de configuración: SECRETARY (HU-S4-01) o COMPANY (HU-S4-03). Solo nombre, correo y
+ * método de entrega: el rol y la organización los asigna el servidor; cualquier otro campo queda fuera de validated().
  */
-class StoreSecretaryAccountRequest extends FormRequest
+class StoreSetupAccountRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        // El rol (ADMIN o SECRETARY) lo garantiza el middleware de la ruta.
+        // El rol de quien crea la cuenta lo garantiza el middleware de la ruta.
         return true;
     }
 

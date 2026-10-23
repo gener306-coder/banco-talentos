@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { ApiError, currentUser, login, logout, resetPassword, setInitialPassword } from './api'
 
-const user = { id: 1, name: 'Ana', email: 'ana@example.test', role: 'ADMIN', institution: null }
+const user = { id: 1, name: 'Ana', email: 'ana@example.test', role: 'ADMIN', institution: null, company: null }
 const fetchMock = vi.fn<typeof fetch>()
 
 beforeEach(() => {
@@ -117,6 +117,13 @@ describe('contraseña inicial e institución en la sesión', () => {
   it('conserva únicamente el identificador y nombre de la institución vinculada', async () => {
     fetchMock.mockResolvedValueOnce(Response.json({ user: { ...user, role: 'INSTITUTION', institution: { id: 7, name: 'Instituto Dual', private: 'omitido' }, password: 'nunca mostrar' } }))
     await expect(currentUser()).resolves.toEqual({ ...user, role: 'INSTITUTION', institution: { id: 7, name: 'Instituto Dual' } })
+  })
+
+  it('conserva únicamente el identificador y nombre de la empresa vinculada (HU-S4-03 CA-05)', async () => {
+    fetchMock.mockResolvedValueOnce(Response.json({ user: { ...user, role: 'COMPANY', company: { id: 5, name: 'ManuGolfo', rfc: 'omitido' } } }))
+    await expect(currentUser()).resolves.toEqual({ ...user, role: 'COMPANY', company: { id: 5, name: 'ManuGolfo' } })
+    fetchMock.mockResolvedValueOnce(Response.json({ user: { ...user, role: 'COMPANY', company: { id: '5', name: 'ManuGolfo' } } }))
+    await expect(currentUser()).rejects.toMatchObject({ status: 502 })
   })
 
   it('mantiene compatibilidad con sesiones sin institución y rechaza relaciones malformadas', async () => {

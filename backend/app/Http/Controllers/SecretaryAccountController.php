@@ -4,8 +4,8 @@ namespace App\Http\Controllers;
 
 use App\Enums\SetupDeliveryMethod;
 use App\Enums\UserRole;
-use App\Http\Requests\ResendSecretarySetupLinkRequest;
-use App\Http\Requests\StoreSecretaryAccountRequest;
+use App\Http\Requests\ResendSetupLinkRequest;
+use App\Http\Requests\StoreSetupAccountRequest;
 use App\Models\User;
 use App\Services\InitialPasswordLink;
 use Illuminate\Database\UniqueConstraintViolationException;
@@ -33,7 +33,7 @@ class SecretaryAccountController extends Controller
             ->paginate(self::PER_PAGE, ['id', 'name', 'email', 'is_active', 'password_setup_required', 'created_at']);
 
         return response()->json([
-            'data' => $page->getCollection()->map(fn (User $user): array => $this->present($user))->values(),
+            'data' => $page->getCollection()->map(fn (User $user): array => $user->setupAccountSummary())->values(),
             'meta' => [
                 'current_page' => $page->currentPage(),
                 'last_page' => $page->lastPage(),
@@ -42,7 +42,7 @@ class SecretaryAccountController extends Controller
         ])->header('Cache-Control', 'no-store, private');
     }
 
-    public function store(StoreSecretaryAccountRequest $request, InitialPasswordLink $links): JsonResponse
+    public function store(StoreSetupAccountRequest $request, InitialPasswordLink $links): JsonResponse
     {
         $data = $request->validated();
         $method = SetupDeliveryMethod::from($data['delivery_method'] ?? SetupDeliveryMethod::EMAIL->value);
@@ -73,11 +73,11 @@ class SecretaryAccountController extends Controller
 
         return response()->json([
             ...$links->deliver($user, $setupUrl, $method, $request->user()->id),
-            'data' => $this->present($user->refresh()),
+            'data' => $user->refresh()->setupAccountSummary(),
         ], 201)->header('Cache-Control', 'no-store, private');
     }
 
-    public function resendSetup(ResendSecretarySetupLinkRequest $request, InitialPasswordLink $links): JsonResponse
+    public function resendSetup(ResendSetupLinkRequest $request, InitialPasswordLink $links): JsonResponse
     {
         $data = $request->validated();
         $method = SetupDeliveryMethod::from($data['delivery_method'] ?? SetupDeliveryMethod::EMAIL->value);
@@ -101,17 +101,5 @@ class SecretaryAccountController extends Controller
 
         return response()->json($links->deliver($user, $setupUrl, $method, $request->user()->id))
             ->header('Cache-Control', 'no-store, private');
-    }
-
-    private function present(User $user): array
-    {
-        return [
-            'id' => $user->id,
-            'name' => $user->name,
-            'email' => $user->email,
-            // Activa, pendiente de su primera contraseña o inactiva (CA-05).
-            'status' => ! $user->is_active ? 'inactive' : ($user->password_setup_required ? 'pending' : 'active'),
-            'created_at' => $user->created_at?->toISOString(),
-        ];
     }
 }

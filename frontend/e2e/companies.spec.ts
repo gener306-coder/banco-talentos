@@ -30,7 +30,7 @@ test('HU-S4-02: la Secretaría registra una empresa → la busca → la edita �
     const created = secretary.waitForResponse((response) => response.url().endsWith('/api/companies') && response.request().method() === 'POST')
     await secretary.getByRole('button', { name: 'Registrar empresa', exact: true }).click()
     expect((await created).status()).toBe(201)
-    await expect(secretary.getByRole('status')).toHaveText('Empresa registrada correctamente.')
+    await expect(secretary.getByText('Empresa registrada correctamente.', { exact: true })).toBeVisible()
     await expect(secretary.getByText(companyRfc, { exact: true })).toBeVisible()
     await expect(secretary.getByText('Reynosa, Tamaulipas', { exact: true })).toBeVisible()
 
@@ -47,15 +47,15 @@ test('HU-S4-02: la Secretaría registra una empresa → la busca → la edita �
     await expect(secretary.getByRole('combobox', { name: 'Municipio' })).toHaveValue('Reynosa')
     await secretary.getByLabel('Nombre comercial (opcional)').fill(`Golfo ${suffix}`)
     await secretary.getByRole('button', { name: 'Guardar cambios', exact: true }).click()
-    await expect(secretary.getByRole('status')).toHaveText('Empresa actualizada correctamente.')
+    await expect(secretary.getByText('Empresa actualizada correctamente.', { exact: true })).toBeVisible()
     await expect(secretary.getByText(`Golfo ${suffix}`, { exact: true })).toBeVisible()
 
     // CA-07: inactivar pide confirmación; reactivar no.
     await secretary.getByRole('button', { name: 'Inactivar empresa', exact: true }).click()
     await secretary.getByRole('alertdialog', { name: '¿Inactivar la empresa?' }).getByRole('button', { name: 'Inactivar', exact: true }).click()
-    await expect(secretary.getByRole('status')).toHaveText('Empresa inactivada correctamente.')
+    await expect(secretary.getByText('Empresa inactivada correctamente.', { exact: true })).toBeVisible()
     await secretary.getByRole('button', { name: 'Activar empresa', exact: true }).click()
-    await expect(secretary.getByRole('status')).toHaveText('Empresa activada correctamente.')
+    await expect(secretary.getByText('Empresa activada correctamente.', { exact: true })).toBeVisible()
 
     // CA-03: el mismo RFC no puede registrarse dos veces.
     await secretary.goto('/companies/new')

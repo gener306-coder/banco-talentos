@@ -3,6 +3,7 @@
 namespace Database\Factories;
 
 use App\Enums\UserRole;
+use App\Models\Company;
 use App\Models\Institution;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
@@ -29,9 +30,20 @@ class UserFactory extends Factory
         return $this->state(fn (): array => ['is_active' => false]);
     }
 
+    /** Una cuenta COMPANY siempre pertenece a una empresa (HU-S4-03 CA-03). */
     public function role(UserRole $role): static
     {
-        return $this->state(fn (): array => ['role' => $role]);
+        return $role === UserRole::COMPANY
+            ? $this->forCompany()
+            : $this->state(fn (): array => ['role' => $role]);
+    }
+
+    public function forCompany(?Company $company = null): static
+    {
+        return $this->state(fn (): array => [
+            'company_id' => $company?->id ?? Company::factory(),
+            'role' => UserRole::COMPANY,
+        ]);
     }
 
     public function forInstitution(Institution $institution): static

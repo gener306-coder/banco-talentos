@@ -1,6 +1,7 @@
 <?php
 
 use App\Enums\UserRole;
+use App\Models\Company;
 use App\Models\Institution;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -37,13 +38,15 @@ dataset('role authorization matrix', (function () {
 })());
 
 it('logs in each allowed role and restores its identity from the session cookie', function (string $role) {
-    $user = User::factory()->create(['role' => UserRole::from($role)]);
+    $user = User::factory()->role(UserRole::from($role))->create();
     $expected = ['user' => [
         'id' => $user->id,
         'name' => $user->name,
         'email' => $user->email,
         'role' => $role,
         'institution' => null,
+        // HU-S4-03 CA-05: una cuenta COMPANY incluye su empresa vinculada.
+        'company' => $user->company ? ['id' => $user->company->id, 'name' => $user->company->legal_name] : null,
     ]];
 
     $this->loginWithCookies($user)->assertOk()->assertExactJson($expected);
@@ -245,7 +248,7 @@ it('rejects logout without valid CSRF while preserving the authenticated session
 })->with(['missing' => [null], 'invalid' => ['forged-csrf-token']]);
 
 it('enforces every role pairing using the role stored on the authenticated account', function (string $actual, string $required) {
-    $user = User::factory()->create(['role' => UserRole::from($actual)]);
+    $user = User::factory()->role(UserRole::from($actual))->create();
     $this->loginWithCookies($user)->assertOk();
 
     $response = $this->browserRequest('GET', '/_tests/roles/'.$required);
@@ -279,7 +282,7 @@ it('denies a restricted route immediately after the persisted role changes', fun
     $this->loginWithCookies($user)->assertOk();
     $this->browserRequest('GET', '/_tests/roles/ADMIN')->assertOk();
 
-    $user->update(['role' => UserRole::COMPANY]);
+    $user->forceFill(['role' => UserRole::COMPANY, 'company_id' => Company::factory()->create()->id])->save();
 
     $this->browserRequest('GET', '/_tests/roles/ADMIN')->assertForbidden();
     $this->browserRequest('GET', '/_tests/roles/COMPANY')->assertOk();

@@ -3,6 +3,7 @@ export type ValidationErrors = Record<string, string[]>
 export const accessErrorMessages = {
   ACCOUNT_INACTIVE: 'La cuenta está inactiva. No puedes acceder al sistema.',
   INSTITUTION_INACTIVE: 'La institución está inactiva. No puedes acceder al sistema.',
+  COMPANY_INACTIVE: 'La empresa está inactiva. No puedes acceder al sistema.',
   PASSWORD_SETUP_REQUIRED: 'Debes establecer tu contraseña antes de iniciar sesión.',
 } as const
 

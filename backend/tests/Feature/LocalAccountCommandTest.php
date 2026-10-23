@@ -27,7 +27,7 @@ it('provisions a local account only with an explicit role, status and confirmed 
     $this->artisan('auth:create-user')
         ->expectsQuestion('Nombre', 'Cuenta local de prueba')
         ->expectsQuestion('Correo electrónico', '  LOCAL@example.test  ')
-        ->expectsQuestion('Rol (ADMIN, INSTITUTION, COMPANY, SECRETARY)', 'COMPANY')
+        ->expectsQuestion('Rol (ADMIN, INSTITUTION, SECRETARY)', 'SECRETARY')
         ->expectsQuestion('¿La cuenta estará activa? (sí/no)', $answer)
         ->expectsQuestion('Contraseña (mínimo 12 caracteres)', 'ProvisionedPassword123!')
         ->expectsQuestion('Confirma la contraseña', 'ProvisionedPassword123!')
@@ -37,7 +37,7 @@ it('provisions a local account only with an explicit role, status and confirmed 
     $user = User::sole();
 
     expect($user->email)->toBe('local@example.test');
-    expect($user->role)->toBe(UserRole::COMPANY);
+    expect($user->role)->toBe(UserRole::SECRETARY);
     expect($user->is_active)->toBe($active);
     expect(Hash::check('ProvisionedPassword123!', $user->password))->toBeTrue();
 })->with(['active' => ['sí', true], 'inactive' => ['no', false]]);
@@ -48,7 +48,7 @@ it('does not invent a role or active status when provisioning answers are omitte
     $this->artisan('auth:create-user')
         ->expectsQuestion('Nombre', 'Cuenta local de prueba')
         ->expectsQuestion('Correo electrónico', 'local@example.test')
-        ->expectsQuestion('Rol (ADMIN, INSTITUTION, COMPANY, SECRETARY)', $role)
+        ->expectsQuestion('Rol (ADMIN, INSTITUTION, SECRETARY)', $role)
         ->expectsQuestion('¿La cuenta estará activa? (sí/no)', $active)
         ->expectsQuestion('Contraseña (mínimo 12 caracteres)', 'ProvisionedPassword123!')
         ->expectsQuestion('Confirma la contraseña', 'ProvisionedPassword123!')
@@ -57,6 +57,8 @@ it('does not invent a role or active status when provisioning answers are omitte
     $this->assertDatabaseCount('users', 0);
 })->with([
     'missing role' => ['', 'sí'],
-    'missing status' => ['COMPANY', ''],
+    'missing status' => ['SECRETARY', ''],
     'student is not an account role' => ['STUDENT', 'sí'],
+    // HU-S4-03: las cuentas de empresa se crean desde el detalle de la empresa.
+    'company accounts need a company' => ['COMPANY', 'sí'],
 ]);

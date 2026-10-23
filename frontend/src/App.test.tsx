@@ -292,6 +292,7 @@ describe('sesión institucional HU-S1-03', () => {
 
   it.each([
     [401, 'INSTITUTION_INACTIVE', 'La institución está inactiva. No puedes acceder al sistema.'],
+    [401, 'COMPANY_INACTIVE', 'La empresa está inactiva. No puedes acceder al sistema.'],
     [403, 'PASSWORD_SETUP_REQUIRED', 'Debes establecer tu contraseña antes de iniciar sesión.'],
   ])('presenta un login rechazado %i con código %s de forma controlada', async (status, code, message) => {
     fetchMock.mockResolvedValueOnce(new Response(null, { status: 401 }))

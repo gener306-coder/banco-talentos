@@ -13,6 +13,7 @@ class AccountAccessDenied extends RuntimeException implements ShouldntReport
     {
         parent::__construct(match ($reason) {
             'INSTITUTION_INACTIVE' => 'La institución está inactiva. No puedes acceder al sistema.',
+            'COMPANY_INACTIVE' => 'La empresa está inactiva. No puedes acceder al sistema.',
             'PASSWORD_SETUP_REQUIRED' => 'Debes establecer tu contraseña antes de iniciar sesión.',
             default => 'La cuenta está inactiva. No puedes acceder al sistema.',
         });

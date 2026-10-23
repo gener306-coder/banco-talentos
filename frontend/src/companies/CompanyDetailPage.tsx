@@ -8,6 +8,7 @@ import { ChevronLeftIcon } from '../ui/icons'
 import { LoadingState } from '../ui/StateMessage'
 import { companyMessages, getCompany, setCompanyStatus } from './api'
 import { sectorName } from './catalogs'
+import { CompanyAccountsSection } from './CompanyAccountsSection'
 import { CompanyLayout } from './CompanyLayout'
 
 const dateFormat = new Intl.DateTimeFormat('es-MX', { dateStyle: 'long' })
@@ -67,6 +68,7 @@ function CompanyDetail({ id }: { id: string }) {
                 {mutation.pending ? 'Guardando estado…' : data.is_active ? 'Inactivar empresa' : 'Activar empresa'}
               </button>
             </div>
+            <CompanyAccountsSection companyId={data.id} active={data.is_active} />
           </>
         )}
       <ConfirmDialog open={confirming} origin={statusButton}

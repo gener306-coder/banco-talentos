@@ -150,13 +150,15 @@ it('normalizes account emails and rejects duplicates across roles including inac
     $existing = User::factory()->role($role)->inactive()->create(['email' => 'duplicate@example.test']);
     $original = $existing->fresh()->getAttributes();
     $this->loginWithCookies(User::factory()->role(UserRole::ADMIN)->create())->assertOk();
+    // Una cuenta COMPANY trae su empresa y la cuenta SECRETARY que la registró (HU-S4-03).
+    $users = User::count();
 
     $this->browserRequest('POST', '/api/institution-accounts', accountPayload([
         'institution_id' => $institution->id,
         'email' => '  DUPLICATE@EXAMPLE.TEST  ',
     ]))->assertUnprocessable()->assertJsonValidationErrors('email');
 
-    $this->assertDatabaseCount('users', 2);
+    $this->assertDatabaseCount('users', $users);
     $this->assertDatabaseCount('institution_password_setup_tokens', 0);
     expect($existing->fresh()->getAttributes())->toBe($original);
 
@@ -202,13 +204,14 @@ it('rejects anonymous account creation with valid CSRF', function () {
 it('rejects account creation by every non-admin role even with forged admin claims', function (UserRole $role) {
     $institution = Institution::factory()->create();
     $this->loginWithCookies(User::factory()->role($role)->create())->assertOk();
+    $users = User::count();
 
     $this->browserRequest('POST', '/api/institution-accounts?role=ADMIN', accountPayload([
         'institution_id' => $institution->id,
         'role' => 'ADMIN',
     ]), headers: ['X-Role' => 'ADMIN'])->assertForbidden();
 
-    $this->assertDatabaseCount('users', 1);
+    $this->assertDatabaseCount('users', $users);
     $this->assertDatabaseCount('institution_password_setup_tokens', 0);
 })->with('institution account unauthorized roles');
 
@@ -251,6 +254,7 @@ it('returns institutional identity without exposing password hashes or setup cre
             'email' => $user->email,
             'role' => 'INSTITUTION',
             'institution' => ['id' => $institution->id, 'name' => $institution->name],
+            'company' => null,
         ]]);
         expect($response->getContent())->not->toContain($user->password, 'Password123!');
     }

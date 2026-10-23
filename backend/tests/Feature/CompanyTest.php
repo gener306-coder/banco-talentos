@@ -285,6 +285,8 @@ it('only lets SECRETARY accounts manage companies (CA-01)', function (UserRole $
     $user = $role === UserRole::INSTITUTION
         ? User::factory()->forInstitution(Institution::factory()->create())->create()
         : User::factory()->role($role)->create();
+    // Una cuenta COMPANY trae su propia empresa.
+    $companies = Company::count();
     $this->loginWithCookies($user)->assertOk();
 
     $this->browserRequest('GET', '/api/companies')->assertForbidden();
@@ -293,7 +295,7 @@ it('only lets SECRETARY accounts manage companies (CA-01)', function (UserRole $
     $this->browserRequest('PUT', '/api/companies/'.$company->id, companyPayload())->assertForbidden();
     $this->browserRequest('PATCH', '/api/companies/'.$company->id.'/status', ['is_active' => false])->assertForbidden();
 
-    expect(Company::count())->toBe(1)->and($company->fresh()->is_active)->toBeTrue();
+    expect(Company::count())->toBe($companies)->and($company->fresh()->is_active)->toBeTrue();
 })->with([UserRole::ADMIN, UserRole::INSTITUTION, UserRole::COMPANY]);
 
 it('rejects anonymous requests and requires CSRF to write', function () {

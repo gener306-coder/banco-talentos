@@ -17,6 +17,8 @@ export interface User {
   email: string
   role: Role
   institution: { id: number; name: string } | null
+  /** Empresa vinculada a una cuenta COMPANY (HU-S4-03 CA-05): solo su nombre visible. */
+  company: { id: number; name: string } | null
 }
 
 function sessionUser(data: unknown): User {
@@ -39,16 +41,20 @@ function sessionUser(data: unknown): User {
     throw new ApiError(502)
   }
 
-  let institution: User['institution'] = null
-  if ('institution' in user && user.institution !== null && user.institution !== undefined) {
-    const linked = user.institution
+  const organization = (key: 'institution' | 'company'): { id: number; name: string } | null => {
+    if (!(key in user)) return null
+    const linked: unknown = (user as Record<string, unknown>)[key]
+    if (linked === null || linked === undefined) return null
     if (typeof linked !== 'object' || !('id' in linked) || typeof linked.id !== 'number' ||
         !Number.isSafeInteger(linked.id) || linked.id <= 0 ||
         !('name' in linked) || typeof linked.name !== 'string') throw new ApiError(502)
-    institution = { id: linked.id, name: linked.name }
+    return { id: linked.id, name: linked.name }
   }
 
-  return { id: user.id, name: user.name, email: user.email, role: user.role as Role, institution }
+  return {
+    id: user.id, name: user.name, email: user.email, role: user.role as Role,
+    institution: organization('institution'), company: organization('company'),
+  }
 }
 
 export async function currentUser(signal?: AbortSignal): Promise<User> {

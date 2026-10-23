@@ -61,7 +61,7 @@ class AuthController extends Controller
 
     private function userResponse(User $user): JsonResponse
     {
-        $user->loadMissing('institution');
+        $user->loadMissing(['institution', 'company']);
 
         $data = [
             'id' => $user->id,
@@ -69,6 +69,11 @@ class AuthController extends Controller
             'email' => $user->email,
             'role' => $user->role->value,
             'institution' => null,
+            // Empresa vinculada (HU-S4-03 CA-05): solo su nombre visible, sin datos internos de validación.
+            'company' => $user->company ? [
+                'id' => $user->company->id,
+                'name' => $user->company->trade_name ?? $user->company->legal_name,
+            ] : null,
         ];
 
         if ($user->institution) {

@@ -1,6 +1,7 @@
 <?php
 
 use App\Enums\UserRole;
+use App\Models\Company;
 use App\Models\Institution;
 use App\Models\User;
 use App\Notifications\SetInitialPassword;
@@ -152,8 +153,9 @@ it('lists SECRETARY accounts with name, email, status and creation date only (CA
     $viewer = signInAs($role, $this);
     User::factory()->role(UserRole::SECRETARY)->create(['name' => 'Beatriz Pendiente', 'email' => 'b@economia.test', 'password_setup_required' => true]);
     User::factory()->role(UserRole::SECRETARY)->create(['name' => 'Carlos Inactivo', 'email' => 'c@economia.test', 'is_active' => false]);
-    User::factory()->role(UserRole::SECRETARY)->create(['name' => 'Ana Activa', 'email' => 'a@economia.test']);
-    User::factory()->role(UserRole::COMPANY)->create(['name' => 'Empresa']);
+    $ana = User::factory()->role(UserRole::SECRETARY)->create(['name' => 'Ana Activa', 'email' => 'a@economia.test']);
+    // La empresa la registró Ana: la cuenta COMPANY no añade otra cuenta de la Secretaría al listado.
+    User::factory()->forCompany(Company::factory()->create(['registered_by' => $ana->id]))->create(['name' => 'Empresa']);
     User::factory()->forInstitution(Institution::factory()->create())->create(['name' => 'Institución']);
 
     $response = $this->browserRequest('GET', '/api/secretary-accounts')
@@ -246,7 +248,7 @@ it('forbids SECRETARY accounts management to other roles and anonymous visitors'
     $this->browserRequest('GET', '/api/secretary-accounts')->assertForbidden();
     $this->browserRequest('POST', '/api/secretary-accounts', secretaryPayload())->assertForbidden();
     $this->browserRequest('POST', '/api/secretary-accounts/resend-setup', ['email' => 'x@economia.test'])->assertForbidden();
-    expect(User::where('role', UserRole::SECRETARY)->exists())->toBeFalse();
+    expect(User::where('email', secretaryPayload()['email'])->exists())->toBeFalse();
 })->with([UserRole::INSTITUTION, UserRole::COMPANY]);
 
 it('rejects anonymous requests and requires CSRF to create an account', function () {

@@ -7,11 +7,12 @@ use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 
-class ResendSecretarySetupLinkRequest extends FormRequest
+/** Reenvío del enlace de configuración de una cuenta SECRETARY (HU-S4-01) o COMPANY (HU-S4-03). */
+class ResendSetupLinkRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        // El rol (ADMIN o SECRETARY) lo garantiza el middleware de la ruta.
+        // El rol de quien reenvía el enlace lo garantiza el middleware de la ruta.
         return true;
     }
 

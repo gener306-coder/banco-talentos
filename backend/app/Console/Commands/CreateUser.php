@@ -27,7 +27,8 @@ class CreateUser extends Command
 
         $name = $this->ask('Nombre');
         $email = $this->ask('Correo electrónico');
-        $role = $this->ask('Rol (ADMIN, INSTITUTION, COMPANY, SECRETARY)');
+        // COMPANY no: una cuenta de empresa pertenece a una empresa y se crea desde su detalle (HU-S4-03).
+        $role = $this->ask('Rol (ADMIN, INSTITUTION, SECRETARY)');
         $active = $this->ask('¿La cuenta estará activa? (sí/no)');
         $password = $this->secret('Contraseña (mínimo 12 caracteres)', false);
         $confirmation = $this->secret('Confirma la contraseña', false);
@@ -43,7 +44,7 @@ class CreateUser extends Command
         $validator = Validator::make($data, [
             'name' => ['required', 'string', 'max:120'],
             'email' => ['required', 'string', 'email', 'max:254', 'unique:users,email'],
-            'role' => ['required', Rule::enum(UserRole::class)],
+            'role' => ['required', Rule::enum(UserRole::class)->except(UserRole::COMPANY)],
             'active_answer' => ['required', Rule::in(['sí', 'si', 'no'])],
             'password' => [
                 'bail', 'required', 'string', 'min:12', 'max:72', 'confirmed',
@@ -55,7 +56,7 @@ class CreateUser extends Command
             ],
         ], [
             'required' => 'El campo :attribute es obligatorio.',
-            'role.enum' => 'Debes elegir uno de los cuatro roles indicados.',
+            'role.enum' => 'Debes elegir uno de los tres roles indicados. Las cuentas de empresa se crean desde el detalle de la empresa.',
             'active_answer.in' => 'Debes indicar sí o no para el estado de la cuenta.',
             'password.confirmed' => 'Las contraseñas no coinciden.',
             'password.min' => 'La contraseña debe tener al menos 12 caracteres.',

@@ -1,3 +1,6 @@
+import { createSetupAccount, resendSetupLink, setupAccount } from '../accounts/api'
+import type { CreatedSetupAccount, SetupAccount, SetupAccountInput } from '../accounts/api'
+import type { DeliveryMethod, SetupResult } from '../institutions/api'
 import { ApiError, request } from '../lib/http'
 import type { FailureMessages } from '../lib/useApiRequest'
 import { isStateCode } from '../students/catalogs'
@@ -132,4 +135,20 @@ export async function updateCompany(id: string | number, input: CompanyInput): P
 export async function setCompanyStatus(id: string | number, active: boolean): Promise<Company> {
   await request('/sanctum/csrf-cookie')
   return detail(await request(`${companyPath(id)}/status`, { method: 'PATCH', body: JSON.stringify({ is_active: active }) }))
+}
+
+/** Cuentas de acceso de la empresa (HU-S4-03 CA-06). */
+export async function listCompanyAccounts(id: string | number, signal?: AbortSignal): Promise<SetupAccount[]> {
+  const response = await request(`${companyPath(id)}/accounts`, { signal })
+  if (typeof response !== 'object' || response === null || !('data' in response) || !Array.isArray(response.data)) throw new ApiError(502)
+  return response.data.map(setupAccount)
+}
+
+/** El rol COMPANY y la empresa los asigna el servidor a partir de la ruta (CA-01). */
+export function createCompanyAccount(id: string | number, input: SetupAccountInput): Promise<CreatedSetupAccount> {
+  return createSetupAccount(`${companyPath(id)}/accounts`, input)
+}
+
+export function resendCompanyAccountSetup(id: string | number, input: { email: string; delivery_method: DeliveryMethod }): Promise<SetupResult> {
+  return resendSetupLink(`${companyPath(id)}/accounts/resend-setup`, input)
 }

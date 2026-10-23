@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Enums\UserRole;
 use App\Exceptions\AccountAccessDenied;
 use App\Http\Requests\SetInitialPasswordRequest;
+use App\Models\Company;
 use App\Models\Institution;
 use App\Models\User;
 use Illuminate\Http\Response;
@@ -35,6 +36,12 @@ class InitialPasswordController extends Controller
                     throw new AccountAccessDenied('INSTITUTION_INACTIVE', 403);
                 }
             }
+            if ($user->role === UserRole::COMPANY) {
+                $company = Company::query()->lockForUpdate()->find($user->company_id);
+                if (! $company || ! $company->is_active) {
+                    throw new AccountAccessDenied('COMPANY_INACTIVE', 403);
+                }
+            }
             if (! $user->is_active) {
                 throw new AccountAccessDenied('ACCOUNT_INACTIVE', 403);
             }
@@ -56,13 +63,15 @@ class InitialPasswordController extends Controller
 
     /**
      * Cuentas que se dan de alta con enlace de configuración: INSTITUTION vinculada a su institución
-     * (HU-S1-03) y SECRETARY sin organización (HU-S4-01). Las demás nunca reciben ese enlace.
+     * (HU-S1-03), SECRETARY sin organización (HU-S4-01) y COMPANY vinculada a su empresa (HU-S4-03).
+     * ADMIN nunca recibe ese enlace.
      */
     public static function issuable(User $user): bool
     {
         return match ($user->role) {
-            UserRole::INSTITUTION => $user->institution_id !== null,
-            UserRole::SECRETARY => $user->institution_id === null,
+            UserRole::INSTITUTION => $user->institution_id !== null && $user->company_id === null,
+            UserRole::SECRETARY => $user->institution_id === null && $user->company_id === null,
+            UserRole::COMPANY => $user->company_id !== null && $user->institution_id === null,
             default => false,
         };
     }
