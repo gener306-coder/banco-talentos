@@ -14,6 +14,7 @@ use App\Http\Controllers\SkillController;
 use App\Http\Controllers\StudentController;
 use App\Http\Controllers\StudentCvController;
 use App\Http\Controllers\StudentSocialSecurityController;
+use App\Http\Controllers\TalentController;
 use App\Models\Institution;
 use Illuminate\Support\Facades\Route;
 
@@ -111,3 +112,13 @@ Route::get('/skills', [SkillController::class, 'index'])
 Route::get('/catalogs/states/{state}/municipalities', [MunicipalityController::class, 'index'])
     ->middleware(['auth:sanctum', 'active', 'role:'.implode(',', UserRole::values())])
     ->where('state', '0[1-9]|[12][0-9]|3[0-2]');
+
+// Buscador de talento anónimo para empresas (HU-S4-05): solo COMPANY con empresa activa (la empresa inactiva la
+// rechaza `active` con COMPANY_INACTIVE). El alumno se identifica por su UUID público; otro formato responde 404.
+Route::middleware(['auth:sanctum', 'active', 'role:'.UserRole::COMPANY->value, 'throttle:talent-search'])
+    ->prefix('talent')
+    ->where(['publicId' => '[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'])
+    ->group(function (): void {
+        Route::get('/', [TalentController::class, 'index']);
+        Route::get('{publicId}', [TalentController::class, 'show']);
+    });

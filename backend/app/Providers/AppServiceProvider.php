@@ -47,6 +47,10 @@ class AppServiceProvider extends ServiceProvider
         RateLimiter::for('institution-setup-resend', fn (Request $request) => Limit::perMinute(10)->by('setup-resend-admin:'.$request->user()->id)
         );
 
+        // HU-S4-05 CA-09: límite por cuenta para impedir la extracción masiva de perfiles.
+        RateLimiter::for('talent-search', fn (Request $request) => Limit::perMinute(60)->by('talent-search:'.$request->user()->id)
+        );
+
         RateLimiter::for('company-setup-resend', fn (Request $request) => Limit::perMinute(10)->by('company-setup-resend:'.$request->user()->id)
         );
 

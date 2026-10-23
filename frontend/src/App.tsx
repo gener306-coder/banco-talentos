@@ -18,6 +18,8 @@ import { CompanyDetailPage } from './companies/CompanyDetailPage'
 import { CompanyEditPage } from './companies/CompanyEditPage'
 import { SECRETARY_ACCOUNT_MANAGERS } from './secretary/api'
 import { SecretaryAccountsPage } from './secretary/SecretaryAccountsPage'
+import { TalentProfilePage } from './talent/TalentProfilePage'
+import { TalentSearchPage } from './talent/TalentSearchPage'
 import { StudentCvPage } from './students/StudentCvPage'
 import { StudentDetailPage } from './students/StudentDetailPage'
 import { StudentsPage } from './students/StudentsPage'
@@ -67,6 +69,10 @@ function AuthRoutes() {
         <Route path="/companies/new" element={<CompanyCreatePage />} />
         <Route path="/companies/:id" element={<CompanyDetailPage />} />
         <Route path="/companies/:id/edit" element={<CompanyEditPage />} />
+      </Route>
+      <Route element={<ProtectedRoute role="COMPANY" deniedMessage="No tienes permiso para buscar talento." />}>
+        <Route path="/talent" element={<TalentSearchPage />} />
+        <Route path="/talent/:publicId" element={<TalentProfilePage />} />
       </Route>
       <Route element={<ProtectedRoute role="INSTITUTION" deniedMessage="No tienes permiso para acceder al padrón de alumnos." />}>
         <Route path="/students" element={<StudentsPage />} />

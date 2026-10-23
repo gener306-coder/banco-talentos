@@ -23,16 +23,32 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const busy = useRef(false)
   const generation = useRef(0)
   const controller = useRef<AbortController | null>(null)
+  // Recuperación en curso y cancelación diferida del desmontaje (ver cancelOnUnmount).
+  const inflight = useRef<Promise<User> | null>(null)
+  const scheduledAbort = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const restore = useCallback(async () => {
     if (busy.current) return
     const version = ++generation.current
-    controller.current?.abort()
-    controller.current = new AbortController()
+    if (scheduledAbort.current) {
+      clearTimeout(scheduledAbort.current)
+      scheduledAbort.current = null
+    }
+    // Una sola consulta de /api/me a la vez: si ya hay una en curso, se reutiliza. Una segunda petición podría
+    // llegar después de que la primera cerrara la sesión de una cuenta bloqueada y perder el motivo
+    // (INSTITUTION_INACTIVE, COMPANY_INACTIVE…) al recibir un 401 sin código.
+    if (!inflight.current) {
+      controller.current = new AbortController()
+      const request = currentUser(controller.current.signal)
+      inflight.current = request
+      void request.catch(() => undefined).finally(() => {
+        if (inflight.current === request) inflight.current = null
+      })
+    }
     setSession({ status: 'loading', user: null, message: null })
 
     try {
-      const user = await currentUser(controller.current.signal)
+      const user = await inflight.current
       if (version === generation.current) setSession({ status: 'ready', user, message: null })
     } catch (error) {
       if (version !== generation.current) return
@@ -51,6 +67,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     controller.current?.abort()
   }, [])
 
+  /**
+   * Al desmontar, la consulta se cancela en el siguiente ciclo y no de inmediato: el doble montaje de StrictMode
+   * vuelve a llamar a restore() antes, que reutiliza la consulta en curso en lugar de lanzar otra.
+   */
+  const cancelOnUnmount = useCallback(() => {
+    ++generation.current
+    scheduledAbort.current = setTimeout(() => {
+      scheduledAbort.current = null
+      controller.current?.abort()
+    }, 0)
+  }, [])
+
   const expireSession = useCallback((error?: ApiError) => {
     cancelPending()
     busy.current = false
@@ -60,8 +88,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     void restore()
-    return cancelPending
-  }, [restore, cancelPending])
+    return cancelOnUnmount
+  }, [restore, cancelOnUnmount])
 
   async function mutate(action: () => Promise<User | void>, signingOut: boolean) {
     if (busy.current) return

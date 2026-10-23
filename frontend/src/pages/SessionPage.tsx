@@ -29,6 +29,9 @@ export function SessionPage() {
           <Link to="/secretary-accounts">Cuentas de la Secretaría</Link>
         </nav>
       )}
+      {user.role === 'COMPANY' && user.company && (
+        <nav aria-label="Empresa"><Link to="/talent">Buscar talento</Link></nav>
+      )}
       {user.role === 'INSTITUTION' && user.institution && (
         <nav aria-label="Institución"><Link to="/students">Alumnos</Link></nav>
       )}

@@ -133,7 +133,8 @@ Por decisión del responsable del proyecto con el cliente (21 de octubre de 2026
 
 ## HU-S4-05 — Buscador de talento anónimo (vista exploratoria)
 
-**Estado:** Pendiente  
+**Estado:** Completada (22 de octubre de 2026)  
+**Diseño técnico y verificación:** [HU-S4-05.md](HU-S4-05.md)  
 **Story Points:** 8  
 **Rol:** `COMPANY`
 

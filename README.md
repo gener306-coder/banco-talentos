@@ -1,6 +1,6 @@
 # Banco de Talentos – Educación Dual
 
-Monolito modular. Sprint vigente: [Sprint 4](docs/sprint-4.md); historias del [Sprint 1](docs/sprint-1.md) y del Sprint 2:
+Monolito modular. Sprint vigente: [Sprint 4](docs/sprint-4.md) (completo); historias del [Sprint 1](docs/sprint-1.md) y del Sprint 2:
 
 - **HU-S1-01 — Autenticación y control de acceso** ([detalle](docs/HU-S1-01.md)).
 - **HU-S1-02 — Gestión de instituciones**: ADMIN lista, registra, consulta, edita y activa o inactiva instituciones ([detalle](docs/HU-S1-02.md)).
@@ -67,7 +67,7 @@ La SPA consulta `GET /api/me` al cargar. Para iniciar sesión obtiene primero `G
 
 La cookie de sesión es `HttpOnly`, de dominio local y `SameSite=Lax`. El cliente envía el token CSRF mediante `X-XSRF-TOKEN`. El identificador de sesión se regenera al autenticar; el cierre de sesión impide reutilizar la cookie anterior. Las sesiones locales expiran tras 120 minutos de inactividad. Las opciones de cookies y duración están en `backend/.env.example`.
 
-Los roles son `ADMIN`, `INSTITUTION`, `COMPANY` y `SECRETARY`. Todos requieren una cuenta activa. Las cuentas `INSTITUTION` requieren además que su institución esté activa. ADMIN dispone de la gestión de instituciones y de cuentas institucionales; ADMIN y `SECRETARY` gestionan las cuentas de la Secretaría; `SECRETARY` gestiona las empresas; `INSTITUTION` ve su institución vinculada; `COMPANY` ve su empresa vinculada. El acceso se restringe tanto en las rutas React como en la API con Sanctum y el middleware `role`.
+Los roles son `ADMIN`, `INSTITUTION`, `COMPANY` y `SECRETARY`. Todos requieren una cuenta activa. Las cuentas `INSTITUTION` requieren además que su institución esté activa. ADMIN dispone de la gestión de instituciones y de cuentas institucionales; ADMIN y `SECRETARY` gestionan las cuentas de la Secretaría; `SECRETARY` gestiona las empresas; `INSTITUTION` ve su institución vinculada; `COMPANY` ve su empresa vinculada y busca talento anónimo. El acceso se restringe tanto en las rutas React como en la API con Sanctum y el middleware `role`.
 
 Después de iniciar sesión como ADMIN, abre **Instituciones**. El listado incluye instituciones activas e inactivas. El registro y la edición solicitan nombre, CCT y correo de contacto; el detalle ofrece la acción para activar o inactivar. El CCT es único incluso entre instituciones inactivas y no existe eliminación. Consulta el contrato y la matriz de pruebas en [docs/HU-S1-02.md](docs/HU-S1-02.md).
 
@@ -102,6 +102,17 @@ ADMIN y `SECRETARY` abren **Cuentas de la Secretaría** desde el inicio (`/secre
 No se pide domicilio ni documentos. El servidor ubica a la empresa en la cabecera de su municipio para la futura búsqueda por distancia y registra qué cuenta la dio de alta. El detalle permite editarla e inactivarla, previa confirmación, o reactivarla; no existe eliminación. Contrato y cobertura en [docs/HU-S4-02.md](docs/HU-S4-02.md).
 
 En el mismo detalle, **Cuentas de la empresa** lista las cuentas `COMPANY` con su estado. Con la empresa activa permite crear nuevas, indicando nombre y correo, y reenviar el enlace de las pendientes. Funcionan igual que las cuentas de la Secretaría: el servidor asigna el rol y la empresa, y la titular establece su contraseña con el enlace de un solo uso. Tras iniciar sesión, la cuenta ve el nombre de su empresa. Si la Secretaría inactiva la empresa, sus cuentas reciben `401` con código `COMPANY_INACTIVE` al iniciar sesión, y las sesiones abiertas se cierran en la siguiente petición. La base de datos impide cuentas `COMPANY` sin empresa, y `auth:create-user` ya no crea cuentas de empresa. Contrato y cobertura en [docs/HU-S4-03.md](docs/HU-S4-03.md).
+
+## Buscador de talento
+
+Una cuenta `COMPANY` de una empresa activa abre **Buscar talento** desde el inicio (`/talent`). El panel de filtros combina:
+- habilidades, todas requeridas;
+- idioma con nivel mínimo;
+- carrera, periodo mínimo y certificación revisada;
+- disponibilidad dual y para reubicarse;
+- estado y distancia máxima (10, 25, 50, 100 o 200 km), medida desde el municipio de la empresa o desde otro municipio del catálogo.
+
+No hay mapa: los resultados son tarjetas anónimas ordenadas por distancia, de 20 en 20. Cada tarjeta muestra titular, carrera, periodo, institución, ubicación aproximada, habilidades, idiomas y disponibilidad. **Ver perfil** (`/talent/:public_id`) muestra el CV público completo, sin botón de contacto. Las empresas nunca reciben la identidad del alumno, el seguro facultativo, los enlaces ni las credenciales, y lo identifican solo por un UUID aleatorio. Solo aparecen alumnos activos de instituciones activas con su expediente capturado. Contrato, nota de privacidad y cobertura en [docs/HU-S4-05.md](docs/HU-S4-05.md).
 
 ## Alumnos
 

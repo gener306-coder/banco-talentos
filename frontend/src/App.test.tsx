@@ -1,4 +1,5 @@
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { StrictMode } from 'react'
 import { MemoryRouter, useLocation } from 'react-router'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import App from './App'
@@ -229,6 +230,15 @@ describe('acceso y sesión', () => {
     renderApp()
     expect(await screen.findByRole('heading', { name: 'Acceso denegado' })).toBeInTheDocument()
     expect(screen.queryByText(user.email)).not.toBeInTheDocument()
+  })
+
+  it('consulta la sesión una sola vez en el doble montaje de StrictMode y conserva el motivo del bloqueo', async () => {
+    // Una segunda consulta llegaría con la sesión ya cerrada por la primera y perdería COMPANY_INACTIVE.
+    fetchMock.mockResolvedValueOnce(Response.json({ code: 'COMPANY_INACTIVE' }, { status: 401 }))
+      .mockResolvedValueOnce(new Response(null, { status: 401 }))
+    render(<StrictMode><MemoryRouter initialEntries={['/']}><App /><Location /></MemoryRouter></StrictMode>)
+    expect(await screen.findByRole('alert')).toHaveTextContent('La empresa está inactiva. No puedes acceder al sistema.')
+    expect(fetchMock.mock.calls.filter(([path]) => path === '/api/me')).toHaveLength(1)
   })
 
   it('ignora una recuperación tardía de un montaje anterior tras cerrar sesión', async () => {
