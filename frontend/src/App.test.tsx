@@ -64,6 +64,10 @@ describe('acceso y sesión', () => {
     expect(screen.getAllByRole('button')).toHaveLength(1)
     if (role === 'ADMIN') {
       expect(screen.getByRole('link', { name: 'Instituciones' })).toHaveAttribute('href', '/institutions')
+    }
+    // HU-S4-01 CA-08: ADMIN y SECRETARY gestionan las cuentas de la Secretaría.
+    if (role === 'ADMIN' || role === 'SECRETARY') {
+      expect(screen.getByRole('link', { name: 'Cuentas de la Secretaría' })).toHaveAttribute('href', '/secretary-accounts')
     } else {
       expect(screen.queryByRole('link')).not.toBeInTheDocument()
     }

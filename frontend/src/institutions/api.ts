@@ -86,7 +86,7 @@ export interface InstitutionAccountInput {
 
 export type SetupDelivery = 'sent' | 'pending' | 'manual'
 
-function setupDelivery(response: unknown, required = false): SetupDelivery | undefined {
+export function setupDelivery(response: unknown, required = false): SetupDelivery | undefined {
   if (typeof response !== 'object' || response === null) throw new ApiError(502)
   const value = 'setup_delivery' in response ? response.setup_delivery : undefined
   if (value === undefined && !required) return undefined
@@ -96,7 +96,7 @@ function setupDelivery(response: unknown, required = false): SetupDelivery | und
 
 // Solo la entrega manual (HU-S2-01) conserva el enlace, y únicamente si es un enlace de configuración válido.
 // Con correo se descarta siempre cualquier setup_url que llegara en la respuesta.
-function manualSetupLink(response: unknown, delivery: SetupDelivery | undefined): string | undefined {
+export function manualSetupLink(response: unknown, delivery: SetupDelivery | undefined): string | undefined {
   if (delivery !== 'manual') return undefined
   const value = typeof response === 'object' && response !== null && 'setup_url' in response ? response.setup_url : undefined
   if (typeof value !== 'string') throw new ApiError(502)

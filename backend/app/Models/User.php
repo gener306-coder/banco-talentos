@@ -42,6 +42,12 @@ class User extends Authenticatable
         return $this->belongsTo(Institution::class);
     }
 
+    /** Usuario que creó la cuenta (HU-S4-01 CA-06); fuera de $fillable, lo asigna el servidor. */
+    public function creator(): BelongsTo
+    {
+        return $this->belongsTo(self::class, 'created_by');
+    }
+
     protected function email(): Attribute
     {
         return Attribute::make(set: fn (string $value): string => Str::lower(trim($value)));

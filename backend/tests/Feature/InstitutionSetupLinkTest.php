@@ -208,7 +208,7 @@ it('renews the link for manual delivery without sending mail and invalidates the
 
         Notification::assertNothingSent();
         Log::shouldHaveReceived('notice')->once()->withArgs(fn (string $message, array $context): bool => $message === 'Enlace de configuración inicial generado para entrega manual.'
-            && array_keys($context) === ['admin_id', 'user_id']
+            && array_keys($context) === ['issued_by', 'user_id']
             && $context['user_id'] === $this->pendingUser->id);
     } finally {
         $this->app->detectEnvironment(fn () => 'testing');

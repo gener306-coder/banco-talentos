@@ -25,16 +25,16 @@ class InitialPasswordLink
     /**
      * Campos de entrega para la respuesta HTTP del alta o del reenvío.
      *
-     * Manual (HU-S2-01): no se programa ningún correo y el enlace se devuelve al ADMIN
-     * para que lo comparta; se audita quién lo pidió, sin registrar el token ni la URL.
+     * Manual (HU-S2-01): no se programa ningún correo y el enlace se devuelve a quien lo pidió (ADMIN o
+     * SECRETARY) para que lo comparta; se audita quién fue, sin registrar el token ni la URL.
      * Email: el correo se envía después del commit y el enlace nunca se devuelve, en ningún
      * entorno (en Pest llega al mailer array y en E2E a Mailpit).
      */
-    public function deliver(User $user, string $setupUrl, SetupDeliveryMethod $method, int $adminId): array
+    public function deliver(User $user, string $setupUrl, SetupDeliveryMethod $method, int $issuedBy): array
     {
         if ($method === SetupDeliveryMethod::MANUAL) {
             Log::notice('Enlace de configuración inicial generado para entrega manual.', [
-                'admin_id' => $adminId,
+                'issued_by' => $issuedBy,
                 'user_id' => $user->id,
             ]);
 

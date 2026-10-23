@@ -47,6 +47,9 @@ class AppServiceProvider extends ServiceProvider
         RateLimiter::for('institution-setup-resend', fn (Request $request) => Limit::perMinute(10)->by('setup-resend-admin:'.$request->user()->id)
         );
 
+        RateLimiter::for('secretary-setup-resend', fn (Request $request) => Limit::perMinute(10)->by('secretary-setup-resend:'.$request->user()->id)
+        );
+
         RateLimiter::for('login', function (Request $request): array {
             $email = $request->input('email');
             $email = is_string($email) ? Str::lower(trim($email)) : '';

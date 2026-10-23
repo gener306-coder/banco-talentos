@@ -29,7 +29,8 @@ Por decisión del responsable del proyecto con el cliente (21 de octubre de 2026
 
 ## HU-S4-01 — Cuentas de la Secretaría de Economía
 
-**Estado:** Pendiente  
+**Estado:** Completada (22 de octubre de 2026)  
+**Diseño técnico y verificación:** [HU-S4-01.md](HU-S4-01.md)  
 **Story Points:** 3  
 **Rol:** `ADMIN`, `SECRETARY`
 

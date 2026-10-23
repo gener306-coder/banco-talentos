@@ -23,7 +23,7 @@ class InstitutionAccountController extends Controller
         unset($data['delivery_method']);
 
         try {
-            [$user, $setupUrl] = DB::transaction(function () use ($data, $links): array {
+            [$user, $setupUrl] = DB::transaction(function () use ($data, $links, $request): array {
                 // Revalidar bajo bloqueo cubre una inactivación posterior al FormRequest.
                 $institution = Institution::query()->lockForUpdate()->find($data['institution_id']);
                 if (! $institution || ! $institution->is_active) {
@@ -40,6 +40,7 @@ class InstitutionAccountController extends Controller
                     'password' => Str::random(64),
                 ]);
                 $user->password_setup_required = true;
+                $user->created_by = $request->user()->id;
                 $user->save();
                 $user->setRelation('institution', $institution);
 

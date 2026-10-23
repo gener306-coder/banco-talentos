@@ -67,7 +67,7 @@ La SPA consulta `GET /api/me` al cargar. Para iniciar sesión obtiene primero `G
 
 La cookie de sesión es `HttpOnly`, de dominio local y `SameSite=Lax`. El cliente envía el token CSRF mediante `X-XSRF-TOKEN`. El identificador de sesión se regenera al autenticar; el cierre de sesión impide reutilizar la cookie anterior. Las sesiones locales expiran tras 120 minutos de inactividad. Las opciones de cookies y duración están en `backend/.env.example`.
 
-Los roles son `ADMIN`, `INSTITUTION`, `COMPANY` y `SECRETARY`. Todos requieren una cuenta activa. Las cuentas `INSTITUTION` requieren además que su institución esté activa. ADMIN dispone de la gestión de instituciones y de cuentas institucionales; `INSTITUTION` ve su institución vinculada; los demás roles conservan identidad y logout. El acceso se restringe tanto en las rutas React como en la API con Sanctum y `role:ADMIN`.
+Los roles son `ADMIN`, `INSTITUTION`, `COMPANY` y `SECRETARY`. Todos requieren una cuenta activa. Las cuentas `INSTITUTION` requieren además que su institución esté activa. ADMIN dispone de la gestión de instituciones y de cuentas institucionales; ADMIN y `SECRETARY` gestionan las cuentas de la Secretaría; `INSTITUTION` ve su institución vinculada; `COMPANY` conserva identidad y logout. El acceso se restringe tanto en las rutas React como en la API con Sanctum y el middleware `role`.
 
 Después de iniciar sesión como ADMIN, abre **Instituciones**. El listado incluye instituciones activas e inactivas. El registro y la edición solicitan nombre, CCT y correo de contacto; el detalle ofrece la acción para activar o inactivar. El CCT es único incluso entre instituciones inactivas y no existe eliminación. Consulta el contrato y la matriz de pruebas en [docs/HU-S1-02.md](docs/HU-S1-02.md).
 
@@ -88,6 +88,10 @@ En el mismo detalle, **Iniciar restablecimiento de contraseña** solicita solo e
 Las credenciales incorrectas y las cuentas inactivas producen el mismo mensaje. Con credenciales correctas, una institución inactiva responde `401` con código `INSTITUTION_INACTIVE` y una cuenta pendiente de contraseña inicial con `PASSWORD_SETUP_REQUIRED`. La API devuelve errores JSON controlados: `401` sin sesión válida, `403` por autorización, `419` por CSRF, `422` por validación y `429` al superar los límites de login, configuración, reenvío o restablecimiento. Una cuenta desactivada durante la sesión pierde acceso en su siguiente petición protegida. El frontend trata errores de red sin afirmar que un logout fallido haya cerrado la sesión.
 
 Consulta [backend/README.md](backend/README.md) para detalles del contrato HTTP y del alta local. La matriz de aceptación, los resultados y el inventario de cambios están en [docs/HU-S1-01.md](docs/HU-S1-01.md).
+
+## Cuentas de la Secretaría
+
+ADMIN y `SECRETARY` abren **Cuentas de la Secretaría** desde el inicio (`/secretary-accounts`). El listado muestra el nombre, el correo, el estado (activa, pendiente de su primera contraseña o inactiva) y la fecha de alta. **Nueva cuenta de la Secretaría** pide solo nombre y correo: el servidor asigna el rol `SECRETARY` y registra quién creó la cuenta (`created_by`). La persona titular establece su contraseña con el mismo enlace de un solo uso y 60 minutos de las cuentas institucionales, enviado por correo o generado para compartirlo. Mientras siga pendiente, **Reenviar enlace** lo sustituye; hay que esperar un minuto entre dos reenvíos de la misma cuenta. No hay edición ni baja de estas cuentas. `SECRETARY` no gestiona instituciones ni sus cuentas. Contrato y cobertura en [docs/HU-S4-01.md](docs/HU-S4-01.md).
 
 ## Alumnos
 

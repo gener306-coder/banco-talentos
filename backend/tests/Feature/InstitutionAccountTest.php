@@ -328,7 +328,7 @@ it('returns the one-time setup link for manual delivery without sending any mail
         Notification::assertNothingSent();
         Log::shouldHaveReceived('notice')->once()->withArgs(function (string $message, array $context) use ($admin, $user, $query): bool {
             return $message === 'Enlace de configuración inicial generado para entrega manual.'
-                && $context === ['admin_id' => $admin->id, 'user_id' => $user->id]
+                && $context === ['issued_by' => $admin->id, 'user_id' => $user->id]
                 && ! str_contains(json_encode($context), $query['token']);
         });
     } finally {

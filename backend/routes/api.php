@@ -7,6 +7,7 @@ use App\Http\Controllers\InstitutionController;
 use App\Http\Controllers\InstitutionPasswordResetController;
 use App\Http\Controllers\InstitutionSetupLinkController;
 use App\Http\Controllers\MunicipalityController;
+use App\Http\Controllers\SecretaryAccountController;
 use App\Http\Controllers\SkillController;
 use App\Http\Controllers\StudentController;
 use App\Http\Controllers\StudentCvController;
@@ -44,6 +45,15 @@ Route::post('/institution-accounts/resend-setup', [InstitutionSetupLinkControlle
 
 Route::post('/institution-accounts/password-reset/start', [InstitutionPasswordResetController::class, 'start'])
     ->middleware(['auth:sanctum', 'active', 'role:'.UserRole::ADMIN->value, 'throttle:institution-password-reset']);
+
+// Cuentas de la Secretaría de Economía (HU-S4-01): ADMIN y SECRETARY las listan, crean y reenvían su enlace.
+Route::middleware(['auth:sanctum', 'active', 'role:'.UserRole::ADMIN->value.','.UserRole::SECRETARY->value])
+    ->prefix('secretary-accounts')
+    ->group(function (): void {
+        Route::get('/', [SecretaryAccountController::class, 'index']);
+        Route::post('/', [SecretaryAccountController::class, 'store']);
+        Route::post('/resend-setup', [SecretaryAccountController::class, 'resendSetup'])->middleware('throttle:secretary-setup-resend');
+    });
 
 // Padrón (HU-S2-02), expediente (HU-S2-03), baja lógica (HU-S2-04), seguro facultativo (HU-S3-02) y
 // CV normalizado (HU-S3-01) de la institución de la sesión; sin DELETE.

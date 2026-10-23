@@ -42,3 +42,5 @@ main.institutions-shell { width: min(100% - 2rem, 70rem); }
 .manual-setup-link { margin: 1rem 0; padding: 0.9rem; border: 1px solid var(--border); border-radius: 0.35rem; background: var(--surface-muted); }
 .manual-setup-link input { font-family: ui-monospace, monospace; font-size: 0.85rem; background: var(--surface); }
 }
+/* Cuenta pendiente de su primera contraseña (HU-S4-01). */
+.institution-status.pending { color: var(--accent); background: var(--tint); }

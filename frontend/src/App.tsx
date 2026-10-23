@@ -12,6 +12,8 @@ import { InstitutionsPage } from './institutions/InstitutionsPage'
 import { InstitutionCreatePage } from './institutions/InstitutionCreatePage'
 import { InstitutionDetailPage } from './institutions/InstitutionDetailPage'
 import { InstitutionEditPage } from './institutions/InstitutionEditPage'
+import { SECRETARY_ACCOUNT_MANAGERS } from './secretary/api'
+import { SecretaryAccountsPage } from './secretary/SecretaryAccountsPage'
 import { StudentCvPage } from './students/StudentCvPage'
 import { StudentDetailPage } from './students/StudentDetailPage'
 import { StudentsPage } from './students/StudentsPage'
@@ -52,6 +54,9 @@ function AuthRoutes() {
         <Route path="/institutions/new" element={<InstitutionCreatePage />} />
         <Route path="/institutions/:id" element={<InstitutionDetailPage />} />
         <Route path="/institutions/:id/edit" element={<InstitutionEditPage />} />
+      </Route>
+      <Route element={<ProtectedRoute role={SECRETARY_ACCOUNT_MANAGERS} deniedMessage="No tienes permiso para gestionar las cuentas de la Secretaría." />}>
+        <Route path="/secretary-accounts" element={<SecretaryAccountsPage />} />
       </Route>
       <Route element={<ProtectedRoute role="INSTITUTION" deniedMessage="No tienes permiso para acceder al padrón de alumnos." />}>
         <Route path="/students" element={<StudentsPage />} />

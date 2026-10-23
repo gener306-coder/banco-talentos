@@ -17,7 +17,13 @@ export function SessionPage() {
       </dl>
       {message && <p className="notice" role="alert">{message}</p>}
       {user.role === 'ADMIN' && (
-        <nav aria-label="Administración"><Link to="/institutions">Instituciones</Link></nav>
+        <nav aria-label="Administración">
+          <Link to="/institutions">Instituciones</Link>
+          <Link to="/secretary-accounts">Cuentas de la Secretaría</Link>
+        </nav>
+      )}
+      {user.role === 'SECRETARY' && (
+        <nav aria-label="Secretaría de Economía"><Link to="/secretary-accounts">Cuentas de la Secretaría</Link></nav>
       )}
       {user.role === 'INSTITUTION' && user.institution && (
         <nav aria-label="Institución"><Link to="/students">Alumnos</Link></nav>

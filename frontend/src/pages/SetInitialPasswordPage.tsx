@@ -6,7 +6,7 @@ export function SetInitialPasswordPage() {
     <NewPasswordForm
       path="/set-initial-password"
       title="Establecer contraseña"
-      intro="Establece tu contraseña para acceder con tu cuenta institucional."
+      intro="Establece tu contraseña para acceder con tu cuenta del Banco de Talentos."
       submitLabel="Establecer contraseña"
       pendingLabel="Estableciendo contraseña…"
       successMessage="Contraseña establecida. Ya puedes iniciar sesión."

@@ -24,14 +24,16 @@ class InitialPasswordController extends Controller
             // deben observar password_setup_required antes de cambiar la contraseña.
             $user = User::query()->where('email', $data['email'])->lockForUpdate()->first();
             $broker = Password::broker('institution_setup');
-            if (! $user || $user->role !== UserRole::INSTITUTION || ! $user->password_setup_required
-                || ! $user->institution_id || ! $broker->tokenExists($user, $data['token'])) {
+            if (! $user || ! $user->password_setup_required || ! self::issuable($user)
+                || ! $broker->tokenExists($user, $data['token'])) {
                 $this->invalidToken();
             }
 
-            $institution = Institution::query()->lockForUpdate()->find($user->institution_id);
-            if (! $institution || ! $institution->is_active) {
-                throw new AccountAccessDenied('INSTITUTION_INACTIVE', 403);
+            if ($user->role === UserRole::INSTITUTION) {
+                $institution = Institution::query()->lockForUpdate()->find($user->institution_id);
+                if (! $institution || ! $institution->is_active) {
+                    throw new AccountAccessDenied('INSTITUTION_INACTIVE', 403);
+                }
             }
             if (! $user->is_active) {
                 throw new AccountAccessDenied('ACCOUNT_INACTIVE', 403);
@@ -50,6 +52,19 @@ class InitialPasswordController extends Controller
 
         // No inicia sesión automáticamente ni altera la sesión de otro usuario.
         return response()->noContent()->header('Cache-Control', 'no-store, private');
+    }
+
+    /**
+     * Cuentas que se dan de alta con enlace de configuración: INSTITUTION vinculada a su institución
+     * (HU-S1-03) y SECRETARY sin organización (HU-S4-01). Las demás nunca reciben ese enlace.
+     */
+    public static function issuable(User $user): bool
+    {
+        return match ($user->role) {
+            UserRole::INSTITUTION => $user->institution_id !== null,
+            UserRole::SECRETARY => $user->institution_id === null,
+            default => false,
+        };
     }
 
     private function invalidToken(): never
