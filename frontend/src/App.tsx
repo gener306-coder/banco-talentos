@@ -12,6 +12,10 @@ import { InstitutionsPage } from './institutions/InstitutionsPage'
 import { InstitutionCreatePage } from './institutions/InstitutionCreatePage'
 import { InstitutionDetailPage } from './institutions/InstitutionDetailPage'
 import { InstitutionEditPage } from './institutions/InstitutionEditPage'
+import { CompaniesPage } from './companies/CompaniesPage'
+import { CompanyCreatePage } from './companies/CompanyCreatePage'
+import { CompanyDetailPage } from './companies/CompanyDetailPage'
+import { CompanyEditPage } from './companies/CompanyEditPage'
 import { SECRETARY_ACCOUNT_MANAGERS } from './secretary/api'
 import { SecretaryAccountsPage } from './secretary/SecretaryAccountsPage'
 import { StudentCvPage } from './students/StudentCvPage'
@@ -57,6 +61,12 @@ function AuthRoutes() {
       </Route>
       <Route element={<ProtectedRoute role={SECRETARY_ACCOUNT_MANAGERS} deniedMessage="No tienes permiso para gestionar las cuentas de la Secretaría." />}>
         <Route path="/secretary-accounts" element={<SecretaryAccountsPage />} />
+      </Route>
+      <Route element={<ProtectedRoute role="SECRETARY" deniedMessage="No tienes permiso para gestionar empresas." />}>
+        <Route path="/companies" element={<CompaniesPage />} />
+        <Route path="/companies/new" element={<CompanyCreatePage />} />
+        <Route path="/companies/:id" element={<CompanyDetailPage />} />
+        <Route path="/companies/:id/edit" element={<CompanyEditPage />} />
       </Route>
       <Route element={<ProtectedRoute role="INSTITUTION" deniedMessage="No tienes permiso para acceder al padrón de alumnos." />}>
         <Route path="/students" element={<StudentsPage />} />

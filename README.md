@@ -67,7 +67,7 @@ La SPA consulta `GET /api/me` al cargar. Para iniciar sesión obtiene primero `G
 
 La cookie de sesión es `HttpOnly`, de dominio local y `SameSite=Lax`. El cliente envía el token CSRF mediante `X-XSRF-TOKEN`. El identificador de sesión se regenera al autenticar; el cierre de sesión impide reutilizar la cookie anterior. Las sesiones locales expiran tras 120 minutos de inactividad. Las opciones de cookies y duración están en `backend/.env.example`.
 
-Los roles son `ADMIN`, `INSTITUTION`, `COMPANY` y `SECRETARY`. Todos requieren una cuenta activa. Las cuentas `INSTITUTION` requieren además que su institución esté activa. ADMIN dispone de la gestión de instituciones y de cuentas institucionales; ADMIN y `SECRETARY` gestionan las cuentas de la Secretaría; `INSTITUTION` ve su institución vinculada; `COMPANY` conserva identidad y logout. El acceso se restringe tanto en las rutas React como en la API con Sanctum y el middleware `role`.
+Los roles son `ADMIN`, `INSTITUTION`, `COMPANY` y `SECRETARY`. Todos requieren una cuenta activa. Las cuentas `INSTITUTION` requieren además que su institución esté activa. ADMIN dispone de la gestión de instituciones y de cuentas institucionales; ADMIN y `SECRETARY` gestionan las cuentas de la Secretaría; `SECRETARY` gestiona las empresas; `INSTITUTION` ve su institución vinculada; `COMPANY` conserva identidad y logout. El acceso se restringe tanto en las rutas React como en la API con Sanctum y el middleware `role`.
 
 Después de iniciar sesión como ADMIN, abre **Instituciones**. El listado incluye instituciones activas e inactivas. El registro y la edición solicitan nombre, CCT y correo de contacto; el detalle ofrece la acción para activar o inactivar. El CCT es único incluso entre instituciones inactivas y no existe eliminación. Consulta el contrato y la matriz de pruebas en [docs/HU-S1-02.md](docs/HU-S1-02.md).
 
@@ -92,6 +92,14 @@ Consulta [backend/README.md](backend/README.md) para detalles del contrato HTTP 
 ## Cuentas de la Secretaría
 
 ADMIN y `SECRETARY` abren **Cuentas de la Secretaría** desde el inicio (`/secretary-accounts`). El listado muestra el nombre, el correo, el estado (activa, pendiente de su primera contraseña o inactiva) y la fecha de alta. **Nueva cuenta de la Secretaría** pide solo nombre y correo: el servidor asigna el rol `SECRETARY` y registra quién creó la cuenta (`created_by`). La persona titular establece su contraseña con el mismo enlace de un solo uso y 60 minutos de las cuentas institucionales, enviado por correo o generado para compartirlo. Mientras siga pendiente, **Reenviar enlace** lo sustituye; hay que esperar un minuto entre dos reenvíos de la misma cuenta. No hay edición ni baja de estas cuentas. `SECRETARY` no gestiona instituciones ni sus cuentas. Contrato y cobertura en [docs/HU-S4-01.md](docs/HU-S4-01.md).
+
+## Empresas
+
+`SECRETARY` abre **Empresas** desde el inicio (`/companies`). El listado incluye empresas activas e inactivas, de 50 en 50, con búsqueda por razón social, nombre comercial o RFC. **Nueva empresa** pide solo lo esencial, porque la Secretaría ya validó a la empresa:
+- **Obligatorios:** razón social, RFC (persona moral o física, guardado en mayúsculas y único aun entre inactivas), sector SCIAN, estado y municipio del catálogo INEGI, y nombre y correo del contacto del programa dual.
+- **Opcionales:** nombre comercial, teléfono y folio de validación.
+
+No se pide domicilio ni documentos. El servidor ubica a la empresa en la cabecera de su municipio para la futura búsqueda por distancia y registra qué cuenta la dio de alta. El detalle permite editarla e inactivarla, previa confirmación, o reactivarla; no existe eliminación. Contrato y cobertura en [docs/HU-S4-02.md](docs/HU-S4-02.md).
 
 ## Alumnos
 

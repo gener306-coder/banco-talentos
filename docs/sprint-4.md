@@ -53,7 +53,8 @@ Por decisión del responsable del proyecto con el cliente (21 de octubre de 2026
 
 ## HU-S4-02 — Registro y gestión de empresas validadas
 
-**Estado:** Pendiente  
+**Estado:** Completada (22 de octubre de 2026)  
+**Diseño técnico y verificación:** [HU-S4-02.md](HU-S4-02.md)  
 **Story Points:** 5  
 **Rol:** `SECRETARY`
 
