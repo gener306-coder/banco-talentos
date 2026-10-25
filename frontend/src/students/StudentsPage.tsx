@@ -1,5 +1,5 @@
 import { useCallback, useState } from 'react'
-import { Link } from 'react-router'
+import { Link, useLocation } from 'react-router'
 import { InstitutionRequestError } from '../institutions/InstitutionLayout'
 import { useApiRequest } from '../lib/useApiRequest'
 import { ChevronLeftIcon, ChevronRightIcon, PlusIcon, SearchIcon } from '../ui/icons'
@@ -15,7 +15,12 @@ export function StudentsPage() {
   const [page, setPage] = useState(1)
   const load = useCallback((signal: AbortSignal) => listStudents(page, signal), [page])
   const { data, loading, failure, refresh } = useApiRequest(load, studentMessages)
-  const [registering, setRegistering] = useState(false)
+  // «Registrar alumno» del inicio abre directamente la hoja de alta.
+  const location = useLocation()
+  const [registering, setRegistering] = useState(() => {
+    const state: unknown = location.state
+    return typeof state === 'object' && state !== null && 'register' in state && state.register === true
+  })
   const close = useCallback(() => setRegistering(false), [])
 
   const openButton = (label: string) => (

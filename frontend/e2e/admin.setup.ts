@@ -10,7 +10,8 @@ setup('ADMIN inicia sesión una vez y guarda la sesión para los demás escenari
   await page.getByLabel('Correo electrónico').fill(email)
   await page.getByLabel('Contraseña', { exact: true }).fill(password)
   await page.getByRole('button', { name: 'Iniciar sesión', exact: true }).click()
-  await expect(page.getByRole('heading', { name: 'Sesión iniciada', exact: true })).toBeVisible()
+  // Inicio por rol: el saludo confirma la sesión.
+  await expect(page.getByRole('heading', { level: 2, name: /^Hola, / })).toBeVisible()
   // Cookies de sesión y CSRF: nunca se versionan (playwright/.auth está en .gitignore).
   await page.context().storageState({ path: ADMIN_STATE })
 })

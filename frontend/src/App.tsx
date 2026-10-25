@@ -23,6 +23,7 @@ import { TalentSearchPage } from './talent/TalentSearchPage'
 import { StudentCvPage } from './students/StudentCvPage'
 import { StudentDetailPage } from './students/StudentDetailPage'
 import { StudentsPage } from './students/StudentsPage'
+import { AccountMenu } from './ui/AccountMenu'
 import { prefersReducedMotion } from './ui/modal'
 
 function AuthRoutes() {
@@ -123,19 +124,23 @@ function useScrolled() {
 }
 
 /**
- * Pantallas de acceso con una sola tarjeta: usan el ancho angosto. Todas las demás vistas son anchas por defecto
- * (docs/design/identidad-visual.md, «Tamaños y retícula»), para que una vista nueva no quede comprimida.
+ * Pantallas de acceso con una sola tarjeta: usan el ancho angosto. Todas las demás vistas, incluido el inicio,
+ * son anchas por defecto (docs/design/identidad-visual.md, «Tamaños y retícula»).
  */
-const NARROW_PATHS = ['/', '/login', '/set-initial-password', '/reset-password']
+const NARROW_PATHS = ['/login', '/set-initial-password', '/reset-password']
+
+/** Enlaces de contraseña: funcionan sin sesión y no montan el proveedor de sesión. */
+const PASSWORD_PATHS = ['/set-initial-password', '/reset-password']
 
 function App() {
   const { pathname } = useLocation()
   const wide = !NARROW_PATHS.includes(pathname)
+  const withSession = !PASSWORD_PATHS.includes(pathname)
   const main = useRef<HTMLElement>(null)
   const scrolled = useScrolled()
   useRouteTransition(main, pathname)
 
-  return (
+  const shell = (
     <>
       <header className="app-bar" data-scrolled={scrolled}>
         <div className={`app-bar-inner${wide ? ' wide' : ''}`}>
@@ -149,17 +154,22 @@ function App() {
           </div>
           {/* Coemblema institucional: a la derecha, con la misma altura que el logotipo principal. */}
           <img src="/brand/sec-economia.png" alt="Secretaría de Economía" width={1920} height={414} className="app-bar-partner h-[1.6rem] w-auto min-[481px]:h-11" />
+          {/* Menú de cuenta: identidad y «Cerrar sesión» en todas las vistas con sesión. */}
+          {withSession && <AccountMenu />}
         </div>
       </header>
       <main ref={main} className={wide ? 'page-wide' : undefined}>
         <Routes>
           <Route path="/set-initial-password" element={<SetInitialPasswordPage />} />
           <Route path="/reset-password" element={<ResetPasswordPage />} />
-          <Route path="*" element={<AuthProvider><AuthRoutes /></AuthProvider>} />
+          <Route path="*" element={<AuthRoutes />} />
         </Routes>
       </main>
     </>
   )
+
+  // El proveedor envuelve encabezado y contenido para que el menú de cuenta comparta la sesión.
+  return withSession ? <AuthProvider>{shell}</AuthProvider> : shell
 }
 
 export default App

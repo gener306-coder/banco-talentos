@@ -230,3 +230,16 @@ Hoy `SESSION_DRIVER=file` y `CACHE_STORE=file`. Con varias instancias detrás de
 
 Las vistas del Sprint 4 (empresas, cuentas de la Secretaría y buscador de talento) se mostraban en el ancho angosto del inicio de sesión, porque `App.tsx` solo ensanchaba las rutas de instituciones y alumnos. Ahora las vistas son anchas por defecto (70 rem) y solo las pantallas de acceso son angostas (34 rem), con tokens de dimensión y un único ancho de lectura de 45 rem para formularios y detalles. En el buscador, los filtros y los resultados quedan en dos columnas en escritorio, y las tarjetas se reparten en una cuadrícula responsiva.
 
+### Inicio por rol
+
+**Estado:** Completada (24 de octubre de 2026)  
+**Origen:** solicitud del responsable del proyecto; no corresponde a una historia de Jira.  
+**Detalle:** [design/identidad-visual.md](design/identidad-visual.md#inicio-por-rol)
+
+La página de inicio era la misma tarjeta genérica para los cuatro roles. Ahora es un punto de partida por rol:
+- saludo con la organización y el rol;
+- una acción principal: nueva institución, registrar empresa, registrar alumno o, para la empresa, buscar talento por habilidad;
+- tarjetas de acceso a las secciones del rol en una cuadrícula responsiva, con el ancho completo de 70 rem.
+
+La identidad y «Cerrar sesión» pasan a un menú de cuenta en el encabezado, disponible en todas las vistas. Solo es frontend, sin datos nuevos. Los contadores y avisos con datos reales se planearán como historias del Sprint 5.
+

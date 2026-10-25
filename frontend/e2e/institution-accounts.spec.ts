@@ -104,7 +104,8 @@ test('ADMIN crea una cuenta sin contraseña; su titular la establece y pierde ac
     await expect(holder).toHaveURL(`${baseURL}/`)
     await expect(holder.getByText(account.email, { exact: true })).toBeVisible()
     await expect(holder.getByText('Institución', { exact: true })).toBeVisible()
-    await expect(holder.getByText('Institución vinculada', { exact: true })).toBeVisible()
+    // Inicio por rol: la cuenta vinculada ve su sección de alumnos.
+    await expect(holder.getByRole('link', { name: 'Alumnos', exact: true })).toBeVisible()
     await expect(holder.getByText(institution.name, { exact: true })).toBeVisible()
     await expect(holder.getByRole('link', { name: 'Instituciones', exact: true })).toHaveCount(0)
 

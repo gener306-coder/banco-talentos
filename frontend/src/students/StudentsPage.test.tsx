@@ -175,7 +175,7 @@ describe('padrón de alumnos HU-S2-02', () => {
   it.each([['ADMIN', null], ['INSTITUTION', null]])('no ofrece el padrón a %s sin institución vinculada', async (role, institution) => {
     user = { ...institutionUser, role, institution }
     renderApp('/')
-    expect(await screen.findByRole('heading', { name: 'Sesión iniciada' })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: /^Hola, / })).toBeInTheDocument()
     expect(screen.queryByRole('link', { name: 'Alumnos' })).not.toBeInTheDocument()
   })
 })

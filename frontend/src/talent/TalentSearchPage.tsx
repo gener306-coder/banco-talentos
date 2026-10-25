@@ -1,6 +1,6 @@
 import { useCallback, useState } from 'react'
 import type { FormEvent, KeyboardEvent } from 'react'
-import { Link } from 'react-router'
+import { Link, useLocation } from 'react-router'
 import { InstitutionRequestError } from '../institutions/InstitutionLayout'
 import { useApiRequest } from '../lib/useApiRequest'
 import { MAX_PERIOD, MEXICAN_STATES } from '../students/catalogs'
@@ -21,8 +21,15 @@ const periods = Array.from({ length: MAX_PERIOD }, (_, index) => index + 1)
  * enviar el panel; los resultados son exploratorios y no ofrecen ninguna acción de contacto.
  */
 export function TalentSearchPage() {
-  const [draft, setDraft] = useState<TalentFilters>(emptyFilters)
-  const [applied, setApplied] = useState<TalentFilters>(emptyFilters)
+  // Atajo del inicio de la empresa: la habilidad llega ya como filtro aplicado.
+  const location = useLocation()
+  const [initial] = useState<TalentFilters>(() => {
+    const state: unknown = location.state
+    const skill = typeof state === 'object' && state !== null && 'skill' in state && typeof state.skill === 'string' ? displayName(state.skill).slice(0, 80) : ''
+    return skill ? { ...emptyFilters, skills: [skill] } : emptyFilters
+  })
+  const [draft, setDraft] = useState<TalentFilters>(initial)
+  const [applied, setApplied] = useState<TalentFilters>(initial)
   const [page, setPage] = useState(1)
   const [skillText, setSkillText] = useState('')
   const [skillError, setSkillError] = useState<string | null>(null)

@@ -266,6 +266,63 @@ textarea[aria-invalid='true'] { border-color: var(--danger-border); }
   .data-table th, .data-table td { padding: 0.75rem 0.55rem; }
 }
 }
+@layer components {
 /* Municipio capturado como texto libre antes del catálogo INEGI (HU-S4-04): pendiente de confirmar. */
 .pending-notice { margin: 0 0 0.8rem; padding: 0.6rem 0.8rem; border-radius: 10px; font-size: 0.9rem;
   background: var(--status-off-surface); color: var(--status-off-text); }
+
+/* Inicio por rol (tarea transversal del Sprint 4): saludo, acción principal y tarjetas de acceso. */
+/* La navegación del inicio es la cuadrícula de tarjetas: no la fila flexible de enlaces de .card > nav. */
+.home > nav { display: block; margin: 0; }
+.home-greeting h2 { margin: 0 0 0.35rem; font-size: clamp(1.6rem, 4vw, 2.1rem); line-height: 1.15; }
+.home-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 0.35rem 0.9rem; margin: 0 0 1.5rem; color: var(--text); font-size: 0.95rem; }
+.home-role { padding: 0.15rem 0.7rem; border-radius: 999px; background: var(--tint); color: var(--accent); font-weight: 600; font-size: 0.85rem; }
+.home-primary { margin: 0 0 1.75rem; }
+.home-action { display: inline-flex; align-items: center; gap: 0.45rem; padding: 0.8rem 1.1rem; border-radius: 0.6rem; background: var(--accent);
+  color: var(--on-accent); font-weight: 600; text-decoration: none; transition: transform 150ms ease-out, background-color 150ms ease-out; }
+.home-action:hover { background: var(--accent-hover); }
+.home-action:active { transform: scale(0.97); }
+.home-search { max-width: var(--content-readable); margin: 0 0 1.75rem; gap: 0.4rem; }
+.home-search > div { display: flex; gap: 0.5rem; }
+.home-search input { margin: 0; }
+.home-search button { display: inline-flex; align-items: center; gap: 0.4rem; white-space: nowrap; }
+.home-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(16rem, 100%), 1fr)); gap: 0.9rem; margin: 0; padding: 0; list-style: none; }
+.home-card { display: flex; align-items: flex-start; gap: 0.9rem; height: 100%; padding: 1.1rem; border: 1px solid var(--border); border-radius: 14px;
+  background: var(--surface); color: inherit; text-decoration: none; transition: transform 150ms ease-out, box-shadow 150ms ease-out, border-color 150ms ease-out; }
+.home-card:active { transform: scale(0.98); }
+.home-card > .icon { margin-top: 0.3rem; color: var(--accent); }
+.home-card-icon { display: grid; place-items: center; flex-shrink: 0; width: 2.5rem; height: 2.5rem; border-radius: 10px; background: var(--tint); color: var(--accent); font-size: 1.2rem; }
+.home-card-text { display: grid; gap: 0.25rem; flex: 1; min-width: 0; }
+.home-card-title { font-weight: 700; color: var(--accent); }
+.home-card-description { font-size: 0.92rem; line-height: 1.45; color: var(--text); }
+@media (hover: hover) {
+  .home-card:hover { border-color: color-mix(in srgb, var(--accent) 35%, var(--border)); box-shadow: 0 6px 18px color-mix(in srgb, var(--shadow) 8%, transparent); }
+  .home-card:hover > .icon { transform: translateX(2px); }
+}
+
+/* Menú de cuenta del encabezado: el panel solo existe mientras está abierto. */
+.account-menu { position: relative; flex-shrink: 0; }
+.account-trigger { display: grid; place-items: center; width: 2.4rem; height: 2.4rem; padding: 0; border: 0; border-radius: 50%;
+  background: var(--tint); color: var(--accent); font-size: 0.85rem; font-weight: 700; }
+.account-trigger:hover:not(:disabled) { background: var(--tint-hover); }
+.account-trigger[aria-expanded='true'] { background: var(--accent); color: var(--on-accent); }
+.account-panel { position: absolute; right: 0; top: calc(100% + 0.5rem); z-index: 20; width: min(18rem, calc(100vw - 2rem)); padding: 1rem;
+  display: grid; gap: 0.3rem; background: var(--surface); border: 1px solid var(--border); border-radius: 14px;
+  box-shadow: 0 12px 28px color-mix(in srgb, var(--shadow) 14%, transparent); animation: materialize var(--spring-duration) var(--spring) both; }
+.account-panel p { margin: 0; overflow-wrap: anywhere; }
+.account-name { font-weight: 700; }
+.account-detail { font-size: 0.9rem; color: var(--text); }
+.account-panel button { margin-top: 0.6rem; }
+@media (prefers-reduced-motion: reduce) {
+  .home-card, .home-action { transition: none; }
+  .home-card:active, .home-action:active { transform: none; }
+  .account-panel { animation: fade-in 160ms ease both; }
+}
+@media (prefers-contrast: more) {
+  .home-card, .account-panel { border-color: var(--border-strong); }
+}
+@media (max-width: 600px) {
+  .home-search > div { flex-direction: column; }
+  .home-action { width: 100%; justify-content: center; }
+}
+}

@@ -138,7 +138,7 @@ Adoptado el 24 de octubre de 2026 como tarea transversal del Sprint 4 (`docs/spr
 
 | Token | Valor | Uso |
 | --- | --- | --- |
-| `--page-narrow` | 34 rem | Pantallas de acceso de una sola tarjeta: inicio de sesión, contraseña inicial, restablecimiento y la página de sesión (`/`). |
+| `--page-narrow` | 34 rem | Pantallas de acceso de una sola tarjeta: inicio de sesión, contraseña inicial y restablecimiento. Desde el «Inicio por rol», la página de inicio (`/`) es ancha. |
 | `--page-wide` | 70 rem | Todas las demás vistas: listados, detalles, formularios y buscador. |
 | `--page-gutter` | 2 rem | Margen lateral total en pantallas estrechas (1 rem por lado). |
 | `--content-readable` | 45 rem | Ancho máximo de formularios, listas de detalles y bloques de texto dentro de una vista ancha. |
@@ -151,6 +151,20 @@ Adoptado el 24 de octubre de 2026 como tarea transversal del Sprint 4 (`docs/spr
 | 601 a 959 px | Una columna; en el buscador, los filtros arriba y los resultados debajo, con dos tarjetas por fila si caben. |
 | Desde 960 px | Contenido hasta 70 rem. El buscador en dos columnas: filtros de 18 a 20 rem y resultados en tarjetas de al menos 20 rem (`auto-fill`), de igual altura por fila. |
 | 480 px | Solo cambia el tamaño de los logotipos del encabezado. |
+
+## Inicio por rol
+
+Adoptado el 24 de octubre de 2026 como tarea transversal del Sprint 4 (`docs/sprint-4.md`). Sustituye la tarjeta «Sesión iniciada», con nombre, correo, rol y enlaces de texto, por un punto de partida por rol. Es solo presentación: no consulta datos nuevos.
+
+- **Saludo:** título grande «Hola, {nombre}» y, en texto secundario, el rol como etiqueta tintada (`.home-role`), la organización vinculada (institución o empresa) y el correo.
+- **Acción principal:** un botón primario con el siguiente paso más probable. Administrador: «Nueva institución». Secretaría: «Registrar empresa». Institución: «Registrar alumno», que abre directamente la hoja de alta del padrón. La empresa tiene en su lugar el campo «Buscar talento por habilidad», que abre el buscador con ese filtro aplicado.
+- **Tarjetas de acceso** (`.home-card`): una por sección del rol, con icono tintado, título, descripción y chevron. La cuadrícula es `auto-fill` con un mínimo de 16 rem: una columna en móvil y hasta tres en escritorio. El nombre accesible de cada tarjeta es su título (`aria-labelledby`) y la descripción se anuncia aparte (`aria-describedby`). La navegación conserva el nombre de cada rol: «Administración», «Secretaría de Economía», «Institución» o «Empresa».
+- **Cuenta sin organización:** una cuenta sin su organización vinculada ve un aviso en lugar de las secciones.
+- **Menú de cuenta** (`ui/AccountMenu.tsx`): botón con las iniciales del usuario, a la derecha del encabezado en todas las vistas con sesión. Su panel muestra nombre, correo, rol, organización y «Cerrar sesión».
+  - El panel solo se monta mientras está abierto, y muestra ahí los errores al cerrar la sesión.
+  - Se cierra con Esc, con un clic fuera o al navegar, y Esc devuelve el foco al botón.
+  - Se materializa como las hojas; con «reducir movimiento» solo se funde.
+- **Contadores y avisos con datos** («12 instituciones activas», «municipios por confirmar»): quedan para una historia del Sprint 5, porque requieren endpoints con autorización por rol.
 
 ## Lenguaje de interacción (apple-design)
 

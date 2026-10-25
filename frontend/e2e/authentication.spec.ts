@@ -14,6 +14,7 @@ test('un visitante no accede al área protegida ni a la API', async ({ page, req
   await expect(page).toHaveURL(/\/login$/)
   await expect(page.getByRole('button', { name: 'Iniciar sesión', exact: true })).toBeVisible()
   await expect(page.getByRole('button', { name: 'Cerrar sesión' })).toHaveCount(0)
+  await expect(page.getByRole('button', { name: /^Cuenta de / })).toHaveCount(0)
 
   const response = await request.get('/api/me')
   expect(response.status()).toBe(401)
@@ -44,7 +45,9 @@ test('login → área protegida → recarga → logout invalida también la cook
 
   await page.reload()
   await expect(page.getByText(email!, { exact: true })).toBeVisible()
-  await page.getByRole('button', { name: 'Cerrar sesión', exact: true }).click()
+  // «Cerrar sesión» está en el menú de cuenta del encabezado.
+  await page.getByRole('button', { name: /^Cuenta de / }).click()
+  await page.getByRole('region', { name: 'Cuenta' }).getByRole('button', { name: 'Cerrar sesión', exact: true }).click()
   await expect(page).toHaveURL(/\/login$/)
   await page.goto('/')
   await expect(page).toHaveURL(/\/login$/)

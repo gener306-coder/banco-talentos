@@ -17,6 +17,14 @@ function renderApp(path = '/') {
   return render(<MemoryRouter initialEntries={[path]}><App /><Location /></MemoryRouter>)
 }
 
+/** «Cerrar sesión» vive en el menú de cuenta del encabezado: se abre si aún está cerrado. */
+function clickSignOut() {
+  if (!screen.queryByRole('button', { name: /^Cerrar sesión|^Cerrando sesión/ })) {
+    fireEvent.click(screen.getByRole('button', { name: /^Cuenta de / }))
+  }
+  fireEvent.click(screen.getByRole('button', { name: 'Cerrar sesión' }))
+}
+
 function csrfResponse() {
   document.cookie = 'XSRF-TOKEN=csrf%3D; Path=/'
   return Promise.resolve(new Response(null, { status: 204 }))
@@ -46,7 +54,7 @@ describe('acceso y sesión', () => {
     renderApp()
     expect(screen.getByText('Comprobando sesión…')).toHaveAttribute('role', 'status')
     expect(screen.queryByRole('heading', { name: 'Iniciar sesión' })).not.toBeInTheDocument()
-    expect(screen.queryByRole('heading', { name: 'Sesión iniciada' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('heading', { name: /^Hola, / })).not.toBeInTheDocument()
     await act(async () => { resolve(new Response(null, { status: 401 })) })
     expect(await screen.findByRole('heading', { name: 'Iniciar sesión' })).toBeInTheDocument()
     expect(screen.getByLabelText('Ruta actual')).toHaveTextContent('/login')
@@ -151,7 +159,7 @@ describe('acceso y sesión', () => {
       .mockResolvedValueOnce(new Response(null, { status: 401 }))
     const view = renderApp()
     await screen.findByText(user.email)
-    fireEvent.click(screen.getByRole('button', { name: 'Cerrar sesión' }))
+    clickSignOut()
     expect(screen.getByRole('button', { name: 'Cerrando sesión…' })).toBeDisabled()
     await act(async () => { resolve(new Response(null, { status: 204 })) })
     expect(await screen.findByRole('heading', { name: 'Iniciar sesión' })).toBeInTheDocument()
@@ -168,7 +176,7 @@ describe('acceso y sesión', () => {
       .mockResolvedValueOnce(new Response(null, { status: 401 }))
     renderApp()
     await screen.findByText(user.email)
-    fireEvent.click(screen.getByRole('button', { name: 'Cerrar sesión' }))
+    clickSignOut()
     expect(await screen.findByRole('heading', { name: 'Iniciar sesión' })).toBeInTheDocument()
     expect(screen.getByRole('alert')).toHaveTextContent('Tu sesión terminó')
     expect(screen.queryByText(user.email)).not.toBeInTheDocument()
@@ -182,9 +190,9 @@ describe('acceso y sesión', () => {
       .mockResolvedValueOnce(new Response(null, { status: 419 }))
     renderApp()
     await screen.findByText(user.email)
-    fireEvent.click(screen.getByRole('button', { name: 'Cerrar sesión' }))
+    clickSignOut()
     expect(await screen.findByRole('alert')).toHaveTextContent('No pudimos cerrar la sesión')
-    expect(screen.getByText(user.email)).toBeInTheDocument()
+    expect(screen.getAllByText(user.email).length).toBeGreaterThan(0)
     expect(screen.getByRole('button', { name: 'Cerrar sesión' })).toBeEnabled()
     expect(fetchMock).toHaveBeenCalledTimes(4)
   })
@@ -195,9 +203,9 @@ describe('acceso y sesión', () => {
       .mockResolvedValueOnce(new Response(null, { status: 403 }))
     renderApp()
     await screen.findByText(user.email)
-    fireEvent.click(screen.getByRole('button', { name: 'Cerrar sesión' }))
+    clickSignOut()
     expect(await screen.findByRole('alert')).toHaveTextContent('No tienes permiso')
-    expect(screen.getByText(user.email)).toBeInTheDocument()
+    expect(screen.getAllByText(user.email).length).toBeGreaterThan(0)
     expect(screen.getByRole('button', { name: 'Cerrar sesión' })).toBeEnabled()
   })
 
@@ -208,10 +216,10 @@ describe('acceso y sesión', () => {
       .mockResolvedValueOnce(new Response(null, { status: 204 }))
     renderApp()
     await screen.findByText(user.email)
-    fireEvent.click(screen.getByRole('button', { name: 'Cerrar sesión' }))
+    clickSignOut()
     expect(await screen.findByRole('alert')).toHaveTextContent('No pudimos conectar')
-    expect(screen.getByText(user.email)).toBeInTheDocument()
-    fireEvent.click(screen.getByRole('button', { name: 'Cerrar sesión' }))
+    expect(screen.getAllByText(user.email).length).toBeGreaterThan(0)
+    clickSignOut()
     expect(await screen.findByRole('heading', { name: 'Iniciar sesión' })).toBeInTheDocument()
   })
 
@@ -236,7 +244,7 @@ describe('acceso y sesión', () => {
   it.each([
     ['/institutions', true], ['/students/3', true], ['/companies', true], ['/secretary-accounts', true], ['/talent', true],
     ['/talent/3f2c1b9e-8a7d-4c6b-9e5f-1a2b3c4d5e6f', true], ['/una-vista-futura', true],
-    ['/', false], ['/login', false], ['/set-initial-password', false], ['/reset-password', false],
+    ['/', true], ['/login', false], ['/set-initial-password', false], ['/reset-password', false],
   ])('usa el ancho %s → ancho: %s, igual en el encabezado y el contenido', (path, wide) => {
     // La sesión queda pendiente: solo importa el ancho que se calcula con la ruta.
     fetchMock.mockReturnValue(new Promise<Response>(() => undefined))
@@ -264,7 +272,7 @@ describe('acceso y sesión', () => {
     staleView.unmount()
     renderApp()
     await screen.findByText(user.email)
-    fireEvent.click(screen.getByRole('button', { name: 'Cerrar sesión' }))
+    clickSignOut()
     await screen.findByRole('heading', { name: 'Iniciar sesión' })
     await act(async () => { resolveStale(Response.json({ user })) })
     expect(screen.queryByText(user.email)).not.toBeInTheDocument()
@@ -300,8 +308,8 @@ describe('sesión institucional HU-S1-03', () => {
   it('presenta la institución vinculada sin ofrecer navegación ADMIN', async () => {
     fetchMock.mockResolvedValueOnce(Response.json({ user: { ...user, role: 'INSTITUTION', institution: { id: 7, name: 'Instituto Dual' } } }))
     renderApp()
-    expect(await screen.findByText('Institución vinculada')).toBeInTheDocument()
-    expect(screen.getByText('Instituto Dual')).toBeInTheDocument()
+    expect(await screen.findByText('Instituto Dual')).toBeInTheDocument()
+    expect(screen.getByText('Institución', { selector: '.home-role' })).toBeInTheDocument()
     expect(screen.queryByRole('link', { name: 'Instituciones' })).not.toBeInTheDocument()
   })
 
@@ -326,7 +334,7 @@ describe('sesión institucional HU-S1-03', () => {
     expect(await screen.findByRole('alert')).toHaveTextContent(message)
     expect(screen.queryByText('Mensaje arbitrario')).not.toBeInTheDocument()
     expect(screen.getByLabelText('Contraseña')).toHaveValue('')
-    expect(screen.queryByRole('heading', { name: 'Sesión iniciada' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('heading', { name: /^Hola, / })).not.toBeInTheDocument()
   })
 })
 
@@ -344,7 +352,7 @@ describe('identidad visual', () => {
   it('muestra el logotipo en el encabezado general fuera del login', async () => {
     fetchMock.mockResolvedValueOnce(Response.json({ user }))
     renderApp('/')
-    await screen.findByRole('heading', { name: 'Sesión iniciada' })
+    await screen.findByRole('heading', { name: /^Hola, / })
     const header = screen.getByRole('banner')
     const logo = screen.getByRole('img', { name: 'Nodologístico' })
     expect(header).toContainElement(logo)
@@ -354,7 +362,7 @@ describe('identidad visual', () => {
   it.each(['/', '/login'])('muestra el logotipo de la Secretaría de Economía en el encabezado de %s', async (path) => {
     fetchMock.mockResolvedValueOnce(path === '/' ? Response.json({ user }) : new Response(null, { status: 401 }))
     renderApp(path)
-    await screen.findByRole('heading', { name: path === '/' ? 'Sesión iniciada' : 'Iniciar sesión' })
+    await screen.findByRole('heading', { name: path === '/' ? /^Hola, / : 'Iniciar sesión' })
     const partner = screen.getByRole('img', { name: 'Secretaría de Economía' })
     expect(screen.getByRole('banner')).toContainElement(partner)
     expect(partner).toHaveAttribute('src', '/brand/sec-economia.png')
