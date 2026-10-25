@@ -38,6 +38,17 @@
 }
 /* Fin de los tokens semánticos. */
 
+/*
+ * Dimensiones (docs/design/identidad-visual.md, «Tamaños y retícula»): dos anchos de página y un ancho de lectura.
+ * Las vistas son anchas por defecto; solo las pantallas de acceso de una tarjeta son angostas (App.tsx).
+ */
+:root {
+  --page-narrow: 34rem;
+  --page-wide: 70rem;
+  --page-gutter: 2rem;
+  --content-readable: 45rem;
+}
+
 :root {
   font-family: system-ui, sans-serif;
   color: var(--text);
@@ -49,7 +60,8 @@
 
 * { box-sizing: border-box; }
 body { margin: 0; min-width: 320px; }
-main { width: min(100% - 2rem, 34rem); margin: 8vh auto; }
+main { width: min(100% - var(--page-gutter), var(--page-narrow)); margin: 8vh auto; }
+main.page-wide { width: min(100% - var(--page-gutter), var(--page-wide)); }
 header { margin-bottom: 2rem; }
 h1 { margin: 0.5rem 0 1rem; font-size: clamp(2rem, 6vw, 3rem); line-height: 1.15; }
 h2 { margin-top: 0; font-size: 1.4rem; color: var(--accent); }

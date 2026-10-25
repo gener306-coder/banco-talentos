@@ -26,8 +26,9 @@ h3 { font-weight: 600; letter-spacing: -0.01em; color: var(--ink); }
 .app-bar { position: sticky; top: 0; z-index: 10; margin: 0 0 1.5rem; background: var(--glass);
   -webkit-backdrop-filter: blur(20px) saturate(180%); backdrop-filter: blur(20px) saturate(180%);
   border-top: 1px solid color-mix(in srgb, var(--surface) 60%, transparent); }
-.app-bar-inner { width: min(100% - 2rem, 34rem); margin: 0 auto; display: flex; align-items: center; gap: 0.9rem; padding: 0.7rem 0; }
-.app-bar-inner.wide { width: min(100% - 2rem, 70rem); }
+.app-bar-inner { width: min(100% - var(--page-gutter), var(--page-narrow)); margin: 0 auto; display: flex; align-items: center; gap: 0.9rem; padding: 0.7rem 0; }
+/* Mismo ancho que <main> (index.css): encabezado y contenido siempre alineados. */
+.app-bar-inner.wide { width: min(100% - var(--page-gutter), var(--page-wide)); }
 .app-bar h1 { margin: 0.1rem 0 0; font-size: 1.5rem; }
 .app-bar .eyebrow { margin: 0; }
 .app-bar-partner { margin-left: auto; padding-left: 0.9rem; border-left: 1px solid var(--border); flex-shrink: 1; min-width: 0; object-fit: contain; }
@@ -179,14 +180,14 @@ select[aria-invalid='true'], .student-section input[aria-invalid='true'], .sheet
 .field-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr)); gap: 0 1rem; }
 .student-section { margin-top: 2rem; padding-top: 1.5rem; border-top: 1px solid var(--border); }
 .student-section h3 { margin-top: 0; }
-.student-profile { max-width: 45rem; }
+.student-profile { max-width: var(--content-readable); }
 .student-profile > fieldset { border: 0; padding: 0; margin: 0; min-width: 0; }
 .student-profile h4 { margin: 1.5rem 0 0.6rem; font-size: 1rem; color: var(--accent); }
-.student-identity { max-width: 45rem; margin: 1rem 0; }
+.student-identity { max-width: var(--content-readable); margin: 1rem 0; }
 .student-identity dd { margin: 0.2rem 0 0; }
 .student-identity dd.mono { font-family: ui-monospace, monospace; }
 /* Seguro facultativo (HU-S3-02): dos formularios en columnas que se apilan en pantallas angostas. */
-.social-security { display: grid; grid-template-columns: repeat(auto-fit, minmax(17rem, 1fr)); gap: 1.5rem 2rem; max-width: 45rem; margin-top: 1rem; }
+.social-security { display: grid; grid-template-columns: repeat(auto-fit, minmax(17rem, 1fr)); gap: 1.5rem 2rem; max-width: var(--content-readable); margin-top: 1rem; }
 .social-security-form h4 { margin: 0 0 0.6rem; font-size: 1rem; color: var(--accent); }
 .social-security-form input.mono { font-family: ui-monospace, monospace; letter-spacing: 0.06em; margin-bottom: 0.2rem; }
 .social-security-form input[type='file'] { padding: 0.45rem; background: var(--surface); margin-bottom: 0.2rem; }
@@ -201,9 +202,9 @@ select[aria-invalid='true'], .student-section input[aria-invalid='true'], .sheet
 .document-meta { font-size: 0.82rem; color: var(--text); margin-bottom: 0.6rem !important; }
 /* CV normalizado (HU-S3-01). */
 .student-cv-link { margin: -0.4rem 0 0.4rem; }
-.cv-intro { max-width: 45rem; color: var(--text); }
+.cv-intro { max-width: var(--content-readable); color: var(--text); }
 .cv-intro .icon, .protected-note .icon, .protected-badge .icon, .credential-line .icon { vertical-align: -0.12em; }
-.cv-section form, .cv-section .cv-cards { max-width: 45rem; }
+.cv-section form, .cv-section .cv-cards { max-width: var(--content-readable); }
 /* Agrupadores para deshabilitar un formulario mientras se envía: sin el borde del navegador. */
 .sheet-body form > fieldset, .cv-rows { border: 0; padding: 0; margin: 0; min-width: 0; }
 .cv-section h4 { margin: 1rem 0 0.4rem; font-size: 0.95rem; color: var(--accent); }
@@ -244,7 +245,7 @@ select[aria-invalid='true'], .student-section input[aria-invalid='true'], .sheet
 .protected-badge { display: inline-flex; align-items: center; gap: 0.25rem; margin-left: 0.4rem; padding: 0.15rem 0.55rem; border-radius: 1rem;
   font-size: 0.75rem; font-weight: 700; vertical-align: middle; color: var(--text); background: var(--surface-muted);
   border: 1px solid var(--border); }
-.protected-note { display: flex; gap: 0.5rem; align-items: flex-start; max-width: 45rem; margin: 0.4rem 0 0.9rem; padding: 0.7rem 0.9rem;
+.protected-note { display: flex; gap: 0.5rem; align-items: flex-start; max-width: var(--content-readable); margin: 0.4rem 0 0.9rem; padding: 0.7rem 0.9rem;
   border-radius: 12px; background: var(--surface-muted); color: var(--text); font-size: 0.88rem; }
 .protected-note .icon { flex-shrink: 0; margin-top: 0.15rem; color: var(--accent); }
 .protected-fields { margin-top: 0.8rem; padding-top: 0.6rem; border-top: 1px dashed var(--border); }

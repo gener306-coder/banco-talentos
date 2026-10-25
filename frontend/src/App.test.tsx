@@ -232,6 +232,19 @@ describe('acceso y sesión', () => {
     expect(screen.queryByText(user.email)).not.toBeInTheDocument()
   })
 
+  // Tarea transversal «Tamaños y retícula»: vistas anchas por defecto; angostas solo las pantallas de acceso.
+  it.each([
+    ['/institutions', true], ['/students/3', true], ['/companies', true], ['/secretary-accounts', true], ['/talent', true],
+    ['/talent/3f2c1b9e-8a7d-4c6b-9e5f-1a2b3c4d5e6f', true], ['/una-vista-futura', true],
+    ['/', false], ['/login', false], ['/set-initial-password', false], ['/reset-password', false],
+  ])('usa el ancho %s → ancho: %s, igual en el encabezado y el contenido', (path, wide) => {
+    // La sesión queda pendiente: solo importa el ancho que se calcula con la ruta.
+    fetchMock.mockReturnValue(new Promise<Response>(() => undefined))
+    const { container } = renderApp(path)
+    expect(container.querySelector('main')?.classList.contains('page-wide')).toBe(wide)
+    expect(container.querySelector('.app-bar-inner')?.classList.contains('wide')).toBe(wide)
+  })
+
   it('consulta la sesión una sola vez en el doble montaje de StrictMode y conserva el motivo del bloqueo', async () => {
     // Una segunda consulta llegaría con la sesión ya cerrada por la primera y perdería COMPANY_INACTIVE.
     fetchMock.mockResolvedValueOnce(Response.json({ code: 'COMPANY_INACTIVE' }, { status: 401 }))

@@ -130,6 +130,28 @@ Enfoque híbrido:
 - Vistas nuevas: preferir clases de Tailwind; los estilos globales ya aplican la marca a botones, enlaces y campos.
 - Tailwind sólo emite en el CSS final las variables de tema que se usan en utilidades o en CSS procesado por Tailwind (`index.css`). Si `institutions.css` u otra hoja sin `@import "tailwindcss"` necesita una variable no usada en `index.css`, comprobar que aparezca en `dist/assets/*.css` tras `npm run build`.
 
+## Tamaños y retícula
+
+Adoptado el 24 de octubre de 2026 como tarea transversal del Sprint 4 (`docs/sprint-4.md`). Antes, el ancho de la página dependía de una lista de rutas en `App.tsx`, y las vistas nuevas (empresas, cuentas de la Secretaría y buscador) quedaban comprimidas en el ancho del login.
+
+**Tokens de dimensión** (`frontend/src/index.css`, bloque «Dimensiones», separado de los tokens de color):
+
+| Token | Valor | Uso |
+| --- | --- | --- |
+| `--page-narrow` | 34 rem | Pantallas de acceso de una sola tarjeta: inicio de sesión, contraseña inicial, restablecimiento y la página de sesión (`/`). |
+| `--page-wide` | 70 rem | Todas las demás vistas: listados, detalles, formularios y buscador. |
+| `--page-gutter` | 2 rem | Margen lateral total en pantallas estrechas (1 rem por lado). |
+| `--content-readable` | 45 rem | Ancho máximo de formularios, listas de detalles y bloques de texto dentro de una vista ancha. |
+
+**Regla:** las vistas son anchas por defecto. `App.tsx` solo enumera las rutas angostas (`NARROW_PATHS`) y aplica `page-wide` a `<main>` y `.wide` al encabezado en el resto, así que el encabezado y el contenido siempre tienen el mismo ancho. Una vista nueva no necesita registrarse en ningún sitio. Las tablas, las cuadrículas de tarjetas y el buscador ocupan todo el ancho; los formularios y los detalles se limitan a `--content-readable`. La barra de búsqueda de empresas conserva 38 rem.
+
+| Ancho de ventana | Comportamiento |
+| --- | --- |
+| Hasta 600 px | Margen de 1 rem por lado, tarjeta con padding de 1.25 rem, barras de acciones apiladas y botones a todo el ancho. |
+| 601 a 959 px | Una columna; en el buscador, los filtros arriba y los resultados debajo, con dos tarjetas por fila si caben. |
+| Desde 960 px | Contenido hasta 70 rem. El buscador en dos columnas: filtros de 18 a 20 rem y resultados en tarjetas de al menos 20 rem (`auto-fill`), de igual altura por fila. |
+| 480 px | Solo cambia el tamaño de los logotipos del encabezado. |
+
 ## Lenguaje de interacción (apple-design)
 
 Adoptado el 11 de octubre de 2026 como cambio transversal del Sprint 2 (`docs/sprint-2.md`), a partir de la skill `apple-design`. Las reglas viven en `frontend/src/ui/ui.css` (capa `components`, que prevalece sobre `legacy`) y en los componentes de `frontend/src/ui/`.

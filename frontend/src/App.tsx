@@ -122,9 +122,15 @@ function useScrolled() {
   return scrolled
 }
 
+/**
+ * Pantallas de acceso con una sola tarjeta: usan el ancho angosto. Todas las demás vistas son anchas por defecto
+ * (docs/design/identidad-visual.md, «Tamaños y retícula»), para que una vista nueva no quede comprimida.
+ */
+const NARROW_PATHS = ['/', '/login', '/set-initial-password', '/reset-password']
+
 function App() {
   const { pathname } = useLocation()
-  const wide = pathname.startsWith('/institutions') || pathname.startsWith('/students')
+  const wide = !NARROW_PATHS.includes(pathname)
   const main = useRef<HTMLElement>(null)
   const scrolled = useScrolled()
   useRouteTransition(main, pathname)
@@ -145,7 +151,7 @@ function App() {
           <img src="/brand/sec-economia.png" alt="Secretaría de Economía" width={1920} height={414} className="app-bar-partner h-[1.6rem] w-auto min-[481px]:h-11" />
         </div>
       </header>
-      <main ref={main} className={wide ? 'institutions-shell' : undefined}>
+      <main ref={main} className={wide ? 'page-wide' : undefined}>
         <Routes>
           <Route path="/set-initial-password" element={<SetInitialPasswordPage />} />
           <Route path="/reset-password" element={<ResetPasswordPage />} />

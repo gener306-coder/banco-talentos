@@ -1,7 +1,10 @@
 /* Buscador de talento (HU-S4-05): panel de filtros y tarjetas, solo con tokens semánticos. */
 .talent-layout { display: grid; gap: 1.5rem; }
-@media (min-width: 960px) { .talent-layout { grid-template-columns: 19rem 1fr; align-items: start; } }
-.talent-filters { padding: 1rem; border: 1px solid var(--border); border-radius: 12px; background: var(--surface); }
+/* Escritorio: filtros a la izquierda y resultados en el resto. En tableta y móvil, una columna a todo el ancho. */
+@media (min-width: 960px) { .talent-layout { grid-template-columns: minmax(18rem, 20rem) 1fr; align-items: start; } }
+.talent-layout > * { min-width: 0; }
+/* El panel no hereda el ancho de lectura de los formularios (.institutions form). */
+.talent-filters { max-width: none; padding: 1rem; border: 1px solid var(--border); border-radius: 12px; background: var(--surface); }
 .talent-filters fieldset { margin: 0 0 1rem; padding: 0; border: 0; }
 .talent-filters legend { margin-bottom: 0.5rem; font-weight: 700; color: var(--accent); }
 .talent-filters select, .talent-filters input[type='text'] { width: 100%; margin-bottom: 0.6rem; }
@@ -10,8 +13,8 @@
 .talent-skill-input { display: flex; gap: 0.5rem; }
 .talent-skill-input input { margin-bottom: 0.4rem; }
 .talent-results-summary { margin: 0 0 0.8rem; font-weight: 600; }
-.talent-cards { display: grid; gap: 0.9rem; margin: 0; padding: 0; list-style: none; }
-.talent-card { padding: 1rem 1.1rem; border: 1px solid var(--border); border-radius: 12px; background: var(--surface); }
+.talent-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(20rem, 100%), 1fr)); gap: 0.9rem; margin: 0; padding: 0; list-style: none; }
+.talent-card { height: 100%; padding: 1rem 1.1rem; border: 1px solid var(--border); border-radius: 12px; background: var(--surface); }
 .talent-card h3 { margin: 0 0 0.5rem; font-size: 1.1rem; }
 .talent-facts { margin: 0 0 0.6rem; }
 .talent-facts div { margin-bottom: 0.25rem; }

@@ -221,3 +221,12 @@ Hoy `SESSION_DRIVER=file` y `CACHE_STORE=file`. Con varias instancias detrás de
 - Se actualizan `backend/.env.example`, Compose y el entorno de pruebas.
 - Se conservan las garantías actuales de sesión: cookie `HttpOnly` y `SameSite=Lax`, regeneración del identificador al autenticar, invalidación al cerrar sesión y cierre de todas las sesiones al restablecer la contraseña.
 - Las pruebas de sesión que hoy dependen de archivos se adaptan sin sustituir el login real por `actingAs`.
+
+### Normalización del tamaño de los contenedores
+
+**Estado:** Completada (24 de octubre de 2026)  
+**Origen:** solicitud del responsable del proyecto; no corresponde a una historia de Jira.  
+**Detalle:** [design/identidad-visual.md](design/identidad-visual.md#tamaños-y-retícula)
+
+Las vistas del Sprint 4 (empresas, cuentas de la Secretaría y buscador de talento) se mostraban en el ancho angosto del inicio de sesión, porque `App.tsx` solo ensanchaba las rutas de instituciones y alumnos. Ahora las vistas son anchas por defecto (70 rem) y solo las pantallas de acceso son angostas (34 rem), con tokens de dimensión y un único ancho de lectura de 45 rem para formularios y detalles. En el buscador, los filtros y los resultados quedan en dos columnas en escritorio, y las tarjetas se reparten en una cuadrícula responsiva.
+
