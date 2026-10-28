@@ -63,7 +63,7 @@ Cada historia debe:
 
 ## Desarrollo por Sprint
 
-Sprint vigente: docs/sprint-4.md
+Sprint vigente: docs/sprint-5.md
 
 Ese archivo es la única fuente de verdad mientras dure el Sprint.
 Los archivos de Sprints anteriores (docs/sprint-N.md) son históricos:
@@ -81,3 +81,19 @@ Antes de implementar una historia:
 ## Identidad visual del frontend
 
 Antes de desarrollar vistas frontend, consulta `docs/design/identidad-visual.md` y usa los tokens semánticos de marca definidos allí. No inventes una paleta ni migres los estilos existentes sin aprobación.
+
+## Convenciones técnicas obligatorias (Sprints 1–4)
+
+### Backend y Base de Datos
+- **Aislamiento y Anti-IDOR:** Toda consulta o escritura de recursos de una institución o empresa debe filtrar por la organización de la sesión (ej. trait `FindsOwnedStudent`). Un recurso ajeno responde `404` idéntico a uno inexistente.
+- **Privacidad por diseño:** Nunca exponer `student_identities`, `student_social_security`, `student_links`, `student_certification_credentials`, `students.id` ni columnas `location` (PostGIS) en endpoints para `COMPANY` o `SECRETARY`. Usar listas explícitas de campos y `students.public_id` (UUID v4) para vistas externas.
+- **Geolocalización:** El cliente nunca envía coordenadas (`latitude`, `longitude`, `location` se ignoran). El servidor calcula `location` desde la cabecera municipal del catálogo INEGI (`municipalities`).
+- **Cabeceras y rutas:** Respuestas autenticadas llevan `Cache-Control: no-store, private`. No existen rutas `DELETE` para entidades principales (usar baja lógica `is_active` vía `PATCH .../status`).
+
+### Frontend y Diseño (apple-design)
+- **Tokens semánticos estrictos:** En archivos CSS usar exclusivamente los tokens semánticos de `frontend/src/index.css` (`--surface`, `--text`, `--accent`, `--border`, etc.) dentro de `@layer`. Nunca escribir valores HEX, `rgb()` ni `var(--color-*)` directos (`src/ui/tokens.test.ts` lo verifica).
+- **Retícula:** Las vistas son anchas por defecto (`--page-wide: 70rem`); formularios y detalles se limitan a `--content-readable: 45rem`.
+- **Componentes UI:** Reutilizar `Sheet` para formularios secundarios en detalles, `ConfirmDialog` para inactivaciones/bajas, `LoadingState`, `StateMessage` y `MunicipalityCombobox`.
+
+### Ejecución de Pruebas
+- Ejecutar `sh scripts/test-backend.sh` y `sh scripts/test-e2e.sh` siempre de forma **secuencial**, nunca en paralelo, porque comparten el proyecto `banco-talentos-tests`.
