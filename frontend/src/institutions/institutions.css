@@ -3,8 +3,8 @@
 .institution-navigation { display: flex; gap: 1.25rem; margin-bottom: 1.75rem; }
 .institution-toolbar { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1rem; margin-bottom: 1.5rem; }
 .institution-toolbar p { margin: 0; }
-.institutions .institution-button { display: inline-flex; align-items: center; justify-content: center; padding: 0.8rem 1rem; border: 1px solid var(--accent); border-radius: 0.35rem; color: var(--on-accent); background: var(--accent); font-weight: 600; text-decoration: none; }
-.institutions .institution-button:hover { background: var(--accent-hover); }
+.institutions .institution-button { display: inline-flex; align-items: center; justify-content: center; padding: 0.8rem 1rem; border: 1px solid var(--accent); border-radius: 0.35rem; color: var(--on-accent); background: var(--accent-fill); font-weight: 600; text-decoration: none; }
+.institutions .institution-button:hover { background: var(--accent-fill-hover); }
 .institutions .institution-button.secondary { background: var(--surface); color: var(--accent); }
 .institutions .institution-button.secondary:hover { background: var(--surface-muted); }
 .institution-table-wrapper { overflow-x: auto; }

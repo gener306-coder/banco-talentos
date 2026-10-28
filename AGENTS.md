@@ -91,7 +91,7 @@ Antes de desarrollar vistas frontend, consulta `docs/design/identidad-visual.md`
 - **Cabeceras y rutas:** Respuestas autenticadas llevan `Cache-Control: no-store, private`. No existen rutas `DELETE` para entidades principales (usar baja lógica `is_active` vía `PATCH .../status`).
 
 ### Frontend y Diseño (apple-design)
-- **Tokens semánticos estrictos:** En archivos CSS usar exclusivamente los tokens semánticos de `frontend/src/index.css` (`--surface`, `--text`, `--accent`, `--border`, etc.) dentro de `@layer`. Nunca escribir valores HEX, `rgb()` ni `var(--color-*)` directos (`src/ui/tokens.test.ts` lo verifica).
+- **Tokens semánticos estrictos:** En archivos CSS usar exclusivamente los tokens semánticos de `frontend/src/index.css` (`--surface`, `--text`, `--accent`, `--border`, etc.) dentro de `@layer`. Nunca escribir valores HEX, `rgb()` ni `var(--color-*)` directos, ni utilidades de color de Tailwind (`text-brand-*`, `bg-*`) en el JSX. Todo token nuevo se define en el bloque claro y en el oscuro (`:root[data-theme='dark']`), con contraste ≥ 4.5:1 en texto; `src/ui/tokens.test.ts` lo verifica.
 - **Retícula:** Las vistas son anchas por defecto (`--page-wide: 70rem`); formularios y detalles se limitan a `--content-readable: 45rem`.
 - **Componentes UI:** Reutilizar `Sheet` para formularios secundarios en detalles, `ConfirmDialog` para inactivaciones/bajas, `LoadingState`, `StateMessage` y `MunicipalityCombobox`.
 

@@ -23,7 +23,9 @@ export function LoginPage() {
 
   return (
     <section className="card" aria-labelledby="login-title">
-      <img src="/brand/logo.png" alt="Nodologístico" width={697} height={783} className="mx-auto mb-6 block h-32 w-auto" />
+      <div className="brand-plate mx-auto mb-6 w-fit">
+        <img src="/brand/logo.png" alt="Nodologístico" width={697} height={783} className="block h-32 w-auto" />
+      </div>
       <h2 id="login-title">Iniciar sesión</h2>
       <p>Ingresa con tu cuenta del sistema.</p>
       {message && <p className="notice" role="alert">{message}</p>}

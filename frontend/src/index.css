@@ -11,17 +11,23 @@
 @layer legacy {
 /*
  * Tokens semánticos (docs/design/identidad-visual.md, «Tokens semánticos»): nombran la función del color,
- * no el color. Las hojas de estilo solo usan estos tokens; un tema futuro (por ejemplo, oscuro) solo
- * redefine este bloque. Es el único lugar, junto con @theme, donde se escriben valores de color.
+ * no el color. Las hojas de estilo solo usan estos tokens; el tema oscuro (abajo) redefine los mismos. Estos dos
+ * bloques y @theme son los únicos lugares donde se escriben valores de color.
  */
 :root {
+  color-scheme: light;
   --surface: var(--color-white);
   --surface-muted: var(--color-neutral-100);
   --text: var(--color-brand-neutral);
+  /* Texto de máximo contraste del encabezado («Educación Dual»); en claro es el texto normal. */
+  --text-strong: var(--color-brand-neutral);
   --border: var(--color-neutral-200);
   --border-strong: var(--color-neutral-500);
   --accent: var(--color-brand-primary);
   --accent-hover: var(--color-brand-primary-hover);
+  /* Relleno de las acciones primarias: en claro coincide con el acento; en oscuro conserva el vino de marca. */
+  --accent-fill: var(--color-brand-primary);
+  --accent-fill-hover: var(--color-brand-primary-hover);
   --on-accent: var(--color-white);
   --accent-secondary: var(--color-brand-secondary);
   --accent-secondary-text: #6b4f22;
@@ -34,9 +40,47 @@
   --success-border: #327a4a;
   --status-off-text: #5d4b36;
   --status-off-surface: #f2ebdf;
+  /* Pastilla de los logotipos: en claro no se ve; en oscuro los mantiene sobre un fondo claro. */
+  --logo-plate: transparent;
+  --logo-plate-padding: 0;
   --shadow: #000;
 }
 /* Fin de los tokens semánticos. */
+
+/*
+ * Tema oscuro (docs/design/identidad-visual.md, «Modo oscuro»): PREPARADO, NO ACTIVADO. Nada en la aplicación fija
+ * data-theme="dark", así que este bloque no se aplica; se mantiene al día para activarlo cuando haya logotipos para
+ * fondo oscuro. Mismos tokens que el tema claro, con contraste mínimo de 4.5:1 en texto (src/ui/tokens.test.ts).
+ */
+:root[data-theme='dark'] {
+  color-scheme: dark;
+  --surface: #211f24;
+  --surface-muted: #17161a;
+  --text: #e6e4e8;
+  --text-strong: #fff;
+  --border: #3a3840;
+  --border-strong: #8a8790;
+  --accent: #e07a8a;
+  --accent-hover: #ea97a3;
+  --accent-fill: var(--color-brand-primary);
+  --accent-fill-hover: var(--color-brand-primary-hover);
+  --on-accent: #fff;
+  --accent-secondary: var(--color-brand-secondary);
+  --accent-secondary-text: #e3c48f;
+  --focus-ring: #f0a04b;
+  --danger-text: #f2a79b;
+  --danger-surface: #3a1e1b;
+  --danger-border: #d9705f;
+  --success-text: #8fd3a6;
+  --success-surface: #183324;
+  --success-border: #4f9c6a;
+  --status-off-text: #e0cdb0;
+  --status-off-surface: #362e24;
+  --logo-plate: #f1f0f3;
+  --logo-plate-padding: 0.25rem 0.4rem;
+  --shadow: #000;
+}
+/* Fin de los tokens del tema oscuro. */
 
 /*
  * Dimensiones (docs/design/identidad-visual.md, «Tamaños y retícula»): dos anchos de página y un ancho de lectura.
@@ -71,9 +115,9 @@ p { line-height: 1.6; }
 form { display: flex; flex-direction: column; gap: 0.65rem; }
 label, dt { font-weight: 600; }
 input, button { font: inherit; border-radius: 0.35rem; }
-input { width: 100%; padding: 0.7rem; border: 1px solid var(--border-strong); margin-bottom: 0.6rem; }
-button { padding: 0.8rem 1rem; background: var(--accent); color: var(--on-accent); border: 1px solid var(--accent); cursor: pointer; font-weight: 600; }
-button:hover:not(:disabled) { background: var(--accent-hover); }
+input { width: 100%; padding: 0.7rem; border: 1px solid var(--border-strong); margin-bottom: 0.6rem; background: var(--surface); }
+button { padding: 0.8rem 1rem; background: var(--accent-fill); color: var(--on-accent); border: 1px solid var(--accent); cursor: pointer; font-weight: 600; }
+button:hover:not(:disabled) { background: var(--accent-fill-hover); }
 button.secondary { background: var(--surface); color: var(--accent); }
 button.secondary:hover:not(:disabled) { background: var(--surface-muted); }
 button:disabled, input:disabled { opacity: 0.65; cursor: not-allowed; }
