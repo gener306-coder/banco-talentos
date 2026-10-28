@@ -1,6 +1,6 @@
 # Banco de Talentos – Educación Dual
 
-Monolito modular. Sprint vigente: [Sprint 6](docs/sprint-6.md) (HU-S6-01 y HU-S6-02 completadas: ver «Solicitudes de vinculación»). Sprint anterior: [Sprint 5](docs/sprint-5.md) (completo: ver «Inicio por rol», «Oportunidades Duales», «Buscador de talento» y «Solicitudes de vinculación»). [Sprint 4](docs/sprint-4.md) completo. Historias del [Sprint 1](docs/sprint-1.md) y del Sprint 2:
+Monolito modular. Sprint vigente: [Sprint 6](docs/sprint-6.md) (HU-S6-01 a HU-S6-03 completadas: ver «Solicitudes de vinculación» e «Inicio por rol»). Sprint anterior: [Sprint 5](docs/sprint-5.md) (completo: ver «Inicio por rol», «Oportunidades Duales», «Buscador de talento» y «Solicitudes de vinculación»). [Sprint 4](docs/sprint-4.md) completo. Historias del [Sprint 1](docs/sprint-1.md) y del Sprint 2:
 
 - **HU-S1-01 — Autenticación y control de acceso** ([detalle](docs/HU-S1-01.md)).
 - **HU-S1-02 — Gestión de instituciones**: ADMIN lista, registra, consulta, edita y activa o inactiva instituciones ([detalle](docs/HU-S1-02.md)).
@@ -74,12 +74,12 @@ Después de iniciar sesión como ADMIN, abre **Instituciones**. El listado inclu
 ## Inicio por rol
 
 La página de inicio (`/`) saluda a la cuenta, ofrece la acción principal de su rol y muestra tarjetas de acceso a sus secciones. Sobre las tarjetas aparecen los indicadores de `GET /api/dashboard` (HU-S5-01), calculados solo con los datos de la organización de la sesión:
-- ADMIN: instituciones activas e inactivas y cuentas de la Secretaría activas y pendientes;
-- `SECRETARY`: empresas activas e inactivas y cuentas de la Secretaría pendientes;
-- `INSTITUTION`: alumnos activos, visibles en el buscador y con «Municipio por confirmar». Si hay alguno pendiente, un aviso enlaza al padrón;
-- `COMPANY`: perfiles disponibles en el buscador.
+- ADMIN: instituciones activas e inactivas, cuentas de la Secretaría activas y pendientes, oportunidades activas de empresas activas y vinculaciones aceptadas;
+- `SECRETARY`: empresas activas e inactivas, cuentas de la Secretaría pendientes, oportunidades activas de empresas activas y vinculaciones aceptadas;
+- `INSTITUTION`: alumnos activos, visibles en el buscador y con «Municipio por confirmar», y solicitudes de vinculación pendientes de su respuesta. Si hay alumnos por confirmar, un aviso enlaza al padrón; si hay solicitudes pendientes, un aviso destacado enlaza a su bandeja;
+- `COMPANY`: perfiles disponibles en el buscador, oportunidades activas de su empresa y solicitudes pendientes de la institución.
 
-Una cuenta sin organización vinculada no recibe indicadores. Si la consulta falla, el inicio muestra un aviso discreto y las secciones siguen disponibles. Contrato y cobertura en [docs/HU-S5-01.md](docs/HU-S5-01.md).
+Una cuenta sin organización vinculada no recibe indicadores. Si la consulta falla, el inicio muestra un aviso discreto y las secciones siguen disponibles. Contrato y cobertura en [docs/HU-S5-01.md](docs/HU-S5-01.md) y, para oportunidades y solicitudes, en [docs/HU-S6-03.md](docs/HU-S6-03.md).
 
 ## Cuentas institucionales
 

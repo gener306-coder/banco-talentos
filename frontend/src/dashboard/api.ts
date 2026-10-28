@@ -1,12 +1,15 @@
 import type { Role } from '../auth/api'
 import { ApiError, request } from '../lib/http'
 
-/** Claves de los indicadores de cada rol, en el orden en que se muestran (HU-S5-01 CA-02 a CA-05). */
+/**
+ * Claves de los indicadores de cada rol, en el orden en que se muestran (HU-S5-01 CA-02 a CA-05), con las de
+ * oportunidades y solicitudes de vinculación (HU-S6-03 CA-01).
+ */
 export const metricKeys = {
-  ADMIN: ['active_institutions', 'inactive_institutions', 'active_secretaries', 'pending_secretaries'],
-  SECRETARY: ['active_companies', 'inactive_companies', 'pending_secretaries'],
-  INSTITUTION: ['active_students', 'searchable_students', 'pending_municipality_students'],
-  COMPANY: ['available_talent_profiles'],
+  ADMIN: ['active_institutions', 'inactive_institutions', 'active_secretaries', 'pending_secretaries', 'active_opportunities', 'accepted_linkage_requests'],
+  SECRETARY: ['active_companies', 'inactive_companies', 'pending_secretaries', 'active_opportunities', 'accepted_linkage_requests'],
+  INSTITUTION: ['active_students', 'searchable_students', 'pending_municipality_students', 'pending_linkage_requests'],
+  COMPANY: ['available_talent_profiles', 'active_opportunities', 'pending_linkage_requests'],
 } as const satisfies Record<Role, readonly string[]>
 
 export type MetricKey = (typeof metricKeys)[Role][number]
@@ -22,6 +25,9 @@ export const metricLabels: Record<MetricKey, string> = {
   searchable_students: 'Visibles en el buscador',
   pending_municipality_students: 'Municipio por confirmar',
   available_talent_profiles: 'Perfiles disponibles',
+  active_opportunities: 'Oportunidades activas',
+  pending_linkage_requests: 'Solicitudes pendientes',
+  accepted_linkage_requests: 'Vinculaciones aceptadas',
 }
 
 export type Metrics = Partial<Record<MetricKey, number>>

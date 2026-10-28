@@ -74,7 +74,7 @@ Sprint vigente desde el 28 de octubre de 2026. Sprint anterior: [sprint-5.md](sp
 
 ## HU-S6-03 — Indicadores de vinculación en el inicio por rol
 
-**Estado:** Pendiente  
+**Estado:** Completada (28 de octubre de 2026)  
 **Diseño técnico y verificación:** `docs/HU-S6-03.md`  
 **Story Points:** 3  
 **Rol:** `ADMIN`, `SECRETARY`, `INSTITUTION`, `COMPANY`  

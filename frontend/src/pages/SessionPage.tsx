@@ -96,8 +96,8 @@ function TalentShortcut() {
 const count = new Intl.NumberFormat('es-MX')
 
 /**
- * Indicadores del rol (HU-S5-01 CA-07). No bloquean el inicio: mientras cargan no se muestra nada y, si fallan,
- * un aviso discreto deja las tarjetas de acceso intactas.
+ * Indicadores del rol (HU-S5-01 CA-07, HU-S6-03 CA-02). No bloquean el inicio: mientras cargan no se muestra nada y,
+ * si fallan, un aviso discreto deja las tarjetas de acceso intactas.
  */
 function HomeIndicators({ role }: { role: Role }) {
   const load = useCallback((signal: AbortSignal) => getDashboard(role, signal), [role])
@@ -109,9 +109,20 @@ function HomeIndicators({ role }: { role: Role }) {
   const metrics = data?.metrics
   if (!metrics) return null
   const pending = metrics.pending_municipality_students ?? 0
+  // HU-S6-03 CA-02: solo la institución responde solicitudes; a la empresa le basta el contador.
+  const linkages = role === 'INSTITUTION' ? metrics.pending_linkage_requests ?? 0 : 0
 
   return (
     <section className="home-indicators" aria-label="Indicadores">
+      {linkages > 0 && (
+        <p className="pending-notice home-notice home-linkage-notice">
+          <AlertIcon />
+          <span>
+            {linkages === 1 ? 'Tienes 1 solicitud de vinculación' : `Tienes ${count.format(linkages)} solicitudes de vinculación`} pendiente{linkages === 1 ? '' : 's'} de respuesta.{' '}
+            <Link to="/institution/linkage-requests">Revisar solicitudes</Link>
+          </span>
+        </p>
+      )}
       {pending > 0 && (
         <p className="pending-notice home-notice">
           <AlertIcon />

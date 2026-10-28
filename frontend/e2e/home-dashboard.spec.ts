@@ -41,13 +41,25 @@ test('HU-S5-01: la institución ve sus contadores y se actualizan al registrar u
 
 test('HU-S5-01: el aviso de «Municipio por confirmar» enlaza al padrón', async ({ page }) => {
   await page.route('**/api/dashboard', (route) => route.fulfill({
-    json: { data: { role: 'INSTITUTION', metrics: { active_students: 9, searchable_students: 4, pending_municipality_students: 3 } } },
+    json: { data: { role: 'INSTITUTION', metrics: { active_students: 9, searchable_students: 4, pending_municipality_students: 3, pending_linkage_requests: 0 } } },
   }))
   await page.goto('/')
   const region = page.getByRole('region', { name: 'Indicadores' })
   await expect(region.getByText('3 alumnos tienen «Municipio por confirmar».')).toBeVisible()
   await region.getByRole('link', { name: 'Revisar el padrón' }).click()
   await expect(page).toHaveURL(/\/students$/)
+})
+
+test('HU-S6-03: el aviso de solicitudes pendientes enlaza a la bandeja de la institución (CA-02)', async ({ page }) => {
+  await page.route('**/api/dashboard', (route) => route.fulfill({
+    json: { data: { role: 'INSTITUTION', metrics: { active_students: 9, searchable_students: 4, pending_municipality_students: 0, pending_linkage_requests: 2 } } },
+  }))
+  await page.goto('/')
+  const region = page.getByRole('region', { name: 'Indicadores' })
+  await expect(indicator(page, 'Solicitudes pendientes')).toHaveText('2')
+  await expect(region.getByText('Tienes 2 solicitudes de vinculación pendientes de respuesta.')).toBeVisible()
+  await region.getByRole('link', { name: 'Revisar solicitudes' }).click()
+  await expect(page).toHaveURL(/\/institution\/linkage-requests$/)
 })
 
 test('HU-S5-01: si los indicadores fallan, el inicio sigue navegable (CA-07)', async ({ page }) => {
@@ -59,10 +71,14 @@ test('HU-S5-01: si los indicadores fallan, el inicio sigue navegable (CA-07)', a
   await expect(page).toHaveURL(/\/students$/)
 })
 
-test('HU-S5-01: la empresa ve los perfiles disponibles del buscador (CA-05)', async ({ browser, baseURL }) => {
+test('HU-S5-01 y HU-S6-03: la empresa ve los perfiles disponibles del buscador y sus oportunidades y solicitudes', async ({ browser, baseURL }) => {
   const { context, page } = await openCompanySession(browser, baseURL)
   try {
     const available = await indicatorValue(page, 'Perfiles disponibles')
+    // Sus contadores de oportunidades y solicitudes, sin el aviso que solo ve la institución (CA-02).
+    await indicatorValue(page, 'Oportunidades activas')
+    await indicatorValue(page, 'Solicitudes pendientes')
+    await expect(page.getByRole('link', { name: 'Revisar solicitudes' })).toHaveCount(0)
     // Mismo universo que el buscador sin filtros (HU-S4-05 CA-02).
     const search = page.waitForResponse((response) => new URL(response.url()).pathname === '/api/talent')
     await page.getByRole('navigation', { name: 'Empresa' }).getByRole('link', { name: 'Buscar talento' }).click()
