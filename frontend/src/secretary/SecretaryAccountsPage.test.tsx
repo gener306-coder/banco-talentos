@@ -65,7 +65,8 @@ describe('cuentas de la Secretaría HU-S4-01', () => {
     expect(within(rows[1]).getByText('laura@economia.test')).toBeInTheDocument()
     expect(within(rows[1]).getByText('ACTIVA')).toBeInTheDocument()
     expect(within(rows[2]).getByText('PENDIENTE')).toBeInTheDocument()
-    expect(within(rows[1]).queryByRole('button')).not.toBeInTheDocument()
+    // Una cuenta activa no tiene enlace que reenviar; desde HU-S6-04 ofrece sus acciones de acceso.
+    expect(within(rows[1]).queryByRole('button', { name: /Reenviar enlace/ })).not.toBeInTheDocument()
     expect(apiMock.mock.calls[0][0]).toBe('/api/secretary-accounts?page=1')
   })
 
@@ -127,5 +128,58 @@ describe('cuentas de la Secretaría HU-S4-01', () => {
     fireEvent.change(within(dialog).getByLabelText('Correo de la cuenta pendiente'), { target: { value: 'mario@economia.test' } })
     fireEvent.click(within(dialog).getByRole('button', { name: 'Reenviar enlace de configuración' }))
     expect(await within(dialog).findByRole('alert')).toHaveTextContent('Espera al menos un minuto')
+  })
+
+  describe('estado y restablecimiento HU-S6-04', () => {
+    const nora = { id: 11, name: 'Nora Activa', email: 'nora@economia.test', status: 'active', created_at: '2026-10-22T10:00:00Z' }
+    const patches = () => apiMock.mock.calls.filter(([, options]) => options?.method === 'PATCH')
+
+    it('inactiva tras confirmar y activa otra cuenta, pero nunca la propia (CA-01, CA-04)', async () => {
+      apiMock.mockResolvedValueOnce(listResponse([...accounts, nora]))
+        .mockResolvedValueOnce(Response.json({ data: { ...nora, status: 'inactive' } }))
+        .mockResolvedValueOnce(Response.json({ data: nora }))
+      renderApp()
+      const table = await screen.findByRole('table', { name: 'Cuentas de la Secretaría' })
+      // La propia cuenta de la sesión (id 9) puede restablecerse, pero no inactivarse; la pendiente usa su enlace.
+      expect(within(table).getByRole('button', { name: 'Restablecer la contraseña de Laura Secretaría' })).toBeInTheDocument()
+      expect(within(table).queryByRole('button', { name: 'Inactivar la cuenta de Laura Secretaría' })).not.toBeInTheDocument()
+      expect(within(table).queryByRole('button', { name: 'Inactivar la cuenta de Mario Pendiente' })).not.toBeInTheDocument()
+
+      fireEvent.click(within(table).getByRole('button', { name: 'Inactivar la cuenta de Nora Activa' }))
+      fireEvent.click(within(await screen.findByRole('alertdialog', { name: '¿Inactivar la cuenta?' })).getByRole('button', { name: 'Inactivar' }))
+      expect(await screen.findByText(/Cuenta de Nora Activa inactivada correctamente/)).toBeInTheDocument()
+      expect(patches()[0][0]).toBe('/api/secretary-accounts/11/status')
+      expect(within(table).getByRole('row', { name: /Nora Activa/ })).toHaveTextContent('INACTIVA')
+
+      fireEvent.click(within(table).getByRole('button', { name: 'Activar la cuenta de Nora Activa' }))
+      expect(await screen.findByText('Cuenta de Nora Activa activada correctamente.')).toBeInTheDocument()
+      expect(patches().map(([, options]) => JSON.parse(options?.body as string))).toEqual([{ is_active: false }, { is_active: true }])
+    })
+
+    it('ADMIN puede inactivar cualquier cuenta configurada', async () => {
+      user = admin
+      apiMock.mockResolvedValueOnce(listResponse())
+      renderApp()
+      expect(await screen.findByRole('button', { name: 'Inactivar la cuenta de Laura Secretaría' })).toBeInTheDocument()
+    })
+
+    it('inicia el restablecimiento tras confirmar e informa el envío o el límite (CA-02, CA-04)', async () => {
+      apiMock.mockResolvedValueOnce(listResponse([...accounts, nora]))
+        .mockResolvedValueOnce(Response.json({ reset_delivery: 'sent' }))
+        .mockResolvedValueOnce(new Response(null, { status: 429 }))
+      renderApp()
+      const reset = await screen.findByRole('button', { name: 'Restablecer la contraseña de Nora Activa' })
+      fireEvent.click(reset)
+      const dialog = await screen.findByRole('alertdialog', { name: '¿Restablecer la contraseña?' })
+      expect(dialog).toHaveTextContent('nora@economia.test')
+      fireEvent.click(within(dialog).getByRole('button', { name: 'Enviar enlace' }))
+      expect(await screen.findByText(/Se envió el enlace de restablecimiento a nora@economia.test/)).toBeInTheDocument()
+      expect(posts()[0][0]).toBe('/api/secretary-accounts/password-reset/start')
+      expect(JSON.parse(posts()[0][1]?.body as string)).toEqual({ email: 'nora@economia.test' })
+
+      fireEvent.click(reset)
+      fireEvent.click(within(await screen.findByRole('alertdialog')).getByRole('button', { name: 'Enviar enlace' }))
+      expect(await screen.findByRole('alert')).toHaveTextContent('Espera al menos un minuto')
+    })
   })
 })

@@ -1,11 +1,13 @@
 import { useCallback, useState } from 'react'
 import { Link } from 'react-router'
+import { useAccountAccess } from '../accounts/useAccountAccess'
+import { useAuth } from '../auth/useAuth'
 import { InstitutionRequestError } from '../institutions/InstitutionLayout'
 import { useApiRequest } from '../lib/useApiRequest'
 import { ChevronLeftIcon, ChevronRightIcon, PlusIcon } from '../ui/icons'
 import { Sheet } from '../ui/Sheet'
 import { LoadingState } from '../ui/StateMessage'
-import { listSecretaryAccounts, secretaryMessages } from './api'
+import { listSecretaryAccounts, SECRETARY_PASSWORD_RESET_PATH, secretaryAccountStatusPath, secretaryMessages } from './api'
 import type { SecretaryAccountStatus } from './api'
 import { SecretaryAccountForm, SecretarySetupLinkForm } from './SecretaryAccountForms'
 import '../institutions/institutions.css'
@@ -15,12 +17,21 @@ const dateFormat = new Intl.DateTimeFormat('es-MX', { dateStyle: 'medium' })
 
 /**
  * Cuentas de la Secretaría de Economía (HU-S4-01 CA-05, CA-08): listado con su estado, alta y reenvío del enlace
- * en hojas. Disponible para ADMIN y SECRETARY.
+ * en hojas, e inactivación, activación y restablecimiento de contraseña (HU-S6-04 CA-04). Disponible para ADMIN y
+ * SECRETARY.
  */
 export function SecretaryAccountsPage() {
   const [page, setPage] = useState(1)
   const load = useCallback((signal: AbortSignal) => listSecretaryAccounts(page, signal), [page])
-  const { data, loading, failure, refresh } = useApiRequest(load, secretaryMessages)
+  const { data, loading, failure, refresh, setData } = useApiRequest(load, secretaryMessages)
+  const { user } = useAuth()
+  const access = useAccountAccess({
+    statusPath: (account) => secretaryAccountStatusPath(account.id),
+    resetPath: SECRETARY_PASSWORD_RESET_PATH,
+    messages: secretaryMessages,
+    selfId: user?.id,
+    onUpdated: (updated) => setData((current) => current && { ...current, accounts: current.accounts.map((account) => account.id === updated.id ? updated : account) }),
+  })
   const [sheet, setSheet] = useState<{ kind: 'create' } | { kind: 'resend'; email: string } | null>(null)
   const closeSheet = useCallback(() => setSheet(null), [])
 
@@ -37,6 +48,7 @@ export function SecretaryAccountsPage() {
           <button type="button" className="secondary" onClick={() => setSheet({ kind: 'resend', email: '' })}>Reenviar enlace</button>
         </div>
       </div>
+      {access.feedback}
       {loading ? <LoadingState label="Cargando cuentas…" variant="table" />
         : failure ? <InstitutionRequestError failure={failure} retry={refresh} page />
         : data && (
@@ -52,10 +64,15 @@ export function SecretaryAccountsPage() {
                       <td>{account.email}</td>
                       <td><span className={`institution-status ${account.status}`}>{statusLabels[account.status]}</span></td>
                       <td>{dateFormat.format(new Date(account.created_at))}</td>
-                      <td>{account.status === 'pending' && (
-                        <button type="button" className="secondary" aria-label={`Reenviar enlace a ${account.name}`}
-                          onClick={() => setSheet({ kind: 'resend', email: account.email })}>Reenviar enlace</button>
-                      )}</td>
+                      <td>
+                        <div className="actions">
+                          {account.status === 'pending' && (
+                            <button type="button" className="secondary" aria-label={`Reenviar enlace a ${account.name}`}
+                              onClick={() => setSheet({ kind: 'resend', email: account.email })}>Reenviar enlace</button>
+                          )}
+                          {access.rowActions(account)}
+                        </div>
+                      </td>
                     </tr>
                   ))}
                 </tbody>
@@ -72,6 +89,7 @@ export function SecretaryAccountsPage() {
             )}
           </>
         )}
+      {access.dialog}
       <Sheet open={sheet?.kind === 'create'} onClose={closeSheet} labelledBy="secretary-account-title">
         <SecretaryAccountForm onCreated={() => { void refresh() }} />
       </Sheet>

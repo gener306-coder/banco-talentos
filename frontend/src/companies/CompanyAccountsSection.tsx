@@ -1,6 +1,7 @@
 import { useCallback, useState } from 'react'
 import { SetupAccountForm, SetupLinkResendForm } from '../accounts/SetupAccountForms'
 import type { SetupAccountStatus } from '../accounts/api'
+import { useAccountAccess } from '../accounts/useAccountAccess'
 import { InstitutionRequestError } from '../institutions/InstitutionLayout'
 import { useApiRequest } from '../lib/useApiRequest'
 import { PlusIcon } from '../ui/icons'
@@ -12,11 +13,18 @@ const statusLabels: Record<SetupAccountStatus, string> = { active: 'ACTIVA', pen
 
 /**
  * Cuentas de acceso de la empresa (HU-S4-03): listado con su estado (CA-06) y, si la empresa está activa, alta y
- * reenvío del enlace en hojas (CA-01, CA-02).
+ * reenvío del enlace en hojas (CA-01, CA-02), e inactivación, activación y restablecimiento de contraseña de cada cuenta
+ * (HU-S6-04 CA-03, CA-04).
  */
 export function CompanyAccountsSection({ companyId, active }: { companyId: number; active: boolean }) {
   const load = useCallback((signal: AbortSignal) => listCompanyAccounts(companyId, signal), [companyId])
-  const { data, loading, failure, refresh } = useApiRequest(load, companyMessages)
+  const { data, loading, failure, refresh, setData } = useApiRequest(load, companyMessages)
+  const access = useAccountAccess({
+    statusPath: (account) => `/api/companies/${companyId}/accounts/${account.id}/status`,
+    resetPath: `/api/companies/${companyId}/accounts/password-reset/start`,
+    messages: companyMessages,
+    onUpdated: (updated) => setData((current) => current && current.map((account) => account.id === updated.id ? updated : account)),
+  })
   const [sheet, setSheet] = useState<{ kind: 'create' } | { kind: 'resend'; email: string } | null>(null)
   const closeSheet = useCallback(() => setSheet(null), [])
   const create = useCallback((input: Parameters<typeof createCompanyAccount>[1]) => createCompanyAccount(companyId, input), [companyId])
@@ -33,7 +41,8 @@ export function CompanyAccountsSection({ companyId, active }: { companyId: numbe
             <button type="button" className="secondary" onClick={() => setSheet({ kind: 'resend', email: '' })}>Reenviar enlace</button>
           </div>
         )
-        : <p className="notice">Activa la empresa para crear cuentas o reenviar enlaces. Mientras esté inactiva, sus cuentas no pueden iniciar sesión.</p>}
+        : <p className="notice">Activa la empresa para crear cuentas, reenviar enlaces o gestionar el acceso de sus cuentas. Mientras esté inactiva, sus cuentas no pueden iniciar sesión.</p>}
+      {access.feedback}
       {loading ? <LoadingState label="Cargando cuentas…" variant="table" />
         : failure ? <InstitutionRequestError failure={failure} retry={refresh} />
         : data && (data.length === 0
@@ -49,16 +58,22 @@ export function CompanyAccountsSection({ companyId, active }: { companyId: numbe
                       <th scope="row">{account.name}</th>
                       <td>{account.email}</td>
                       <td><span className={`institution-status ${account.status}`}>{statusLabels[account.status]}</span></td>
-                      <td>{active && account.status === 'pending' && (
-                        <button type="button" className="secondary" aria-label={`Reenviar enlace a ${account.name}`}
-                          onClick={() => setSheet({ kind: 'resend', email: account.email })}>Reenviar enlace</button>
-                      )}</td>
+                      <td>
+                        <div className="actions">
+                          {active && account.status === 'pending' && (
+                            <button type="button" className="secondary" aria-label={`Reenviar enlace a ${account.name}`}
+                              onClick={() => setSheet({ kind: 'resend', email: account.email })}>Reenviar enlace</button>
+                          )}
+                          {access.rowActions(account, active)}
+                        </div>
+                      </td>
                     </tr>
                   ))}
                 </tbody>
               </table>
             </div>
           ))}
+      {access.dialog}
       <Sheet open={sheet?.kind === 'create'} onClose={closeSheet} labelledBy="company-account-title">
         <SetupAccountForm idPrefix="company-account" title="Nueva cuenta de la empresa" submitLabel="Crear cuenta de la empresa"
           intro="La cuenta se vinculará a esta empresa. La persona titular establecerá su propia contraseña mediante un enlace de configuración."

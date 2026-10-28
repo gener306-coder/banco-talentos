@@ -1,7 +1,8 @@
 import { randomBytes } from 'node:crypto'
 import { expect, test } from '@playwright/test'
 import type { Page } from '@playwright/test'
-import { ADMIN_STATE } from './support/admin'
+import { ADMIN_STATE, NO_SESSION } from './support/admin'
+import { linkFromMail } from './support/mailpit'
 import { newSecretarySession, signInWithSetupLink } from './support/secretary'
 
 test.use({ storageState: ADMIN_STATE })
@@ -60,6 +61,62 @@ test('HU-S4-03: la Secretaría crea la cuenta de una empresa → la titular entr
       await holderContext.close()
     }
   } finally {
+    await secretaryContext.close()
+  }
+})
+
+test('HU-S6-04: la Secretaría inactiva una cuenta de empresa (su sesión se cierra), la reactiva y restablece su contraseña por correo', async ({ page, browser, baseURL, request }) => {
+  const { context: secretaryContext, page: secretary } = await newSecretarySession(page, browser, baseURL, 'acceso-empresa-se')
+  const suffix = randomBytes(6).toString('hex')
+  const email = `acceso-${suffix}@example.test`
+  const resetContext = await browser.newContext({ baseURL, ...NO_SESSION })
+  try {
+    await registerCompany(secretary, `Acceso E2E ${suffix}, S.C.`)
+    await secretary.getByRole('button', { name: 'Nueva cuenta de la empresa', exact: true }).click()
+    const creation = secretary.getByRole('dialog', { name: 'Nueva cuenta de la empresa' })
+    await creation.getByLabel('Nombre de la cuenta', { exact: true }).fill(`Acceso ${suffix}`)
+    await creation.getByLabel('Correo de acceso', { exact: true }).fill(email)
+    await creation.getByRole('radio', { name: /Generar un enlace para compartirlo/ }).check()
+    await creation.getByRole('button', { name: 'Crear cuenta de la empresa', exact: true }).click()
+    const link = await creation.getByLabel('Enlace de configuración', { exact: true }).inputValue()
+    await creation.getByRole('button', { name: 'Cerrar', exact: true }).click()
+
+    const { context: holderContext, page: holder } = await signInWithSetupLink(browser, baseURL, link, email)
+    try {
+      // CA-03, CA-04: inactivar se confirma y cierra la sesión abierta en su siguiente petición.
+      await secretary.reload()
+      const row = secretary.getByRole('row').filter({ hasText: email })
+      await row.getByRole('button', { name: /^Inactivar la cuenta de/ }).click()
+      await secretary.getByRole('alertdialog', { name: '¿Inactivar la cuenta?' }).getByRole('button', { name: 'Inactivar', exact: true }).click()
+      await expect(row).toContainText('INACTIVA')
+      await holder.reload()
+      await expect(holder.getByRole('button', { name: 'Iniciar sesión', exact: true })).toBeVisible()
+
+      await row.getByRole('button', { name: /^Activar la cuenta de/ }).click()
+      await expect(row).toContainText('ACTIVA')
+    } finally {
+      await holderContext.close()
+    }
+
+    // CA-03: restablecimiento por correo desde el detalle de la empresa.
+    await secretary.getByRole('row').filter({ hasText: email }).getByRole('button', { name: /^Restablecer la contraseña de/ }).click()
+    await secretary.getByRole('alertdialog', { name: '¿Restablecer la contraseña?' }).getByRole('button', { name: 'Enviar enlace', exact: true }).click()
+    await expect(secretary.getByText(`Se envió el enlace de restablecimiento a ${email}`, { exact: false })).toBeVisible()
+
+    const password = randomBytes(24).toString('hex')
+    const reset = await resetContext.newPage()
+    await reset.goto(await linkFromMail(request, email, 'Restablece tu contraseña', '/reset-password'))
+    await reset.getByLabel('Contraseña', { exact: true }).fill(password)
+    await reset.getByLabel('Confirmar contraseña', { exact: true }).fill(password)
+    await reset.getByRole('button', { name: 'Restablecer contraseña', exact: true }).click()
+    await expect(reset.getByRole('status')).toHaveText('Contraseña restablecida. Ya puedes iniciar sesión con tu nueva contraseña.')
+    await reset.goto('/login')
+    await reset.getByLabel('Correo electrónico').fill(email)
+    await reset.getByLabel('Contraseña', { exact: true }).fill(password)
+    await reset.getByRole('button', { name: 'Iniciar sesión', exact: true }).click()
+    await expect(reset.getByText(email, { exact: true })).toBeVisible()
+  } finally {
+    await resetContext.close()
     await secretaryContext.close()
   }
 })
