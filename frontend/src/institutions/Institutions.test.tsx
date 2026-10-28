@@ -62,6 +62,8 @@ beforeEach(() => {
     if (path === '/api/me') {
       return sessionUser ? Response.json({ user: sessionUser }) : new Response(null, { status: 401 })
     }
+    // Indicadores del inicio (HU-S5-01): ajenos a estas pruebas, quedan pendientes sin consumir respuestas.
+    if (path === '/api/dashboard') return new Promise<Response>(() => undefined)
     if (path === '/sanctum/csrf-cookie') {
       document.cookie = 'XSRF-TOKEN=csrf%3D; Path=/'
       return new Response(null, { status: 204 })

@@ -1,6 +1,6 @@
 # Banco de Talentos – Educación Dual
 
-Monolito modular. Sprint vigente: [Sprint 4](docs/sprint-4.md) (completo); historias del [Sprint 1](docs/sprint-1.md) y del Sprint 2:
+Monolito modular. Sprint vigente: [Sprint 5](docs/sprint-5.md) (en curso; completada HU-S5-01, ver «Inicio por rol»). Sprint anterior: [Sprint 4](docs/sprint-4.md) (completo). Historias del [Sprint 1](docs/sprint-1.md) y del Sprint 2:
 
 - **HU-S1-01 — Autenticación y control de acceso** ([detalle](docs/HU-S1-01.md)).
 - **HU-S1-02 — Gestión de instituciones**: ADMIN lista, registra, consulta, edita y activa o inactiva instituciones ([detalle](docs/HU-S1-02.md)).
@@ -70,6 +70,16 @@ La cookie de sesión es `HttpOnly`, de dominio local y `SameSite=Lax`. El client
 Los roles son `ADMIN`, `INSTITUTION`, `COMPANY` y `SECRETARY`. Todos requieren una cuenta activa. Las cuentas `INSTITUTION` requieren además que su institución esté activa. ADMIN dispone de la gestión de instituciones y de cuentas institucionales; ADMIN y `SECRETARY` gestionan las cuentas de la Secretaría; `SECRETARY` gestiona las empresas; `INSTITUTION` ve su institución vinculada; `COMPANY` ve su empresa vinculada y busca talento anónimo. El acceso se restringe tanto en las rutas React como en la API con Sanctum y el middleware `role`.
 
 Después de iniciar sesión como ADMIN, abre **Instituciones**. El listado incluye instituciones activas e inactivas. El registro y la edición solicitan nombre, CCT y correo de contacto; el detalle ofrece la acción para activar o inactivar. El CCT es único incluso entre instituciones inactivas y no existe eliminación. Consulta el contrato y la matriz de pruebas en [docs/HU-S1-02.md](docs/HU-S1-02.md).
+
+## Inicio por rol
+
+La página de inicio (`/`) saluda a la cuenta, ofrece la acción principal de su rol y muestra tarjetas de acceso a sus secciones. Sobre las tarjetas aparecen los indicadores de `GET /api/dashboard` (HU-S5-01), calculados solo con los datos de la organización de la sesión:
+- ADMIN: instituciones activas e inactivas y cuentas de la Secretaría activas y pendientes;
+- `SECRETARY`: empresas activas e inactivas y cuentas de la Secretaría pendientes;
+- `INSTITUTION`: alumnos activos, visibles en el buscador y con «Municipio por confirmar». Si hay alguno pendiente, un aviso enlaza al padrón;
+- `COMPANY`: perfiles disponibles en el buscador.
+
+Una cuenta sin organización vinculada no recibe indicadores. Si la consulta falla, el inicio muestra un aviso discreto y las secciones siguen disponibles. Contrato y cobertura en [docs/HU-S5-01.md](docs/HU-S5-01.md).
 
 ## Cuentas institucionales
 
@@ -147,7 +157,7 @@ sh scripts/test-e2e.sh
 
 Los scripts usan el proyecto Compose independiente `banco-talentos-tests`, sin puertos publicados ni el volumen PostgreSQL de desarrollo. PostgreSQL utiliza almacenamiento temporal; Pest y E2E tienen bases distintas. Las sesiones, cachés y clave de aplicación de ese entorno también son independientes. Las pruebas Pest comprueban la base de destino antes de aplicar migraciones destructivas. El E2E incluye un Mailpit efímero, sin puertos publicados, del que lee los correos que envía el backend; Pest no lo utiliza y conserva el mailer `array`.
 
-Cada script limpia sus contenedores y red al terminar; el volumen `test_vendor` conserva sólo dependencias. Ejecuta los dos scripts secuencialmente, porque comparten el proyecto de pruebas. El E2E genera credenciales efímeras separadas para ADMIN e INSTITUTION, no las imprime y no guarda trazas de red. ADMIN e INSTITUTION inician sesión una sola vez (`e2e/admin.setup.ts` y `e2e/institution.setup.ts`) y los escenarios de administración y de alumnos reutilizan esas sesiones, guardada dentro del contenedor de pruebas en `playwright/.auth/` (excluido de Git), para no agotar el límite de intentos de login. Chromium y sus bibliotecas se instalan en la imagen de pruebas, no en tu equipo ni en el contenedor de desarrollo. La primera construcción requiere Internet y puede tardar varios minutos.
+Cada script limpia sus contenedores y red al terminar; el volumen `test_vendor` conserva sólo dependencias. Ejecuta los dos scripts secuencialmente, porque comparten el proyecto de pruebas. El E2E genera credenciales efímeras separadas para ADMIN e INSTITUTION, no las imprime y no guarda trazas de red. ADMIN e INSTITUTION inician sesión una sola vez (`e2e/admin.setup.ts` y `e2e/institution.setup.ts`); a partir de ellas, `e2e/secretary.setup.ts` y `e2e/company.setup.ts` crean una cuenta `SECRETARY` y una empresa con su cuenta `COMPANY` (T-S5-01). Los escenarios reutilizan esas sesiones, guardadas dentro del contenedor de pruebas en `playwright/.auth/` (excluido de Git), para no agotar el límite de intentos de login. Chromium y sus bibliotecas se instalan en la imagen de pruebas, no en tu equipo ni en el contenedor de desarrollo. La primera construcción requiere Internet y puede tardar varios minutos.
 
 Los tests de roles registran rutas únicamente dentro de Pest para verificar la matriz de acceso sin introducir módulos ficticios en la aplicación. Las pruebas de sesión usan cookies cifradas y archivos reales; no sustituyen el login por `actingAs`. Las pruebas CSRF desactivan únicamente la excepción del framework para el entorno de tests.
 
