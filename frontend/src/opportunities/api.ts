@@ -162,3 +162,22 @@ export async function setOpportunityStatus(id: string | number, active: boolean)
   await request('/sanctum/csrf-cookie')
   return detail(await request(`${opportunityPath(id)}/status`, { method: 'PATCH', body: JSON.stringify({ is_active: active }) }))
 }
+
+/** Oportunidad activa que se puede elegir en una solicitud de vinculación (HU-S5-04 CA-06). */
+export interface OpportunityOption {
+  id: number
+  title: string
+  program: string
+  municipality: string | null
+}
+
+export async function listOpportunityOptions(signal?: AbortSignal): Promise<OpportunityOption[]> {
+  const response = await request('/api/opportunities/options', { signal })
+  if (!isObject(response) || !Array.isArray(response.data)) throw new ApiError(502)
+  return response.data.map((item: unknown): OpportunityOption => {
+    if (!isObject(item) || !isPositiveInt(item.id) || !isText(item.title) || !isText(item.program) || !isOptionalText(item.municipality)) {
+      throw new ApiError(502)
+    }
+    return { id: item.id, title: item.title, program: item.program, municipality: item.municipality }
+  })
+}

@@ -3,7 +3,7 @@ import { expect, test } from '@playwright/test'
 import type { Page } from '@playwright/test'
 import { ADMIN_STATE } from './support/admin'
 import { INSTITUTION_STATE } from './support/institution'
-import { openCompanySession } from './support/company'
+import { createOpportunity, openCompanySession } from './support/company'
 
 test.use({ storageState: ADMIN_STATE })
 
@@ -43,7 +43,7 @@ async function publishStudent(page: Page, data: { surname: string; enrollment: s
   await expect(page.getByText('Habilidades guardadas correctamente.')).toBeVisible()
 }
 
-test('HU-S4-05: una empresa encuentra un perfil anónimo por habilidad y distancia, sin datos personales ni contacto', async ({ browser, baseURL }) => {
+test('HU-S4-05 y HU-S5-04: una empresa encuentra un perfil anónimo por habilidad y distancia, sin datos personales, y solicita la vinculación a su institución', async ({ browser, baseURL }) => {
   const suffix = randomBytes(6).toString('hex')
   const student = { surname: `Oculto${suffix}`, enrollment: `TAL-${suffix}`, headline: `Analista E2E ${suffix}`, skill: `Destreza${suffix}` }
 
@@ -87,6 +87,29 @@ test('HU-S4-05: una empresa encuentra un perfil anónimo por habilidad y distanc
     const content = await company.content()
     expect(content.includes(student.surname) || content.includes(student.enrollment) || content.includes('Valeria Secreta')).toBe(false)
     expect(company.url()).toMatch(/\/talent\/[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/)
+
+    // HU-S5-04: solicitud de vinculación directa a la institución con una oportunidad activa.
+    const opportunityTitle = `Tableros E2E ${suffix}`
+    const setup = await context.newPage()
+    await createOpportunity(setup, opportunityTitle)
+    await setup.close()
+    await company.getByRole('button', { name: 'Solicitar vinculación' }).click()
+    const sheet = company.getByRole('dialog', { name: 'Solicitar vinculación' })
+    await sheet.getByLabel('Oportunidad').selectOption({ label: `${opportunityTitle} · Reynosa` })
+    await sheet.getByLabel('Mensaje para la institución (opcional)').fill('Nos interesa su perfil para el proyecto de tableros.')
+    const sent = company.waitForResponse((response) => response.url().endsWith('/api/linkage-requests') && response.request().method() === 'POST')
+    await sheet.getByRole('button', { name: 'Enviar solicitud' }).click()
+    const response = await sent
+    expect(response.status()).toBe(201)
+    const body = await response.text()
+    // CA-05: la respuesta solo identifica al alumno por su public_id.
+    expect(body.includes(student.surname) || body.includes(student.enrollment) || body.includes('student_id')).toBe(false)
+    await expect(sheet.getByRole('status')).toContainText(`Solicitud enviada a la institución del alumno para «${opportunityTitle}»`)
+
+    // CA-03: una segunda solicitud para el mismo perfil y oportunidad se rechaza.
+    await sheet.getByLabel('Oportunidad').selectOption({ label: `${opportunityTitle} · Reynosa` })
+    await sheet.getByRole('button', { name: 'Enviar solicitud' }).click()
+    await expect(sheet.getByLabel('Oportunidad')).toHaveAccessibleDescription('Ya enviaste una solicitud para este perfil en esa oportunidad.')
   } finally {
     await context.close()
   }

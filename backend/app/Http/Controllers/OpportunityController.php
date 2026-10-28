@@ -25,6 +25,8 @@ class OpportunityController extends Controller
     /** Habilidades que muestra el listado; el detalle las muestra todas. */
     private const SUMMARY_SKILLS = 5;
 
+    private const OPTIONS_LIMIT = 200;
+
     public function index(Request $request): JsonResponse
     {
         // CA-06: de la más reciente a la más antigua; el id desempata altas del mismo segundo.
@@ -59,6 +61,29 @@ class OpportunityController extends Controller
             'municipality_code' => $company->municipality_code,
             'municipality' => $company->municipality?->name,
         ]])->header('Cache-Control', 'no-store, private');
+    }
+
+    /**
+     * Oportunidades activas de la empresa para elegir en una solicitud de vinculación (HU-S5-04 CA-06), de la más
+     * reciente a la más antigua. Sin paginar, con un tope amplio.
+     */
+    public function options(Request $request): JsonResponse
+    {
+        $opportunities = Opportunity::query()
+            ->where('company_id', $request->user()->company_id)
+            ->where('is_active', true)
+            ->with('municipality:code,name')
+            ->orderByDesc('created_at')
+            ->orderByDesc('id')
+            ->limit(self::OPTIONS_LIMIT)
+            ->get(['id', 'title', 'program', 'municipality_code', 'created_at']);
+
+        return response()->json(['data' => $opportunities->map(fn (Opportunity $opportunity): array => [
+            'id' => $opportunity->id,
+            'title' => $opportunity->title,
+            'program' => $opportunity->program,
+            'municipality' => $opportunity->municipality?->name,
+        ])->values()])->header('Cache-Control', 'no-store, private');
     }
 
     public function store(OpportunityRequest $request): JsonResponse

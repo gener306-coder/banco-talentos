@@ -1,6 +1,6 @@
 # Banco de Talentos – Educación Dual
 
-Monolito modular. Sprint vigente: [Sprint 5](docs/sprint-5.md) (en curso; completadas HU-S5-01, ver «Inicio por rol», HU-S5-02 y HU-S5-03, ver «Oportunidades Duales»). Sprint anterior: [Sprint 4](docs/sprint-4.md) (completo). Historias del [Sprint 1](docs/sprint-1.md) y del Sprint 2:
+Monolito modular. Sprint vigente: [Sprint 5](docs/sprint-5.md) (en curso; completadas HU-S5-01, ver «Inicio por rol», HU-S5-02 y HU-S5-03, ver «Oportunidades Duales», y HU-S5-04, ver «Buscador de talento»). Sprint anterior: [Sprint 4](docs/sprint-4.md) (completo). Historias del [Sprint 1](docs/sprint-1.md) y del Sprint 2:
 
 - **HU-S1-01 — Autenticación y control de acceso** ([detalle](docs/HU-S1-01.md)).
 - **HU-S1-02 — Gestión de instituciones**: ADMIN lista, registra, consulta, edita y activa o inactiva instituciones ([detalle](docs/HU-S1-02.md)).
@@ -123,6 +123,8 @@ Una cuenta `COMPANY` de una empresa activa abre **Buscar talento** desde el inic
 - estado y distancia máxima (10, 25, 50, 100 o 200 km), medida desde el municipio de la empresa o desde otro municipio del catálogo.
 
 No hay mapa: los resultados son tarjetas anónimas ordenadas por distancia, de 20 en 20. Cada tarjeta muestra titular, carrera, periodo, institución, ubicación aproximada, habilidades, idiomas y disponibilidad. **Ver perfil** (`/talent/:public_id`) muestra el CV público completo, sin botón de contacto. Las empresas nunca reciben la identidad del alumno, el seguro facultativo, los enlaces ni las credenciales, y lo identifican solo por un UUID aleatorio. Solo aparecen alumnos activos de instituciones activas con su expediente capturado. Contrato, nota de privacidad y cobertura en [docs/HU-S4-05.md](docs/HU-S4-05.md).
+
+Desde el perfil, **Solicitar vinculación** abre una hoja para elegir una de las oportunidades activas de la empresa y escribir un mensaje opcional, sin datos de contacto. La solicitud llega directamente a la institución del alumno, queda pendiente de su respuesta y no requiere a la Secretaría. La empresa sigue sin recibir datos personales. No se puede repetir la solicitud para el mismo perfil y oportunidad mientras siga pendiente o aceptada. Si la empresa no tiene oportunidades activas, la hoja ofrece registrar una. Contrato y cobertura en [docs/HU-S5-04.md](docs/HU-S5-04.md).
 
 ## Oportunidades Duales
 
