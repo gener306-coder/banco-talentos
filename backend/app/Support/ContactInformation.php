@@ -13,6 +13,9 @@ final class ContactInformation
     /** Oportunidades duales (HU-S5-02 CA-04): la empresa no publica canales de contacto fuera del flujo institucional. */
     public const OPPORTUNITY_MESSAGE = 'No incluyas enlaces, correos ni teléfonos: el contacto con el alumno se coordina con su institución.';
 
+    /** Respuesta institucional (HU-S6-02 CA-01): la empresa ya tiene el contacto de la institución en su bandeja. */
+    public const RESPONSE_MESSAGE = 'No incluyas enlaces, correos ni teléfonos: la empresa ya tiene el contacto de tu institución.';
+
     private const PATTERNS = [
         '~https?://~i',
         '~\bwww\.~i',

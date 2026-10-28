@@ -168,6 +168,9 @@ class LinkageRequestController extends Controller
                 'period_number' => $student->period_number,
             ],
             'institution' => ['name' => $linkage->institution->name, 'contact_email' => $linkage->institution->contact_email],
+            // Respuesta de la institución (HU-S6-02 CA-04), sin la cuenta que respondió.
+            'responded_at' => $linkage->responded_at?->toISOString(),
+            'response_message' => $linkage->response_message,
         ];
     }
 

@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\LinkageRequestStatus;
+use App\Http\Requests\DecideLinkageRequestRequest;
 use App\Http\Requests\ListInstitutionLinkageRequestsRequest;
 use App\Models\Company;
 use App\Models\LinkageRequest;
@@ -10,11 +12,14 @@ use App\Models\Student;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
 
 /**
  * Bandeja institucional de solicitudes de vinculación (HU-S6-01): las que las empresas enviaron para alumnos de la
  * institución de la sesión, con la identidad interna del alumno para evaluarlas. Esa identidad y el indicador del
  * seguro facultativo son de uso exclusivo de la institución; nunca forman parte de una respuesta para la empresa.
+ * La institución responde las pendientes con ACEPTADA o RECHAZADA (HU-S6-02).
  */
 class InstitutionLinkageRequestController extends Controller
 {
@@ -54,19 +59,53 @@ class InstitutionLinkageRequestController extends Controller
     /** CA-05: detalle completo para evaluar la solicitud. Una ajena responde igual que una inexistente (CA-02). */
     public function show(Request $request, string $linkageRequest): JsonResponse
     {
-        $linkage = $this->owned($request)
-            ->with([
-                'company.municipality:code,name',
-                'opportunity.municipality:code,name',
-                'opportunity.skills:id,name,kind',
-                self::STUDENT_COLUMNS,
-                'student.identity',
-                'student.municipality:code,name',
-                // Solo las columnas que dicen si hay NSS y comprobante; nunca su valor ni la ruta del PDF.
-                'student.socialSecurity:id,student_id,nss_hash,document_path',
-            ])
-            ->find((int) $linkageRequest);
+        $linkage = $this->owned($request)->find((int) $linkageRequest);
         abort_if($linkage === null, 404, 'La solicitud no existe.');
+
+        return $this->detail($linkage);
+    }
+
+    /**
+     * Respuesta institucional (HU-S6-02 CA-01 a CA-03): solo una solicitud propia y PENDIENTE_INSTITUCION. La fila se
+     * bloquea para que la empresa no la cancele a la vez; una ajena o inexistente responde 404 y una que ya no está
+     * pendiente, 422, sin cambios.
+     */
+    public function decide(DecideLinkageRequestRequest $request, string $linkageRequest): JsonResponse
+    {
+        $validated = $request->validated();
+
+        $linkage = DB::transaction(function () use ($request, $linkageRequest, $validated): LinkageRequest {
+            $linkage = $this->owned($request)->lockForUpdate()->find((int) $linkageRequest);
+            abort_if($linkage === null, 404, 'La solicitud no existe.');
+
+            if ($linkage->status !== LinkageRequestStatus::PENDING_INSTITUTION) {
+                throw ValidationException::withMessages(['status' => ['Solo puedes responder solicitudes pendientes.']]);
+            }
+            $linkage->status = LinkageRequestStatus::from($validated['status']);
+            $linkage->response_message = $validated['response_message'] ?? null;
+            $linkage->responded_by = $request->user()->id;
+            $linkage->responded_at = now();
+            $linkage->save();
+
+            return $linkage;
+        });
+
+        return $this->detail($linkage);
+    }
+
+    private function detail(LinkageRequest $linkage): JsonResponse
+    {
+        $linkage->load([
+            'company.municipality:code,name',
+            'opportunity.municipality:code,name',
+            'opportunity.skills:id,name,kind',
+            self::STUDENT_COLUMNS,
+            'student.identity',
+            'student.municipality:code,name',
+            // Solo las columnas que dicen si hay NSS y comprobante; nunca su valor ni la ruta del PDF.
+            'student.socialSecurity:id,student_id,nss_hash,document_path',
+            'responder:id,name',
+        ]);
 
         $item = $this->item($linkage);
         $company = $linkage->company;
@@ -111,6 +150,10 @@ class InstitutionLinkageRequestController extends Controller
                     'has_document' => $socialSecurity?->document_path !== null,
                 ],
             ],
+            // Respuesta (HU-S6-02 CA-05): la cuenta que respondió solo la ve la institución.
+            'responded_at' => $linkage->responded_at?->toISOString(),
+            'response_message' => $linkage->response_message,
+            'responded_by' => $linkage->responder === null ? null : ['name' => $linkage->responder->name],
         ]])->header('Cache-Control', 'no-store, private');
     }
 

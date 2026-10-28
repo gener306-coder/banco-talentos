@@ -3,9 +3,8 @@
 namespace App\Enums;
 
 /**
- * Estado de una solicitud de vinculación Empresa → Institución (HU-S5-04). La respuesta de la institución
- * (ACEPTADA / RECHAZADA) pertenece al Sprint 6; en este Sprint toda solicitud nace PENDIENTE_INSTITUCION y la empresa
- * puede cancelarla mientras siga pendiente (HU-S5-05).
+ * Estado de una solicitud de vinculación Empresa → Institución (HU-S5-04). Toda solicitud nace PENDIENTE_INSTITUCION;
+ * mientras siga pendiente, la empresa puede cancelarla (HU-S5-05) y la institución aceptarla o rechazarla (HU-S6-02).
  */
 enum LinkageRequestStatus: string
 {
