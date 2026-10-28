@@ -3,6 +3,19 @@ import type { Browser, BrowserContext, Page } from '@playwright/test'
 import { randomBytes } from 'node:crypto'
 import { NO_SESSION } from './admin'
 
+/**
+ * Sesión SECRETARY compartida por los escenarios de secretaría. La crea `secretary.setup.ts`.
+ */
+export const SECRETARY_STATE = 'playwright/.auth/secretary.json'
+
+/** Abre una nueva página con la sesión reutilizable de la Secretaría en la página de inicio. */
+export async function openSecretarySession(browser: Browser, baseURL: string | undefined) {
+  const context = await browser.newContext({ baseURL, storageState: SECRETARY_STATE })
+  const page = await context.newPage()
+  await page.goto('/')
+  return { context, page }
+}
+
 /** Crea una cuenta de la Secretaría con enlace manual desde la sección abierta y devuelve el enlace (HU-S4-01). */
 export async function createSecretaryAccount(page: Page, account: { name: string; email: string }): Promise<string> {
   await page.getByRole('button', { name: 'Nueva cuenta de la Secretaría', exact: true }).click()

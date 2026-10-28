@@ -12,11 +12,29 @@ export default defineConfig({
   },
   projects: [
     // Un único login de ADMIN y otro de INSTITUTION, cuyas sesiones reutilizan los demás escenarios.
-    { name: 'setup', testMatch: /.*\.setup\.ts/, use: { ...devices['Desktop Chrome'] } },
+    {
+      name: 'setup',
+      testMatch: /(admin|institution)\.setup\.ts/,
+      use: { ...devices['Desktop Chrome'] },
+    },
+    // Sesión reutilizable de SECRETARY (creada por ADMIN durante setup).
+    {
+      name: 'secretary-setup',
+      testMatch: /secretary\.setup\.ts/,
+      use: { ...devices['Desktop Chrome'] },
+      dependencies: ['setup'],
+    },
+    // Sesión reutilizable de COMPANY (empresa y cuenta creadas por SECRETARY durante setup).
+    {
+      name: 'company-setup',
+      testMatch: /company\.setup\.ts/,
+      use: { ...devices['Desktop Chrome'] },
+      dependencies: ['secretary-setup'],
+    },
     {
       name: 'chromium',
       use: { ...devices['Desktop Chrome'] },
-      dependencies: ['setup'],
+      dependencies: ['setup', 'secretary-setup', 'company-setup'],
     },
   ],
   webServer: {
