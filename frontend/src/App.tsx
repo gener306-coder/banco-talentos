@@ -18,6 +18,7 @@ import { CompanyDetailPage } from './companies/CompanyDetailPage'
 import { CompanyEditPage } from './companies/CompanyEditPage'
 import { SECRETARY_ACCOUNT_MANAGERS } from './secretary/api'
 import { SecretaryAccountsPage } from './secretary/SecretaryAccountsPage'
+import { LinkageRequestsPage } from './linkage/LinkageRequestsPage'
 import { OpportunitiesPage } from './opportunities/OpportunitiesPage'
 import { OpportunityCreatePage } from './opportunities/OpportunityCreatePage'
 import { OpportunityDetailPage } from './opportunities/OpportunityDetailPage'
@@ -84,6 +85,9 @@ function AuthRoutes() {
         <Route path="/opportunities/new" element={<OpportunityCreatePage />} />
         <Route path="/opportunities/:id" element={<OpportunityDetailPage />} />
         <Route path="/opportunities/:id/edit" element={<OpportunityEditPage />} />
+      </Route>
+      <Route element={<ProtectedRoute role="COMPANY" deniedMessage="No tienes permiso para consultar solicitudes de vinculación." />}>
+        <Route path="/linkage-requests" element={<LinkageRequestsPage />} />
       </Route>
       <Route element={<ProtectedRoute role="INSTITUTION" deniedMessage="No tienes permiso para acceder al padrón de alumnos." />}>
         <Route path="/students" element={<StudentsPage />} />

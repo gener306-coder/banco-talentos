@@ -1,0 +1,12 @@
+/* Solicitudes de vinculación (HU-S5-04, HU-S5-05): estados y bandeja, solo con tokens semánticos. */
+.linkage-status { display: inline-block; padding: 0.15rem 0.6rem; border-radius: 999px; font-size: 0.8rem; font-weight: 700; white-space: nowrap; }
+.linkage-status.pending { background: var(--tint); color: var(--accent); }
+.linkage-status.accepted { background: var(--success-surface); color: var(--success-text); }
+.linkage-status.rejected { background: var(--danger-surface); color: var(--danger-text); }
+.linkage-status.cancelled { background: var(--status-off-surface); color: var(--status-off-text); }
+.linkage-filter { display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: flex-end; margin: 0 0 1rem; max-width: 24rem; }
+.linkage-filter > div { flex: 1 1 14rem; }
+.linkage-filter select { width: 100%; margin-bottom: 0; }
+.linkage-profile-meta { display: block; font-size: 0.85rem; color: var(--text); }
+.linkage-notice { max-width: var(--content-readable); }
+.linkage-notice ul { margin: 0.3rem 0 0; padding-left: 1.2rem; }

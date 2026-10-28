@@ -32,6 +32,10 @@ beforeEach(() => {
     if (path === '/api/me') return Response.json({ user })
     // Indicadores del inicio (HU-S5-01): ajenos a estas pruebas, quedan pendientes sin consumir respuestas.
     if (path === '/api/dashboard') return new Promise<Response>(() => undefined)
+    // Solicitudes ya enviadas para el perfil (HU-S5-05 CA-04): ninguna en estas pruebas.
+    if (typeof path === 'string' && path.startsWith('/api/linkage-requests?')) {
+      return Response.json({ data: [], meta: { current_page: 1, last_page: 1, total: 0, per_page: 20 } })
+    }
     if (typeof path === 'string' && path.startsWith('/api/catalogs/')) {
       return Response.json({ data: [{ code: '28032', name: 'Reynosa' }, { code: '28041', name: 'Victoria' }] })
     }

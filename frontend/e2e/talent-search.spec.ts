@@ -43,7 +43,7 @@ async function publishStudent(page: Page, data: { surname: string; enrollment: s
   await expect(page.getByText('Habilidades guardadas correctamente.')).toBeVisible()
 }
 
-test('HU-S4-05 y HU-S5-04: una empresa encuentra un perfil anónimo por habilidad y distancia, sin datos personales, y solicita la vinculación a su institución', async ({ browser, baseURL }) => {
+test('HU-S4-05, HU-S5-04 y HU-S5-05: una empresa encuentra un perfil anónimo por habilidad y distancia, sin datos personales, solicita la vinculación a su institución y la cancela desde su bandeja', async ({ browser, baseURL }) => {
   const suffix = randomBytes(6).toString('hex')
   const student = { surname: `Oculto${suffix}`, enrollment: `TAL-${suffix}`, headline: `Analista E2E ${suffix}`, skill: `Destreza${suffix}` }
 
@@ -110,6 +110,35 @@ test('HU-S4-05 y HU-S5-04: una empresa encuentra un perfil anónimo por habilida
     await sheet.getByLabel('Oportunidad').selectOption({ label: `${opportunityTitle} · Reynosa` })
     await sheet.getByRole('button', { name: 'Enviar solicitud' }).click()
     await expect(sheet.getByLabel('Oportunidad')).toHaveAccessibleDescription('Ya enviaste una solicitud para este perfil en esa oportunidad.')
+
+    // HU-S5-05 CA-04: al volver al perfil, aviso con la oportunidad ya solicitada.
+    await sheet.getByRole('button', { name: 'Cerrar', exact: true }).click()
+    await expect(sheet).toBeHidden()
+    await company.reload()
+    const notice = company.getByRole('note', { name: 'Solicitudes enviadas para este perfil' })
+    await expect(notice).toContainText(`«${opportunityTitle}»`)
+    await expect(notice).toContainText('Pendiente de la institución')
+
+    // HU-S5-05 CA-02, CA-03, CA-05: bandeja con contacto institucional y cancelación confirmada.
+    await notice.getByRole('link', { name: 'Ver tus solicitudes' }).click()
+    await expect(company.getByRole('heading', { level: 2, name: 'Solicitudes de vinculación' })).toBeVisible()
+    const row = company.getByRole('table', { name: 'Solicitudes de vinculación enviadas' }).getByRole('row', { name: new RegExp(opportunityTitle) })
+    await expect(row.getByRole('link', { name: student.headline })).toHaveAttribute('href', /\/talent\/[0-9a-f-]{36}$/)
+    await expect(row.getByRole('link', { name: /@/ })).toHaveAttribute('href', /^mailto:/)
+    expect(await row.textContent()).not.toContain(student.surname)
+    const cancel = row.getByRole('button', { name: /Cancelar la solicitud/ })
+    await cancel.click()
+    let confirm = company.getByRole('alertdialog', { name: '¿Cancelar la solicitud?' })
+    await confirm.getByRole('button', { name: 'Cancelar', exact: true }).click()
+    await expect(confirm).toBeHidden()
+    await expect(row).toContainText('Pendiente de la institución')
+    await cancel.click()
+    confirm = company.getByRole('alertdialog', { name: '¿Cancelar la solicitud?' })
+    await confirm.getByRole('button', { name: 'Cancelar solicitud' }).click()
+    await expect(company.getByText(`Solicitud para «${opportunityTitle}» cancelada correctamente.`)).toBeVisible()
+    await expect(row).toContainText('Cancelada')
+    await company.getByLabel('Estado').selectOption('CANCELADA')
+    await expect(company.getByRole('table', { name: 'Solicitudes de vinculación enviadas' }).getByRole('row', { name: new RegExp(opportunityTitle) })).toBeVisible()
   } finally {
     await context.close()
   }

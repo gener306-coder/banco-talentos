@@ -1,6 +1,6 @@
 # Banco de Talentos – Educación Dual
 
-Monolito modular. Sprint vigente: [Sprint 5](docs/sprint-5.md) (en curso; completadas HU-S5-01, ver «Inicio por rol», HU-S5-02 y HU-S5-03, ver «Oportunidades Duales», y HU-S5-04, ver «Buscador de talento»). Sprint anterior: [Sprint 4](docs/sprint-4.md) (completo). Historias del [Sprint 1](docs/sprint-1.md) y del Sprint 2:
+Monolito modular. Sprint vigente: [Sprint 5](docs/sprint-5.md) (historias HU-S5-01 a HU-S5-05 completadas: ver «Inicio por rol», «Oportunidades Duales», «Buscador de talento» y «Solicitudes de vinculación»). Sprint anterior: [Sprint 4](docs/sprint-4.md) (completo). Historias del [Sprint 1](docs/sprint-1.md) y del Sprint 2:
 
 - **HU-S1-01 — Autenticación y control de acceso** ([detalle](docs/HU-S1-01.md)).
 - **HU-S1-02 — Gestión de instituciones**: ADMIN lista, registra, consulta, edita y activa o inactiva instituciones ([detalle](docs/HU-S1-02.md)).
@@ -137,6 +137,10 @@ Una cuenta `COMPANY` de una empresa activa abre **Oportunidades Duales** desde e
 - si requiere que el alumno se reubique.
 
 Los textos no admiten enlaces, correos ni teléfonos. El servidor asigna la empresa y la cuenta que la registró, y ubica la oportunidad en la cabecera de su municipio sin exponer el punto. El detalle permite editarla e inactivarla, previa confirmación, o reactivarla. Una oportunidad inactiva conserva su información y se puede editar, pero no podrá elegirse para nuevas solicitudes de vinculación. No existe eliminación ([docs/HU-S5-03.md](docs/HU-S5-03.md)). Una oportunidad de otra empresa responde igual que una inexistente. Tras actualizar el código aplica las migraciones con `docker compose exec backend php artisan migrate`. Contrato y cobertura en [docs/HU-S5-02.md](docs/HU-S5-02.md).
+
+## Solicitudes de vinculación
+
+Una cuenta `COMPANY` abre **Solicitudes de vinculación** desde el inicio (`/linkage-requests`). La bandeja muestra las solicitudes que envió su empresa, de la más reciente a la más antigua y de 20 en 20, y se puede filtrar por estado: pendiente de la institución, aceptada, rechazada o cancelada. Cada fila enlaza al perfil anónimo y a la oportunidad, y muestra el nombre y el correo de contacto de la institución para coordinar el proceso fuera de la plataforma. Nunca aparece la identidad del alumno. Una solicitud pendiente se puede cancelar, previa confirmación; después se puede volver a solicitar el mismo perfil. El perfil anónimo avisa para qué oportunidades ya se solicitó. Contrato y cobertura en [docs/HU-S5-05.md](docs/HU-S5-05.md).
 
 ## Alumnos
 

@@ -148,7 +148,14 @@ Route::middleware(['auth:sanctum', 'active', 'role:'.UserRole::COMPANY->value, '
         Route::patch('{opportunity}/status', [OpportunityController::class, 'updateStatus']);
     });
 
-// Solicitudes de vinculación directas a la institución desde el perfil anónimo (HU-S5-04): solo COMPANY con empresa
-// activa y vinculada; el alumno se identifica por su public_id.
-Route::post('/linkage-requests', [LinkageRequestController::class, 'store'])
-    ->middleware(['auth:sanctum', 'active', 'role:'.UserRole::COMPANY->value, 'organization.member', 'throttle:linkage-requests']);
+// Solicitudes de vinculación directas a la institución desde el perfil anónimo (HU-S5-04) y bandeja de la empresa
+// con cancelación (HU-S5-05): solo COMPANY con empresa activa y vinculada; el alumno se identifica por su public_id.
+Route::middleware(['auth:sanctum', 'active', 'role:'.UserRole::COMPANY->value, 'organization.member'])
+    ->prefix('linkage-requests')
+    // Identificador acotado a un bigint: fuera de rango responde 404 sin llegar a PostgreSQL.
+    ->where(['linkageRequest' => '[1-9][0-9]{0,17}'])
+    ->group(function (): void {
+        Route::get('/', [LinkageRequestController::class, 'index']);
+        Route::post('/', [LinkageRequestController::class, 'store'])->middleware('throttle:linkage-requests');
+        Route::patch('{linkageRequest}/cancel', [LinkageRequestController::class, 'cancel']);
+    });

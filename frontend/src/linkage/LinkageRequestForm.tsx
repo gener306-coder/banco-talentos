@@ -17,7 +17,7 @@ type Field = 'opportunity_id' | 'message'
  * Solicitud de vinculación desde el perfil anónimo (HU-S5-04 CA-06): una de las oportunidades activas de la empresa
  * y un mensaje opcional. Va directo a la institución del alumno; nunca revela su identidad a la empresa.
  */
-export function LinkageRequestForm({ publicId }: { publicId: string }) {
+export function LinkageRequestForm({ publicId, onSent }: { publicId: string; onSent?: () => void }) {
   const options = useApiRequest(listOpportunityOptions, opportunityMessages)
   const mutation = useApiMutation(linkageMessages)
   const [opportunityId, setOpportunityId] = useState('')
@@ -46,6 +46,7 @@ export function LinkageRequestForm({ publicId }: { publicId: string }) {
         setSent(`Solicitud enviada a la institución del alumno para «${linkage.opportunity.title}». Queda pendiente de su respuesta.`)
         setOpportunityId('')
         setMessage('')
+        onSent?.()
       },
     )
   }
