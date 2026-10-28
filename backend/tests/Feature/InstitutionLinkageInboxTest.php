@@ -214,6 +214,9 @@ describe('detalle (CA-02, CA-05)', function () {
                 'social_security' => ['has_nss' => false, 'has_document' => false],
             ],
             'message' => 'Nos interesa su perfil.',
+            'responded_at' => null,
+            'response_message' => null,
+            'responded_by' => null,
         ]);
     });
 
@@ -255,7 +258,7 @@ describe('detalle (CA-02, CA-05)', function () {
         $this->browserRequest('GET', '/api/institution/linkage-requests/'.$id)->assertNotFound();
     })->with(['0', 'abc', '-1', '1234567890123456789']);
 
-    it('has no write routes', function (string $method) {
+    it('has no write routes besides the decision (HU-S6-02)', function (string $method) {
         $linkage = receivedLinkage($this->company, $this->opportunity, $this->student);
         $this->loginWithCookies($this->account)->assertOk();
 

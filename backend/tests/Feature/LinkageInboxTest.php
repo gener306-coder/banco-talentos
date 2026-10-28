@@ -130,6 +130,8 @@ describe('bandeja (CA-01, CA-02)', function () {
                 'period_type' => 'semester', 'period_number' => 6,
             ],
             'institution' => ['name' => 'Universidad Tecnológica del Golfo', 'contact_email' => 'dual@utgolfo.edu.mx'],
+            'responded_at' => null,
+            'response_message' => null,
         ]]);
         expect($response->getContent())->not->toContain('Nombre Secreto')->not->toContain('Apellido Secreto')->not->toContain('MAT-')
             ->not->toContain('github.com/secreta')->not->toContain('"student_id"')->not->toContain('location');

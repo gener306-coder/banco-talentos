@@ -75,6 +75,9 @@ export interface LinkageInboxItem {
   opportunity: { id: number; title: string }
   profile: { public_id: string; headline: string | null; program: string | null; period_type: PeriodType | null; period_number: number | null }
   institution: { name: string; contact_email: string }
+  /** Respuesta de la institución (HU-S6-02 CA-04), sin la cuenta que respondió. */
+  responded_at: string | null
+  response_message: string | null
 }
 
 export interface LinkageInboxPage {
@@ -92,7 +95,8 @@ function inboxItem(data: unknown): LinkageInboxItem {
       !isObject(data.profile) || typeof data.profile.public_id !== 'string' || !isOptionalText(data.profile.headline) ||
       !isOptionalText(data.profile.program) || (data.profile.period_type !== null && !isPeriodType(data.profile.period_type)) ||
       (data.profile.period_number !== null && !isPositiveInt(data.profile.period_number)) ||
-      !isObject(data.institution) || typeof data.institution.name !== 'string' || typeof data.institution.contact_email !== 'string') {
+      !isObject(data.institution) || typeof data.institution.name !== 'string' || typeof data.institution.contact_email !== 'string' ||
+      !isOptionalText(data.responded_at) || !isOptionalText(data.response_message)) {
     throw new ApiError(502)
   }
   // Solo se conservan los campos del contrato.
@@ -104,6 +108,7 @@ function inboxItem(data: unknown): LinkageInboxItem {
       period_type: data.profile.period_type as PeriodType | null, period_number: data.profile.period_number as number | null,
     },
     institution: { name: data.institution.name, contact_email: data.institution.contact_email },
+    responded_at: data.responded_at, response_message: data.response_message,
   }
 }
 

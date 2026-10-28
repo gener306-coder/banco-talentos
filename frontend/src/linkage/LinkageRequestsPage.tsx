@@ -15,7 +15,8 @@ const dateFormat = new Intl.DateTimeFormat('es-MX', { dateStyle: 'medium' })
 
 /**
  * Bandeja de solicitudes de vinculación enviadas por la empresa (HU-S5-05 CA-05): filtro por estado, enlaces al perfil
- * anónimo y a la oportunidad, correo de contacto de la institución y cancelación confirmada de las pendientes.
+ * anónimo y a la oportunidad, correo de contacto de la institución y cancelación confirmada de las pendientes. Muestra
+ * la fecha y el mensaje de la respuesta institucional (HU-S6-02 CA-04).
  */
 export function LinkageRequestsPage() {
   const [page, setPage] = useState(1)
@@ -89,7 +90,12 @@ export function LinkageRequestsPage() {
                         <td><Link to={`/opportunities/${item.opportunity.id}`}>{item.opportunity.title}</Link></td>
                         <td>{item.institution.name}<a className="linkage-profile-meta" href={`mailto:${item.institution.contact_email}`}>{item.institution.contact_email}</a></td>
                         <td>{dateFormat.format(new Date(item.created_at))}</td>
-                        <td><LinkageStatus status={item.status} /></td>
+                        <td>
+                          <LinkageStatus status={item.status} />
+                          {/* Respuesta de la institución (HU-S6-02 CA-04). */}
+                          {item.responded_at && <span className="linkage-profile-meta">Respondida el {dateFormat.format(new Date(item.responded_at))}</span>}
+                          {item.response_message && <span className="linkage-profile-meta linkage-response">«{item.response_message}»</span>}
+                        </td>
                         <td>
                           {item.status === 'PENDIENTE_INSTITUCION'
                             ? (

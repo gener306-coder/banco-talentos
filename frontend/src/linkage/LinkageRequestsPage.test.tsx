@@ -12,7 +12,7 @@ const pending = {
   id: 41, status: 'PENDIENTE_INSTITUCION', created_at: '2026-10-28T10:00:00Z', message: 'Nos interesa su perfil.',
   opportunity: { id: 12, title: 'Tableros de producción' },
   profile: { public_id: publicId, headline: 'Analista de datos', program: 'Ingeniería en Datos', period_type: 'semester', period_number: 6 },
-  institution: { name: 'UT del Golfo', contact_email: 'dual@utgolfo.edu.mx' },
+  institution: { name: 'UT del Golfo', contact_email: 'dual@utgolfo.edu.mx' }, responded_at: null, response_message: null,
 }
 const cancelled = { ...pending, id: 40, status: 'CANCELADA', opportunity: { id: 13, title: 'Calidad' } }
 const page = (items: unknown[], meta = {}) => Response.json({ data: items, meta: { current_page: 1, last_page: 1, total: items.length, per_page: 20, ...meta } })
@@ -119,5 +119,17 @@ describe('bandeja de solicitudes HU-S5-05', () => {
     fireEvent.click(await screen.findByRole('button', { name: /Cancelar la solicitud/ }))
     fireEvent.click(within(await screen.findByRole('alertdialog')).getByRole('button', { name: 'Cancelar solicitud' }))
     expect(await screen.findByRole('alert')).toHaveTextContent('Solo puedes cancelar solicitudes pendientes de la institución.')
+  })
+
+  it('muestra la fecha y el mensaje de la respuesta institucional, sin quién respondió (HU-S6-02 CA-04)', async () => {
+    const answered = { ...pending, id: 39, status: 'ACEPTADA', opportunity: { id: 14, title: 'Mantenimiento' },
+      responded_at: '2026-10-29T16:00:00Z', response_message: 'Coordinemos la entrevista.' }
+    apiMock.mockResolvedValueOnce(page([answered]))
+    renderApp()
+    const row = within(await screen.findByRole('table', { name: 'Solicitudes de vinculación enviadas' })).getByRole('row', { name: /Mantenimiento/ })
+    expect(row).toHaveTextContent('Aceptada')
+    expect(row).toHaveTextContent('Respondida el 29 oct 2026')
+    expect(row).toHaveTextContent('«Coordinemos la entrevista.»')
+    expect(within(row).queryByRole('button', { name: /Cancelar/ })).not.toBeInTheDocument()
   })
 })

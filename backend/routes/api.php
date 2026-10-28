@@ -161,8 +161,9 @@ Route::middleware(['auth:sanctum', 'active', 'role:'.UserRole::COMPANY->value, '
         Route::patch('{linkageRequest}/cancel', [LinkageRequestController::class, 'cancel']);
     });
 
-// Bandeja institucional de solicitudes de vinculación con la identidad interna del alumno (HU-S6-01): solo
-// INSTITUTION con institución activa y vinculada; cada consulta se filtra por la institución de la sesión.
+// Bandeja institucional de solicitudes de vinculación con la identidad interna del alumno (HU-S6-01) y su respuesta
+// (HU-S6-02): solo INSTITUTION con institución activa y vinculada; cada consulta se filtra por la institución de la
+// sesión.
 Route::middleware(['auth:sanctum', 'active', 'role:'.UserRole::INSTITUTION->value, 'institution.member'])
     ->prefix('institution/linkage-requests')
     // Identificador acotado a un bigint: fuera de rango responde 404 sin llegar a PostgreSQL.
@@ -170,4 +171,6 @@ Route::middleware(['auth:sanctum', 'active', 'role:'.UserRole::INSTITUTION->valu
     ->group(function (): void {
         Route::get('/', [InstitutionLinkageRequestController::class, 'index']);
         Route::get('{linkageRequest}', [InstitutionLinkageRequestController::class, 'show']);
+        // Respuesta institucional (HU-S6-02).
+        Route::patch('{linkageRequest}/decision', [InstitutionLinkageRequestController::class, 'decide']);
     });

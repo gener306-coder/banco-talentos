@@ -34,6 +34,9 @@ const detail = {
     ...student, dual_available: true, state_code: '28', municipality: 'Reynosa', can_relocate: false,
     social_security: { has_nss: true, has_document: true },
   },
+  responded_at: null,
+  response_message: null,
+  responded_by: null,
 }
 const page = (items: unknown[], meta = {}) => Response.json({ data: items, meta: { current_page: 1, last_page: 1, total: items.length, per_page: 20, ...meta } })
 
@@ -48,6 +51,10 @@ beforeEach(() => {
   fetchMock.mockImplementation(async (path, init) => {
     if (path === '/api/me') return Response.json({ user })
     if (path === '/api/dashboard') return new Promise<Response>(() => undefined)
+    if (path === '/sanctum/csrf-cookie') {
+      document.cookie = 'XSRF-TOKEN=csrf; Path=/'
+      return new Response(null, { status: 204 })
+    }
     return apiMock(path, init)
   })
   vi.stubGlobal('fetch', fetchMock)
@@ -147,5 +154,83 @@ describe('detalle de solicitud HU-S6-01', () => {
     renderApp('/institution/linkage-requests/999')
     expect(await screen.findByText('No encontramos esta solicitud')).toBeInTheDocument()
     expect(screen.getByText('La solicitud no existe.')).toBeInTheDocument()
+  })
+})
+
+describe('respuesta institucional HU-S6-02', () => {
+  const patches = () => apiMock.mock.calls.filter(([, init]) => init?.method === 'PATCH')
+  const answered = {
+    ...detail, status: 'ACEPTADA', responded_at: '2026-10-29T16:00:00Z', response_message: 'Coordinemos la entrevista.',
+    responded_by: { name: 'Coordinación dual' },
+  }
+
+  it.each([
+    ['Aceptar solicitud', '¿Aceptar la solicitud?', 'ACEPTADA', 'Solicitud aceptada correctamente.', 'Aceptada'],
+    ['Rechazar solicitud', '¿Rechazar la solicitud?', 'RECHAZADA', 'Solicitud rechazada correctamente.', 'Rechazada'],
+  ])('%s tras confirmar, con el mensaje opcional, y muestra la respuesta (CA-01, CA-05)', async (action, title, status, done, label) => {
+    apiMock.mockResolvedValueOnce(Response.json({ data: detail }))
+      .mockResolvedValueOnce(Response.json({ data: { ...answered, status } }))
+    renderApp('/institution/linkage-requests/41')
+    const section = await screen.findByRole('region', { name: 'Responder solicitud' })
+    fireEvent.change(within(section).getByLabelText('Mensaje para la empresa (opcional)'), { target: { value: '  Coordinemos la entrevista.  ' } })
+
+    // Cancelar el diálogo no envía nada.
+    fireEvent.click(within(section).getByRole('button', { name: action }))
+    let dialog = await screen.findByRole('alertdialog', { name: title })
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Cancelar' }))
+    expect(patches()).toHaveLength(0)
+
+    fireEvent.click(within(section).getByRole('button', { name: action }))
+    dialog = await screen.findByRole('alertdialog', { name: title })
+    fireEvent.click(within(dialog).getByRole('button', { name: action }))
+    const result = await screen.findByRole('region', { name: 'Respuesta' })
+    expect(patches()).toHaveLength(1)
+    expect(patches()[0][0]).toBe('/api/institution/linkage-requests/41/decision')
+    expect(JSON.parse(patches()[0][1]?.body as string)).toEqual({ status, response_message: 'Coordinemos la entrevista.' })
+    expect(within(result).getByRole('status')).toHaveTextContent(done)
+    expect(result).toHaveTextContent(label)
+    expect(result).toHaveTextContent('Coordinación dual')
+    expect(result).toHaveTextContent('Coordinemos la entrevista.')
+    expect(screen.queryByRole('region', { name: 'Responder solicitud' })).not.toBeInTheDocument()
+  })
+
+  it('envía null sin mensaje y rechaza datos de contacto antes de enviar', async () => {
+    apiMock.mockResolvedValueOnce(Response.json({ data: detail })).mockResolvedValueOnce(Response.json({ data: answered }))
+    renderApp('/institution/linkage-requests/41')
+    const section = await screen.findByRole('region', { name: 'Responder solicitud' })
+    const field = within(section).getByLabelText('Mensaje para la empresa (opcional)')
+    fireEvent.change(field, { target: { value: 'Escribe a rh@escuela.mx' } })
+    fireEvent.click(within(section).getByRole('button', { name: 'Aceptar solicitud' }))
+    expect(field).toHaveAccessibleDescription(/No incluyas enlaces, correos ni teléfonos/)
+    expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument()
+
+    fireEvent.change(field, { target: { value: '   ' } })
+    fireEvent.click(within(section).getByRole('button', { name: 'Aceptar solicitud' }))
+    fireEvent.click(within(await screen.findByRole('alertdialog')).getByRole('button', { name: 'Aceptar solicitud' }))
+    await screen.findByRole('region', { name: 'Respuesta' })
+    expect(JSON.parse(patches()[0][1]?.body as string)).toEqual({ status: 'ACEPTADA', response_message: null })
+  })
+
+  it('explica cuando la solicitud ya no estaba pendiente y permite actualizarla (CA-02)', async () => {
+    apiMock.mockResolvedValueOnce(Response.json({ data: detail }))
+      .mockResolvedValueOnce(Response.json({ message: 'Invalid', errors: { status: ['Solo puedes responder solicitudes pendientes.'] } }, { status: 422 }))
+      .mockResolvedValueOnce(Response.json({ data: { ...detail, status: 'CANCELADA' } }))
+    renderApp('/institution/linkage-requests/41')
+    const section = await screen.findByRole('region', { name: 'Responder solicitud' })
+    fireEvent.click(within(section).getByRole('button', { name: 'Rechazar solicitud' }))
+    fireEvent.click(within(await screen.findByRole('alertdialog')).getByRole('button', { name: 'Rechazar solicitud' }))
+    expect(await within(section).findByRole('alert')).toHaveTextContent('Solo puedes responder solicitudes pendientes.')
+    fireEvent.click(within(section).getByRole('button', { name: 'Actualizar solicitud' }))
+    expect(await screen.findByText('La empresa canceló la solicitud antes de que se respondiera.')).toBeInTheDocument()
+  })
+
+  it('muestra la respuesta registrada al abrir una solicitud ya respondida (CA-05)', async () => {
+    apiMock.mockResolvedValueOnce(Response.json({ data: answered }))
+    renderApp('/institution/linkage-requests/41')
+    const result = await screen.findByRole('region', { name: 'Respuesta' })
+    expect(result).toHaveTextContent('Aceptada')
+    expect(result).toHaveTextContent('29 de octubre de 2026')
+    expect(result).toHaveTextContent('Coordinación dual')
+    expect(screen.queryByRole('button', { name: 'Aceptar solicitud' })).not.toBeInTheDocument()
   })
 })
