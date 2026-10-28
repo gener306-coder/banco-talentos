@@ -53,7 +53,7 @@ describe('inicio por rol (tarea transversal del Sprint 4)', () => {
     ['ADMIN', {}, 'Administración', 'Administrador', null, ['Nueva institución', '/institutions/new'], [['Instituciones', '/institutions'], ['Cuentas de la Secretaría', '/secretary-accounts']]],
     ['SECRETARY', {}, 'Secretaría de Economía', 'Secretaría de Economía', null, ['Registrar empresa', '/companies/new'], [['Empresas', '/companies'], ['Cuentas de la Secretaría', '/secretary-accounts']]],
     ['INSTITUTION', { institution: { id: 7, name: 'Instituto Dual' } }, 'Institución', 'Institución', 'Instituto Dual', ['Registrar alumno', '/students'], [['Alumnos', '/students']]],
-    ['COMPANY', { company: { id: 3, name: 'ManuGolfo' } }, 'Empresa', 'Empresa', 'ManuGolfo', null, [['Buscar talento', '/talent']]],
+    ['COMPANY', { company: { id: 3, name: 'ManuGolfo' } }, 'Empresa', 'Empresa', 'ManuGolfo', null, [['Buscar talento', '/talent'], ['Oportunidades Duales', '/opportunities']]],
   ] as const)('%s ve su saludo, su acción principal y sus secciones', async (role, organization, navLabel, roleLabel, orgName, primary, sections) => {
     user = { ...base, role, ...organization }
     renderApp()

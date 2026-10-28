@@ -9,8 +9,6 @@ use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Database\Query\Expression;
-use Illuminate\Support\Facades\DB;
 
 /**
  * Empresa validada por la Secretaría de Economía (HU-S4-02). El punto PostGIS (location) es interno: lo deriva
@@ -39,12 +37,6 @@ class Company extends Model
             'state_code' => MexicanState::class,
             'is_active' => 'boolean',
         ];
-    }
-
-    /** Subconsulta con el punto de la cabecera del municipio, para guardarla en la misma sentencia. */
-    public static function locationOf(string $municipalityCode): Expression
-    {
-        return DB::raw('(SELECT location FROM municipalities WHERE code = '.DB::getPdo()->quote($municipalityCode).')');
     }
 
     public function municipality(): BelongsTo

@@ -4,6 +4,7 @@ namespace Database\Factories;
 
 use App\Enums\UserRole;
 use App\Models\Company;
+use App\Models\Municipality;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Support\Str;
@@ -32,7 +33,7 @@ class CompanyFactory extends Factory
     {
         // El punto lo deriva siempre el servidor del municipio, igual que en la API.
         return $this->afterMaking(function (Company $company): void {
-            $company->location = Company::locationOf($company->municipality_code);
+            $company->location = Municipality::locationOf($company->municipality_code);
         });
     }
 

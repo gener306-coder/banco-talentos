@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Http\Requests\CompanyRequest;
 use App\Http\Requests\UpdateCompanyStatusRequest;
 use App\Models\Company;
+use App\Models\Municipality;
 use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -94,7 +95,7 @@ class CompanyController extends Controller
     {
         // El punto de la cabecera se guarda en la misma sentencia que el municipio (CA-05).
         if ($company->isDirty('municipality_code') || ! $company->exists) {
-            $company->location = Company::locationOf($company->municipality_code);
+            $company->location = Municipality::locationOf($company->municipality_code);
         }
 
         try {

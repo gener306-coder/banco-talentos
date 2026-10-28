@@ -16,9 +16,9 @@ use App\Models\StudentCertification;
 use App\Models\StudentCertificationCredential;
 use App\Rules\SafeHttpsUrl;
 use App\Support\CatalogSlug;
+use App\Support\SkillCatalog;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
@@ -50,18 +50,10 @@ class StudentCvController extends Controller
     public function updateSkills(UpdateStudentSkillsRequest $request, string $student): JsonResponse
     {
         $record = $this->owned($request, $student, []);
-        // Una habilidad repetida (con otras mayúsculas o acentos) se guarda una sola vez, en su primera posición.
-        $skills = collect($request->validated('skills'))
-            ->map(fn (array $skill): array => [
-                'name' => CatalogSlug::displayName($skill['name']),
-                'slug' => CatalogSlug::from($skill['name']),
-                'kind' => $skill['kind'],
-            ])
-            ->unique('slug')
-            ->values();
+        $skills = SkillCatalog::normalize($request->validated('skills'));
 
         DB::transaction(function () use ($record, $skills): void {
-            $ids = $this->catalogIds($skills);
+            $ids = SkillCatalog::ids($skills);
             DB::table('student_skills')->where('student_id', $record->id)->delete();
             DB::table('student_skills')->insert($skills->map(fn (array $skill, int $position): array => [
                 'student_id' => $record->id,
@@ -205,22 +197,6 @@ class StudentCvController extends Controller
         });
 
         return $this->fresh($record);
-    }
-
-    /**
-     * Id del catálogo para cada slug. Las nuevas se insertan sin pisar las existentes: el tipo y el nombre
-     * los fija quien la registró primero, también si dos instituciones la crean a la vez.
-     */
-    private function catalogIds(Collection $skills): array
-    {
-        if ($skills->isEmpty()) {
-            return [];
-        }
-        Skill::query()->insertOrIgnore($skills->map(fn (array $skill): array => [
-            ...$skill, 'created_at' => now(), 'updated_at' => now(),
-        ])->all());
-
-        return Skill::query()->whereIn('slug', $skills->pluck('slug'))->pluck('id', 'slug')->all();
     }
 
     private function saveCredential(StudentCertification $certification, ?string $credentialId, ?string $credentialUrl): void
