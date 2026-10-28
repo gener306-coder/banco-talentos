@@ -160,14 +160,21 @@ function App() {
         <div className={`app-bar-inner${wide ? ' wide' : ''}`}>
           {/* En /login el logotipo se muestra en el formulario; se evita duplicarlo. */}
           {pathname !== '/login' && (
-            <img src="/brand/logo.png" alt="Nodologístico" width={697} height={783} className="h-9 w-auto shrink-0 min-[481px]:h-11" />
+            <span className="brand-plate shrink-0">
+              <img src="/brand/logo.png" alt="Nodologístico" width={697} height={783} className="h-9 w-auto min-[481px]:h-11" />
+            </span>
           )}
           <div>
-            <p className="eyebrow text-brand-neutral">Educación Dual</p>
-            <h1 className="text-brand-primary">Banco de Talentos</h1>
+            <p className="eyebrow">Educación Dual</p>
+            <h1>Banco de Talentos</h1>
           </div>
-          {/* Coemblema institucional: a la derecha, con la misma altura que el logotipo principal. */}
-          <img src="/brand/sec-economia.png" alt="Secretaría de Economía" width={1920} height={414} className="app-bar-partner h-[1.6rem] w-auto min-[481px]:h-11" />
+          {/* Coemblema institucional: a la derecha, con la misma altura que el logotipo principal. Los logotipos van en
+              una pastilla que solo se ve en el tema oscuro, para seguir sobre fondo claro. */}
+          <span className="app-bar-partner">
+            <span className="brand-plate">
+              <img src="/brand/sec-economia.png" alt="Secretaría de Economía" width={1920} height={414} className="h-[1.6rem] w-auto min-[481px]:h-11" />
+            </span>
+          </span>
           {/* Menú de cuenta: identidad y «Cerrar sesión» en todas las vistas con sesión. */}
           {withSession && <AccountMenu />}
         </div>

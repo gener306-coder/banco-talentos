@@ -17,7 +17,7 @@ Existe una única variante del logotipo, más el logotipo institucional de la Se
 | `frontend/public/brand/logo.png` | `/brand/logo.png` | Fondos claros (blanco o gris claro) |
 | `frontend/public/brand/sec-economia.png` | `/brand/sec-economia.png` | Coemblema institucional, horizontal (1920 × 414 px, fondo transparente), solo sobre fondos claros |
 
-El PNG tiene fondo transparente y mide 697 × 783 px; se le retiró únicamente el margen transparente, sin alterar el dibujo. No hay variante blanca: no colocar el logotipo sobre fondos oscuros ni sobre el color primario vino.
+El PNG tiene fondo transparente y mide 697 × 783 px; se le retiró únicamente el margen transparente, sin alterar el dibujo. No hay variante blanca: no colocar el logotipo sobre fondos oscuros ni sobre el color primario vino. En el tema oscuro ambos logotipos se muestran sobre su pastilla clara (`.brand-plate`, ver «Modo oscuro»).
 
 Mantener la proporción y los colores originales; no recolorear, deformar ni recortar el dibujo. Fijar sólo la altura (`h-*` con `w-auto`), declarar `width={697} height={783}` para reservar el espacio y usar `alt="Nodologístico"`.
 
@@ -27,6 +27,8 @@ Ubicaciones actuales:
 |---|---|---|
 | Encabezado general translúcido, junto al título | `App.tsx` | `h-11` (44 px). No se muestra en `/login` para no duplicarlo. |
 | Parte superior del formulario de login | `pages/LoginPage.tsx` | `h-32` (128 px), centrado. |
+
+En las tres ubicaciones el logotipo va dentro de `.brand-plate`. En el tema claro la pastilla es transparente y no ocupa espacio; en el oscuro es un fondo claro redondeado.
 | Secretaría de Economía, extremo derecho del encabezado general | `App.tsx` (`.app-bar-partner`) | `h-11` (44 px), la misma altura que el logotipo principal y centrado con él; separado del título por un filete `neutral-200`. Se muestra en todas las vistas, también en `/login`. Hasta 480 px: `h-[1.6rem]` y el logotipo principal `h-9`, con el título a 1.15rem, para caber en una línea. |
 
 El logotipo de la Secretaría de Economía se usa tal cual: `alt="Secretaría de Economía"`, `width={1920} height={414}` y solo altura fija (`w-auto`), sin recolorear ni recortar el escudo ni el texto.
@@ -88,9 +90,49 @@ Las hojas de estilo no usan los colores de la marca ni valores HEX directamente:
 
 Los derivados de apple-design en `ui/ui.css` (`--tint`, `--tint-hover`, `--fill`, `--glass`, `--ink`) se calculan sobre estos tokens.
 
-**Regla:** en una hoja de estilos nueva, usar solo tokens semánticos. `src/ui/tokens.test.ts` falla si alguna hoja (fuera de `@theme` y del bloque de tokens) escribe un HEX, `rgb()`, `hsl()`, `black`/`white` o un `var(--color-…)` directamente. Las clases de Tailwind en el JSX (`text-brand-primary` del encabezado) siguen usando `@theme`.
+Tokens añadidos con el modo oscuro. En el tema claro son alias de los anteriores, así que no cambian nada visible:
 
-**Modo oscuro (pendiente, fuera del Sprint):** con los tokens listos, faltan variantes de los dos logotipos para fondo oscuro aprobadas por los dueños de cada marca, un vino aclarado aprobado (`#991B30` no alcanza 4.5:1 sobre fondo oscuro) y una revisión de contraste. Se planeará como historia propia.
+| Token | Valor claro | Función |
+|---|---|---|
+| `--text-strong` | `--color-brand-neutral` | Texto de máximo contraste del encabezado («Educación Dual») |
+| `--accent-fill` / `--accent-fill-hover` | `--color-brand-primary` / `-hover` | Relleno de las acciones primarias (botones, «Nueva …», menú de cuenta abierto) |
+| `--logo-plate` / `--logo-plate-padding` | `transparent` / `0` | Pastilla de los logotipos |
+
+**Regla:** en una hoja de estilos nueva, usar solo tokens semánticos. `src/ui/tokens.test.ts` falla si:
+- alguna hoja, fuera de `@theme` y de los bloques de tokens claro y oscuro, escribe un HEX, `rgb()`, `hsl()`, `black`/`white` o un `var(--color-…)` directamente;
+- un `.tsx` usa utilidades de color de Tailwind (`text-|bg-|border-brand-*`, `neutral`, `white`, `black`), que fijarían el tema claro;
+- el bloque oscuro no define exactamente los mismos tokens que el claro, o algún par de texto queda por debajo del umbral de contraste.
+
+## Modo oscuro
+
+**Estado:** implementado el 28 de octubre de 2026 como tarea transversal (rama `feat/ui-modo-oscuro`).
+
+**Activación.** La aplicación sigue por defecto la preferencia del sistema operativo (`prefers-color-scheme`). El menú de cuenta ofrece **Tema: Sistema / Claro / Oscuro**; la elección se guarda solo en ese navegador (`localStorage['bt-theme']`) y se aplica también en las demás pestañas. En el login, que no tiene menú, se sigue al sistema. El tema activo se expresa como `data-theme="light" | "dark"` en `<html>`. Un script en línea de `index.html` lo fija antes del primer pintado para evitar un destello claro, y `src/ui/theme.ts` lo mantiene al día.
+
+**Paleta.** El bloque `:root[data-theme='dark']` de `index.css`, que termina en `/* Fin de los tokens del tema oscuro. */`, redefine los mismos tokens con `color-scheme: dark`, así que los controles nativos también se oscurecen. Contrastes calculados con la fórmula WCAG:
+
+| Token | Oscuro | Contraste |
+|---|---|---|
+| `--surface` / `--surface-muted` | `#211f24` / `#17161a` | — |
+| `--text` | `#e6e4e8` | 12.9:1 sobre surface, 14.3:1 sobre muted |
+| `--text-strong` | `#fff` | 16.9:1 sobre el encabezado |
+| `--border` / `--border-strong` | `#3a3840` / `#8a8790` | borde de campos 4.6:1 (≥ 3:1) |
+| `--accent` / `--accent-hover` | `#e07a8a` / `#ea97a3` | 5.7:1 / 7.4:1 sobre surface |
+| `--accent-fill` / `--accent-fill-hover` | vino `#991B30` / `#7A1626` | blanco encima 8.2:1 / 10.7:1 |
+| `--accent-secondary` / `-text` | dorado / `#e3c48f` | 7.4:1 sobre la etiqueta dorada |
+| `--focus-ring` | `#f0a04b` | 7.7:1 |
+| `--danger-*` | `#f2a79b` / `#3a1e1b` / `#d9705f` | 7.8:1 |
+| `--success-*` | `#8fd3a6` / `#183324` / `#4f9c6a` | 7.8:1 |
+| `--status-off-*` | `#e0cdb0` / `#362e24` | 8.6:1 |
+| `--logo-plate` | `#f1f0f3` | vino del logotipo 7.2:1, guinda de la Secretaría 10.6:1 |
+
+**Vino aclarado.** `#E07A8A` es un color definido para el proyecto, no muestreado. Se usa solo como texto: títulos, enlaces, «Banco de Talentos» y bordes de botones. Las acciones primarias conservan el vino de marca `#991B30` con texto blanco y un filete `#E07A8A` que las separa del fondo oscuro.
+
+**Encabezado.** Gris oscuro translúcido con el mismo difuminado (`--glass` sobre la superficie oscura), «Educación Dual» en blanco (`--text-strong`) y «Banco de Talentos» en vino aclarado.
+
+**Logotipos.** No hay variantes para fondo oscuro. Sobre el gris oscuro, sus colores caerían a 1.2–1.7:1 (guinda de la Secretaría 1.2:1, vino y grafito de Nodologístico 1.7:1). Por eso cada logotipo se muestra tal cual, sin recolorear, sobre una pastilla clara redondeada ajustada a su tamaño, de modo que sigue sobre un fondo claro como exige la regla de arriba. Si los dueños de cada marca aprueban variantes para fondo oscuro, sustituirán a las pastillas sin tocar los tokens.
+
+**Errores frente al vino.** La regla del tema claro se mantiene: los avisos de error se distinguen por su fondo, su borde izquierdo y `role="alert"`, no solo por el color del texto.
 
 ## Accesibilidad
 

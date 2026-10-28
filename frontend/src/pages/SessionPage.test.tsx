@@ -202,6 +202,25 @@ describe('menú de cuenta', () => {
     expect(trigger).toHaveFocus()
   })
 
+  it('elige el tema desde el menú y lo recuerda (modo oscuro)', async () => {
+    localStorage.clear()
+    renderApp()
+    fireEvent.click(await screen.findByRole('button', { name: 'Cuenta de Laura Torres' }))
+    const group = within(screen.getByRole('region', { name: 'Cuenta' })).getByRole('group', { name: 'Tema' })
+    expect(within(group).getAllByRole('radio').map((radio) => radio.closest('div')?.textContent)).toEqual(['Sistema', 'Claro', 'Oscuro'])
+    expect(within(group).getByLabelText('Sistema')).toBeChecked()
+
+    fireEvent.click(within(group).getByLabelText('Oscuro'))
+    expect(document.documentElement.dataset.theme).toBe('dark')
+    expect(localStorage.getItem('bt-theme')).toBe('dark')
+    expect(within(group).getByLabelText('Oscuro')).toBeChecked()
+
+    fireEvent.click(within(group).getByLabelText('Claro'))
+    expect(document.documentElement.dataset.theme).toBe('light')
+    fireEvent.click(within(group).getByLabelText('Sistema'))
+    expect(localStorage.getItem('bt-theme')).toBeNull()
+  })
+
   it('se cierra con un clic fuera y al navegar', async () => {
     renderApp()
     const trigger = await screen.findByRole('button', { name: 'Cuenta de Laura Torres' })
