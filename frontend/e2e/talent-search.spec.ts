@@ -43,7 +43,7 @@ async function publishStudent(page: Page, data: { surname: string; enrollment: s
   await expect(page.getByText('Habilidades guardadas correctamente.')).toBeVisible()
 }
 
-test('HU-S4-05, HU-S5-04 y HU-S5-05: una empresa encuentra un perfil anónimo por habilidad y distancia, sin datos personales, solicita la vinculación a su institución y la cancela desde su bandeja', async ({ browser, baseURL }) => {
+test('HU-S4-05, HU-S5-04, HU-S5-05 y HU-S6-01: una empresa encuentra un perfil anónimo por habilidad y distancia, sin datos personales, solicita la vinculación a su institución, esta la revisa con la identidad del alumno y la empresa la cancela desde su bandeja', async ({ browser, baseURL }) => {
   const suffix = randomBytes(6).toString('hex')
   const student = { surname: `Oculto${suffix}`, enrollment: `TAL-${suffix}`, headline: `Analista E2E ${suffix}`, skill: `Destreza${suffix}` }
 
@@ -118,6 +118,30 @@ test('HU-S4-05, HU-S5-04 y HU-S5-05: una empresa encuentra un perfil anónimo po
     const notice = company.getByRole('note', { name: 'Solicitudes enviadas para este perfil' })
     await expect(notice).toContainText(`«${opportunityTitle}»`)
     await expect(notice).toContainText('Pendiente de la institución')
+
+    // HU-S6-01: la institución recibe la solicitud con la identidad interna del alumno y el contacto de la empresa.
+    const receiving = await browser.newContext({ baseURL, storageState: INSTITUTION_STATE })
+    try {
+      const institution = await receiving.newPage()
+      await institution.goto('/')
+      await institution.getByRole('link', { name: 'Solicitudes de vinculación' }).click()
+      await institution.getByLabel('Estado').selectOption('PENDIENTE_INSTITUCION')
+      const received = institution.getByRole('table', { name: 'Solicitudes de vinculación recibidas' }).getByRole('row', { name: new RegExp(opportunityTitle) })
+      await expect(received.getByRole('rowheader')).toContainText(`${student.surname}, Valeria Secreta`)
+      await expect(received).toContainText(student.enrollment)
+      await received.getByRole('link', { name: /Ver la solicitud/ }).click()
+      const identity = institution.getByRole('region', { name: 'Alumno solicitado' })
+      await expect(identity).toContainText(`Valeria Secreta ${student.surname}`)
+      await expect(institution.getByText('Nos interesa su perfil para el proyecto de tableros.')).toBeVisible()
+      // Sin NSS ni comprobante: aviso con enlace al expediente.
+      const missing = institution.getByRole('region', { name: 'Seguro Facultativo (IMSS)' }).getByRole('note')
+      await expect(missing).toContainText('Al alumno le falta el NSS y el comprobante de vigencia del IMSS.')
+      await expect(institution.getByRole('region', { name: 'Empresa y contacto del programa dual' }).getByRole('link', { name: /@/ })).toHaveAttribute('href', /^mailto:/)
+      await missing.getByRole('link', { name: 'expediente' }).click()
+      await expect(institution.getByRole('heading', { level: 2, name: `Valeria Secreta ${student.surname}` })).toBeVisible()
+    } finally {
+      await receiving.close()
+    }
 
     // HU-S5-05 CA-02, CA-03, CA-05: bandeja con contacto institucional y cancelación confirmada.
     await notice.getByRole('link', { name: 'Ver tus solicitudes' }).click()

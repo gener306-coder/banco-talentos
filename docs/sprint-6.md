@@ -22,7 +22,7 @@ Sprint vigente desde el 28 de octubre de 2026. Sprint anterior: [sprint-5.md](sp
 
 ## HU-S6-01 — Bandeja institucional de solicitudes de vinculación e identificación del alumno
 
-**Estado:** Pendiente  
+**Estado:** Completada (28 de octubre de 2026)  
 **Diseño técnico y verificación:** `docs/HU-S6-01.md`  
 **Story Points:** 8  
 **Rol:** `INSTITUTION`

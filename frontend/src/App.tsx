@@ -18,6 +18,8 @@ import { CompanyDetailPage } from './companies/CompanyDetailPage'
 import { CompanyEditPage } from './companies/CompanyEditPage'
 import { SECRETARY_ACCOUNT_MANAGERS } from './secretary/api'
 import { SecretaryAccountsPage } from './secretary/SecretaryAccountsPage'
+import { InstitutionLinkageRequestDetailPage } from './linkage/InstitutionLinkageRequestDetailPage'
+import { InstitutionLinkageRequestsPage } from './linkage/InstitutionLinkageRequestsPage'
 import { LinkageRequestsPage } from './linkage/LinkageRequestsPage'
 import { OpportunitiesPage } from './opportunities/OpportunitiesPage'
 import { OpportunityCreatePage } from './opportunities/OpportunityCreatePage'
@@ -93,6 +95,10 @@ function AuthRoutes() {
         <Route path="/students" element={<StudentsPage />} />
         <Route path="/students/:id" element={<StudentDetailPage />} />
         <Route path="/students/:id/cv" element={<StudentCvPage />} />
+      </Route>
+      <Route element={<ProtectedRoute role="INSTITUTION" deniedMessage="No tienes permiso para consultar solicitudes de vinculación." />}>
+        <Route path="/institution/linkage-requests" element={<InstitutionLinkageRequestsPage />} />
+        <Route path="/institution/linkage-requests/:id" element={<InstitutionLinkageRequestDetailPage />} />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

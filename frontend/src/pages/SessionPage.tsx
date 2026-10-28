@@ -55,6 +55,7 @@ function homeFor(user: User): Home | null {
         primary: { to: '/students', label: 'Registrar alumno', state: { register: true } },
         sections: [
           { to: '/students', title: 'Alumnos', icon: <UsersIcon />, description: 'Administra el padrón, el expediente y el CV de tus alumnos.' },
+          { to: '/institution/linkage-requests', title: 'Solicitudes de vinculación', icon: <IdCardIcon />, description: 'Revisa las solicitudes de las empresas para tus alumnos y el contacto de cada empresa.' },
         ],
       } : null
     case 'COMPANY':

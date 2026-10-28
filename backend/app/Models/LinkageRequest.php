@@ -8,7 +8,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 /**
  * Solicitud de vinculación Empresa → Institución (HU-S5-04). Todos sus vínculos los asigna el servidor; student_id
- * nunca forma parte de una respuesta para la empresa.
+ * nunca forma parte de una respuesta para la empresa; la institución sí lo ve en su bandeja (HU-S6-01).
  */
 class LinkageRequest extends Model
 {
@@ -21,6 +21,11 @@ class LinkageRequest extends Model
     protected function casts(): array
     {
         return ['status' => LinkageRequestStatus::class];
+    }
+
+    public function company(): BelongsTo
+    {
+        return $this->belongsTo(Company::class);
     }
 
     public function opportunity(): BelongsTo
