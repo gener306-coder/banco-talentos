@@ -17,7 +17,7 @@ Existe una única variante del logotipo, más el logotipo institucional de la Se
 | `frontend/public/brand/logo.png` | `/brand/logo.png` | Fondos claros (blanco o gris claro) |
 | `frontend/public/brand/sec-economia.png` | `/brand/sec-economia.png` | Coemblema institucional, horizontal (1920 × 414 px, fondo transparente), solo sobre fondos claros |
 
-El PNG tiene fondo transparente y mide 697 × 783 px; se le retiró únicamente el margen transparente, sin alterar el dibujo. No hay variante blanca: no colocar el logotipo sobre fondos oscuros ni sobre el color primario vino. En el tema oscuro ambos logotipos se muestran sobre su pastilla clara (`.brand-plate`, ver «Modo oscuro»).
+El PNG tiene fondo transparente y mide 697 × 783 px; se le retiró únicamente el margen transparente, sin alterar el dibujo. No hay variante blanca: no colocar el logotipo sobre fondos oscuros ni sobre el color primario vino. El modo oscuro, preparado pero no activado, los mostraría sobre una pastilla clara (`.brand-plate`, ver «Modo oscuro»).
 
 Mantener la proporción y los colores originales; no recolorear, deformar ni recortar el dibujo. Fijar sólo la altura (`h-*` con `w-auto`), declarar `width={697} height={783}` para reservar el espacio y usar `alt="Nodologístico"`.
 
@@ -105,9 +105,24 @@ Tokens añadidos con el modo oscuro. En el tema claro son alias de los anteriore
 
 ## Modo oscuro
 
-**Estado:** implementado el 28 de octubre de 2026 como tarea transversal (rama `feat/ui-modo-oscuro`).
+**Estado: preparado, no activado** (28 de octubre de 2026). Se implementó y revisó completo, pero el responsable decidió mantener la aplicación solo en claro hasta contar con logotipos aprobados para fondo oscuro. La aplicación se muestra en claro aunque el sistema prefiera el oscuro (`e2e/theme.spec.ts`).
 
-**Activación.** La aplicación sigue por defecto la preferencia del sistema operativo (`prefers-color-scheme`). El menú de cuenta ofrece **Tema: Sistema / Claro / Oscuro**; la elección se guarda solo en ese navegador (`localStorage['bt-theme']`) y se aplica también en las demás pestañas. En el login, que no tiene menú, se sigue al sistema. El tema activo se expresa como `data-theme="light" | "dark"` en `<html>`. Un script en línea de `index.html` lo fija antes del primer pintado para evitar un destello claro, y `src/ui/theme.ts` lo mantiene al día.
+Queda listo y protegido por `src/ui/tokens.test.ts`:
+- el bloque de tokens oscuros;
+- los tokens `--text-strong`, `--accent-fill` y `--logo-plate`;
+- la pastilla `.brand-plate`, transparente en claro;
+- las reglas de color del encabezado basadas en tokens.
+
+Todo token nuevo debe definirse también en el bloque oscuro y cumplir el contraste.
+
+**Para activarlo:**
+1. Recuperar la activación del commit `0ac5ccc` («modo oscuro alineado a la identidad visual»): `src/ui/theme.ts` y sus pruebas, el script previo al pintado de `index.html`, `watchTheme()` en `main.tsx`, el selector «Tema» del menú de cuenta (`AccountMenu.tsx`, con sus estilos `.account-theme` y su prueba en `SessionPage.test.tsx`) y la versión de `e2e/theme.spec.ts` que comprueba el tema oscuro.
+2. Con logotipos oficiales para fondo oscuro, mostrarlos cuando el tema activo sea oscuro y retirar la pastilla. Colores del encabezado oscuro en reposo y sobre una tarjeta: `#1E1C21` y `#211F24`. Se recomiendan PNG o SVG con fondo transparente, no un fondo sólido. La variante de la Secretaría de Economía debe solicitarse a la propia Secretaría, porque incluye el Escudo Nacional.
+3. Revisar de nuevo las capturas de las vistas en ambos temas.
+
+Diseño aprobado para cuando se active:
+
+**Activación.** Sigue la preferencia del sistema (`prefers-color-scheme`) y el menú de cuenta ofrece **Tema: Sistema / Claro / Oscuro**, guardado solo en el navegador (`localStorage['bt-theme']`). El tema se expresa como `data-theme="light" | "dark"` en `<html>` y se fija antes del primer pintado.
 
 **Paleta.** El bloque `:root[data-theme='dark']` de `index.css`, que termina en `/* Fin de los tokens del tema oscuro. */`, redefine los mismos tokens con `color-scheme: dark`, así que los controles nativos también se oscurecen. Contrastes calculados con la fórmula WCAG:
 
@@ -130,7 +145,7 @@ Tokens añadidos con el modo oscuro. En el tema claro son alias de los anteriore
 
 **Encabezado.** Gris oscuro translúcido con el mismo difuminado (`--glass` sobre la superficie oscura), «Educación Dual» en blanco (`--text-strong`) y «Banco de Talentos» en vino aclarado.
 
-**Logotipos.** No hay variantes para fondo oscuro. Sobre el gris oscuro, sus colores caerían a 1.2–1.7:1 (guinda de la Secretaría 1.2:1, vino y grafito de Nodologístico 1.7:1). Por eso cada logotipo se muestra tal cual, sin recolorear, sobre una pastilla clara redondeada ajustada a su tamaño, de modo que sigue sobre un fondo claro como exige la regla de arriba. Si los dueños de cada marca aprueban variantes para fondo oscuro, sustituirán a las pastillas sin tocar los tokens.
+**Logotipos.** No hay variantes para fondo oscuro. Sobre el gris oscuro, sus colores caerían a 1.2–1.7:1 (guinda de la Secretaría 1.2:1, vino y grafito de Nodologístico 1.7:1). Por eso cada logotipo se muestra tal cual, sin recolorear, sobre una pastilla clara redondeada ajustada a su tamaño, de modo que sigue sobre un fondo claro como exige la regla de arriba. Es una solución provisional que el responsable consideró visualmente insuficiente, y por eso el modo oscuro no se activó. Las variantes para fondo oscuro que aprueben los dueños de cada marca sustituirán a las pastillas sin tocar los tokens.
 
 **Errores frente al vino.** La regla del tema claro se mantiene: los avisos de error se distinguen por su fondo, su borde izquierdo y `role="alert"`, no solo por el color del texto.
 

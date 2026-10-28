@@ -328,9 +328,6 @@ textarea[aria-invalid='true'] { border-color: var(--danger-border); }
 .account-name { font-weight: 700; }
 .account-detail { font-size: 0.9rem; color: var(--text); }
 .account-panel button { margin-top: 0.6rem; }
-/* Selector de tema (modo oscuro): tres opciones en una fila dentro del panel. */
-.account-theme { margin: 0.6rem 0 0; }
-.account-theme div { margin-right: 0.75rem; }
 @media (prefers-reduced-motion: reduce) {
   .home-card, .home-action { transition: none; }
   .home-card:active, .home-action:active { transform: none; }

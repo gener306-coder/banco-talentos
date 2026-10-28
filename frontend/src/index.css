@@ -48,9 +48,9 @@
 /* Fin de los tokens semánticos. */
 
 /*
- * Tema oscuro (docs/design/identidad-visual.md, «Modo oscuro»): los mismos tokens con valores para fondo oscuro,
- * con contraste mínimo de 4.5:1 en texto (lo verifica src/ui/tokens.test.ts). El vino aclarado #E07A8A es un color
- * del proyecto para textos, enlaces y títulos; los rellenos conservan el vino de marca con texto blanco.
+ * Tema oscuro (docs/design/identidad-visual.md, «Modo oscuro»): PREPARADO, NO ACTIVADO. Nada en la aplicación fija
+ * data-theme="dark", así que este bloque no se aplica; se mantiene al día para activarlo cuando haya logotipos para
+ * fondo oscuro. Mismos tokens que el tema claro, con contraste mínimo de 4.5:1 en texto (src/ui/tokens.test.ts).
  */
 :root[data-theme='dark'] {
   color-scheme: dark;

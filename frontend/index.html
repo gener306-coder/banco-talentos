@@ -5,16 +5,6 @@
     <meta name="referrer" content="no-referrer" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Banco de Talentos – Educación Dual</title>
-    <meta name="theme-color" content="" />
-    <!-- Modo oscuro: fija data-theme antes del primer pintado para evitar un destello claro (ver src/ui/theme.ts). -->
-    <script>
-      (function () {
-        var preference = null
-        try { preference = localStorage.getItem('bt-theme') } catch (error) { /* almacenamiento bloqueado */ }
-        var dark = preference === 'dark' || (preference !== 'light' && window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches)
-        document.documentElement.dataset.theme = dark ? 'dark' : 'light'
-      })()
-    </script>
   </head>
   <body>
     <div id="root"></div>

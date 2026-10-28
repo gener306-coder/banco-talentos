@@ -13,7 +13,7 @@ No hay registro público ni recuperación de contraseña iniciada por la propia 
 ## Stack y estructura
 
 - Laravel 13 / PHP 8.4, Sanctum 4 con sesiones y CSRF, PostgreSQL 17 + PostGIS 3.5.
-- React 19 / TypeScript 5.9 / Vite 8 sobre Node 24; Tailwind CSS 4 con los tokens de marca de [docs/design/identidad-visual.md](docs/design/identidad-visual.md), con temas claro y oscuro. El oscuro sigue la preferencia del sistema y se puede fijar desde el menú de cuenta.
+- React 19 / TypeScript 5.9 / Vite 8 sobre Node 24; Tailwind CSS 4 con los tokens de marca de [docs/design/identidad-visual.md](docs/design/identidad-visual.md). Solo tema claro; el modo oscuro está preparado pero no activado (ver «Modo oscuro» en ese documento).
 - Pest, Vitest + React Testing Library y Playwright/Chromium.
 
 ```text
