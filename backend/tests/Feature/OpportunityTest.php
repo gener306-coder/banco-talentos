@@ -345,17 +345,17 @@ describe('consulta y edición con aislamiento (CA-02)', function () {
 });
 
 // HU-S5-03: activación e inactivación (baja lógica).
-describe('estado (HU-S5-03)', function () {
-    function statusUrl(Opportunity $opportunity): string
-    {
-        return '/api/opportunities/'.$opportunity->id.'/status';
-    }
+function opportunityStatusUrl(Opportunity $opportunity): string
+{
+    return '/api/opportunities/'.$opportunity->id.'/status';
+}
 
+describe('estado (HU-S5-03)', function () {
     it('inactivates and reactivates its own opportunity and returns the detail (CA-01)', function () {
         $opportunity = opportunityFor($this->company);
         signInCompany($this);
 
-        $this->browserRequest('PATCH', statusUrl($opportunity), ['is_active' => false])->assertOk()
+        $this->browserRequest('PATCH', opportunityStatusUrl($opportunity), ['is_active' => false])->assertOk()
             ->assertHeader('Cache-Control', 'no-store, private')
             ->assertJsonPath('data.id', $opportunity->id)
             ->assertJsonPath('data.is_active', false)
@@ -364,10 +364,10 @@ describe('estado (HU-S5-03)', function () {
         expect($opportunity->refresh()->is_active)->toBeFalse();
 
         // Idempotente: repetir el mismo estado no falla.
-        $this->browserRequest('PATCH', statusUrl($opportunity), ['is_active' => false])->assertOk()->assertJsonPath('data.is_active', false);
+        $this->browserRequest('PATCH', opportunityStatusUrl($opportunity), ['is_active' => false])->assertOk()->assertJsonPath('data.is_active', false);
 
-        $this->browserRequest('PATCH', statusUrl($opportunity), ['is_active' => true])->assertOk()->assertJsonPath('data.is_active', true);
-        $this->browserRequest('PATCH', statusUrl($opportunity), ['is_active' => true])->assertOk()->assertJsonPath('data.is_active', true);
+        $this->browserRequest('PATCH', opportunityStatusUrl($opportunity), ['is_active' => true])->assertOk()->assertJsonPath('data.is_active', true);
+        $this->browserRequest('PATCH', opportunityStatusUrl($opportunity), ['is_active' => true])->assertOk()->assertJsonPath('data.is_active', true);
         expect($opportunity->refresh()->is_active)->toBeTrue();
     });
 
@@ -375,7 +375,7 @@ describe('estado (HU-S5-03)', function () {
         $opportunity = opportunityFor($this->company);
         signInCompany($this);
 
-        $this->browserRequest('PATCH', statusUrl($opportunity), ['is_active' => $value])
+        $this->browserRequest('PATCH', opportunityStatusUrl($opportunity), ['is_active' => $value])
             ->assertUnprocessable()->assertJsonValidationErrors(['is_active' => 'El estado debe ser true o false.']);
         expect($opportunity->refresh()->is_active)->toBeTrue();
     })->with(['true', 'false', 0, 1, '1', 'yes', 'on']);
@@ -384,7 +384,7 @@ describe('estado (HU-S5-03)', function () {
         $opportunity = opportunityFor($this->company);
         signInCompany($this);
 
-        $this->browserRequest('PATCH', statusUrl($opportunity), [])
+        $this->browserRequest('PATCH', opportunityStatusUrl($opportunity), [])
             ->assertUnprocessable()->assertJsonValidationErrors(['is_active' => 'El estado es obligatorio.']);
     });
 
@@ -392,7 +392,7 @@ describe('estado (HU-S5-03)', function () {
         $opportunity = opportunityFor($this->company);
         signInCompany($this);
 
-        $this->browserRequest('PATCH', statusUrl($opportunity), ['is_active' => false, $field => $value])
+        $this->browserRequest('PATCH', opportunityStatusUrl($opportunity), ['is_active' => false, $field => $value])
             ->assertUnprocessable()
             ->assertJsonValidationErrors([$field => 'La acción de cambio de estado solo permite modificar is_active.']);
         $opportunity->refresh();
@@ -419,7 +419,7 @@ describe('estado (HU-S5-03)', function () {
         $foreign = opportunityFor(Company::factory()->create());
         signInCompany($this);
 
-        $this->browserRequest('PATCH', statusUrl($foreign), ['is_active' => false])
+        $this->browserRequest('PATCH', opportunityStatusUrl($foreign), ['is_active' => false])
             ->assertNotFound()->assertExactJson(['message' => 'La oportunidad no existe.']);
         $this->browserRequest('PATCH', '/api/opportunities/999999/status', ['is_active' => false])
             ->assertNotFound()->assertExactJson(['message' => 'La oportunidad no existe.']);
@@ -436,18 +436,18 @@ describe('estado (HU-S5-03)', function () {
         $user = $role === UserRole::INSTITUTION ? User::factory()->forInstitution(Institution::factory()->create())->create() : User::factory()->role($role)->create();
         $this->loginWithCookies($user)->assertOk();
 
-        $this->browserRequest('PATCH', statusUrl($opportunity), ['is_active' => false])->assertForbidden();
+        $this->browserRequest('PATCH', opportunityStatusUrl($opportunity), ['is_active' => false])->assertForbidden();
         expect($opportunity->refresh()->is_active)->toBeTrue();
     })->with([UserRole::ADMIN, UserRole::INSTITUTION, UserRole::SECRETARY]);
 
     it('rejects visitors and the accounts of an inactive company', function () {
         $opportunity = opportunityFor($this->company);
         $this->startCookieSession();
-        $this->browserRequest('PATCH', statusUrl($opportunity), ['is_active' => false])->assertUnauthorized();
+        $this->browserRequest('PATCH', opportunityStatusUrl($opportunity), ['is_active' => false])->assertUnauthorized();
 
         signInCompany($this);
         $this->company->forceFill(['is_active' => false])->save();
-        $this->browserRequest('PATCH', statusUrl($opportunity), ['is_active' => false])
+        $this->browserRequest('PATCH', opportunityStatusUrl($opportunity), ['is_active' => false])
             ->assertUnauthorized()->assertJsonPath('code', 'COMPANY_INACTIVE');
         expect($opportunity->refresh()->is_active)->toBeTrue();
     });
@@ -456,7 +456,7 @@ describe('estado (HU-S5-03)', function () {
         $opportunity = opportunityFor($this->company);
         signInCompany($this);
 
-        $this->browserRequest('PATCH', statusUrl($opportunity), ['is_active' => false], csrf: false)->assertStatus(419);
+        $this->browserRequest('PATCH', opportunityStatusUrl($opportunity), ['is_active' => false], csrf: false)->assertStatus(419);
         expect($opportunity->refresh()->is_active)->toBeTrue();
     });
 
@@ -464,7 +464,7 @@ describe('estado (HU-S5-03)', function () {
         $opportunity = opportunityFor($this->company);
         signInCompany($this);
 
-        $this->browserRequest('DELETE', statusUrl($opportunity))->assertStatus(405);
+        $this->browserRequest('DELETE', opportunityStatusUrl($opportunity))->assertStatus(405);
         $this->browserRequest('DELETE', '/api/opportunities/'.$opportunity->id)->assertStatus(405);
         expect(Opportunity::query()->whereKey($opportunity->id)->exists())->toBeTrue();
     });
