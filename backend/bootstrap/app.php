@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Middleware\EnsureInstitutionMember;
+use App\Http\Middleware\EnsureOrganizationMember;
 use App\Http\Middleware\EnsureRole;
 use App\Http\Middleware\EnsureUserIsActive;
 use Illuminate\Auth\AuthenticationException;
@@ -25,6 +26,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'active' => EnsureUserIsActive::class,
             'role' => EnsureRole::class,
             'institution.member' => EnsureInstitutionMember::class,
+            'organization.member' => EnsureOrganizationMember::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

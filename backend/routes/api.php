@@ -10,6 +10,7 @@ use App\Http\Controllers\InstitutionController;
 use App\Http\Controllers\InstitutionPasswordResetController;
 use App\Http\Controllers\InstitutionSetupLinkController;
 use App\Http\Controllers\MunicipalityController;
+use App\Http\Controllers\OpportunityController;
 use App\Http\Controllers\SecretaryAccountController;
 use App\Http\Controllers\SkillController;
 use App\Http\Controllers\StudentController;
@@ -108,9 +109,9 @@ Route::middleware(['auth:sanctum', 'active', 'role:'.UserRole::INSTITUTION->valu
         Route::put('{student}/cv/links', [StudentCvController::class, 'updateLinks'])->name('cv.links.update');
     });
 
-// Catálogo de habilidades del CV (HU-S3-01) para autocompletar.
+// Catálogo de habilidades para autocompletar: CV del alumno (HU-S3-01) y oportunidades duales (HU-S5-02).
 Route::get('/skills', [SkillController::class, 'index'])
-    ->middleware(['auth:sanctum', 'active', 'role:'.UserRole::INSTITUTION->value, 'institution.member']);
+    ->middleware(['auth:sanctum', 'active', 'role:'.UserRole::INSTITUTION->value.','.UserRole::COMPANY->value, 'organization.member']);
 
 // Catálogo INEGI de municipios por estado (HU-S4-04) para cualquier rol autenticado. Una clave de estado fuera
 // de 01–32 responde 404 sin consultar la base.
@@ -126,4 +127,18 @@ Route::middleware(['auth:sanctum', 'active', 'role:'.UserRole::COMPANY->value, '
     ->group(function (): void {
         Route::get('/', [TalentController::class, 'index']);
         Route::get('{publicId}', [TalentController::class, 'show']);
+    });
+
+// Oportunidades de Educación Dual de la empresa de la sesión (HU-S5-02): solo COMPANY con empresa activa (la empresa
+// inactiva la rechaza `active` con COMPANY_INACTIVE) y vinculada; sin DELETE.
+Route::middleware(['auth:sanctum', 'active', 'role:'.UserRole::COMPANY->value, 'organization.member'])
+    ->prefix('opportunities')
+    // Identificador acotado a un bigint: fuera de rango responde 404 sin llegar a PostgreSQL.
+    ->where(['opportunity' => '[1-9][0-9]{0,17}'])
+    ->group(function (): void {
+        Route::get('/', [OpportunityController::class, 'index']);
+        Route::post('/', [OpportunityController::class, 'store']);
+        Route::get('defaults', [OpportunityController::class, 'defaults']);
+        Route::get('{opportunity}', [OpportunityController::class, 'show']);
+        Route::put('{opportunity}', [OpportunityController::class, 'update']);
     });

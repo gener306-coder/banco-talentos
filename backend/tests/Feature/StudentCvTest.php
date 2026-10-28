@@ -217,10 +217,11 @@ describe('habilidades y catálogo', function () {
         $this->browserRequest('GET', '/api/skills')->assertUnprocessable()->assertJsonValidationErrors('q');
     });
 
-    it('only lets linked INSTITUTION accounts query the catalog', function () {
+    // Desde HU-S5-02 también lo consultan las cuentas COMPANY para las oportunidades (OpportunityTest).
+    it('does not let ADMIN or SECRETARY query the catalog', function () {
         $this->startCookieSession();
         $this->browserRequest('GET', '/api/skills?q=re')->assertUnauthorized();
-        foreach ([UserRole::ADMIN, UserRole::COMPANY, UserRole::SECRETARY] as $role) {
+        foreach ([UserRole::ADMIN, UserRole::SECRETARY] as $role) {
             $this->initializeCookieBrowser();
             $this->loginWithCookies(User::factory()->role($role)->create())->assertOk();
             $this->browserRequest('GET', '/api/skills?q=re')->assertForbidden();

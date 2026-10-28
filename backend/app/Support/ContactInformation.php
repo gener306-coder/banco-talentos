@@ -10,6 +10,9 @@ final class ContactInformation
 {
     public const MESSAGE = 'Los enlaces y datos de contacto van en la sección protegida de enlaces.';
 
+    /** Oportunidades duales (HU-S5-02 CA-04): la empresa no publica canales de contacto fuera del flujo institucional. */
+    public const OPPORTUNITY_MESSAGE = 'No incluyas enlaces, correos ni teléfonos: el contacto con el alumno se coordina con su institución.';
+
     private const PATTERNS = [
         '~https?://~i',
         '~\bwww\.~i',
