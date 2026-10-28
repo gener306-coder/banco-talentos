@@ -140,7 +140,7 @@ El login aplica un límite de 5 intentos por minuto por correo. Igual que ya exi
 
 ## HU-S5-05 — Bandeja empresarial de solicitudes de vinculación enviadas
 
-**Estado:** Pendiente  
+**Estado:** Completada (28 de octubre de 2026)  
 **Diseño técnico y verificación:** `docs/HU-S5-05.md`  
 **Story Points:** 5  
 **Rol:** `COMPANY`  

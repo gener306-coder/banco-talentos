@@ -1,7 +1,9 @@
 import { useCallback, useState } from 'react'
 import { Link, useParams } from 'react-router'
 import { InstitutionRequestError } from '../institutions/InstitutionLayout'
+import { linkageMessages, listLinkageRequests } from '../linkage/api'
 import { LinkageRequestForm } from '../linkage/LinkageRequestForm'
+import { LinkageStatus } from '../linkage/LinkageStatus'
 import { useApiRequest } from '../lib/useApiRequest'
 import { languageName, levelLabel } from '../students/cvCatalogs'
 import { ChevronLeftIcon } from '../ui/icons'
@@ -22,6 +24,9 @@ const formatDate = (value: string) => dateFormat.format(new Date(`${value}T00:00
 function TalentProfile({ publicId }: { publicId: string }) {
   const load = useCallback((signal: AbortSignal) => getTalent(publicId, signal), [publicId])
   const { data, loading, failure, refresh } = useApiRequest(load, talentMessages)
+  // HU-S5-05 CA-04: solicitudes que la empresa ya envió para este perfil. Si fallan, el perfil se muestra igual.
+  const loadSent = useCallback((signal: AbortSignal) => listLinkageRequests({ publicId }, signal), [publicId])
+  const sent = useApiRequest(loadSent, linkageMessages)
   const [requesting, setRequesting] = useState(false)
   // La hoja carga las oportunidades al abrirse por primera vez y conserva lo escrito al cerrarla.
   const [requested, setRequested] = useState(false)
@@ -37,6 +42,17 @@ function TalentProfile({ publicId }: { publicId: string }) {
           <>
             <h2 id="talent-profile-title">{data.headline ?? 'Perfil sin titular'}</h2>
             <p className="privacy-note">Perfil anónimo: la identidad del alumno y sus datos de contacto los resguarda su institución.</p>
+            {sent.data && sent.data.items.length > 0 && (
+              <div className="pending-notice linkage-notice" role="note" aria-label="Solicitudes enviadas para este perfil">
+                <p>Ya solicitaste la vinculación de este perfil para:</p>
+                <ul>
+                  {sent.data.items.map((item) => (
+                    <li key={item.id}>«{item.opportunity.title}» · <LinkageStatus status={item.status} /></li>
+                  ))}
+                </ul>
+                <Link to="/linkage-requests">Ver tus solicitudes</Link>
+              </div>
+            )}
             <div className="actions">
               <button type="button" onClick={() => { setRequested(true); setRequesting(true) }}>Solicitar vinculación</button>
             </div>
@@ -89,7 +105,7 @@ function TalentProfile({ publicId }: { publicId: string }) {
                 : <p className="notice-muted">Sin proyectos registrados.</p>}
             </section>
             <Sheet open={requesting} onClose={() => setRequesting(false)} labelledBy="linkage-request-title">
-              {requested && <LinkageRequestForm publicId={publicId} />}
+              {requested && <LinkageRequestForm publicId={publicId} onSent={() => { void sent.refresh() }} />}
             </Sheet>
           </>
         )}

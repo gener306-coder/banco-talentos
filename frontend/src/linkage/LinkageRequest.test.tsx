@@ -7,6 +7,9 @@ import { createLinkageRequest } from './api'
 
 const fetchMock = vi.fn<typeof fetch>()
 const linkageMock = vi.fn<typeof fetch>()
+// Solicitudes ya enviadas para el perfil (HU-S5-05 CA-04).
+const sentMock = vi.fn<typeof fetch>()
+const sentPage = (items: unknown[]) => Response.json({ data: items, meta: { current_page: 1, last_page: 1, total: items.length, per_page: 20 } })
 let options: unknown[]
 const user = { id: 9, name: 'Reclutadora', email: 'rh@manugolfo.test', role: 'COMPANY', institution: null, company: { id: 3, name: 'ManuGolfo' } }
 const publicId = '3f2c1b9e-8a7d-4c6b-9e5f-1a2b3c4d5e6f'
@@ -29,6 +32,8 @@ const posts = () => linkageMock.mock.calls.filter(([, init]) => init?.method ===
 beforeEach(() => {
   options = [{ id: 12, title: 'Automatización de línea', program: 'Mecatrónica', municipality: 'Reynosa' }, { id: 13, title: 'Calidad', program: 'Industrial', municipality: null }]
   linkageMock.mockReset()
+  sentMock.mockReset()
+  sentMock.mockImplementation(async () => sentPage([]))
   fetchMock.mockReset()
   fetchMock.mockImplementation(async (path, init) => {
     if (path === '/api/me') return Response.json({ user })
@@ -39,6 +44,7 @@ beforeEach(() => {
     }
     if (path === `/api/talent/${publicId}`) return Response.json({ data: profile })
     if (path === '/api/opportunities/options') return Response.json({ data: options })
+    if (typeof path === 'string' && path.startsWith('/api/linkage-requests?')) return sentMock(path, init)
     return linkageMock(path, init)
   })
   vi.stubGlobal('fetch', fetchMock)
@@ -119,5 +125,33 @@ describe('solicitud de vinculación HU-S5-04', () => {
     expect(result).not.toHaveProperty('student_id')
     expect(result).not.toHaveProperty('institution_id')
     expect(result.student_public_id).toBe(publicId)
+  })
+
+  it('avisa de las solicitudes ya enviadas para el perfil y lo actualiza tras enviar otra (HU-S5-05 CA-04)', async () => {
+    const sentItem = (id: number, title: string, status: string) => ({
+      id, status, created_at: '2026-10-28T10:00:00Z', message: null, opportunity: { id, title },
+      profile: { public_id: publicId, headline: 'Analista de datos', program: 'Ingeniería', period_type: 'semester', period_number: 6 },
+      institution: { name: 'UT del Golfo', contact_email: 'dual@utgolfo.edu.mx' },
+    })
+    sentMock.mockImplementationOnce(async () => sentPage([sentItem(13, 'Calidad', 'CANCELADA')]))
+      .mockImplementationOnce(async () => sentPage([sentItem(12, 'Automatización de línea', 'PENDIENTE_INSTITUCION'), sentItem(13, 'Calidad', 'CANCELADA')]))
+    linkageMock.mockResolvedValueOnce(Response.json({ data: created }, { status: 201 }))
+    const sheet = await openSheet()
+    const notice = screen.getByRole('note', { name: 'Solicitudes enviadas para este perfil' })
+    expect(within(notice).getByText(/«Calidad»/)).toBeInTheDocument()
+    expect(within(notice).getByText('Cancelada')).toBeInTheDocument()
+    expect(within(notice).getByRole('link', { name: 'Ver tus solicitudes' })).toHaveAttribute('href', '/linkage-requests')
+    expect(sentMock.mock.calls[0][0]).toBe(`/api/linkage-requests?page=1&public_id=${publicId}`)
+
+    fireEvent.change(await within(sheet).findByLabelText('Oportunidad'), { target: { value: '12' } })
+    fireEvent.click(within(sheet).getByRole('button', { name: 'Enviar solicitud' }))
+    await within(sheet).findByRole('status')
+    expect(await screen.findByText(/«Automatización de línea»/, { selector: 'li' })).toBeInTheDocument()
+  })
+
+  it('no muestra aviso si la empresa no ha solicitado el perfil', async () => {
+    await openSheet()
+    await waitFor(() => expect(sentMock).toHaveBeenCalled())
+    expect(screen.queryByRole('note', { name: 'Solicitudes enviadas para este perfil' })).not.toBeInTheDocument()
   })
 })
