@@ -24,3 +24,7 @@
 .talent-meta { margin: 0 0 0.6rem; font-size: 0.9rem; color: var(--text); }
 .talent-profile section { margin-top: 1.25rem; }
 .talent-profile .cv-card p { margin: 0 0 0.3rem; }
+/* Solicitud de vinculación en la hoja del perfil (HU-S5-04). */
+.linkage-request select, .linkage-request textarea { width: 100%; }
+.linkage-request textarea { resize: vertical; }
+.linkage-empty { display: grid; gap: 0.6rem; justify-items: start; }

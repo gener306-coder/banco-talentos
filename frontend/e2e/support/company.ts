@@ -79,3 +79,19 @@ export async function createCompanyAccount(
 
   return link
 }
+
+/** Registra una oportunidad dual activa con el municipio precargado de la empresa (HU-S5-02) y queda en su detalle. */
+export async function createOpportunity(page: Page, title: string) {
+  await page.goto('/opportunities/new')
+  const form = page.locator('form.opportunity-form')
+  await expect(form.getByRole('combobox', { name: 'Municipio' })).not.toHaveValue('')
+  await form.getByLabel('Título de la oportunidad').fill(title)
+  await form.getByLabel('Actividades y objetivos').fill('Análisis de datos de producción y tableros de indicadores.')
+  await form.getByLabel('Lugares disponibles').fill('2')
+  await form.getByLabel('Carrera o programa requerido').fill('Ingeniería en Datos')
+  await form.getByLabel('Tipo de periodo').selectOption('semester')
+  await form.getByLabel('Periodo mínimo').selectOption('4')
+  await form.getByRole('group', { name: '¿Requiere que el alumno se reubique?' }).getByLabel('No', { exact: true }).check()
+  await form.getByRole('button', { name: 'Registrar oportunidad' }).click()
+  await expect(page.getByText('Oportunidad registrada correctamente.')).toBeVisible()
+}
