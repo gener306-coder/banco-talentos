@@ -33,10 +33,12 @@ const pageErrorTitles: Record<number, string> = {
  * Error de una solicitud. `page` presenta el fallo de carga de una vista completa como estado;
  * sin él, es el aviso compacto que acompaña a una acción dentro de la vista.
  */
-export function InstitutionRequestError({ failure, retry, page = false }: {
+export function InstitutionRequestError({ failure, retry, page = false, notFoundTitle }: {
   failure: InstitutionFailure
   retry?: () => Promise<void>
   page?: boolean
+  /** Título del 404 de una vista completa en otros módulos (por ejemplo, oportunidades). */
+  notFoundTitle?: string
 }) {
   const canRetry = retry && ![401, 403, 404].includes(failure.status)
   const retryButton = canRetry && (
@@ -46,7 +48,7 @@ export function InstitutionRequestError({ failure, retry, page = false }: {
   if (page) {
     return (
       <StateMessage kind="error" icon={failure.status === 404 ? <SearchIcon /> : <AlertIcon />}
-        title={pageErrorTitles[failure.status] ?? 'No pudimos cargar la información'}
+        title={(failure.status === 404 && notFoundTitle) || pageErrorTitles[failure.status] || 'No pudimos cargar la información'}
         description={failure.message} action={retryButton} />
     )
   }

@@ -1,0 +1,11 @@
+/* Oportunidades de Educación Dual (HU-S5-02): formulario agrupado, listado y detalle con los tokens semánticos. */
+.opportunity-form { max-width: var(--content-readable); }
+.opportunity-form > fieldset { margin: 0 0 1.25rem; padding: 0; border: 0; }
+.opportunity-form > fieldset > legend { margin-bottom: 0.6rem; font-size: 1.05rem; font-weight: 700; color: var(--accent); }
+.opportunity-form select { width: 100%; margin-bottom: 0.6rem; }
+.opportunity-form textarea { width: 100%; resize: vertical; }
+.opportunity-form input[type='number'] { max-width: 8rem; }
+.opportunity-skills { display: flex; flex-wrap: wrap; gap: 0.3rem; margin: 0; padding: 0; list-style: none; }
+.opportunity-skills .chip { padding: 0.15rem 0.65rem; font-size: 0.85rem; }
+.opportunity-details { max-width: var(--content-readable); }
+.opportunity-description { white-space: pre-line; }

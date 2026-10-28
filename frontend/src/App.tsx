@@ -18,6 +18,10 @@ import { CompanyDetailPage } from './companies/CompanyDetailPage'
 import { CompanyEditPage } from './companies/CompanyEditPage'
 import { SECRETARY_ACCOUNT_MANAGERS } from './secretary/api'
 import { SecretaryAccountsPage } from './secretary/SecretaryAccountsPage'
+import { OpportunitiesPage } from './opportunities/OpportunitiesPage'
+import { OpportunityCreatePage } from './opportunities/OpportunityCreatePage'
+import { OpportunityDetailPage } from './opportunities/OpportunityDetailPage'
+import { OpportunityEditPage } from './opportunities/OpportunityEditPage'
 import { TalentProfilePage } from './talent/TalentProfilePage'
 import { TalentSearchPage } from './talent/TalentSearchPage'
 import { StudentCvPage } from './students/StudentCvPage'
@@ -74,6 +78,12 @@ function AuthRoutes() {
       <Route element={<ProtectedRoute role="COMPANY" deniedMessage="No tienes permiso para buscar talento." />}>
         <Route path="/talent" element={<TalentSearchPage />} />
         <Route path="/talent/:publicId" element={<TalentProfilePage />} />
+      </Route>
+      <Route element={<ProtectedRoute role="COMPANY" deniedMessage="No tienes permiso para gestionar oportunidades." />}>
+        <Route path="/opportunities" element={<OpportunitiesPage />} />
+        <Route path="/opportunities/new" element={<OpportunityCreatePage />} />
+        <Route path="/opportunities/:id" element={<OpportunityDetailPage />} />
+        <Route path="/opportunities/:id/edit" element={<OpportunityEditPage />} />
       </Route>
       <Route element={<ProtectedRoute role="INSTITUTION" deniedMessage="No tienes permiso para acceder al padrón de alumnos." />}>
         <Route path="/students" element={<StudentsPage />} />

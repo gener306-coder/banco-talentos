@@ -62,7 +62,7 @@ El login aplica un límite de 5 intentos por minuto por correo. Igual que ya exi
 
 ## HU-S5-02 — Registro y gestión de Oportunidades de Educación Dual
 
-**Estado:** Pendiente  
+**Estado:** Completada (28 de octubre de 2026)  
 **Diseño técnico y verificación:** `docs/HU-S5-02.md`  
 **Story Points:** 8  
 **Rol:** `COMPANY`

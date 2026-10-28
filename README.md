@@ -1,6 +1,6 @@
 # Banco de Talentos – Educación Dual
 
-Monolito modular. Sprint vigente: [Sprint 5](docs/sprint-5.md) (en curso; completada HU-S5-01, ver «Inicio por rol»). Sprint anterior: [Sprint 4](docs/sprint-4.md) (completo). Historias del [Sprint 1](docs/sprint-1.md) y del Sprint 2:
+Monolito modular. Sprint vigente: [Sprint 5](docs/sprint-5.md) (en curso; completadas HU-S5-01, ver «Inicio por rol», y HU-S5-02, ver «Oportunidades Duales»). Sprint anterior: [Sprint 4](docs/sprint-4.md) (completo). Historias del [Sprint 1](docs/sprint-1.md) y del Sprint 2:
 
 - **HU-S1-01 — Autenticación y control de acceso** ([detalle](docs/HU-S1-01.md)).
 - **HU-S1-02 — Gestión de instituciones**: ADMIN lista, registra, consulta, edita y activa o inactiva instituciones ([detalle](docs/HU-S1-02.md)).
@@ -67,7 +67,7 @@ La SPA consulta `GET /api/me` al cargar. Para iniciar sesión obtiene primero `G
 
 La cookie de sesión es `HttpOnly`, de dominio local y `SameSite=Lax`. El cliente envía el token CSRF mediante `X-XSRF-TOKEN`. El identificador de sesión se regenera al autenticar; el cierre de sesión impide reutilizar la cookie anterior. Las sesiones locales expiran tras 120 minutos de inactividad. Las opciones de cookies y duración están en `backend/.env.example`.
 
-Los roles son `ADMIN`, `INSTITUTION`, `COMPANY` y `SECRETARY`. Todos requieren una cuenta activa. Las cuentas `INSTITUTION` requieren además que su institución esté activa. ADMIN dispone de la gestión de instituciones y de cuentas institucionales; ADMIN y `SECRETARY` gestionan las cuentas de la Secretaría; `SECRETARY` gestiona las empresas; `INSTITUTION` ve su institución vinculada; `COMPANY` ve su empresa vinculada y busca talento anónimo. El acceso se restringe tanto en las rutas React como en la API con Sanctum y el middleware `role`.
+Los roles son `ADMIN`, `INSTITUTION`, `COMPANY` y `SECRETARY`. Todos requieren una cuenta activa. Las cuentas `INSTITUTION` requieren además que su institución esté activa. ADMIN dispone de la gestión de instituciones y de cuentas institucionales; ADMIN y `SECRETARY` gestionan las cuentas de la Secretaría; `SECRETARY` gestiona las empresas; `INSTITUTION` ve su institución vinculada; `COMPANY` ve su empresa vinculada, busca talento anónimo y gestiona las Oportunidades Duales de su empresa. El acceso se restringe tanto en las rutas React como en la API con Sanctum y el middleware `role`.
 
 Después de iniciar sesión como ADMIN, abre **Instituciones**. El listado incluye instituciones activas e inactivas. El registro y la edición solicitan nombre, CCT y correo de contacto; el detalle ofrece la acción para activar o inactivar. El CCT es único incluso entre instituciones inactivas y no existe eliminación. Consulta el contrato y la matriz de pruebas en [docs/HU-S1-02.md](docs/HU-S1-02.md).
 
@@ -123,6 +123,18 @@ Una cuenta `COMPANY` de una empresa activa abre **Buscar talento** desde el inic
 - estado y distancia máxima (10, 25, 50, 100 o 200 km), medida desde el municipio de la empresa o desde otro municipio del catálogo.
 
 No hay mapa: los resultados son tarjetas anónimas ordenadas por distancia, de 20 en 20. Cada tarjeta muestra titular, carrera, periodo, institución, ubicación aproximada, habilidades, idiomas y disponibilidad. **Ver perfil** (`/talent/:public_id`) muestra el CV público completo, sin botón de contacto. Las empresas nunca reciben la identidad del alumno, el seguro facultativo, los enlaces ni las credenciales, y lo identifican solo por un UUID aleatorio. Solo aparecen alumnos activos de instituciones activas con su expediente capturado. Contrato, nota de privacidad y cobertura en [docs/HU-S4-05.md](docs/HU-S4-05.md).
+
+## Oportunidades Duales
+
+Una cuenta `COMPANY` de una empresa activa abre **Oportunidades Duales** desde el inicio (`/opportunities`). El listado muestra las oportunidades de su empresa, de la más reciente a la más antigua y de 20 en 20, con título, carrera, municipio, lugares, estado y habilidades principales. **Nueva oportunidad** pide:
+- título, actividades y objetivos, y lugares disponibles (1 a 50);
+- carrera y periodo mínimo (semestre o cuatrimestre, del 1 al 15);
+- habilidades requeridas, opcionales, del catálogo compartido;
+- idioma con nivel mínimo, opcional;
+- estado y municipio, precargados con los de la empresa;
+- si requiere que el alumno se reubique.
+
+Los textos no admiten enlaces, correos ni teléfonos. El servidor asigna la empresa y la cuenta que la registró, y ubica la oportunidad en la cabecera de su municipio sin exponer el punto. El detalle permite editarla. No existe eliminación, y su activación o inactivación llegará en HU-S5-03. Una oportunidad de otra empresa responde igual que una inexistente. Tras actualizar el código aplica las migraciones con `docker compose exec backend php artisan migrate`. Contrato y cobertura en [docs/HU-S5-02.md](docs/HU-S5-02.md).
 
 ## Alumnos
 
