@@ -3,6 +3,8 @@
 use App\Enums\UserRole;
 use App\Models\Company;
 use App\Models\Institution;
+use App\Models\LinkageRequest;
+use App\Models\Opportunity;
 use App\Models\Student;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -47,6 +49,63 @@ function secretaryAccount(bool $pending = false, bool $active = true): User
 function dashboard($test)
 {
     return $test->browserRequest('GET', '/api/dashboard');
+}
+
+/** Oportunidad de la empresa (HU-S5-02), guardada directamente. */
+function dashboardOpportunity(Company $company, bool $active = true): Opportunity
+{
+    $opportunity = new Opportunity([
+        'title' => 'Tableros de producción', 'program' => 'Ingeniería Mecatrónica', 'period_type' => 'semester', 'period_number' => 5,
+        'vacancies' => 2, 'can_relocate' => false, 'state_code' => '28', 'municipality_code' => '28032', 'description' => 'Actividades.',
+    ]);
+    $opportunity->company_id = $company->id;
+    $opportunity->created_by = User::factory()->forCompany($company)->create()->id;
+    $opportunity->location = DB::raw("(SELECT location FROM municipalities WHERE code = '28032')");
+    $opportunity->is_active = $active;
+    $opportunity->save();
+
+    return $opportunity;
+}
+
+/** Solicitud de vinculación (HU-S5-04) en el estado indicado, cada una con su propia oportunidad. */
+function dashboardLinkage(Company $company, Student $student, string $status = 'PENDIENTE_INSTITUCION'): LinkageRequest
+{
+    $linkage = new LinkageRequest;
+    $linkage->company_id = $company->id;
+    $linkage->opportunity_id = dashboardOpportunity($company)->id;
+    $linkage->student_id = $student->id;
+    $linkage->institution_id = $student->institution_id;
+    $linkage->requested_by = User::factory()->forCompany($company)->create()->id;
+    $linkage->status = $status;
+    $linkage->save();
+
+    return $linkage;
+}
+
+/** Programa dual con solicitudes en todos los estados entre dos empresas y dos instituciones (HU-S6-03). */
+function dashboardLinkageProgram(): array
+{
+    [$company, $otherCompany] = [Company::factory()->create(), Company::factory()->create()];
+    [$institution, $otherInstitution] = [Institution::factory()->create(), Institution::factory()->create()];
+    $student = dashboardStudent($institution);
+    $otherStudent = dashboardStudent($otherInstitution);
+
+    dashboardLinkage($company, $student);
+    dashboardLinkage($company, $student);
+    dashboardLinkage($company, $otherStudent);
+    dashboardLinkage($company, $student, 'ACEPTADA');
+    dashboardLinkage($company, $student, 'RECHAZADA');
+    dashboardLinkage($company, $student, 'CANCELADA');
+    dashboardLinkage($otherCompany, $student);
+    dashboardLinkage($otherCompany, $otherStudent, 'ACEPTADA');
+    dashboardOpportunity($company, active: false);
+    dashboardOpportunity($otherCompany, active: false);
+    // Oportunidades activas de una empresa inactiva: fuera del avance general.
+    $inactiveCompany = Company::factory()->create();
+    dashboardOpportunity($inactiveCompany);
+    $inactiveCompany->forceFill(['is_active' => false])->save();
+
+    return compact('company', 'otherCompany', 'institution', 'otherInstitution');
 }
 
 it('rejects visitors (CA-01)', function () {
@@ -97,6 +156,7 @@ it('counts institutions and secretary accounts for ADMIN (CA-02)', function () {
 
     dashboard($this)->assertOk()->assertExactJson(['data' => ['role' => 'ADMIN', 'metrics' => [
         'active_institutions' => 3, 'inactive_institutions' => 2, 'active_secretaries' => 2, 'pending_secretaries' => 1,
+        'active_opportunities' => 0, 'accepted_linkage_requests' => 0,
     ]]]);
 });
 
@@ -111,6 +171,7 @@ it('counts companies and pending secretary accounts for SECRETARY (CA-03)', func
 
     dashboard($this)->assertOk()->assertExactJson(['data' => ['role' => 'SECRETARY', 'metrics' => [
         'active_companies' => 2, 'inactive_companies' => 3, 'pending_secretaries' => 2,
+        'active_opportunities' => 0, 'accepted_linkage_requests' => 0,
     ]]]);
 });
 
@@ -136,7 +197,7 @@ it('counts only the students of its own institution for INSTITUTION (CA-04)', fu
     $this->loginWithCookies(User::factory()->forInstitution($institution)->create())->assertOk();
 
     dashboard($this)->assertOk()->assertExactJson(['data' => ['role' => 'INSTITUTION', 'metrics' => [
-        'active_students' => 6, 'searchable_students' => 3, 'pending_municipality_students' => 2,
+        'active_students' => 6, 'searchable_students' => 3, 'pending_municipality_students' => 2, 'pending_linkage_requests' => 0,
     ]]]);
 });
 
@@ -147,7 +208,7 @@ it('returns zero counts to an institution without students even when others have
     $this->loginWithCookies(User::factory()->forInstitution(Institution::factory()->create())->create())->assertOk();
 
     dashboard($this)->assertOk()->assertJsonPath('data.metrics', [
-        'active_students' => 0, 'searchable_students' => 0, 'pending_municipality_students' => 0,
+        'active_students' => 0, 'searchable_students' => 0, 'pending_municipality_students' => 0, 'pending_linkage_requests' => 0,
     ]);
 });
 
@@ -171,10 +232,44 @@ it('counts the talent search universe for COMPANY (CA-05)', function () {
     $this->loginWithCookies(User::factory()->forCompany()->create())->assertOk();
 
     $response = dashboard($this)->assertOk()->assertExactJson(['data' => ['role' => 'COMPANY', 'metrics' => [
-        'available_talent_profiles' => 3,
+        'available_talent_profiles' => 3, 'active_opportunities' => 0, 'pending_linkage_requests' => 0,
     ]]]);
 
     // Mismo total que el buscador de HU-S4-05.
     expect($this->browserRequest('GET', '/api/talent')->assertOk()->json('meta.total'))
         ->toBe($response->json('data.metrics.available_talent_profiles'));
+});
+
+describe('HU-S6-03: oportunidades y solicitudes de vinculación', function () {
+    it('counts only the pending requests of its own institution for INSTITUTION', function () {
+        $program = dashboardLinkageProgram();
+        $this->loginWithCookies(User::factory()->forInstitution($program['institution'])->create())->assertOk();
+
+        dashboard($this)->assertOk()->assertJsonPath('data.metrics.pending_linkage_requests', 3);
+
+        $this->loginWithCookies(User::factory()->forInstitution($program['otherInstitution'])->create())->assertOk();
+        dashboard($this)->assertOk()->assertJsonPath('data.metrics.pending_linkage_requests', 1);
+    });
+
+    it('counts only the active opportunities and pending requests of its own company for COMPANY', function () {
+        $program = dashboardLinkageProgram();
+        $this->loginWithCookies(User::factory()->forCompany($program['company'])->create())->assertOk();
+
+        // Seis solicitudes, cada una con su oportunidad activa, y una oportunidad inactiva.
+        $metrics = dashboard($this)->assertOk()->json('data.metrics');
+        expect($metrics['active_opportunities'])->toBe(6)->and($metrics['pending_linkage_requests'])->toBe(3);
+
+        $this->loginWithCookies(User::factory()->forCompany($program['otherCompany'])->create())->assertOk();
+        $metrics = dashboard($this)->assertOk()->json('data.metrics');
+        expect($metrics['active_opportunities'])->toBe(2)->and($metrics['pending_linkage_requests'])->toBe(1);
+    });
+
+    it('counts the active opportunities of active companies and every accepted request for ADMIN and SECRETARY', function (UserRole $role) {
+        dashboardLinkageProgram();
+        $this->loginWithCookies($role === UserRole::SECRETARY ? secretaryAccount() : User::factory()->role($role)->create())->assertOk();
+
+        $metrics = dashboard($this)->assertOk()->json('data.metrics');
+        expect($metrics['active_opportunities'])->toBe(8)->and($metrics['accepted_linkage_requests'])->toBe(2)
+            ->and($metrics)->not->toHaveKey('pending_linkage_requests');
+    })->with([UserRole::ADMIN, UserRole::SECRETARY]);
 });

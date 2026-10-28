@@ -14,9 +14,9 @@ const respond = (body: unknown) => fetchMock.mockResolvedValueOnce(Response.json
 
 describe('indicadores del inicio HU-S5-01', () => {
   it('consulta GET /api/dashboard y conserva solo los indicadores del rol', async () => {
-    respond({ data: { role: 'INSTITUTION', metrics: { active_students: 3, searchable_students: 2, pending_municipality_students: 1, extra: 9 } } })
+    respond({ data: { role: 'INSTITUTION', metrics: { active_students: 3, searchable_students: 2, pending_municipality_students: 1, pending_linkage_requests: 2, extra: 9 } } })
     await expect(getDashboard('INSTITUTION')).resolves.toEqual({
-      role: 'INSTITUTION', metrics: { active_students: 3, searchable_students: 2, pending_municipality_students: 1 },
+      role: 'INSTITUTION', metrics: { active_students: 3, searchable_students: 2, pending_municipality_students: 1, pending_linkage_requests: 2 },
     })
     expect(fetchMock.mock.calls[0][0]).toBe('/api/dashboard')
   })

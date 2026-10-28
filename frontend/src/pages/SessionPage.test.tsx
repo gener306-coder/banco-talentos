@@ -18,10 +18,10 @@ function renderApp(path = '/') {
 const emptyPage = { data: [], meta: { current_page: 1, last_page: 1, total: 0, per_page: 20 } }
 
 const zeroMetrics: Record<string, Record<string, number>> = {
-  ADMIN: { active_institutions: 0, inactive_institutions: 0, active_secretaries: 0, pending_secretaries: 0 },
-  SECRETARY: { active_companies: 0, inactive_companies: 0, pending_secretaries: 0 },
-  INSTITUTION: { active_students: 0, searchable_students: 0, pending_municipality_students: 0 },
-  COMPANY: { available_talent_profiles: 0 },
+  ADMIN: { active_institutions: 0, inactive_institutions: 0, active_secretaries: 0, pending_secretaries: 0, active_opportunities: 0, accepted_linkage_requests: 0 },
+  SECRETARY: { active_companies: 0, inactive_companies: 0, pending_secretaries: 0, active_opportunities: 0, accepted_linkage_requests: 0 },
+  INSTITUTION: { active_students: 0, searchable_students: 0, pending_municipality_students: 0, pending_linkage_requests: 0 },
+  COMPANY: { available_talent_profiles: 0, active_opportunities: 0, pending_linkage_requests: 0 },
 }
 /** Respuesta de GET /api/dashboard; por defecto, ceros para el rol de la sesión. */
 let dashboard: (() => Response) | null
@@ -112,20 +112,35 @@ describe('indicadores del inicio (HU-S5-01 CA-07)', () => {
   }
 
   it.each([
-    ['ADMIN', {}, { active_institutions: 12, inactive_institutions: 3, active_secretaries: 4, pending_secretaries: 1 },
-      [['Instituciones activas', '12'], ['Instituciones inactivas', '3'], ['Cuentas de la Secretaría activas', '4'], ['Cuentas de la Secretaría pendientes', '1']]],
-    ['SECRETARY', {}, { active_companies: 1250, inactive_companies: 7, pending_secretaries: 2 },
-      [['Empresas activas', '1,250'], ['Empresas inactivas', '7'], ['Cuentas de la Secretaría pendientes', '2']]],
-    ['INSTITUTION', { institution: { id: 7, name: 'Instituto Dual' } }, { active_students: 40, searchable_students: 25, pending_municipality_students: 0 },
-      [['Alumnos activos', '40'], ['Visibles en el buscador', '25'], ['Municipio por confirmar', '0']]],
-    ['COMPANY', { company: { id: 3, name: 'ManuGolfo' } }, { available_talent_profiles: 318 },
-      [['Perfiles disponibles', '318']]],
+    ['ADMIN', {}, { active_institutions: 12, inactive_institutions: 3, active_secretaries: 4, pending_secretaries: 1, active_opportunities: 30, accepted_linkage_requests: 9 },
+      [['Instituciones activas', '12'], ['Instituciones inactivas', '3'], ['Cuentas de la Secretaría activas', '4'], ['Cuentas de la Secretaría pendientes', '1'],
+        ['Oportunidades activas', '30'], ['Vinculaciones aceptadas', '9']]],
+    ['SECRETARY', {}, { active_companies: 1250, inactive_companies: 7, pending_secretaries: 2, active_opportunities: 2400, accepted_linkage_requests: 15 },
+      [['Empresas activas', '1,250'], ['Empresas inactivas', '7'], ['Cuentas de la Secretaría pendientes', '2'], ['Oportunidades activas', '2,400'], ['Vinculaciones aceptadas', '15']]],
+    ['INSTITUTION', { institution: { id: 7, name: 'Instituto Dual' } }, { active_students: 40, searchable_students: 25, pending_municipality_students: 0, pending_linkage_requests: 0 },
+      [['Alumnos activos', '40'], ['Visibles en el buscador', '25'], ['Municipio por confirmar', '0'], ['Solicitudes pendientes', '0']]],
+    ['COMPANY', { company: { id: 3, name: 'ManuGolfo' } }, { available_talent_profiles: 318, active_opportunities: 4, pending_linkage_requests: 6 },
+      [['Perfiles disponibles', '318'], ['Oportunidades activas', '4'], ['Solicitudes pendientes', '6']]],
   ] as const)('%s ve sus contadores', async (role, organization, metrics, expected) => {
     user = { ...base, role, ...organization }
     dashboard = () => Response.json({ data: { role, metrics } })
     renderApp()
     expect(await indicators()).toEqual(expected)
     expect(screen.queryByText(/Municipio por confirmar»/)).not.toBeInTheDocument()
+    // La empresa ve su contador de pendientes, pero el aviso es solo para la institución, que las responde.
+    expect(screen.queryByRole('link', { name: 'Revisar solicitudes' })).not.toBeInTheDocument()
+  })
+
+  it.each([
+    [1, 'Tienes 1 solicitud de vinculación pendiente de respuesta.'],
+    [3, 'Tienes 3 solicitudes de vinculación pendientes de respuesta.'],
+  ])('avisa a la institución de %i solicitudes pendientes y enlaza a su bandeja (HU-S6-03 CA-02)', async (pending, text) => {
+    user = { ...base, role: 'INSTITUTION', institution: { id: 7, name: 'Instituto Dual' } }
+    dashboard = () => Response.json({ data: { role: 'INSTITUTION', metrics: { ...zeroMetrics.INSTITUTION, pending_linkage_requests: pending } } })
+    renderApp()
+    const region = await screen.findByRole('region', { name: 'Indicadores' })
+    const notice = within(region).getByText(text, { exact: false })
+    expect(within(notice).getByRole('link', { name: 'Revisar solicitudes' })).toHaveAttribute('href', '/institution/linkage-requests')
   })
 
   it.each([
@@ -133,7 +148,7 @@ describe('indicadores del inicio (HU-S5-01 CA-07)', () => {
     [14, '14 alumnos tienen «Municipio por confirmar».'],
   ])('avisa a la institución de %i alumnos con municipio por confirmar y enlaza al padrón', async (pending, text) => {
     user = { ...base, role: 'INSTITUTION', institution: { id: 7, name: 'Instituto Dual' } }
-    dashboard = () => Response.json({ data: { role: 'INSTITUTION', metrics: { active_students: 20, searchable_students: 5, pending_municipality_students: pending } } })
+    dashboard = () => Response.json({ data: { role: 'INSTITUTION', metrics: { ...zeroMetrics.INSTITUTION, active_students: 20, searchable_students: 5, pending_municipality_students: pending } } })
     renderApp()
     const region = await screen.findByRole('region', { name: 'Indicadores' })
     const notice = within(region).getByText(text, { exact: false })
