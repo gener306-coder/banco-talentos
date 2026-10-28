@@ -15,7 +15,7 @@ use Illuminate\Validation\Rule;
 /**
  * Alta y edición de una oportunidad dual (HU-S5-02 CA-03 a CA-05). La empresa, la cuenta creadora y el punto los
  * asigna el servidor: company_id, created_by y las coordenadas quedan fuera de validated(). El estado activo se
- * rechaza porque su cambio pertenece a HU-S5-03.
+ * rechaza porque solo cambia por PATCH {id}/status (HU-S5-03).
  */
 class OpportunityRequest extends FormRequest
 {

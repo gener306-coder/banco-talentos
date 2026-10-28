@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\OpportunityRequest;
+use App\Http\Requests\UpdateOpportunityStatusRequest;
 use App\Models\Municipality;
 use App\Models\Opportunity;
 use App\Models\Skill;
@@ -15,7 +16,7 @@ use Illuminate\Support\Facades\DB;
 /**
  * Oportunidades de Educación Dual de la empresa de la sesión (HU-S5-02). Anti-IDOR (CA-02): toda consulta filtra
  * por company_id de la sesión y una oportunidad ajena responde igual que una inexistente. Sin DELETE: la baja
- * lógica pertenece a HU-S5-03.
+ * lógica es PATCH {id}/status (HU-S5-03).
  */
 class OpportunityController extends Controller
 {
@@ -80,6 +81,19 @@ class OpportunityController extends Controller
     {
         $record = $this->owned($request, $opportunity);
         $this->save($record, $request);
+
+        return $this->detail($record);
+    }
+
+    /**
+     * Baja lógica (HU-S5-03): inactivar no borra nada. La oportunidad sigue consultable y editable por su empresa,
+     * pero no podrá elegirse para nuevas solicitudes de vinculación (HU-S5-04). Repetir el mismo estado no falla.
+     */
+    public function updateStatus(UpdateOpportunityStatusRequest $request, string $opportunity): JsonResponse
+    {
+        $record = $this->owned($request, $opportunity);
+        $record->is_active = $request->validated('is_active');
+        $record->save();
 
         return $this->detail($record);
     }

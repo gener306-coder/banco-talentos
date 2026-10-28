@@ -343,3 +343,129 @@ describe('consulta y edición con aislamiento (CA-02)', function () {
         $this->browserRequest('GET', '/api/opportunities/'.$id)->assertNotFound();
     })->with(['0', 'abc', '-1', '1.5', '1234567890123456789']);
 });
+
+// HU-S5-03: activación e inactivación (baja lógica).
+describe('estado (HU-S5-03)', function () {
+    function statusUrl(Opportunity $opportunity): string
+    {
+        return '/api/opportunities/'.$opportunity->id.'/status';
+    }
+
+    it('inactivates and reactivates its own opportunity and returns the detail (CA-01)', function () {
+        $opportunity = opportunityFor($this->company);
+        signInCompany($this);
+
+        $this->browserRequest('PATCH', statusUrl($opportunity), ['is_active' => false])->assertOk()
+            ->assertHeader('Cache-Control', 'no-store, private')
+            ->assertJsonPath('data.id', $opportunity->id)
+            ->assertJsonPath('data.is_active', false)
+            ->assertJsonPath('data.title', $opportunity->title)
+            ->assertJsonStructure(['data' => ['description', 'skills', 'created_by', 'updated_at']]);
+        expect($opportunity->refresh()->is_active)->toBeFalse();
+
+        // Idempotente: repetir el mismo estado no falla.
+        $this->browserRequest('PATCH', statusUrl($opportunity), ['is_active' => false])->assertOk()->assertJsonPath('data.is_active', false);
+
+        $this->browserRequest('PATCH', statusUrl($opportunity), ['is_active' => true])->assertOk()->assertJsonPath('data.is_active', true);
+        $this->browserRequest('PATCH', statusUrl($opportunity), ['is_active' => true])->assertOk()->assertJsonPath('data.is_active', true);
+        expect($opportunity->refresh()->is_active)->toBeTrue();
+    });
+
+    it('requires a strict boolean (CA-01)', function (mixed $value) {
+        $opportunity = opportunityFor($this->company);
+        signInCompany($this);
+
+        $this->browserRequest('PATCH', statusUrl($opportunity), ['is_active' => $value])
+            ->assertUnprocessable()->assertJsonValidationErrors(['is_active' => 'El estado debe ser true o false.']);
+        expect($opportunity->refresh()->is_active)->toBeTrue();
+    })->with(['true', 'false', 0, 1, '1', 'yes', 'on']);
+
+    it('requires is_active', function () {
+        $opportunity = opportunityFor($this->company);
+        signInCompany($this);
+
+        $this->browserRequest('PATCH', statusUrl($opportunity), [])
+            ->assertUnprocessable()->assertJsonValidationErrors(['is_active' => 'El estado es obligatorio.']);
+    });
+
+    it('rejects any other field and changes nothing (CA-01)', function (string $field, mixed $value) {
+        $opportunity = opportunityFor($this->company);
+        signInCompany($this);
+
+        $this->browserRequest('PATCH', statusUrl($opportunity), ['is_active' => false, $field => $value])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors([$field => 'La acción de cambio de estado solo permite modificar is_active.']);
+        $opportunity->refresh();
+        expect($opportunity->is_active)->toBeTrue()->and($opportunity->title)->toBe('Automatización de línea de ensamble');
+    })->with([
+        ['title', 'Otro título'],
+        ['vacancies', 9],
+        ['company_id', 999],
+        ['created_by', 1],
+        ['location', 'POINT(0 0)'],
+    ]);
+
+    it('keeps an inactive opportunity viewable and editable without PUT changing its state (CA-04)', function () {
+        $opportunity = opportunityFor($this->company, ['is_active' => false]);
+        signInCompany($this);
+
+        $this->browserRequest('GET', '/api/opportunities/'.$opportunity->id)->assertOk()->assertJsonPath('data.is_active', false);
+        $this->browserRequest('PUT', '/api/opportunities/'.$opportunity->id, opportunityPayload(['title' => 'Editada inactiva']))
+            ->assertOk()->assertJsonPath('data.title', 'Editada inactiva')->assertJsonPath('data.is_active', false);
+        expect($opportunity->refresh()->is_active)->toBeFalse();
+    });
+
+    it('answers 404 for another company opportunity exactly like a missing one, without changes (CA-03)', function () {
+        $foreign = opportunityFor(Company::factory()->create());
+        signInCompany($this);
+
+        $this->browserRequest('PATCH', statusUrl($foreign), ['is_active' => false])
+            ->assertNotFound()->assertExactJson(['message' => 'La oportunidad no existe.']);
+        $this->browserRequest('PATCH', '/api/opportunities/999999/status', ['is_active' => false])
+            ->assertNotFound()->assertExactJson(['message' => 'La oportunidad no existe.']);
+        expect($foreign->refresh()->is_active)->toBeTrue();
+    });
+
+    it('answers 404 to malformed or out-of-range identifiers', function (string $id) {
+        signInCompany($this);
+        $this->browserRequest('PATCH', '/api/opportunities/'.$id.'/status', ['is_active' => false])->assertNotFound();
+    })->with(['0', 'abc', '-1', '1234567890123456789']);
+
+    it('forbids every other role', function (UserRole $role) {
+        $opportunity = opportunityFor($this->company);
+        $user = $role === UserRole::INSTITUTION ? User::factory()->forInstitution(Institution::factory()->create())->create() : User::factory()->role($role)->create();
+        $this->loginWithCookies($user)->assertOk();
+
+        $this->browserRequest('PATCH', statusUrl($opportunity), ['is_active' => false])->assertForbidden();
+        expect($opportunity->refresh()->is_active)->toBeTrue();
+    })->with([UserRole::ADMIN, UserRole::INSTITUTION, UserRole::SECRETARY]);
+
+    it('rejects visitors and the accounts of an inactive company', function () {
+        $opportunity = opportunityFor($this->company);
+        $this->startCookieSession();
+        $this->browserRequest('PATCH', statusUrl($opportunity), ['is_active' => false])->assertUnauthorized();
+
+        signInCompany($this);
+        $this->company->forceFill(['is_active' => false])->save();
+        $this->browserRequest('PATCH', statusUrl($opportunity), ['is_active' => false])
+            ->assertUnauthorized()->assertJsonPath('code', 'COMPANY_INACTIVE');
+        expect($opportunity->refresh()->is_active)->toBeTrue();
+    });
+
+    it('requires CSRF', function () {
+        $opportunity = opportunityFor($this->company);
+        signInCompany($this);
+
+        $this->browserRequest('PATCH', statusUrl($opportunity), ['is_active' => false], csrf: false)->assertStatus(419);
+        expect($opportunity->refresh()->is_active)->toBeTrue();
+    });
+
+    it('has no DELETE on the status nor on the resource (CA-02)', function () {
+        $opportunity = opportunityFor($this->company);
+        signInCompany($this);
+
+        $this->browserRequest('DELETE', statusUrl($opportunity))->assertStatus(405);
+        $this->browserRequest('DELETE', '/api/opportunities/'.$opportunity->id)->assertStatus(405);
+        expect(Opportunity::query()->whereKey($opportunity->id)->exists())->toBeTrue();
+    });
+});
