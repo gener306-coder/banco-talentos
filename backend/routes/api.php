@@ -57,13 +57,17 @@ Route::post('/institution-accounts/resend-setup', [InstitutionSetupLinkControlle
 Route::post('/institution-accounts/password-reset/start', [InstitutionPasswordResetController::class, 'start'])
     ->middleware(['auth:sanctum', 'active', 'role:'.UserRole::ADMIN->value, 'throttle:institution-password-reset']);
 
-// Cuentas de la Secretaría de Economía (HU-S4-01): ADMIN y SECRETARY las listan, crean y reenvían su enlace.
+// Cuentas de la Secretaría de Economía (HU-S4-01): ADMIN y SECRETARY las listan, crean, reenvían su enlace y, desde
+// HU-S6-04, cambian su estado e inician su restablecimiento de contraseña.
 Route::middleware(['auth:sanctum', 'active', 'role:'.UserRole::ADMIN->value.','.UserRole::SECRETARY->value])
     ->prefix('secretary-accounts')
     ->group(function (): void {
         Route::get('/', [SecretaryAccountController::class, 'index']);
         Route::post('/', [SecretaryAccountController::class, 'store']);
         Route::post('/resend-setup', [SecretaryAccountController::class, 'resendSetup'])->middleware('throttle:secretary-setup-resend');
+        // Estado y restablecimiento de contraseña (HU-S6-04).
+        Route::patch('{account}/status', [SecretaryAccountController::class, 'updateStatus'])->where('account', '[1-9][0-9]{0,17}');
+        Route::post('/password-reset/start', [SecretaryAccountController::class, 'startPasswordReset'])->middleware('throttle:account-password-reset');
     });
 
 // Empresas validadas por la Secretaría de Economía (HU-S4-02) y sus cuentas (HU-S4-03); sin DELETE.
@@ -81,6 +85,9 @@ Route::middleware(['auth:sanctum', 'active', 'role:'.UserRole::SECRETARY->value]
         Route::get('{company}/accounts', [CompanyAccountController::class, 'index']);
         Route::post('{company}/accounts', [CompanyAccountController::class, 'store']);
         Route::post('{company}/accounts/resend-setup', [CompanyAccountController::class, 'resendSetup'])->middleware('throttle:company-setup-resend');
+        // Estado y restablecimiento de contraseña de las cuentas de la empresa (HU-S6-04).
+        Route::patch('{company}/accounts/{account}/status', [CompanyAccountController::class, 'updateStatus'])->where('account', '[1-9][0-9]{0,17}');
+        Route::post('{company}/accounts/password-reset/start', [CompanyAccountController::class, 'startPasswordReset'])->middleware('throttle:account-password-reset');
     });
 
 // Padrón (HU-S2-02), expediente (HU-S2-03), baja lógica (HU-S2-04), seguro facultativo (HU-S3-02) y

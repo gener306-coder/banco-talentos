@@ -6,6 +6,7 @@ use App\Enums\UserRole;
 use App\Exceptions\AccountAccessDenied;
 use App\Http\Requests\ResetInstitutionPasswordRequest;
 use App\Http\Requests\StartInstitutionPasswordResetRequest;
+use App\Models\Company;
 use App\Models\Institution;
 use App\Models\User;
 use App\Services\InstitutionPasswordResetLink;
@@ -75,14 +76,23 @@ class InstitutionPasswordResetController extends Controller
             // Serializa el consumo: dos envíos simultáneos no pueden usar el mismo token.
             $user = User::query()->where('email', $data['email'])->lockForUpdate()->first();
             $broker = Password::broker('institution_reset');
-            if (! $user || $user->role !== UserRole::INSTITUTION || ! $user->institution_id
+            // Cuentas INSTITUTION (HU-S1-04) y, desde HU-S6-04, SECRETARY y COMPANY; nunca ADMIN.
+            if (! $user || ! InitialPasswordController::issuable($user)
                 || $user->password_setup_required || ! $broker->tokenExists($user, $data['token'])) {
                 $this->invalidToken();
             }
 
-            $institution = Institution::query()->lockForUpdate()->find($user->institution_id);
-            if (! $institution || ! $institution->is_active) {
-                throw new AccountAccessDenied('INSTITUTION_INACTIVE', 403);
+            if ($user->role === UserRole::INSTITUTION) {
+                $institution = Institution::query()->lockForUpdate()->find($user->institution_id);
+                if (! $institution || ! $institution->is_active) {
+                    throw new AccountAccessDenied('INSTITUTION_INACTIVE', 403);
+                }
+            }
+            if ($user->role === UserRole::COMPANY) {
+                $company = Company::query()->lockForUpdate()->find($user->company_id);
+                if (! $company || ! $company->is_active) {
+                    throw new AccountAccessDenied('COMPANY_INACTIVE', 403);
+                }
             }
             if (! $user->is_active) {
                 throw new AccountAccessDenied('ACCOUNT_INACTIVE', 403);

@@ -4,10 +4,16 @@ namespace App\Http\Controllers;
 
 use App\Enums\SetupDeliveryMethod;
 use App\Enums\UserRole;
+use App\Http\Controllers\Concerns\ManagesAccountAccess;
 use App\Http\Requests\ResendSetupLinkRequest;
+use App\Http\Requests\StartAccountPasswordResetRequest;
 use App\Http\Requests\StoreSetupAccountRequest;
+use App\Http\Requests\UpdateAccountStatusRequest;
 use App\Models\User;
+use App\Notifications\ResetInstitutionPassword;
 use App\Services\InitialPasswordLink;
+use App\Services\InstitutionPasswordResetLink;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\DB;
@@ -18,10 +24,13 @@ use Symfony\Component\HttpKernel\Exception\TooManyRequestsHttpException;
 
 /**
  * Cuentas de la Secretaría de Economía (HU-S4-01): ADMIN y SECRETARY las listan, crean y reenvían su enlace de
- * configuración. Nadie define ni ve la contraseña; no hay edición ni baja por esta vía (CA-02).
+ * configuración. Nadie define ni ve la contraseña; no hay edición (CA-02). Desde HU-S6-04 las activan o inactivan e
+ * inician su restablecimiento de contraseña.
  */
 class SecretaryAccountController extends Controller
 {
+    use ManagesAccountAccess;
+
     private const PER_PAGE = 50;
 
     public function index(): JsonResponse
@@ -101,5 +110,25 @@ class SecretaryAccountController extends Controller
 
         return response()->json($links->deliver($user, $setupUrl, $method, $request->user()->id))
             ->header('Cache-Control', 'no-store, private');
+    }
+
+    /** HU-S6-04 CA-01: una cuenta que no es SECRETARY responde 404, igual que una inexistente. */
+    public function updateStatus(UpdateAccountStatusRequest $request, string $account): JsonResponse
+    {
+        $user = $this->changeAccountStatus($request, $this->accounts(), $account, $request->validated('is_active'));
+
+        return response()->json(['data' => $user->setupAccountSummary()])->header('Cache-Control', 'no-store, private');
+    }
+
+    /** HU-S6-04 CA-02: restablecimiento por correo de una cuenta SECRETARY activa con contraseña establecida. */
+    public function startPasswordReset(StartAccountPasswordResetRequest $request, InstitutionPasswordResetLink $links): JsonResponse
+    {
+        return $this->startAccountReset($this->accounts(), $request->validated('email'), $links, ResetInstitutionPassword::SECRETARY_INITIATOR,
+            fn () => throw ValidationException::withMessages(['email' => ['No hay una cuenta de la Secretaría con ese correo.']]));
+    }
+
+    private function accounts(): Builder
+    {
+        return User::query()->where('role', UserRole::SECRETARY);
     }
 }

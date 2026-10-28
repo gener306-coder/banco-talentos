@@ -4,11 +4,17 @@ namespace App\Http\Controllers;
 
 use App\Enums\SetupDeliveryMethod;
 use App\Enums\UserRole;
+use App\Http\Controllers\Concerns\ManagesAccountAccess;
 use App\Http\Requests\ResendSetupLinkRequest;
+use App\Http\Requests\StartAccountPasswordResetRequest;
 use App\Http\Requests\StoreSetupAccountRequest;
+use App\Http\Requests\UpdateAccountStatusRequest;
 use App\Models\Company;
 use App\Models\User;
+use App\Notifications\ResetInstitutionPassword;
 use App\Services\InitialPasswordLink;
+use App\Services\InstitutionPasswordResetLink;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\DB;
@@ -19,10 +25,13 @@ use Symfony\Component\HttpKernel\Exception\TooManyRequestsHttpException;
 
 /**
  * Cuentas de acceso de una empresa (HU-S4-03): SECRETARY las lista, crea y reenvía su enlace desde el detalle de la
- * empresa. El rol COMPANY y la empresa los asigna el servidor a partir de la ruta (CA-01).
+ * empresa. El rol COMPANY y la empresa los asigna el servidor a partir de la ruta (CA-01). Desde HU-S6-04 también las
+ * activa o inactiva e inicia su restablecimiento de contraseña.
  */
 class CompanyAccountController extends Controller
 {
+    use ManagesAccountAccess;
+
     public function index(string $company): JsonResponse
     {
         $record = $this->find($company);
@@ -107,6 +116,40 @@ class CompanyAccountController extends Controller
 
         return response()->json($links->deliver($user, $setupUrl, $method, $request->user()->id))
             ->header('Cache-Control', 'no-store, private');
+    }
+
+    /** HU-S6-04 CA-03: una cuenta de otra empresa responde 404, igual que una inexistente. */
+    public function updateStatus(UpdateAccountStatusRequest $request, string $company, string $account): JsonResponse
+    {
+        $companyId = $this->find($company)->id;
+        $user = $this->changeAccountStatus($request, $this->accounts($companyId), $account, $request->validated('is_active'),
+            fn () => $this->ensureActive($companyId, 'La empresa está inactiva: actívala para cambiar el estado de sus cuentas.'));
+
+        return response()->json(['data' => $user->setupAccountSummary()])->header('Cache-Control', 'no-store, private');
+    }
+
+    /** HU-S6-04 CA-03: restablecimiento por correo de una cuenta COMPANY de esta empresa. */
+    public function startPasswordReset(StartAccountPasswordResetRequest $request, string $company, InstitutionPasswordResetLink $links): JsonResponse
+    {
+        $companyId = $this->find($company)->id;
+
+        return $this->startAccountReset($this->accounts($companyId), $request->validated('email'), $links, ResetInstitutionPassword::SECRETARY_INITIATOR,
+            fn () => abort(404, 'La cuenta no existe.'),
+            fn () => $this->ensureActive($companyId, 'La empresa está inactiva: actívala para restablecer la contraseña de sus cuentas.'));
+    }
+
+    /** Cuentas COMPANY de la empresa de la ruta. */
+    private function accounts(int $companyId): Builder
+    {
+        return User::query()->where('role', UserRole::COMPANY)->where('company_id', $companyId);
+    }
+
+    /** Revalidar bajo bloqueo cubre una inactivación concurrente de la empresa. */
+    private function ensureActive(int $companyId, string $message): void
+    {
+        if (! Company::query()->lockForUpdate()->find($companyId)?->is_active) {
+            throw ValidationException::withMessages(['company' => [$message]]);
+        }
     }
 
     private function find(string $id): Company
