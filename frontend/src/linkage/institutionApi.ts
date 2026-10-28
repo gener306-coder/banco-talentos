@@ -12,6 +12,9 @@ export const institutionLinkageMessages: FailureMessages = {
   404: 'La solicitud no existe.',
 }
 
+/** Decisiones posibles de la institución (HU-S6-02 CA-01). */
+export type LinkageDecision = 'ACEPTADA' | 'RECHAZADA'
+
 /** Identidad interna del alumno (HU-S6-01 CA-04): solo para su institución, nunca para la empresa. */
 export interface ReceivedStudent {
   id: number
@@ -72,6 +75,10 @@ export interface ReceivedLinkageDetail extends ReceivedLinkage {
     can_relocate: boolean | null
     social_security: { has_nss: boolean; has_document: boolean }
   }
+  /** Respuesta (HU-S6-02 CA-05); quién respondió solo lo ve la institución. */
+  responded_at: string | null
+  response_message: string | null
+  responded_by: { name: string } | null
 }
 
 const STATUSES: readonly LinkageStatus[] = LINKAGE_STATUSES.map((item) => item.value)
@@ -110,7 +117,8 @@ function item(data: unknown): ReceivedLinkage {
 
 function detail(data: unknown): ReceivedLinkageDetail {
   const base = item(data)
-  if (!isObject(data) || !isOptionalText(data.message)) return invalid()
+  if (!isObject(data) || !isOptionalText(data.message) || !isOptionalText(data.responded_at) || !isOptionalText(data.response_message) ||
+      (data.responded_by !== null && (!isObject(data.responded_by) || !isText(data.responded_by.name)))) return invalid()
   const { company, opportunity, student: person } = data
   if (!isObject(company) || !isText(company.legal_name) || !isOptionalText(company.trade_name) || !isText(company.sector_code) ||
       !isStateCode(company.state_code) || !isText(company.contact_name) || !isText(company.contact_email) || !isOptionalText(company.contact_phone)) return invalid()
@@ -141,6 +149,8 @@ function detail(data: unknown): ReceivedLinkageDetail {
       municipality: person.municipality, can_relocate: person.can_relocate,
       social_security: { has_nss: person.social_security.has_nss, has_document: person.social_security.has_document },
     },
+    responded_at: data.responded_at, response_message: data.response_message,
+    responded_by: isObject(data.responded_by) ? { name: data.responded_by.name as string } : null,
   }
 }
 
@@ -158,6 +168,17 @@ export async function listReceivedLinkages(filters: { page?: number; status?: Li
 
 export async function getReceivedLinkage(id: string, signal?: AbortSignal): Promise<ReceivedLinkageDetail> {
   const response = await request(`/api/institution/linkage-requests/${encodeURIComponent(id)}`, { signal })
+  if (!isObject(response)) throw new ApiError(502)
+  return detail(response.data)
+}
+
+/** Respuesta institucional a una solicitud pendiente (HU-S6-02 CA-01); devuelve el detalle actualizado. */
+export async function decideLinkage(id: number, status: LinkageDecision, responseMessage: string | null): Promise<ReceivedLinkageDetail> {
+  await request('/sanctum/csrf-cookie')
+  const response = await request(`/api/institution/linkage-requests/${id}/decision`, {
+    method: 'PATCH',
+    body: JSON.stringify({ status, response_message: responseMessage }),
+  })
   if (!isObject(response)) throw new ApiError(502)
   return detail(response.data)
 }

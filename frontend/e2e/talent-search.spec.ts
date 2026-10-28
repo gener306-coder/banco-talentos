@@ -43,7 +43,7 @@ async function publishStudent(page: Page, data: { surname: string; enrollment: s
   await expect(page.getByText('Habilidades guardadas correctamente.')).toBeVisible()
 }
 
-test('HU-S4-05, HU-S5-04, HU-S5-05 y HU-S6-01: una empresa encuentra un perfil anónimo por habilidad y distancia, sin datos personales, solicita la vinculación a su institución, esta la revisa con la identidad del alumno y la empresa la cancela desde su bandeja', async ({ browser, baseURL }) => {
+test('HU-S4-05, HU-S5-04, HU-S5-05, HU-S6-01 y HU-S6-02: una empresa encuentra un perfil anónimo por habilidad y distancia, sin datos personales, solicita la vinculación a su institución, esta la revisa con la identidad del alumno, la empresa la cancela y, al volver a solicitarla, la institución la acepta', async ({ browser, baseURL }) => {
   const suffix = randomBytes(6).toString('hex')
   const student = { surname: `Oculto${suffix}`, enrollment: `TAL-${suffix}`, headline: `Analista E2E ${suffix}`, skill: `Destreza${suffix}` }
 
@@ -87,6 +87,7 @@ test('HU-S4-05, HU-S5-04, HU-S5-05 y HU-S6-01: una empresa encuentra un perfil a
     const content = await company.content()
     expect(content.includes(student.surname) || content.includes(student.enrollment) || content.includes('Valeria Secreta')).toBe(false)
     expect(company.url()).toMatch(/\/talent\/[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/)
+    const profilePath = new URL(company.url()).pathname
 
     // HU-S5-04: solicitud de vinculación directa a la institución con una oportunidad activa.
     const opportunityTitle = `Tableros E2E ${suffix}`
@@ -163,6 +164,41 @@ test('HU-S4-05, HU-S5-04, HU-S5-05 y HU-S6-01: una empresa encuentra un perfil a
     await expect(row).toContainText('Cancelada')
     await company.getByLabel('Estado').selectOption('CANCELADA')
     await expect(company.getByRole('table', { name: 'Solicitudes de vinculación enviadas' }).getByRole('row', { name: new RegExp(opportunityTitle) })).toBeVisible()
+
+    // HU-S6-02: la empresa vuelve a solicitar el perfil y la institución acepta con un mensaje, previa confirmación.
+    await company.goto(profilePath)
+    await company.getByRole('button', { name: 'Solicitar vinculación' }).click()
+    const again = company.getByRole('dialog', { name: 'Solicitar vinculación' })
+    await again.getByLabel('Oportunidad').selectOption({ label: `${opportunityTitle} · Reynosa` })
+    await again.getByRole('button', { name: 'Enviar solicitud' }).click()
+    await expect(again.getByRole('status')).toContainText(`«${opportunityTitle}»`)
+
+    const answering = await browser.newContext({ baseURL, storageState: INSTITUTION_STATE })
+    try {
+      const institution = await answering.newPage()
+      await institution.goto('/institution/linkage-requests')
+      await institution.getByLabel('Estado').selectOption('PENDIENTE_INSTITUCION')
+      await institution.getByRole('table', { name: 'Solicitudes de vinculación recibidas' }).getByRole('row', { name: new RegExp(opportunityTitle) })
+        .getByRole('link', { name: /Ver la solicitud/ }).click()
+      const decision = institution.getByRole('region', { name: 'Responder solicitud' })
+      await decision.getByLabel('Mensaje para la empresa (opcional)').fill('Coordinemos la entrevista con el área dual.')
+      await decision.getByRole('button', { name: 'Aceptar solicitud' }).click()
+      await institution.getByRole('alertdialog', { name: '¿Aceptar la solicitud?' }).getByRole('button', { name: 'Aceptar solicitud' }).click()
+      const answer = institution.getByRole('region', { name: 'Respuesta' })
+      await expect(answer.getByRole('status')).toHaveText('Solicitud aceptada correctamente.')
+      await expect(answer).toContainText('Aceptada')
+      await expect(answer).toContainText('Coordinemos la entrevista con el área dual.')
+    } finally {
+      await answering.close()
+    }
+
+    // CA-04: la empresa ve la respuesta y ya no puede cancelarla.
+    await company.goto('/linkage-requests')
+    await company.getByLabel('Estado').selectOption('ACEPTADA')
+    const acceptedRow = company.getByRole('table', { name: 'Solicitudes de vinculación enviadas' }).getByRole('row', { name: new RegExp(opportunityTitle) })
+    await expect(acceptedRow).toContainText('«Coordinemos la entrevista con el área dual.»')
+    await expect(acceptedRow).toContainText('Respondida el')
+    await expect(acceptedRow.getByRole('button', { name: /Cancelar/ })).toHaveCount(0)
   } finally {
     await context.close()
   }

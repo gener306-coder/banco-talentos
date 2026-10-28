@@ -1,4 +1,4 @@
-/* Solicitudes de vinculación (HU-S5-04, HU-S5-05): estados y bandeja, solo con tokens semánticos. */
+/* Solicitudes de vinculación (HU-S5-04, HU-S5-05, HU-S6-02): estados, bandejas y respuesta, solo con tokens semánticos. */
 .linkage-status { display: inline-block; padding: 0.15rem 0.6rem; border-radius: 999px; font-size: 0.8rem; font-weight: 700; white-space: nowrap; }
 .linkage-status.pending { background: var(--tint); color: var(--accent); }
 .linkage-status.accepted { background: var(--success-surface); color: var(--success-text); }
@@ -10,3 +10,7 @@
 .linkage-profile-meta { display: block; font-size: 0.85rem; color: var(--text); }
 .linkage-notice { max-width: var(--content-readable); }
 .linkage-notice ul { margin: 0.3rem 0 0; padding-left: 1.2rem; }
+.linkage-decision { max-width: var(--content-readable); }
+.linkage-decision > fieldset { margin: 0; padding: 0; border: 0; min-width: 0; }
+.linkage-decision textarea { width: 100%; resize: vertical; }
+.linkage-response { max-width: 22rem; white-space: pre-line; }

@@ -50,7 +50,7 @@ Sprint vigente desde el 28 de octubre de 2026. Sprint anterior: [sprint-5.md](sp
 
 ## HU-S6-02 — Respuesta institucional (`ACEPTADA` / `RECHAZADA`) a solicitudes de vinculación
 
-**Estado:** Pendiente  
+**Estado:** Completada (28 de octubre de 2026)  
 **Diseño técnico y verificación:** `docs/HU-S6-02.md`  
 **Story Points:** 5  
 **Rol:** `INSTITUTION`, `COMPANY`  

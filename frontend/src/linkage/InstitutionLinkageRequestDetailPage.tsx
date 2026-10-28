@@ -13,6 +13,7 @@ import { LoadingState } from '../ui/StateMessage'
 import { getReceivedLinkage, institutionLinkageMessages } from './institutionApi'
 import type { ReceivedLinkageDetail } from './institutionApi'
 import { InstitutionLinkageLayout } from './InstitutionLinkageRequestsPage'
+import { LinkageDecisionSection } from './LinkageDecisionSection'
 import { LinkageStatus } from './LinkageStatus'
 
 const dateFormat = new Intl.DateTimeFormat('es-MX', { dateStyle: 'long' })
@@ -23,7 +24,11 @@ function missingSocialSecurity({ has_nss, has_document }: ReceivedLinkageDetail[
   return missing.length ? missing.join(' y ') : null
 }
 
-function Detail({ data }: { data: ReceivedLinkageDetail }) {
+function Detail({ data, onDecided, refresh }: {
+  data: ReceivedLinkageDetail
+  onDecided: (updated: ReceivedLinkageDetail) => void
+  refresh: () => Promise<void>
+}) {
   const { student, opportunity, company } = data
   const missing = missingSocialSecurity(student.social_security)
   const studentPath = `/students/${student.id}`
@@ -95,25 +100,27 @@ function Detail({ data }: { data: ReceivedLinkageDetail }) {
           <dt>Teléfono</dt><dd>{company.contact_phone ? <a href={`tel:${company.contact_phone.replace(/[^\d+]/g, '')}`}>{company.contact_phone}</a> : 'Sin teléfono'}</dd>
         </dl>
       </section>
+
+      <LinkageDecisionSection data={data} onDecided={onDecided} refresh={refresh} />
     </>
   )
 }
 
 function InstitutionLinkageRequestDetail({ id }: { id: string }) {
   const load = useCallback((signal: AbortSignal) => getReceivedLinkage(id, signal), [id])
-  const { data, loading, failure, refresh } = useApiRequest(load, institutionLinkageMessages)
+  const { data, loading, failure, refresh, setData } = useApiRequest(load, institutionLinkageMessages)
 
   return (
     <InstitutionLinkageLayout title="Detalle de solicitud">
       {loading ? <LoadingState label="Cargando solicitud…" variant="details" />
         : failure ? <InstitutionRequestError failure={failure} retry={refresh} page notFoundTitle="No encontramos esta solicitud" />
-        : data && <Detail data={data} />}
+        : data && <Detail data={data} onDecided={setData} refresh={refresh} />}
       <p className="institution-back"><Link className="plain" to="/institution/linkage-requests"><ChevronLeftIcon />Volver a solicitudes</Link></p>
     </InstitutionLinkageLayout>
   )
 }
 
-/** Detalle de una solicitud recibida (HU-S6-01 CA-05, CA-06). */
+/** Detalle de una solicitud recibida (HU-S6-01 CA-05, CA-06) y su respuesta (HU-S6-02 CA-05). */
 export function InstitutionLinkageRequestDetailPage() {
   const { id = '' } = useParams()
   return <InstitutionLinkageRequestDetail key={id} id={id} />

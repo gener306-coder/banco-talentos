@@ -131,7 +131,7 @@ describe('solicitud de vinculación HU-S5-04', () => {
     const sentItem = (id: number, title: string, status: string) => ({
       id, status, created_at: '2026-10-28T10:00:00Z', message: null, opportunity: { id, title },
       profile: { public_id: publicId, headline: 'Analista de datos', program: 'Ingeniería', period_type: 'semester', period_number: 6 },
-      institution: { name: 'UT del Golfo', contact_email: 'dual@utgolfo.edu.mx' },
+      institution: { name: 'UT del Golfo', contact_email: 'dual@utgolfo.edu.mx' }, responded_at: null, response_message: null,
     })
     sentMock.mockImplementationOnce(async () => sentPage([sentItem(13, 'Calidad', 'CANCELADA')]))
       .mockImplementationOnce(async () => sentPage([sentItem(12, 'Automatización de línea', 'PENDIENTE_INSTITUCION'), sentItem(13, 'Calidad', 'CANCELADA')]))
