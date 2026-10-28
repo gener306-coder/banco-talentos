@@ -224,4 +224,54 @@ describe('oportunidades duales HU-S5-02', () => {
     expect(screen.getByText('La oportunidad no existe.')).toBeInTheDocument()
     await waitFor(() => expect(screen.queryByRole('button', { name: 'Reintentar' })).not.toBeInTheDocument())
   })
+
+  describe('estado HU-S5-03', () => {
+    it('cancelar la confirmación no cambia nada; inactivar pide confirmación y reactivar no (CA-04)', async () => {
+      let resolveInactivation!: (value: Response) => void
+      apiMock.mockResolvedValueOnce(Response.json({ data: opportunity }))
+        .mockReturnValueOnce(new Promise<Response>((resolve) => { resolveInactivation = resolve }))
+        .mockResolvedValueOnce(Response.json({ data: opportunity }))
+      renderApp('/opportunities/12')
+      const section = await screen.findByRole('region', { name: 'Estado de la oportunidad' })
+      expect(within(section).getByText(/no podrá elegirse para nuevas solicitudes de vinculación/)).toBeInTheDocument()
+
+      const inactivate = within(section).getByRole('button', { name: 'Inactivar oportunidad' })
+      fireEvent.click(inactivate)
+      let dialog = await screen.findByRole('alertdialog', { name: '¿Inactivar la oportunidad?' })
+      expect(within(dialog).getByRole('button', { name: 'Cancelar' })).toHaveFocus()
+      fireEvent.click(within(dialog).getByRole('button', { name: 'Cancelar' }))
+      await waitFor(() => expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument())
+      expect(writes('PATCH')).toHaveLength(0)
+
+      fireEvent.click(inactivate)
+      dialog = await screen.findByRole('alertdialog', { name: '¿Inactivar la oportunidad?' })
+      fireEvent.click(within(dialog).getByRole('button', { name: 'Inactivar' }))
+      // Pendiente: un segundo clic no envía otra petición.
+      const pending = await within(section).findByRole('button', { name: 'Guardando estado…' })
+      expect(pending).toBeDisabled()
+      fireEvent.click(pending)
+      resolveInactivation(Response.json({ data: { ...opportunity, is_active: false } }))
+      expect(await within(section).findByText('Oportunidad inactivada correctamente.')).toHaveAttribute('role', 'status')
+      expect(screen.getByText('INACTIVA')).toBeInTheDocument()
+      expect(within(section).getByText(/Está inactiva: conserva toda su información/)).toBeInTheDocument()
+
+      fireEvent.click(within(section).getByRole('button', { name: 'Reactivar oportunidad' }))
+      expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument()
+      expect(await within(section).findByText('Oportunidad reactivada correctamente.')).toBeInTheDocument()
+      expect(screen.getByText('ACTIVA')).toBeInTheDocument()
+      expect(writes('PATCH').map(([path]) => path)).toEqual(['/api/opportunities/12/status', '/api/opportunities/12/status'])
+      expect(writes('PATCH').map(([, options]) => JSON.parse(options?.body as string))).toEqual([{ is_active: false }, { is_active: true }])
+    })
+
+    it('muestra el error junto a la sección y conserva el estado', async () => {
+      apiMock.mockResolvedValueOnce(Response.json({ data: { ...opportunity, is_active: false } }))
+        .mockResolvedValueOnce(Response.json({ message: 'La oportunidad no existe.' }, { status: 404 }))
+      renderApp('/opportunities/12')
+      const section = await screen.findByRole('region', { name: 'Estado de la oportunidad' })
+      fireEvent.click(within(section).getByRole('button', { name: 'Reactivar oportunidad' }))
+      expect(await within(section).findByRole('alert')).toHaveTextContent('La oportunidad no existe.')
+      expect(screen.getByText('INACTIVA')).toBeInTheDocument()
+      expect(within(section).getByRole('button', { name: 'Reactivar oportunidad' })).toBeEnabled()
+    })
+  })
 })

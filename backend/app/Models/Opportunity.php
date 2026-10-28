@@ -38,7 +38,7 @@ class Opportunity extends Model
             'can_relocate' => 'boolean',
             'state_code' => MexicanState::class,
             'min_level' => 'integer',
-            // Fuera de $fillable: su cambio pertenece a HU-S5-03.
+            // Fuera de $fillable: solo cambia por PATCH /opportunities/{id}/status (HU-S5-03).
             'is_active' => 'boolean',
         ];
     }

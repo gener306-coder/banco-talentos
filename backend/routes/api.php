@@ -129,7 +129,7 @@ Route::middleware(['auth:sanctum', 'active', 'role:'.UserRole::COMPANY->value, '
         Route::get('{publicId}', [TalentController::class, 'show']);
     });
 
-// Oportunidades de Educación Dual de la empresa de la sesión (HU-S5-02): solo COMPANY con empresa activa (la empresa
+// Oportunidades de Educación Dual de la empresa de la sesión (HU-S5-02) y su baja lógica (HU-S5-03): solo COMPANY con empresa activa (la empresa
 // inactiva la rechaza `active` con COMPANY_INACTIVE) y vinculada; sin DELETE.
 Route::middleware(['auth:sanctum', 'active', 'role:'.UserRole::COMPANY->value, 'organization.member'])
     ->prefix('opportunities')
@@ -141,4 +141,6 @@ Route::middleware(['auth:sanctum', 'active', 'role:'.UserRole::COMPANY->value, '
         Route::get('defaults', [OpportunityController::class, 'defaults']);
         Route::get('{opportunity}', [OpportunityController::class, 'show']);
         Route::put('{opportunity}', [OpportunityController::class, 'update']);
+        // Baja lógica (HU-S5-03).
+        Route::patch('{opportunity}/status', [OpportunityController::class, 'updateStatus']);
     });
