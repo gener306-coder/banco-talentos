@@ -98,7 +98,7 @@ Sprint vigente desde el 28 de octubre de 2026. Sprint anterior: [sprint-5.md](sp
 
 ## HU-S6-04 — Inactivación y restablecimiento de contraseña para cuentas `SECRETARY` y `COMPANY`
 
-**Estado:** Pendiente  
+**Estado:** Completada (28 de octubre de 2026)  
 **Diseño técnico y verificación:** `docs/HU-S6-04.md`  
 **Story Points:** 6  
 **Rol:** `ADMIN`, `SECRETARY`  

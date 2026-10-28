@@ -28,12 +28,12 @@ class InstitutionPasswordResetLink
      * Envía el enlace sólo después de confirmar la transacción. El enlace nunca se
      * devuelve por HTTP, tampoco en testing: las pruebas lo inspeccionan con Notification::fake().
      */
-    public function deliverAfterCommit(User $user, string $resetUrl): string
+    public function deliverAfterCommit(User $user, string $resetUrl, string $initiator = ResetInstitutionPassword::ADMIN_INITIATOR): string
     {
         $status = 'pending';
-        DB::afterCommit(function () use ($user, $resetUrl, &$status): void {
+        DB::afterCommit(function () use ($user, $resetUrl, $initiator, &$status): void {
             try {
-                $user->notify(new ResetInstitutionPassword($resetUrl));
+                $user->notify(new ResetInstitutionPassword($resetUrl, $initiator));
                 // Aceptado por el transporte; no equivale a entrega en el buzón.
                 $status = 'sent';
             } catch (Throwable $exception) {

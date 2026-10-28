@@ -230,10 +230,58 @@ describe('empresas HU-S4-02', () => {
       apiMock.mockResolvedValueOnce(Response.json({ data: { ...company, is_active: false } }))
       accountsMock.mockResolvedValueOnce(Response.json({ data: accounts }))
       renderApp('/companies/5')
-      expect(await screen.findByText(/Activa la empresa para crear cuentas o reenviar enlaces/)).toBeInTheDocument()
+      expect(await screen.findByText(/Activa la empresa para crear cuentas, reenviar enlaces o gestionar el acceso/)).toBeInTheDocument()
       expect(screen.queryByRole('button', { name: 'Nueva cuenta de la empresa' })).not.toBeInTheDocument()
       await screen.findByRole('table', { name: 'Cuentas de la empresa' })
       expect(screen.queryByRole('button', { name: /Reenviar enlace a/ })).not.toBeInTheDocument()
+      // HU-S6-04 CA-03: tampoco se gestiona el acceso de sus cuentas.
+      expect(screen.queryByRole('button', { name: /Inactivar la cuenta|Restablecer la contraseña|Activar la cuenta/ })).not.toBeInTheDocument()
+    })
+
+    it('inactiva tras confirmar, activa y restablece la contraseña de una cuenta de la empresa (HU-S6-04 CA-03, CA-04)', async () => {
+      const ana = accounts[0]
+      apiMock.mockResolvedValueOnce(Response.json({ data: company }))
+      accountsMock.mockResolvedValueOnce(Response.json({ data: accounts }))
+        .mockResolvedValueOnce(Response.json({ data: { ...ana, status: 'inactive' } }))
+        .mockResolvedValueOnce(Response.json({ data: ana }))
+        .mockResolvedValueOnce(Response.json({ reset_delivery: 'sent' }))
+      renderApp('/companies/5')
+      const table = await screen.findByRole('table', { name: 'Cuentas de la empresa' })
+      // La cuenta pendiente se gestiona con su enlace.
+      expect(within(table).queryByRole('button', { name: 'Inactivar la cuenta de Beto Pendiente' })).not.toBeInTheDocument()
+
+      fireEvent.click(within(table).getByRole('button', { name: 'Inactivar la cuenta de Ana Talento' }))
+      let dialog = await screen.findByRole('alertdialog', { name: '¿Inactivar la cuenta?' })
+      fireEvent.click(within(dialog).getByRole('button', { name: 'Cancelar' }))
+      expect(accountsMock).toHaveBeenCalledTimes(1)
+      fireEvent.click(within(table).getByRole('button', { name: 'Inactivar la cuenta de Ana Talento' }))
+      dialog = await screen.findByRole('alertdialog', { name: '¿Inactivar la cuenta?' })
+      fireEvent.click(within(dialog).getByRole('button', { name: 'Inactivar' }))
+      expect(await screen.findByText(/Cuenta de Ana Talento inactivada correctamente/)).toBeInTheDocument()
+      expect(accountsMock.mock.calls[1][0]).toBe('/api/companies/5/accounts/21/status')
+      expect(JSON.parse(accountsMock.mock.calls[1][1]?.body as string)).toEqual({ is_active: false })
+      expect(within(table).getByRole('row', { name: /Ana Talento/ })).toHaveTextContent('INACTIVA')
+
+      fireEvent.click(within(table).getByRole('button', { name: 'Activar la cuenta de Ana Talento' }))
+      expect(await screen.findByText('Cuenta de Ana Talento activada correctamente.')).toBeInTheDocument()
+      expect(JSON.parse(accountsMock.mock.calls[2][1]?.body as string)).toEqual({ is_active: true })
+
+      fireEvent.click(within(table).getByRole('button', { name: 'Restablecer la contraseña de Ana Talento' }))
+      dialog = await screen.findByRole('alertdialog', { name: '¿Restablecer la contraseña?' })
+      fireEvent.click(within(dialog).getByRole('button', { name: 'Enviar enlace' }))
+      expect(await screen.findByText(/Se envió el enlace de restablecimiento a ana@manugolfo.test/)).toBeInTheDocument()
+      expect(accountsMock.mock.calls[3][0]).toBe('/api/companies/5/accounts/password-reset/start')
+      expect(JSON.parse(accountsMock.mock.calls[3][1]?.body as string)).toEqual({ email: 'ana@manugolfo.test' })
+    })
+
+    it('muestra el motivo si el servidor rechaza el cambio de estado', async () => {
+      apiMock.mockResolvedValueOnce(Response.json({ data: company }))
+      accountsMock.mockResolvedValueOnce(Response.json({ data: accounts }))
+        .mockResolvedValueOnce(Response.json({ errors: { company: ['La empresa está inactiva: actívala para cambiar el estado de sus cuentas.'] } }, { status: 422 }))
+      renderApp('/companies/5')
+      fireEvent.click(await screen.findByRole('button', { name: 'Inactivar la cuenta de Ana Talento' }))
+      fireEvent.click(within(await screen.findByRole('alertdialog')).getByRole('button', { name: 'Inactivar' }))
+      expect(await screen.findByRole('alert')).toHaveTextContent('La empresa está inactiva: actívala para cambiar el estado de sus cuentas.')
     })
 
     it('muestra el aviso del servidor si la empresa se inactivó durante el alta', async () => {

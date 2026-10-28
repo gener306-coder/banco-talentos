@@ -61,6 +61,10 @@ class AppServiceProvider extends ServiceProvider
         RateLimiter::for('secretary-setup-resend', fn (Request $request) => Limit::perMinute(10)->by('secretary-setup-resend:'.$request->user()->id)
         );
 
+        // HU-S6-04: inicio del restablecimiento de cuentas SECRETARY y COMPANY, por cuenta que lo inicia.
+        RateLimiter::for('account-password-reset', fn (Request $request) => Limit::perMinute(10)->by('account-password-reset:'.$request->user()->id)
+        );
+
         RateLimiter::for('login', function (Request $request): array {
             $email = $request->input('email');
             $email = is_string($email) ? Str::lower(trim($email)) : '';

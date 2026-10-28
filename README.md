@@ -1,6 +1,6 @@
 # Banco de Talentos – Educación Dual
 
-Monolito modular. Sprint vigente: [Sprint 6](docs/sprint-6.md) (HU-S6-01 a HU-S6-03 completadas: ver «Solicitudes de vinculación» e «Inicio por rol»). Sprint anterior: [Sprint 5](docs/sprint-5.md) (completo: ver «Inicio por rol», «Oportunidades Duales», «Buscador de talento» y «Solicitudes de vinculación»). [Sprint 4](docs/sprint-4.md) completo. Historias del [Sprint 1](docs/sprint-1.md) y del Sprint 2:
+Monolito modular. Sprint vigente: [Sprint 6](docs/sprint-6.md) (completo: ver «Solicitudes de vinculación», «Inicio por rol», «Cuentas de la Secretaría» y «Empresas»). Sprint anterior: [Sprint 5](docs/sprint-5.md) (completo: ver «Inicio por rol», «Oportunidades Duales», «Buscador de talento» y «Solicitudes de vinculación»). [Sprint 4](docs/sprint-4.md) completo. Historias del [Sprint 1](docs/sprint-1.md) y del Sprint 2:
 
 - **HU-S1-01 — Autenticación y control de acceso** ([detalle](docs/HU-S1-01.md)).
 - **HU-S1-02 — Gestión de instituciones**: ADMIN lista, registra, consulta, edita y activa o inactiva instituciones ([detalle](docs/HU-S1-02.md)).
@@ -101,7 +101,9 @@ Consulta [backend/README.md](backend/README.md) para detalles del contrato HTTP 
 
 ## Cuentas de la Secretaría
 
-ADMIN y `SECRETARY` abren **Cuentas de la Secretaría** desde el inicio (`/secretary-accounts`). El listado muestra el nombre, el correo, el estado (activa, pendiente de su primera contraseña o inactiva) y la fecha de alta. **Nueva cuenta de la Secretaría** pide solo nombre y correo: el servidor asigna el rol `SECRETARY` y registra quién creó la cuenta (`created_by`). La persona titular establece su contraseña con el mismo enlace de un solo uso y 60 minutos de las cuentas institucionales, enviado por correo o generado para compartirlo. Mientras siga pendiente, **Reenviar enlace** lo sustituye; hay que esperar un minuto entre dos reenvíos de la misma cuenta. No hay edición ni baja de estas cuentas. `SECRETARY` no gestiona instituciones ni sus cuentas. Contrato y cobertura en [docs/HU-S4-01.md](docs/HU-S4-01.md).
+ADMIN y `SECRETARY` abren **Cuentas de la Secretaría** desde el inicio (`/secretary-accounts`). El listado muestra el nombre, el correo, el estado (activa, pendiente de su primera contraseña o inactiva) y la fecha de alta. **Nueva cuenta de la Secretaría** pide solo nombre y correo: el servidor asigna el rol `SECRETARY` y registra quién creó la cuenta (`created_by`). La persona titular establece su contraseña con el mismo enlace de un solo uso y 60 minutos de las cuentas institucionales, enviado por correo o generado para compartirlo. Mientras siga pendiente, **Reenviar enlace** lo sustituye; hay que esperar un minuto entre dos reenvíos de la misma cuenta. No hay edición de estas cuentas. `SECRETARY` no gestiona instituciones ni sus cuentas. Contrato y cobertura en [docs/HU-S4-01.md](docs/HU-S4-01.md).
+
+Una cuenta que ya estableció su contraseña tiene **Inactivar** (previa confirmación) o **Activar**, y **Restablecer contraseña**. Nadie puede inactivar su propia cuenta. La cuenta inactivada no puede iniciar sesión y su sesión abierta se cierra en la siguiente petición. El restablecimiento envía por correo el mismo enlace de un solo uso y 60 minutos de las cuentas institucionales; la persona titular elige su nueva contraseña en `/reset-password` y sus sesiones abiertas se cierran. Contrato y cobertura en [docs/HU-S6-04.md](docs/HU-S6-04.md).
 
 ## Empresas
 
@@ -112,6 +114,8 @@ ADMIN y `SECRETARY` abren **Cuentas de la Secretaría** desde el inicio (`/secre
 No se pide domicilio ni documentos. El servidor ubica a la empresa en la cabecera de su municipio para la futura búsqueda por distancia y registra qué cuenta la dio de alta. El detalle permite editarla e inactivarla, previa confirmación, o reactivarla; no existe eliminación. Contrato y cobertura en [docs/HU-S4-02.md](docs/HU-S4-02.md).
 
 En el mismo detalle, **Cuentas de la empresa** lista las cuentas `COMPANY` con su estado. Con la empresa activa permite crear nuevas, indicando nombre y correo, y reenviar el enlace de las pendientes. Funcionan igual que las cuentas de la Secretaría: el servidor asigna el rol y la empresa, y la titular establece su contraseña con el enlace de un solo uso. Tras iniciar sesión, la cuenta ve el nombre de su empresa. Si la Secretaría inactiva la empresa, sus cuentas reciben `401` con código `COMPANY_INACTIVE` al iniciar sesión, y las sesiones abiertas se cierran en la siguiente petición. La base de datos impide cuentas `COMPANY` sin empresa, y `auth:create-user` ya no crea cuentas de empresa. Contrato y cobertura en [docs/HU-S4-03.md](docs/HU-S4-03.md).
+
+Con la empresa activa, cada cuenta que ya estableció su contraseña tiene también **Inactivar** (previa confirmación) o **Activar**, y **Restablecer contraseña**, con las mismas reglas que las cuentas de la Secretaría ([docs/HU-S6-04.md](docs/HU-S6-04.md)).
 
 ## Buscador de talento
 

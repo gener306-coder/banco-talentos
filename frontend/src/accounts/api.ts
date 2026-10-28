@@ -1,5 +1,5 @@
 import { manualSetupLink, setupDelivery } from '../institutions/api'
-import type { DeliveryMethod, SetupDelivery, SetupResult } from '../institutions/api'
+import type { DeliveryMethod, ResetDelivery, SetupDelivery, SetupResult } from '../institutions/api'
 import { ApiError, request } from '../lib/http'
 
 /**
@@ -65,4 +65,24 @@ export async function resendSetupLink(path: string, input: { email: string; deli
   const delivery = setupDelivery(response, true) as SetupDelivery
   const setupLink = manualSetupLink(response, delivery)
   return setupLink ? { delivery, setupLink } : { delivery }
+}
+
+/** Estado de una cuenta que ya configuró su contraseña (HU-S6-04 CA-01, CA-03); devuelve la cuenta actualizada. */
+export async function setSetupAccountStatus(path: string, active: boolean): Promise<SetupAccount> {
+  await request('/sanctum/csrf-cookie')
+  const response = await request(path, { method: 'PATCH', body: JSON.stringify({ is_active: active }) })
+  if (typeof response !== 'object' || response === null || !('data' in response)) throw new ApiError(502)
+  return setupAccount(response.data)
+}
+
+/**
+ * Inicio del restablecimiento de contraseña por correo (HU-S6-04 CA-02, CA-03). Solo identifica la cuenta: nunca se
+ * envían ni reciben contraseñas, tokens o enlaces.
+ */
+export async function startSetupAccountPasswordReset(path: string, email: string): Promise<ResetDelivery> {
+  await request('/sanctum/csrf-cookie')
+  const response = await request(path, { method: 'POST', body: JSON.stringify({ email }) })
+  const value = typeof response === 'object' && response !== null && 'reset_delivery' in response ? response.reset_delivery : undefined
+  if (value !== 'sent' && value !== 'pending') throw new ApiError(502)
+  return value
 }

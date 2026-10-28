@@ -42,3 +42,7 @@ export function createSecretaryAccount(input: SecretaryAccountInput): Promise<Cr
 export function resendSecretaryAccountSetup(input: { email: string; delivery_method: DeliveryMethod }): Promise<SetupResult> {
   return resendSetupLink('/api/secretary-accounts/resend-setup', input)
 }
+
+/** Estado y restablecimiento de contraseña de una cuenta SECRETARY (HU-S6-04 CA-01, CA-02). */
+export const secretaryAccountStatusPath = (id: number) => `/api/secretary-accounts/${id}/status`
+export const SECRETARY_PASSWORD_RESET_PATH = '/api/secretary-accounts/password-reset/start'
