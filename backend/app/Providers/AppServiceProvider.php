@@ -51,6 +51,10 @@ class AppServiceProvider extends ServiceProvider
         RateLimiter::for('talent-search', fn (Request $request) => Limit::perMinute(60)->by('talent-search:'.$request->user()->id)
         );
 
+        // HU-S5-04: una solicitud de vinculación es un envío deliberado; el límite frena el envío masivo.
+        RateLimiter::for('linkage-requests', fn (Request $request) => Limit::perMinute(20)->by('linkage-requests:'.$request->user()->id)
+        );
+
         RateLimiter::for('company-setup-resend', fn (Request $request) => Limit::perMinute(10)->by('company-setup-resend:'.$request->user()->id)
         );
 

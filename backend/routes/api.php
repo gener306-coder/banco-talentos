@@ -9,6 +9,7 @@ use App\Http\Controllers\InstitutionAccountController;
 use App\Http\Controllers\InstitutionController;
 use App\Http\Controllers\InstitutionPasswordResetController;
 use App\Http\Controllers\InstitutionSetupLinkController;
+use App\Http\Controllers\LinkageRequestController;
 use App\Http\Controllers\MunicipalityController;
 use App\Http\Controllers\OpportunityController;
 use App\Http\Controllers\SecretaryAccountController;
@@ -139,8 +140,15 @@ Route::middleware(['auth:sanctum', 'active', 'role:'.UserRole::COMPANY->value, '
         Route::get('/', [OpportunityController::class, 'index']);
         Route::post('/', [OpportunityController::class, 'store']);
         Route::get('defaults', [OpportunityController::class, 'defaults']);
+        // Oportunidades activas para una solicitud de vinculación (HU-S5-04).
+        Route::get('options', [OpportunityController::class, 'options']);
         Route::get('{opportunity}', [OpportunityController::class, 'show']);
         Route::put('{opportunity}', [OpportunityController::class, 'update']);
         // Baja lógica (HU-S5-03).
         Route::patch('{opportunity}/status', [OpportunityController::class, 'updateStatus']);
     });
+
+// Solicitudes de vinculación directas a la institución desde el perfil anónimo (HU-S5-04): solo COMPANY con empresa
+// activa y vinculada; el alumno se identifica por su public_id.
+Route::post('/linkage-requests', [LinkageRequestController::class, 'store'])
+    ->middleware(['auth:sanctum', 'active', 'role:'.UserRole::COMPANY->value, 'organization.member', 'throttle:linkage-requests']);
