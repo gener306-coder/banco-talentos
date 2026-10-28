@@ -7,6 +7,7 @@ use App\Http\Controllers\CompanyController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\InstitutionAccountController;
 use App\Http\Controllers\InstitutionController;
+use App\Http\Controllers\InstitutionLinkageRequestController;
 use App\Http\Controllers\InstitutionPasswordResetController;
 use App\Http\Controllers\InstitutionSetupLinkController;
 use App\Http\Controllers\LinkageRequestController;
@@ -158,4 +159,15 @@ Route::middleware(['auth:sanctum', 'active', 'role:'.UserRole::COMPANY->value, '
         Route::get('/', [LinkageRequestController::class, 'index']);
         Route::post('/', [LinkageRequestController::class, 'store'])->middleware('throttle:linkage-requests');
         Route::patch('{linkageRequest}/cancel', [LinkageRequestController::class, 'cancel']);
+    });
+
+// Bandeja institucional de solicitudes de vinculación con la identidad interna del alumno (HU-S6-01): solo
+// INSTITUTION con institución activa y vinculada; cada consulta se filtra por la institución de la sesión.
+Route::middleware(['auth:sanctum', 'active', 'role:'.UserRole::INSTITUTION->value, 'institution.member'])
+    ->prefix('institution/linkage-requests')
+    // Identificador acotado a un bigint: fuera de rango responde 404 sin llegar a PostgreSQL.
+    ->where(['linkageRequest' => '[1-9][0-9]{0,17}'])
+    ->group(function (): void {
+        Route::get('/', [InstitutionLinkageRequestController::class, 'index']);
+        Route::get('{linkageRequest}', [InstitutionLinkageRequestController::class, 'show']);
     });
