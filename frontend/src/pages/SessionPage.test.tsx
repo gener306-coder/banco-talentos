@@ -17,7 +17,18 @@ function renderApp(path = '/') {
 }
 const emptyPage = { data: [], meta: { current_page: 1, last_page: 1, total: 0, per_page: 20 } }
 
+const zeroMetrics: Record<string, Record<string, number>> = {
+  ADMIN: { active_institutions: 0, inactive_institutions: 0, active_secretaries: 0, pending_secretaries: 0 },
+  SECRETARY: { active_companies: 0, inactive_companies: 0, pending_secretaries: 0 },
+  INSTITUTION: { active_students: 0, searchable_students: 0, pending_municipality_students: 0 },
+  COMPANY: { available_talent_profiles: 0 },
+}
+/** Respuesta de GET /api/dashboard; por defecto, ceros para el rol de la sesión. */
+let dashboard: (() => Response) | null
+const dashboardCalls = () => fetchMock.mock.calls.filter(([path]) => path === '/api/dashboard').length
+
 beforeEach(() => {
+  dashboard = null
   apiMock.mockReset()
   apiMock.mockImplementation(async () => Response.json(emptyPage))
   fetchMock.mockReset()
@@ -28,6 +39,9 @@ beforeEach(() => {
       return new Response(null, { status: 204 })
     }
     if (path === '/api/logout') return new Response(null, { status: 204 })
+    if (path === '/api/dashboard') {
+      return dashboard ? dashboard() : Response.json({ data: { role: user.role, metrics: zeroMetrics[String(user.role)] } })
+    }
     return apiMock(path, options)
   })
   vi.stubGlobal('fetch', fetchMock)
@@ -87,6 +101,76 @@ describe('inicio por rol (tarea transversal del Sprint 4)', () => {
     renderApp()
     fireEvent.click(await screen.findByRole('link', { name: 'Registrar alumno' }))
     expect(await screen.findByRole('dialog', { name: 'Registrar alumno' })).toBeInTheDocument()
+  })
+})
+
+describe('indicadores del inicio (HU-S5-01 CA-07)', () => {
+  /** Indicadores visibles como pares [etiqueta, cifra], en orden. */
+  async function indicators() {
+    const region = await screen.findByRole('region', { name: 'Indicadores' })
+    return within(region).getAllByRole('term').map((term) => [term.textContent, term.nextElementSibling?.textContent])
+  }
+
+  it.each([
+    ['ADMIN', {}, { active_institutions: 12, inactive_institutions: 3, active_secretaries: 4, pending_secretaries: 1 },
+      [['Instituciones activas', '12'], ['Instituciones inactivas', '3'], ['Cuentas de la Secretaría activas', '4'], ['Cuentas de la Secretaría pendientes', '1']]],
+    ['SECRETARY', {}, { active_companies: 1250, inactive_companies: 7, pending_secretaries: 2 },
+      [['Empresas activas', '1,250'], ['Empresas inactivas', '7'], ['Cuentas de la Secretaría pendientes', '2']]],
+    ['INSTITUTION', { institution: { id: 7, name: 'Instituto Dual' } }, { active_students: 40, searchable_students: 25, pending_municipality_students: 0 },
+      [['Alumnos activos', '40'], ['Visibles en el buscador', '25'], ['Municipio por confirmar', '0']]],
+    ['COMPANY', { company: { id: 3, name: 'ManuGolfo' } }, { available_talent_profiles: 318 },
+      [['Perfiles disponibles', '318']]],
+  ] as const)('%s ve sus contadores', async (role, organization, metrics, expected) => {
+    user = { ...base, role, ...organization }
+    dashboard = () => Response.json({ data: { role, metrics } })
+    renderApp()
+    expect(await indicators()).toEqual(expected)
+    expect(screen.queryByText(/Municipio por confirmar»/)).not.toBeInTheDocument()
+  })
+
+  it.each([
+    [1, '1 alumno tiene «Municipio por confirmar».'],
+    [14, '14 alumnos tienen «Municipio por confirmar».'],
+  ])('avisa a la institución de %i alumnos con municipio por confirmar y enlaza al padrón', async (pending, text) => {
+    user = { ...base, role: 'INSTITUTION', institution: { id: 7, name: 'Instituto Dual' } }
+    dashboard = () => Response.json({ data: { role: 'INSTITUTION', metrics: { active_students: 20, searchable_students: 5, pending_municipality_students: pending } } })
+    renderApp()
+    const region = await screen.findByRole('region', { name: 'Indicadores' })
+    const notice = within(region).getByText(text, { exact: false })
+    expect(within(notice).getByRole('link', { name: 'Revisar el padrón' })).toHaveAttribute('href', '/students')
+  })
+
+  it.each([
+    ['un error del servidor', () => new Response(null, { status: 500 })],
+    ['una respuesta de otro rol', () => Response.json({ data: { role: 'ADMIN', metrics: zeroMetrics.ADMIN } })],
+  ])('con %s el inicio sigue navegable', async (_case, response) => {
+    user = { ...base, role: 'INSTITUTION', institution: { id: 7, name: 'Instituto Dual' } }
+    dashboard = response
+    renderApp()
+    expect(await screen.findByText(/No pudimos cargar los indicadores/)).toBeInTheDocument()
+    expect(screen.queryByRole('region', { name: 'Indicadores' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+
+    fireEvent.click(within(screen.getByRole('navigation', { name: 'Institución' })).getByRole('link', { name: 'Alumnos' }))
+    await waitFor(() => expect(screen.getByLabelText('Ruta actual')).toHaveTextContent('/students'))
+  })
+
+  it('sin organización vinculada no consulta indicadores (CA-06)', async () => {
+    user = { ...base, role: 'COMPANY' }
+    renderApp()
+    expect(await screen.findByText(/no está vinculada a una organización/)).toBeInTheDocument()
+    expect(dashboardCalls()).toBe(0)
+    expect(screen.queryByRole('region', { name: 'Indicadores' })).not.toBeInTheDocument()
+  })
+
+  it('no muestra contadores si el servidor responde metrics: null', async () => {
+    user = { ...base, role: 'INSTITUTION', institution: { id: 7, name: 'Instituto Dual' } }
+    dashboard = () => Response.json({ data: { role: 'INSTITUTION', metrics: null } })
+    renderApp()
+    expect(await screen.findByRole('navigation', { name: 'Institución' })).toBeInTheDocument()
+    await waitFor(() => expect(dashboardCalls()).toBe(1))
+    expect(screen.queryByRole('region', { name: 'Indicadores' })).not.toBeInTheDocument()
+    expect(screen.queryByText(/No pudimos cargar los indicadores/)).not.toBeInTheDocument()
   })
 })
 

@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Enums\AcademicPeriodType;
 use App\Enums\MexicanState;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -44,6 +45,17 @@ class Student extends Model
             // Baja lógica (HU-S2-04); fuera de $fillable: solo cambia por PATCH /students/{id}/status.
             'is_active' => 'boolean',
         ];
+    }
+
+    /**
+     * Alumno ACTIVO con el expediente público capturado y su punto (HU-S4-05 CA-02). El buscador añade que la
+     * institución esté activa; el inicio por rol (HU-S5-01) reutiliza la misma condición para sus conteos.
+     */
+    public function scopeSearchable(Builder $query): void
+    {
+        $query->where('students.is_active', true)
+            ->whereNotNull(['students.program', 'students.period_type', 'students.period_number', 'students.dual_available',
+                'students.state_code', 'students.can_relocate', 'students.location']);
     }
 
     public function institution(): BelongsTo

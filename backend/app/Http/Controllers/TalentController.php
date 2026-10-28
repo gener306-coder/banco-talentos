@@ -84,9 +84,7 @@ class TalentController extends Controller
         return Student::query()
             ->join('institutions', 'institutions.id', '=', 'students.institution_id')
             ->where('institutions.is_active', true)
-            ->where('students.is_active', true)
-            ->whereNotNull(['students.program', 'students.period_type', 'students.period_number', 'students.dual_available',
-                'students.state_code', 'students.can_relocate', 'students.location'])
+            ->searchable()
             ->select('students.*')
             ->selectRaw('ST_Distance(students.location, (SELECT location FROM municipalities WHERE code = ?)) AS distance_m', [$origin])
             ->withCount(['certifications as verified_certifications_count' => fn ($query) => $query->whereNotNull('verified_at')])

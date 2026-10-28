@@ -30,6 +30,8 @@ beforeEach(() => {
   fetchMock.mockReset()
   fetchMock.mockImplementation(async (path, options) => {
     if (path === '/api/me') return Response.json({ user })
+    // Indicadores del inicio (HU-S5-01): ajenos a estas pruebas, quedan pendientes sin consumir respuestas.
+    if (path === '/api/dashboard') return new Promise<Response>(() => undefined)
     if (typeof path === 'string' && path.startsWith('/api/catalogs/')) {
       return Response.json({ data: [{ code: '28032', name: 'Reynosa' }, { code: '28041', name: 'Victoria' }] })
     }

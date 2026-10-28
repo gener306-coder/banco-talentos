@@ -286,6 +286,16 @@ textarea[aria-invalid='true'] { border-color: var(--danger-border); }
 .home-search > div { display: flex; gap: 0.5rem; }
 .home-search input { margin: 0; }
 .home-search button { display: inline-flex; align-items: center; gap: 0.4rem; white-space: nowrap; }
+/* Indicadores del inicio (HU-S5-01): cifra grande sobre su etiqueta. */
+.home-indicators { margin: 0 0 1.75rem; }
+.home-stats { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(11rem, 100%), 1fr)); gap: 0.9rem; margin: 0; }
+.home-stat { display: flex; flex-direction: column-reverse; gap: 0.2rem; padding: 0.9rem 1.1rem; border: 1px solid var(--border); border-radius: 14px; background: var(--surface); }
+.home-stat dt { font-size: 0.9rem; line-height: 1.35; color: var(--text); }
+.home-stat dd { margin: 0; font-size: 1.75rem; font-weight: 700; line-height: 1.1; color: var(--accent); font-variant-numeric: tabular-nums; }
+.home-notice { display: flex; align-items: flex-start; gap: 0.5rem; }
+.home-notice > .icon { flex-shrink: 0; margin-top: 0.2rem; }
+.home-notice a { color: inherit; font-weight: 600; text-decoration: underline; }
+.home-stats-failure { margin: 0 0 1.75rem; }
 .home-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(16rem, 100%), 1fr)); gap: 0.9rem; margin: 0; padding: 0; list-style: none; }
 .home-card { display: flex; align-items: flex-start; gap: 0.9rem; height: 100%; padding: 1.1rem; border: 1px solid var(--border); border-radius: 14px;
   background: var(--surface); color: inherit; text-decoration: none; transition: transform 150ms ease-out, box-shadow 150ms ease-out, border-color 150ms ease-out; }
@@ -319,7 +329,7 @@ textarea[aria-invalid='true'] { border-color: var(--danger-border); }
   .account-panel { animation: fade-in 160ms ease both; }
 }
 @media (prefers-contrast: more) {
-  .home-card, .account-panel { border-color: var(--border-strong); }
+  .home-card, .home-stat, .account-panel { border-color: var(--border-strong); }
 }
 @media (max-width: 600px) {
   .home-search > div { flex-direction: column; }

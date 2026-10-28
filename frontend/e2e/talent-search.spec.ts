@@ -3,7 +3,7 @@ import { expect, test } from '@playwright/test'
 import type { Page } from '@playwright/test'
 import { ADMIN_STATE } from './support/admin'
 import { INSTITUTION_STATE } from './support/institution'
-import { newSecretarySession, signInWithSetupLink } from './support/secretary'
+import { openCompanySession } from './support/company'
 
 test.use({ storageState: ADMIN_STATE })
 
@@ -43,29 +43,7 @@ async function publishStudent(page: Page, data: { surname: string; enrollment: s
   await expect(page.getByText('Habilidades guardadas correctamente.')).toBeVisible()
 }
 
-/** La Secretaría registra una empresa en Reynosa y devuelve el enlace de una cuenta de esa empresa. */
-async function companyAccountLink(secretary: Page, email: string): Promise<string> {
-  await secretary.goto('/companies/new')
-  await secretary.getByLabel('Razón social', { exact: true }).fill(`Buscadora ${email}`)
-  await secretary.getByLabel('RFC', { exact: true }).fill(`BUS010101${randomBytes(3).toString('hex').slice(0, 3).toUpperCase()}`)
-  await secretary.getByLabel('Sector económico (SCIAN)').selectOption('54')
-  await secretary.getByLabel('Estado', { exact: true }).selectOption({ label: 'Tamaulipas' })
-  await secretary.getByRole('combobox', { name: 'Municipio' }).fill('reynosa')
-  await secretary.getByRole('option', { name: 'Reynosa', exact: true }).click()
-  await secretary.getByLabel('Nombre del contacto', { exact: true }).fill('Reclutamiento')
-  await secretary.getByLabel('Correo del contacto', { exact: true }).fill(`rh-${email}`)
-  await secretary.getByRole('button', { name: 'Registrar empresa', exact: true }).click()
-  await expect(secretary.getByText('Empresa registrada correctamente.', { exact: true })).toBeVisible()
-  await secretary.getByRole('button', { name: 'Nueva cuenta de la empresa', exact: true }).click()
-  const creation = secretary.getByRole('dialog', { name: 'Nueva cuenta de la empresa' })
-  await creation.getByLabel('Nombre de la cuenta', { exact: true }).fill('Reclutadora')
-  await creation.getByLabel('Correo de acceso', { exact: true }).fill(email)
-  await creation.getByRole('radio', { name: /Generar un enlace para compartirlo/ }).check()
-  await creation.getByRole('button', { name: 'Crear cuenta de la empresa', exact: true }).click()
-  return creation.getByLabel('Enlace de configuración', { exact: true }).inputValue()
-}
-
-test('HU-S4-05: una empresa encuentra un perfil anónimo por habilidad y distancia, sin datos personales ni contacto', async ({ page, browser, baseURL }) => {
+test('HU-S4-05: una empresa encuentra un perfil anónimo por habilidad y distancia, sin datos personales ni contacto', async ({ browser, baseURL }) => {
   const suffix = randomBytes(6).toString('hex')
   const student = { surname: `Oculto${suffix}`, enrollment: `TAL-${suffix}`, headline: `Analista E2E ${suffix}`, skill: `Destreza${suffix}` }
 
@@ -76,16 +54,7 @@ test('HU-S4-05: una empresa encuentra un perfil anónimo por habilidad y distanc
     await institutionContext.close()
   }
 
-  const { context: secretaryContext, page: secretary } = await newSecretarySession(page, browser, baseURL, 'buscador-se')
-  const email = `reclutadora-${suffix}@example.test`
-  let link: string
-  try {
-    link = await companyAccountLink(secretary, email)
-  } finally {
-    await secretaryContext.close()
-  }
-
-  const { context, page: company } = await signInWithSetupLink(browser, baseURL, link, email)
+  const { context, page: company } = await openCompanySession(browser, baseURL)
   try {
     // CA-01, CA-10: el buscador desde el inicio.
     await company.getByRole('link', { name: 'Buscar talento', exact: true }).click()

@@ -39,6 +39,8 @@ beforeEach(() => {
   fetchMock.mockReset()
   fetchMock.mockImplementation(async (path, options) => {
     if (path === '/api/me') return Response.json({ user })
+    // Indicadores del inicio (HU-S5-01): ajenos a estas pruebas, quedan pendientes sin consumir respuestas.
+    if (path === '/api/dashboard') return new Promise<Response>(() => undefined)
     if (path === '/sanctum/csrf-cookie') {
       document.cookie = 'XSRF-TOKEN=csrf; Path=/'
       return new Response(null, { status: 204 })

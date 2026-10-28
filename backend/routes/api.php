@@ -4,6 +4,7 @@ use App\Enums\UserRole;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\CompanyAccountController;
 use App\Http\Controllers\CompanyController;
+use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\InstitutionAccountController;
 use App\Http\Controllers\InstitutionController;
 use App\Http\Controllers\InstitutionPasswordResetController;
@@ -19,6 +20,10 @@ use App\Models\Institution;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/me', [AuthController::class, 'me'])
+    ->middleware(['auth:sanctum', 'active', 'role:'.implode(',', UserRole::values())]);
+
+// Indicadores del inicio por rol (HU-S5-01): solo los de la cuenta y la organización de la sesión.
+Route::get('/dashboard', DashboardController::class)
     ->middleware(['auth:sanctum', 'active', 'role:'.implode(',', UserRole::values())]);
 
 Route::bind('institution', function (string $value): Institution {

@@ -1,7 +1,7 @@
 import { randomBytes } from 'node:crypto'
 import { expect, test } from '@playwright/test'
 import { ADMIN_STATE } from './support/admin'
-import { newSecretarySession } from './support/secretary'
+import { openSecretarySession } from './support/secretary'
 
 test.use({ storageState: ADMIN_STATE })
 
@@ -9,7 +9,7 @@ test.use({ storageState: ADMIN_STATE })
 const rfc = () => `EMP010101${randomBytes(3).toString('hex').slice(0, 3).toUpperCase()}`
 
 test('HU-S4-02: la Secretaría registra una empresa → la busca → la edita → la inactiva y la reactiva', async ({ page, browser, baseURL }) => {
-  const { context, page: secretary } = await newSecretarySession(page, browser, baseURL, 'empresas-se')
+  const { context, page: secretary } = await openSecretarySession(browser, baseURL)
   const suffix = randomBytes(6).toString('hex')
   const legalName = `Manufacturas E2E ${suffix}, S.A. de C.V.`
   const companyRfc = rfc()

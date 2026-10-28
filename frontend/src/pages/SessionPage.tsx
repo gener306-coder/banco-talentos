@@ -1,11 +1,13 @@
-import { useId, useState } from 'react'
+import { useCallback, useId, useState } from 'react'
 import type { FormEvent, ReactNode } from 'react'
 import { Link, useNavigate } from 'react-router'
 import { roleLabels } from '../auth/api'
-import type { User } from '../auth/api'
+import type { Role, User } from '../auth/api'
 import { useAuth } from '../auth/useAuth'
 import { organizationOf } from '../auth/user'
-import { BriefcaseIcon, BuildingIcon, ChevronRightIcon, IdCardIcon, PlusIcon, SearchIcon, UsersIcon } from '../ui/icons'
+import { getDashboard, metricKeys, metricLabels } from '../dashboard/api'
+import { useApiRequest } from '../lib/useApiRequest'
+import { AlertIcon, BriefcaseIcon, BuildingIcon, ChevronRightIcon, IdCardIcon, PlusIcon, SearchIcon, UsersIcon } from '../ui/icons'
 
 interface Section {
   to: string
@@ -88,9 +90,49 @@ function TalentShortcut() {
   )
 }
 
+const count = new Intl.NumberFormat('es-MX')
+
+/**
+ * Indicadores del rol (HU-S5-01 CA-07). No bloquean el inicio: mientras cargan no se muestra nada y, si fallan,
+ * un aviso discreto deja las tarjetas de acceso intactas.
+ */
+function HomeIndicators({ role }: { role: Role }) {
+  const load = useCallback((signal: AbortSignal) => getDashboard(role, signal), [role])
+  const { data, failure } = useApiRequest(load)
+
+  if (failure) {
+    return <p className="notice-muted home-stats-failure">No pudimos cargar los indicadores. Puedes seguir usando las secciones de tu inicio.</p>
+  }
+  const metrics = data?.metrics
+  if (!metrics) return null
+  const pending = metrics.pending_municipality_students ?? 0
+
+  return (
+    <section className="home-indicators" aria-label="Indicadores">
+      {pending > 0 && (
+        <p className="pending-notice home-notice">
+          <AlertIcon />
+          <span>
+            {pending === 1 ? '1 alumno tiene' : `${count.format(pending)} alumnos tienen`} «Municipio por confirmar».{' '}
+            <Link to="/students">Revisar el padrón</Link>
+          </span>
+        </p>
+      )}
+      <dl className="home-stats">
+        {metricKeys[role].map((key) => (
+          <div className="home-stat" key={key}>
+            <dt>{metricLabels[key]}</dt>
+            <dd>{count.format(metrics[key] ?? 0)}</dd>
+          </div>
+        ))}
+      </dl>
+    </section>
+  )
+}
+
 /**
  * Inicio por rol (tarea transversal del Sprint 4): saludo, acción principal y tarjetas de acceso a las secciones
- * del rol. La identidad completa y «Cerrar sesión» están en el menú de cuenta del encabezado (ui/AccountMenu).
+ * del rol, con sus indicadores (HU-S5-01). La identidad completa y «Cerrar sesión» están en el menú de cuenta del encabezado (ui/AccountMenu).
  */
 export function SessionPage() {
   const { user } = useAuth()
@@ -116,6 +158,7 @@ export function SessionPage() {
         </div>
       )}
       {user.role === 'COMPANY' && home && <TalentShortcut />}
+      {home && <HomeIndicators role={user.role} />}
 
       {home
         ? (

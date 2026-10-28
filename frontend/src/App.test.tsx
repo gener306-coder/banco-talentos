@@ -39,7 +39,9 @@ async function fillLogin() {
 
 beforeEach(() => {
   fetchMock.mockReset()
-  vi.stubGlobal('fetch', fetchMock)
+  // Los indicadores del inicio (HU-S5-01) quedan pendientes fuera de fetchMock: no consumen sus respuestas en orden.
+  vi.stubGlobal('fetch', (path: RequestInfo | URL, options?: RequestInit) =>
+    path === '/api/dashboard' ? new Promise<Response>(() => undefined) : fetchMock(path, options))
   document.cookie = 'XSRF-TOKEN=; Max-Age=0; Path=/'
   localStorage.clear()
   sessionStorage.clear()
