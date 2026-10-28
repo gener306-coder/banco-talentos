@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { getOpportunity, getOpportunityDefaults, listOpportunities } from './api'
+import { getOpportunity, getOpportunityDefaults, listOpportunities, setOpportunityStatus } from './api'
 
 const fetchMock = vi.fn<typeof fetch>()
 const base = {
@@ -56,5 +56,16 @@ describe('cliente de oportunidades HU-S5-02', () => {
     await expect(getOpportunityDefaults()).resolves.toEqual({ state_code: '28', municipality_code: '28032', municipality: 'Reynosa' })
     respond({ data: { state_code: '28', municipality_code: 'x' } })
     await expect(getOpportunityDefaults()).rejects.toMatchObject({ status: 502 })
+  })
+
+  it('cambia el estado con PATCH y solo is_active (HU-S5-03)', async () => {
+    fetchMock.mockResolvedValueOnce(new Response(null, { status: 204 }))
+    respond({ data: { ...base, is_active: false } })
+    document.cookie = 'XSRF-TOKEN=csrf; Path=/'
+    await expect(setOpportunityStatus(12, false)).resolves.toMatchObject({ is_active: false })
+    const [path, options] = fetchMock.mock.calls[1]
+    expect(path).toBe('/api/opportunities/12/status')
+    expect(options?.method).toBe('PATCH')
+    expect(JSON.parse(options?.body as string)).toEqual({ is_active: false })
   })
 })

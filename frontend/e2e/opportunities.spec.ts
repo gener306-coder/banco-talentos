@@ -2,7 +2,7 @@ import { randomBytes } from 'node:crypto'
 import { expect, test } from '@playwright/test'
 import { openCompanySession } from './support/company'
 
-test('HU-S5-02: la empresa registra una oportunidad con el municipio precargado → la consulta → la edita → la ve en su listado', async ({ browser, baseURL }) => {
+test('HU-S5-02 y HU-S5-03: la empresa registra una oportunidad con el municipio precargado → la edita → la ve en su listado → la inactiva y la reactiva', async ({ browser, baseURL }) => {
   const suffix = randomBytes(6).toString('hex')
   const title = `Automatización E2E ${suffix}`
   const skill = `Robótica${suffix}`
@@ -67,6 +67,33 @@ test('HU-S5-02: la empresa registra una oportunidad con el municipio precargado 
     await expect(firstRow).toContainText('6')
     await expect(firstRow).toContainText('ACTIVA')
     await expect(firstRow.getByText(skill)).toBeVisible()
+
+    // HU-S5-03: cancelar la confirmación no cambia nada → inactivar → estado en detalle y listado → reactivar.
+    await firstRow.getByRole('link', { name: `Ver detalle de ${title}` }).click()
+    const status = page.getByRole('region', { name: 'Estado de la oportunidad' })
+    await status.getByRole('button', { name: 'Inactivar oportunidad' }).click()
+    let dialog = page.getByRole('alertdialog', { name: '¿Inactivar la oportunidad?' })
+    await expect(dialog.getByRole('button', { name: 'Cancelar' })).toBeFocused()
+    await dialog.getByRole('button', { name: 'Cancelar' }).click()
+    await expect(dialog).toBeHidden()
+    await expect(page.getByText('ACTIVA', { exact: true })).toBeVisible()
+
+    await status.getByRole('button', { name: 'Inactivar oportunidad' }).click()
+    dialog = page.getByRole('alertdialog', { name: '¿Inactivar la oportunidad?' })
+    const inactivated = page.waitForResponse((response) => response.url().endsWith('/status') && response.request().method() === 'PATCH')
+    await dialog.getByRole('button', { name: 'Inactivar' }).click()
+    expect((await inactivated).status()).toBe(200)
+    await expect(status.getByText('Oportunidad inactivada correctamente.')).toBeVisible()
+    await expect(page.getByText('INACTIVA', { exact: true })).toBeVisible()
+
+    await page.getByRole('link', { name: 'Volver a oportunidades' }).click()
+    await expect(page.getByRole('table', { name: 'Oportunidades de la empresa' }).getByRole('row').nth(1)).toContainText('INACTIVA')
+
+    await page.getByRole('link', { name: `Ver detalle de ${title}` }).click()
+    await status.getByRole('button', { name: 'Reactivar oportunidad' }).click()
+    await expect(page.getByRole('alertdialog')).toHaveCount(0)
+    await expect(status.getByText('Oportunidad reactivada correctamente.')).toBeVisible()
+    await expect(page.getByText('ACTIVA', { exact: true })).toBeVisible()
   } finally {
     await context.close()
   }

@@ -156,3 +156,9 @@ export async function updateOpportunity(id: string | number, input: OpportunityI
   await request('/sanctum/csrf-cookie')
   return detail(await request(opportunityPath(id), { method: 'PUT', body: body(input) }))
 }
+
+/** Baja lógica (HU-S5-03): no existe borrado. */
+export async function setOpportunityStatus(id: string | number, active: boolean): Promise<Opportunity> {
+  await request('/sanctum/csrf-cookie')
+  return detail(await request(`${opportunityPath(id)}/status`, { method: 'PATCH', body: JSON.stringify({ is_active: active }) }))
+}
