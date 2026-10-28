@@ -1,6 +1,6 @@
 # Banco de Talentos – Educación Dual
 
-Monolito modular. Sprint vigente: [Sprint 5](docs/sprint-5.md) (historias HU-S5-01 a HU-S5-05 completadas: ver «Inicio por rol», «Oportunidades Duales», «Buscador de talento» y «Solicitudes de vinculación»). Sprint anterior: [Sprint 4](docs/sprint-4.md) (completo). Historias del [Sprint 1](docs/sprint-1.md) y del Sprint 2:
+Monolito modular. Sprint vigente: [Sprint 6](docs/sprint-6.md) (HU-S6-01 completada: ver «Solicitudes de vinculación»). Sprint anterior: [Sprint 5](docs/sprint-5.md) (completo: ver «Inicio por rol», «Oportunidades Duales», «Buscador de talento» y «Solicitudes de vinculación»). [Sprint 4](docs/sprint-4.md) completo. Historias del [Sprint 1](docs/sprint-1.md) y del Sprint 2:
 
 - **HU-S1-01 — Autenticación y control de acceso** ([detalle](docs/HU-S1-01.md)).
 - **HU-S1-02 — Gestión de instituciones**: ADMIN lista, registra, consulta, edita y activa o inactiva instituciones ([detalle](docs/HU-S1-02.md)).
@@ -141,6 +141,8 @@ Los textos no admiten enlaces, correos ni teléfonos. El servidor asigna la empr
 ## Solicitudes de vinculación
 
 Una cuenta `COMPANY` abre **Solicitudes de vinculación** desde el inicio (`/linkage-requests`). La bandeja muestra las solicitudes que envió su empresa, de la más reciente a la más antigua y de 20 en 20, y se puede filtrar por estado: pendiente de la institución, aceptada, rechazada o cancelada. Cada fila enlaza al perfil anónimo y a la oportunidad, y muestra el nombre y el correo de contacto de la institución para coordinar el proceso fuera de la plataforma. Nunca aparece la identidad del alumno. Una solicitud pendiente se puede cancelar, previa confirmación; después se puede volver a solicitar el mismo perfil. El perfil anónimo avisa para qué oportunidades ya se solicitó. Contrato y cobertura en [docs/HU-S5-05.md](docs/HU-S5-05.md).
+
+Una cuenta `INSTITUTION` abre **Solicitudes de vinculación** desde el inicio (`/institution/linkage-requests`) para ver las que las empresas enviaron para sus alumnos, de la más reciente a la más antigua, de 20 en 20 y con filtro por estado. Cada fila identifica al alumno por apellidos, nombre y matrícula, con la empresa, la oportunidad, la fecha y el estado. El detalle (`/institution/linkage-requests/:id`) muestra el mensaje de la empresa, la identidad del alumno con enlace a su expediente, si tiene capturados el NSS y el comprobante del IMSS (sin mostrarlos; si falta alguno, un aviso enlaza al expediente), la oportunidad completa y el contacto del programa dual de la empresa con su correo y teléfono. Una solicitud para un alumno de otra institución responde igual que una inexistente, y la empresa sigue sin ver la identidad del alumno. Contrato y cobertura en [docs/HU-S6-01.md](docs/HU-S6-01.md).
 
 ## Alumnos
 
