@@ -4,7 +4,6 @@ import { expect, test } from '@playwright/test'
 import type { Page } from '@playwright/test'
 import { ADMIN_STATE } from './support/admin'
 import { INSTITUTION_STATE } from './support/institution'
-import { openFromRoster } from './support/students'
 import { createOpportunity, openCompanySession } from './support/company'
 
 test.use({ storageState: ADMIN_STATE })
@@ -19,8 +18,8 @@ async function publishStudent(page: Page, data: { surname: string; enrollment: s
   await register.getByLabel('Primer apellido', { exact: true }).fill(data.surname)
   await register.getByRole('button', { name: 'Registrar alumno', exact: true }).click()
   await expect(register.getByRole('status')).toContainText('Alumno registrado')
-  await register.getByRole('button', { name: 'Cerrar', exact: true }).click()
-  await openFromRoster(page, data.surname)
+  // HU-S8-02: el detalle del alumno nuevo se abre directamente desde el alta.
+  await register.getByRole('button', { name: 'Completar expediente' }).click()
 
   const profile = page.getByRole('region', { name: 'Expediente público' })
   await profile.getByLabel('Carrera o programa educativo').fill('Ingeniería en Datos')

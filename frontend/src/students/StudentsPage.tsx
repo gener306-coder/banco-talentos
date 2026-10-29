@@ -137,7 +137,8 @@ export function StudentsPage() {
           </>
         )}
       <Sheet open={registering} onClose={close} labelledBy="student-form-title">
-        <StudentForm onCreated={() => { void refresh() }} />
+        <StudentForm onCreated={() => { void refresh() }}
+          onCompleteProfile={(student) => { void navigate(`/students/${student.id}`, { state: { completeProfile: true } }) }} />
       </Sheet>
     </section>
   )

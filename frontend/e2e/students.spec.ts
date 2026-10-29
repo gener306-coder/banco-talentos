@@ -33,6 +33,8 @@ test('HU-S2-02: la institución registra alumnos en su padrón y la matrícula e
     expect(Object.keys(response.request().postDataJSON() as Record<string, unknown>).sort())
       .toEqual(['enrollment_number', 'first_surname', 'given_names', 'second_surname'])
     await expect(sheet.getByRole('status')).toContainText('Alumno registrado')
+    // HU-S8-02: tras registrar se elige entre completar el expediente o registrar otro.
+    await sheet.getByRole('button', { name: 'Registrar otro alumno' }).click()
     await expect(sheet.getByLabel('Matrícula o control interno', { exact: true })).toHaveValue('')
   }
 
@@ -394,6 +396,7 @@ test('HU-S8-01: la institución busca alumnos por matrícula o nombre, los filtr
     await register.getByLabel('Primer apellido', { exact: true }).fill(student.surname)
     await register.getByRole('button', { name: 'Registrar alumno', exact: true }).click()
     await expect(register.getByRole('status')).toContainText(student.surname)
+    await register.getByRole('button', { name: 'Registrar otro alumno' }).click()
   }
   await register.getByRole('button', { name: 'Cerrar', exact: true }).click()
 
@@ -434,4 +437,36 @@ test('HU-S8-01: la institución busca alumnos por matrícula o nombre, los filtr
   await page.goBack()
   await page.getByRole('link', { name: `Ver detalle de ${active.surname}, ${active.given}` }).click()
   await expect(page.getByRole('heading', { level: 2, name: `${active.given} ${active.surname}` })).toBeVisible()
+})
+
+test('HU-S8-02: tras registrar un alumno, «Completar expediente» abre su detalle listo para capturar el expediente público', async ({ page }) => {
+  const suffix = randomBytes(4).toString('hex').toUpperCase()
+  const surname = `Continuo${suffix}`
+
+  await page.goto('/students')
+  await page.getByRole('button', { name: /Registrar (el primer )?alumno/ }).first().click()
+  const register = page.getByRole('dialog', { name: 'Registrar alumno' })
+  await register.getByLabel('Matrícula o control interno', { exact: true }).fill(`CON-${suffix}`)
+  await register.getByLabel('Nombre(s)', { exact: true }).fill('Abril')
+  await register.getByLabel('Primer apellido', { exact: true }).fill(surname)
+  await register.getByRole('button', { name: 'Registrar alumno', exact: true }).click()
+
+  // CA-01, CA-04: la confirmación pregunta qué sigue y el foco queda en la acción principal.
+  await expect(register.getByRole('status')).toHaveText(`Alumno registrado: Abril ${surname}. ¿Qué quieres hacer ahora?`)
+  const complete = register.getByRole('button', { name: 'Completar expediente' })
+  await expect(complete).toBeFocused()
+  await expect(register.getByRole('button', { name: 'Registrar otro alumno' })).toBeVisible()
+  await page.keyboard.press('Enter')
+
+  // CA-02: el detalle del alumno nuevo con el foco en el primer campo del expediente público.
+  await expect(page).toHaveURL(/\/students\/\d+$/)
+  await expect(page.getByRole('heading', { level: 2, name: `Abril ${surname}` })).toBeVisible()
+  await expect(page.getByRole('region', { name: 'Expediente público' }).getByLabel('Carrera o programa educativo')).toBeFocused()
+
+  // CA-03: el padrón ya incluye al alumno.
+  await page.getByRole('link', { name: 'Volver a alumnos' }).click()
+  const search = page.getByRole('search', { name: 'Buscar alumnos' })
+  await search.getByLabel('Buscar por matrícula o nombre').fill(surname)
+  await search.getByRole('button', { name: 'Buscar' }).click()
+  await expect(page.getByRole('table', { name: 'Alumnos registrados' }).getByRole('row', { name: new RegExp(surname) })).toBeVisible()
 })
