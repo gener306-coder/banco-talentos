@@ -69,7 +69,7 @@ Sprint vigente desde el 28 de octubre de 2026. Sprint anterior: [sprint-6.md](sp
 
 ## HU-S7-03 — Consulta administrativa de eventos recientes (Trazabilidad)
 
-**Estado:** Pendiente  
+**Estado:** Completada (28 de octubre de 2026)  
 **Diseño técnico y verificación:** `docs/HU-S7-03.md`  
 **Story Points:** 6  
 **Rol:** `ADMIN`

@@ -7,7 +7,7 @@ import { useAuth } from '../auth/useAuth'
 import { organizationOf } from '../auth/user'
 import { getDashboard, metricKeys, metricLabels } from '../dashboard/api'
 import { useApiRequest } from '../lib/useApiRequest'
-import { AlertIcon, BriefcaseIcon, BuildingIcon, ChartIcon, ChevronRightIcon, IdCardIcon, PlusIcon, SearchIcon, UsersIcon } from '../ui/icons'
+import { AlertIcon, BriefcaseIcon, BuildingIcon, ChartIcon, ChevronRightIcon, ClipboardIcon, IdCardIcon, PlusIcon, SearchIcon, UsersIcon } from '../ui/icons'
 
 interface Section {
   to: string
@@ -45,6 +45,8 @@ function homeFor(user: User): Home | null {
           { to: '/institutions', title: 'Instituciones', icon: <BuildingIcon />, description: 'Registra instituciones educativas y administra sus cuentas.' },
           secretaryAccounts,
           reports,
+          // HU-S7-03 CA-01: solo ADMIN.
+          { to: '/audit-events', title: 'Bitácora', icon: <ClipboardIcon />, description: 'Revisa quién creó cuentas, empresas, oportunidades y solicitudes de vinculación, y cuándo.' },
         ],
       }
     case 'SECRETARY':

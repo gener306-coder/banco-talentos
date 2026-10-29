@@ -1,6 +1,6 @@
 # Banco de Talentos – Educación Dual
 
-Monolito modular. Sprint vigente: [Sprint 7](docs/sprint-7.md) (en curso: ver «Reporte ejecutivo» y «Solicitudes de vinculación»). Sprint anterior: [Sprint 6](docs/sprint-6.md) (completo: ver «Solicitudes de vinculación», «Inicio por rol», «Cuentas de la Secretaría» y «Empresas»). [Sprint 5](docs/sprint-5.md) completo. [Sprint 4](docs/sprint-4.md) completo. Historias del [Sprint 1](docs/sprint-1.md) y del Sprint 2:
+Monolito modular. Sprint vigente: [Sprint 7](docs/sprint-7.md) (en curso: ver «Reporte ejecutivo», «Bitácora» y «Solicitudes de vinculación»). Sprint anterior: [Sprint 6](docs/sprint-6.md) (completo: ver «Solicitudes de vinculación», «Inicio por rol», «Cuentas de la Secretaría» y «Empresas»). [Sprint 5](docs/sprint-5.md) completo. [Sprint 4](docs/sprint-4.md) completo. Historias del [Sprint 1](docs/sprint-1.md) y del Sprint 2:
 
 - **HU-S1-01 — Autenticación y control de acceso** ([detalle](docs/HU-S1-01.md)).
 - **HU-S1-02 — Gestión de instituciones**: ADMIN lista, registra, consulta, edita y activa o inactiva instituciones ([detalle](docs/HU-S1-02.md)).
@@ -161,6 +161,10 @@ En su bandeja, la institución tiene **Descargar CSV**: un archivo con todas las
 - cada sector SCIAN con empresas activas, oportunidades activas y solicitudes aceptadas.
 
 No incluye nombres, matrículas, NSS ni ubicaciones de alumnos. **Descargar CSV** baja el desglose por institución y por sector en un archivo compatible con Excel. Contrato y cobertura en [docs/HU-S7-01.md](docs/HU-S7-01.md) y, para la exportación, en [docs/HU-S7-02.md](docs/HU-S7-02.md).
+
+## Bitácora
+
+`ADMIN` abre **Bitácora** desde el inicio (`/audit-events`) para revisar, de 30 en 30 y del más reciente al más antiguo, quién creó cada cuenta, empresa y oportunidad, y quién solicitó o respondió cada vinculación. Se puede filtrar por tipo de evento. Cada evento muestra la fecha, la cuenta que lo realizó con su rol y una descripción pública del recurso; nunca contraseñas, tokens, NSS ni la identidad de alumnos. Los eventos salen de las columnas de autoría ya registradas, sin tabla adicional. Contrato y cobertura en [docs/HU-S7-03.md](docs/HU-S7-03.md).
 
 ## Alumnos
 

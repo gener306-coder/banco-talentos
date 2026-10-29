@@ -1,6 +1,7 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import type { RefObject } from 'react'
 import { Navigate, Route, Routes, useLocation } from 'react-router'
+import { AuditEventsPage } from './audit/AuditEventsPage'
 import { AuthProvider } from './auth/AuthProvider'
 import { ProtectedRoute } from './auth/ProtectedRoute'
 import { useAuth } from './auth/useAuth'
@@ -70,6 +71,9 @@ function AuthRoutes() {
         <Route path="/institutions/new" element={<InstitutionCreatePage />} />
         <Route path="/institutions/:id" element={<InstitutionDetailPage />} />
         <Route path="/institutions/:id/edit" element={<InstitutionEditPage />} />
+      </Route>
+      <Route element={<ProtectedRoute role="ADMIN" deniedMessage="No tienes permiso para consultar la bitácora." />}>
+        <Route path="/audit-events" element={<AuditEventsPage />} />
       </Route>
       <Route element={<ProtectedRoute role={SECRETARY_ACCOUNT_MANAGERS} deniedMessage="No tienes permiso para gestionar las cuentas de la Secretaría." />}>
         <Route path="/secretary-accounts" element={<SecretaryAccountsPage />} />

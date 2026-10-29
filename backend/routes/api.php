@@ -1,6 +1,7 @@
 <?php
 
 use App\Enums\UserRole;
+use App\Http\Controllers\AuditEventController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\CompanyAccountController;
 use App\Http\Controllers\CompanyController;
@@ -37,6 +38,10 @@ Route::middleware(['auth:sanctum', 'active', 'role:'.UserRole::ADMIN->value.','.
         Route::get('/reports/dual-program', [ReportController::class, 'dualProgram']);
         Route::get('/reports/dual-program/export.csv', [ReportController::class, 'export']);
     });
+
+// Bitácora de trazabilidad (HU-S7-03): solo ADMIN, a partir de las columnas de autoría ya registradas.
+Route::get('/audit-events', [AuditEventController::class, 'index'])
+    ->middleware(['auth:sanctum', 'active', 'role:'.UserRole::ADMIN->value]);
 
 Route::bind('institution', function (string $value): Institution {
     // Evita enviar identificadores malformados o fuera de rango a PostgreSQL.
