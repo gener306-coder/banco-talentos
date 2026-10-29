@@ -220,6 +220,21 @@ Cada script limpia sus contenedores y red al terminar; el volumen `test_vendor` 
 
 Los tests de roles registran rutas únicamente dentro de Pest para verificar la matriz de acceso sin introducir módulos ficticios en la aplicación. Las pruebas de sesión usan cookies cifradas y archivos reales; no sustituyen el login por `actingAs`. Las pruebas CSRF desactivan únicamente la excepción del framework para el entorno de tests.
 
+## Simulación de carga
+
+Para ver el sistema con volumen de piloto (unos 43 000 alumnos en 16 instituciones, 150 empresas, 600 oportunidades y 5000 solicitudes) existe un entorno aislado, el proyecto Compose `banco-talentos-sim`. Tiene su propia base, clave y storage, y nunca toca los datos de desarrollo ni de pruebas:
+
+```bash
+sh scripts/simulation.sh up                     # frontend http://localhost:5180 · API http://localhost:8100
+sh scripts/simulation.sh seed                   # datos aleatorios; imprime las cuentas de demostración y su contraseña
+sh scripts/simulation.sh seed --fresh --students=15000 --seed=7   # recargar con otro volumen o semilla
+sh scripts/simulation.sh benchmark --password=… # p50/p95 de los endpoints principales
+sh scripts/simulation.sh explain                # EXPLAIN ANALYZE de las consultas más lentas
+sh scripts/simulation.sh down                   # detener conservando los datos (down --purge los borra)
+```
+
+Las cuentas de demostración son `admin@sim.test`, `secretaria01@sim.test`, `institucion01-1@sim.test` y `empresa001-1@sim.test`, todas con la misma contraseña. Los comandos `simulation:*` se niegan a correr fuera de `APP_ENV=simulation` y de su base. Los informes quedan en `backend/storage/simulation/`, excluido de Git. Los resultados y las recomendaciones de la primera ejecución están en [docs/simulacion-carga.md](docs/simulacion-carga.md).
+
 ## Operación local
 
 ```bash
