@@ -1,12 +1,20 @@
 # Banco de Talentos – Educación Dual
 
-Monolito modular. Sprint vigente: [Sprint 7](docs/sprint-7.md) (en curso: ver «Reporte ejecutivo», «Bitácora» y «Solicitudes de vinculación»). Sprint anterior: [Sprint 6](docs/sprint-6.md) (completo: ver «Solicitudes de vinculación», «Inicio por rol», «Cuentas de la Secretaría» y «Empresas»). [Sprint 5](docs/sprint-5.md) completo. [Sprint 4](docs/sprint-4.md) completo. Historias del [Sprint 1](docs/sprint-1.md) y del Sprint 2:
+Plataforma web que vincula instituciones educativas, empresas y la Secretaría de Economía mediante un Banco de Talentos para la Educación Dual. Monolito modular Laravel + React. Los alumnos no son usuarios: los administra su institución.
 
-- **HU-S1-01 — Autenticación y control de acceso** ([detalle](docs/HU-S1-01.md)).
-- **HU-S1-02 — Gestión de instituciones**: ADMIN lista, registra, consulta, edita y activa o inactiva instituciones ([detalle](docs/HU-S1-02.md)).
-- **HU-S1-03 — Creación de cuentas institucionales**: ADMIN crea cuentas `INSTITUTION` vinculadas a una institución activa; la persona titular establece su contraseña mediante un enlace enviado por correo ([detalle](docs/HU-S1-03.md)).
-- **HU-S1-04 — Inicio seguro de restablecimiento de contraseña**: ADMIN inicia el restablecimiento de una cuenta `INSTITUTION`; la persona titular establece su nueva contraseña mediante un enlace enviado por correo ([detalle](docs/HU-S1-04.md)).
-- **HU-S2-01 — Enlace de invitación manual**: al crear la cuenta o reenviar su enlace, ADMIN puede generarlo para copiarlo y compartirlo (por ejemplo, por WhatsApp) en lugar de enviarlo por correo ([detalle](docs/HU-S2-01.md)).
+La visión completa del proyecto, su arquitectura, el modelo de datos y las diferencias con la propuesta original están en el [Documento General](docs/Banco_de_Talentos_Documento_General.md).
+
+Sprint vigente: [Sprint 7](docs/sprint-7.md), completo. Historias construidas (cada una con su diseño técnico en `docs/HU-SN-0X.md`):
+
+| Sprint | Historias |
+|---|---|
+| [1](docs/sprint-1.md) | Autenticación y control de acceso; gestión de instituciones; cuentas institucionales; restablecimiento de contraseña iniciado por ADMIN |
+| [2](docs/sprint-2.md) | Enlace de invitación manual; padrón estudiantil; expediente académico y geográfico; baja lógica de alumnos |
+| [3](docs/sprint-3.md) | CV normalizado; seguro facultativo (IMSS) |
+| [4](docs/sprint-4.md) | Cuentas de la Secretaría; empresas validadas y sus cuentas; catálogo INEGI de municipios; buscador de talento anónimo |
+| [5](docs/sprint-5.md) | Indicadores del inicio; Oportunidades Duales y su baja lógica; solicitud de vinculación directa; bandeja de la empresa |
+| [6](docs/sprint-6.md) | Bandeja institucional; respuesta `ACEPTADA`/`RECHAZADA`; indicadores de vinculación; inactivación y restablecimiento de cuentas de Secretaría y empresa |
+| [7](docs/sprint-7.md) | Reporte ejecutivo; exportación CSV; bitácora de trazabilidad; actualización del Documento General |
 
 No hay registro público ni recuperación de contraseña iniciada por la propia cuenta.
 
@@ -17,10 +25,12 @@ No hay registro público ni recuperación de contraseña iniciada por la propia 
 - Pest, Vitest + React Testing Library y Playwright/Chromium.
 
 ```text
-backend/                 API, usuarios, instituciones, cuentas institucionales y pruebas Pest
-frontend/                Sesión, instituciones, cuentas, contraseña inicial y restablecimiento, pruebas React y E2E
+backend/                 API REST Laravel: acceso, instituciones, empresas, cuentas, alumnos, búsqueda,
+                         oportunidades, vinculación, indicadores, reportes, bitácora y pruebas Pest
+frontend/                SPA React por módulos (auth, institutions, companies, secretary, students, talent,
+                         opportunities, linkage, reports, audit, ui), pruebas Vitest y E2E en frontend/e2e
 docker/                  Imágenes y configuración de desarrollo/pruebas
-docs/                    Sprint vigente, documentación técnica de cada historia e identidad visual (docs/design/)
+docs/                    Documento General, Sprints, diseño técnico de cada historia e identidad visual (docs/design/)
 compose.yaml             Entorno de desarrollo (incluye Mailpit)
 compose.testing.yaml     Entorno aislado de pruebas
 scripts/test-backend.sh   Ejecuta Pest con PostgreSQL temporal
@@ -67,7 +77,14 @@ La SPA consulta `GET /api/me` al cargar. Para iniciar sesión obtiene primero `G
 
 La cookie de sesión es `HttpOnly`, de dominio local y `SameSite=Lax`. El cliente envía el token CSRF mediante `X-XSRF-TOKEN`. El identificador de sesión se regenera al autenticar; el cierre de sesión impide reutilizar la cookie anterior. Las sesiones locales expiran tras 120 minutos de inactividad. Las opciones de cookies y duración están en `backend/.env.example`.
 
-Los roles son `ADMIN`, `INSTITUTION`, `COMPANY` y `SECRETARY`. Todos requieren una cuenta activa. Las cuentas `INSTITUTION` requieren además que su institución esté activa. ADMIN dispone de la gestión de instituciones y de cuentas institucionales; ADMIN y `SECRETARY` gestionan las cuentas de la Secretaría; `SECRETARY` gestiona las empresas; `INSTITUTION` ve su institución vinculada; `COMPANY` ve su empresa vinculada, busca talento anónimo y gestiona las Oportunidades Duales de su empresa. El acceso se restringe tanto en las rutas React como en la API con Sanctum y el middleware `role`.
+Los roles son `ADMIN`, `INSTITUTION`, `COMPANY` y `SECRETARY`. Todos requieren una cuenta activa. Las cuentas `INSTITUTION` y `COMPANY` requieren además que su institución o empresa esté activa.
+- ADMIN gestiona las instituciones y sus cuentas, y consulta la bitácora.
+- ADMIN y `SECRETARY` gestionan las cuentas de la Secretaría y consultan el reporte ejecutivo.
+- `SECRETARY` gestiona las empresas validadas y sus cuentas.
+- `INSTITUTION` administra a sus alumnos y responde las solicitudes de vinculación que recibe.
+- `COMPANY` busca talento anónimo, gestiona las Oportunidades Duales de su empresa y envía solicitudes de vinculación.
+
+El acceso se restringe tanto en las rutas React como en la API con Sanctum y el middleware `role`.
 
 Después de iniciar sesión como ADMIN, abre **Instituciones**. El listado incluye instituciones activas e inactivas. El registro y la edición solicitan nombre, CCT y correo de contacto; el detalle ofrece la acción para activar o inactivar. El CCT es único incluso entre instituciones inactivas y no existe eliminación. Consulta el contrato y la matriz de pruebas en [docs/HU-S1-02.md](docs/HU-S1-02.md).
 
@@ -183,17 +200,16 @@ Desde el detalle, **CV profesional** (`/students/:id/cv`, HU-S3-01) construye un
 Ejecuta desde la raíz:
 
 ```bash
-# PostgreSQL temporal: autenticación, autorización, instituciones, cuentas institucionales y alumnos
+# Pest con PostgreSQL temporal (toda la API). Para un solo archivo: sh scripts/test-backend.sh -- --filter=NombreTest
 sh scripts/test-backend.sh
 
-# Clientes HTTP, sesión, instituciones, cuentas y configuración de contraseña inicial
-# Requiere el servicio frontend de desarrollo iniciado.
+# Vitest, ESLint y build de producción. Requiere el servicio frontend de desarrollo iniciado.
 docker compose exec frontend npm run test
 docker compose exec frontend npm run lint
 docker compose exec frontend npm run build
 
-# Chromium + API real: autenticación, instituciones, alta de cuenta → contraseña inicial → login
-# y restablecimiento iniciado por ADMIN → correo en Mailpit → nueva contraseña → login
+# Chromium + API real + Mailpit: recorridos de cada rol, incluido el flujo completo
+# empresa busca → solicita → institución acepta (e2e/talent-search.spec.ts)
 sh scripts/test-e2e.sh
 ```
 
