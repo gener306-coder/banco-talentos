@@ -1,0 +1,109 @@
+name: banco-talentos-sim
+
+# Simulación de carga: entorno propio con datos aleatorios de volumen piloto. Nunca monta los volúmenes de desarrollo
+# ni de pruebas. Úsalo con scripts/simulation.sh.
+services:
+  db:
+    image: docker.io/postgis/postgis:17-3.5
+    environment:
+      POSTGRES_DB: banco_talentos_sim
+      POSTGRES_USER: banco_talentos_sim
+      POSTGRES_PASSWORD: local_sim_password
+    volumes:
+      - sim_postgres_data:/var/lib/postgresql/data
+      - ./docker/postgres/01-postgis.sql:/docker-entrypoint-initdb.d/20-postgis.sql:ro,Z
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U \"$$POSTGRES_USER\" -d \"$$POSTGRES_DB\""]
+      interval: 2s
+      timeout: 5s
+      retries: 30
+
+  # Buzón efímero, sin puertos en el host: la simulación no necesita leer correos.
+  mailpit:
+    image: docker.io/axllent/mailpit:v1.30.5
+
+  # El volumen de estado nace propiedad de root: se entrega una vez al usuario sin privilegios del backend.
+  state-permissions:
+    image: banco-talentos-backend-sim
+    user: root
+    entrypoint: ["chown", "-R", "${LOCAL_UID:-1000}:${LOCAL_GID:-1000}", "/sim-state"]
+    volumes:
+      - sim_state:/sim-state
+
+  backend:
+    image: banco-talentos-backend-sim
+    build:
+      context: .
+      dockerfile: docker/backend/Dockerfile
+      args:
+        LOCAL_UID: ${LOCAL_UID:-1000}
+        LOCAL_GID: ${LOCAL_GID:-1000}
+    init: true
+    entrypoint: ["sh", "/sim-entrypoint.sh"]
+    command: ["serve"]
+    environment:
+      APP_ENV: simulation
+      APP_DEBUG: "false"
+      APP_URL: http://localhost:${SIM_BACKEND_PORT:-8100}
+      FRONTEND_URL: http://localhost:${SIM_FRONTEND_PORT:-5180}
+      DB_CONNECTION: pgsql
+      DB_HOST: db
+      DB_PORT: 5432
+      DB_DATABASE: banco_talentos_sim
+      DB_USERNAME: banco_talentos_sim
+      DB_PASSWORD: local_sim_password
+      DB_URL: ""
+      CACHE_STORE: database
+      SESSION_DRIVER: database
+      SESSION_COOKIE: banco-talentos-sim-session
+      SESSION_DOMAIN: ""
+      SESSION_SECURE_COOKIE: "false"
+      SANCTUM_STATEFUL_DOMAINS: localhost:${SIM_FRONTEND_PORT:-5180},127.0.0.1:${SIM_FRONTEND_PORT:-5180}
+      LOG_LEVEL: warning
+      MAIL_MAILER: smtp
+      MAIL_HOST: mailpit
+      MAIL_PORT: 1025
+      MAIL_FROM_ADDRESS: no-reply@banco-talentos.test
+    ports:
+      - "127.0.0.1:${SIM_BACKEND_PORT:-8100}:8000"
+    volumes:
+      - ./backend:/app:z
+      - sim_vendor:/app/vendor
+      - sim_state:/sim-state
+      - ./docker/simulation/backend-entrypoint.sh:/sim-entrypoint.sh:ro,Z
+    depends_on:
+      db:
+        condition: service_healthy
+      state-permissions:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD", "php", "-r", "exit(@file_get_contents('http://127.0.0.1:8000/up') === false ? 1 : 0);"]
+      interval: 3s
+      timeout: 5s
+      retries: 60
+      start_period: 60s
+
+  frontend:
+    image: banco-talentos-frontend-sim
+    build:
+      context: .
+      dockerfile: docker/frontend/Dockerfile
+      args:
+        LOCAL_UID: ${LOCAL_UID:-1000}
+        LOCAL_GID: ${LOCAL_GID:-1000}
+    environment:
+      API_PROXY_TARGET: http://backend:8000
+    ports:
+      - "127.0.0.1:${SIM_FRONTEND_PORT:-5180}:5173"
+    volumes:
+      - ./frontend:/app:z
+      - sim_node_modules:/app/node_modules
+    depends_on:
+      backend:
+        condition: service_healthy
+
+volumes:
+  sim_postgres_data:
+  sim_vendor:
+  sim_state:
+  sim_node_modules:
