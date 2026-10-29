@@ -30,4 +30,10 @@ class Institution extends Model
     {
         return $this->hasMany(Student::class);
     }
+
+    /** Solicitudes de vinculación recibidas para sus alumnos (HU-S5-04). */
+    public function linkageRequests(): HasMany
+    {
+        return $this->hasMany(LinkageRequest::class);
+    }
 }

@@ -1,6 +1,6 @@
 # Banco de Talentos – Educación Dual
 
-Monolito modular. Sprint vigente: [Sprint 6](docs/sprint-6.md) (completo: ver «Solicitudes de vinculación», «Inicio por rol», «Cuentas de la Secretaría» y «Empresas»). Sprint anterior: [Sprint 5](docs/sprint-5.md) (completo: ver «Inicio por rol», «Oportunidades Duales», «Buscador de talento» y «Solicitudes de vinculación»). [Sprint 4](docs/sprint-4.md) completo. Historias del [Sprint 1](docs/sprint-1.md) y del Sprint 2:
+Monolito modular. Sprint vigente: [Sprint 7](docs/sprint-7.md) (en curso: ver «Reporte ejecutivo»). Sprint anterior: [Sprint 6](docs/sprint-6.md) (completo: ver «Solicitudes de vinculación», «Inicio por rol», «Cuentas de la Secretaría» y «Empresas»). [Sprint 5](docs/sprint-5.md) completo. [Sprint 4](docs/sprint-4.md) completo. Historias del [Sprint 1](docs/sprint-1.md) y del Sprint 2:
 
 - **HU-S1-01 — Autenticación y control de acceso** ([detalle](docs/HU-S1-01.md)).
 - **HU-S1-02 — Gestión de instituciones**: ADMIN lista, registra, consulta, edita y activa o inactiva instituciones ([detalle](docs/HU-S1-02.md)).
@@ -149,6 +149,16 @@ Una cuenta `COMPANY` abre **Solicitudes de vinculación** desde el inicio (`/lin
 Una cuenta `INSTITUTION` abre **Solicitudes de vinculación** desde el inicio (`/institution/linkage-requests`) para ver las que las empresas enviaron para sus alumnos, de la más reciente a la más antigua, de 20 en 20 y con filtro por estado. Cada fila identifica al alumno por apellidos, nombre y matrícula, con la empresa, la oportunidad, la fecha y el estado. El detalle (`/institution/linkage-requests/:id`) muestra el mensaje de la empresa, la identidad del alumno con enlace a su expediente, si tiene capturados el NSS y el comprobante del IMSS (sin mostrarlos; si falta alguno, un aviso enlaza al expediente), la oportunidad completa y el contacto del programa dual de la empresa con su correo y teléfono. Una solicitud para un alumno de otra institución responde igual que una inexistente, y la empresa sigue sin ver la identidad del alumno. Contrato y cobertura en [docs/HU-S6-01.md](docs/HU-S6-01.md).
 
 Mientras una solicitud está pendiente, su detalle ofrece **Aceptar solicitud** o **Rechazar solicitud** con un mensaje opcional para la empresa (hasta 500 caracteres, sin enlaces, correos ni teléfonos), previa confirmación. La respuesta es definitiva: se registra quién respondió y cuándo, y el detalle lo muestra junto con el mensaje. La empresa ve en su bandeja la decisión, la fecha y el mensaje, pero no quién respondió, y ya no puede cancelarla. Tras actualizar el código aplica las migraciones con `docker compose exec backend php artisan migrate`. Contrato y cobertura en [docs/HU-S6-02.md](docs/HU-S6-02.md).
+
+## Reporte ejecutivo
+
+`ADMIN` y `SECRETARY` abren **Reporte ejecutivo** desde el inicio (`/reports`). El reporte muestra, solo con conteos agregados:
+
+- las solicitudes de vinculación por estado, con su proporción;
+- cada institución educativa con su estado, alumnos activos, perfiles buscables, solicitudes recibidas y aceptadas;
+- cada sector SCIAN con empresas activas, oportunidades activas y solicitudes aceptadas.
+
+No incluye nombres, matrículas, NSS ni ubicaciones de alumnos. Contrato y cobertura en [docs/HU-S7-01.md](docs/HU-S7-01.md).
 
 ## Alumnos
 
