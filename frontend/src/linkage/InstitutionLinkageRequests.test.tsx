@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, within } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { MemoryRouter } from 'react-router'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import App from '../App'
@@ -106,6 +106,46 @@ describe('bandeja institucional HU-S6-01', () => {
     apiMock.mockResolvedValueOnce(page([]))
     renderApp()
     expect(await screen.findByText('Aún no has recibido solicitudes.')).toBeInTheDocument()
+    // HU-S7-02: sin solicitudes no hay nada que exportar.
+    expect(screen.queryByRole('button', { name: 'Descargar CSV' })).not.toBeInTheDocument()
+  })
+})
+
+describe('exportación CSV HU-S7-02', () => {
+  it('descarga todas las solicitudes con el filtro de estado vigente (CA-02, CA-04)', async () => {
+    const createObjectURL = vi.fn(() => 'blob:solicitudes')
+    const revokeObjectURL = vi.fn()
+    vi.stubGlobal('URL', Object.assign(URL, { createObjectURL, revokeObjectURL }))
+    const names: string[] = []
+    const click = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(function (this: HTMLAnchorElement) {
+      names.push(this.download)
+    })
+    const csv = () => new Response(new Blob(['\uFEFFFolio'], { type: 'text/csv' }))
+    apiMock.mockResolvedValueOnce(page([pending], { last_page: 2, total: 21 }))
+      .mockResolvedValueOnce(csv())
+      .mockResolvedValueOnce(page([accepted]))
+      .mockResolvedValueOnce(csv())
+    renderApp()
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Descargar CSV' }))
+    await waitFor(() => expect(click).toHaveBeenCalledOnce())
+    expect(apiMock.mock.calls[1][0]).toBe('/api/institution/linkage-requests/export.csv')
+
+    fireEvent.change(screen.getByLabelText('Estado'), { target: { value: 'ACEPTADA' } })
+    fireEvent.click(await screen.findByRole('button', { name: 'Descargar CSV' }))
+    await waitFor(() => expect(click).toHaveBeenCalledTimes(2))
+    expect(apiMock.mock.calls[3][0]).toBe('/api/institution/linkage-requests/export.csv?status=ACEPTADA')
+    expect(names.every((name) => /^solicitudes-vinculacion-\d{4}-\d{2}-\d{2}\.csv$/.test(name))).toBe(true)
+    click.mockRestore()
+  })
+
+  it('avisa si la descarga falla sin perder la bandeja (CA-04)', async () => {
+    apiMock.mockResolvedValueOnce(page([pending]))
+      .mockResolvedValueOnce(new Response(null, { status: 500 }))
+    renderApp()
+    fireEvent.click(await screen.findByRole('button', { name: 'Descargar CSV' }))
+    expect(await screen.findByRole('alert')).toBeInTheDocument()
+    expect(screen.getByRole('table', { name: 'Solicitudes de vinculación recibidas' })).toBeInTheDocument()
   })
 })
 

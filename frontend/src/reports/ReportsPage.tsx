@@ -5,9 +5,10 @@ import { InstitutionRequestError, InstitutionStatus } from '../institutions/Inst
 import { LINKAGE_STATUSES } from '../linkage/api'
 import { LinkageStatus } from '../linkage/LinkageStatus'
 import { useApiRequest } from '../lib/useApiRequest'
+import { CsvDownloadButton } from '../ui/CsvDownloadButton'
 import { ChevronLeftIcon } from '../ui/icons'
 import { LoadingState } from '../ui/StateMessage'
-import { getDualProgramReport, reportMessages } from './api'
+import { downloadDualProgramCsv, getDualProgramReport, reportMessages } from './api'
 import type { DualProgramReport } from './api'
 import '../institutions/institutions.css'
 import './reports.css'
@@ -120,7 +121,7 @@ function SectorParticipation({ items }: { items: DualProgramReport['by_sector'] 
 
 /**
  * Reporte ejecutivo del programa de Educación Dual (HU-S7-01 CA-03) para ADMIN y SECRETARY: solo conteos agregados,
- * sin datos de alumnos ni de cuentas.
+ * sin datos de alumnos ni de cuentas. **Descargar CSV** exporta el desglose (HU-S7-02).
  */
 export function ReportsPage() {
   const load = useCallback((signal: AbortSignal) => getDualProgramReport(signal), [])
@@ -137,7 +138,11 @@ export function ReportsPage() {
         : failure ? <InstitutionRequestError failure={failure} retry={refresh} page />
         : data && (
           <>
-            <p className="report-generated">Generado el {dateFormat.format(new Date(data.generated_at))}</p>
+            <div className="report-toolbar">
+              <p className="report-generated">Generado el {dateFormat.format(new Date(data.generated_at))}</p>
+              {/* HU-S7-02 CA-04: el desglose por institución y por sector, sin datos personales. */}
+              <CsvDownloadButton download={downloadDualProgramCsv} prefix="reporte-educacion-dual" messages={reportMessages} />
+            </div>
             <LinkageSummary summary={data.linkage_summary} />
             <InstitutionParticipation items={data.by_institution} />
             <SectorParticipation items={data.by_sector} />

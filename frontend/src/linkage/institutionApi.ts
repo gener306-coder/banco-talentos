@@ -1,4 +1,4 @@
-import { ApiError, request } from '../lib/http'
+import { ApiError, request, requestBlob } from '../lib/http'
 import type { FailureMessages } from '../lib/useApiRequest'
 import { isPeriodType, isStateCode } from '../students/catalogs'
 import type { PeriodType } from '../students/catalogs'
@@ -164,6 +164,12 @@ export async function listReceivedLinkages(filters: { page?: number; status?: Li
   if (!isPositiveInt(meta.current_page) || !isPositiveInt(meta.last_page) ||
       typeof meta.total !== 'number' || !Number.isSafeInteger(meta.total) || meta.total < 0) throw new ApiError(502)
   return { items: response.data.map(item), page: meta.current_page, lastPage: meta.last_page, total: meta.total }
+}
+
+/** Exportación CSV de la bandeja con el mismo filtro de estado (HU-S7-02 CA-02). */
+export function downloadReceivedLinkagesCsv(status: LinkageStatus | ''): Promise<Blob> {
+  const query = status ? `?${new URLSearchParams({ status }).toString()}` : ''
+  return requestBlob(`/api/institution/linkage-requests/export.csv${query}`)
 }
 
 export async function getReceivedLinkage(id: string, signal?: AbortSignal): Promise<ReceivedLinkageDetail> {

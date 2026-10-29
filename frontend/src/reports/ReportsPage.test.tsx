@@ -1,4 +1,4 @@
-import { render, screen, within } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { MemoryRouter } from 'react-router'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import App from '../App'
@@ -111,5 +111,34 @@ describe('reporte ejecutivo HU-S7-01', () => {
     renderApp()
     await screen.findByRole('table', { name: 'Participación por institución educativa' })
     expect(screen.queryByText(/dual@ut.edu.mx|Ximena/)).not.toBeInTheDocument()
+  })
+
+  it('descarga el CSV del desglose con la fecha en el nombre (HU-S7-02 CA-04)', async () => {
+    vi.useFakeTimers({ toFake: ['Date'] })
+    vi.setSystemTime(new Date(2026, 9, 28, 12))
+    const createObjectURL = vi.fn(() => 'blob:reporte')
+    const revokeObjectURL = vi.fn()
+    vi.stubGlobal('URL', Object.assign(URL, { createObjectURL, revokeObjectURL }))
+    const click = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(function (this: HTMLAnchorElement) {
+      expect(this.download).toBe('reporte-educacion-dual-2026-10-28.csv')
+    })
+    apiMock.mockResolvedValueOnce(Response.json({ data: report }))
+      .mockResolvedValueOnce(new Response(new Blob(['\uFEFFInstitución'], { type: 'text/csv' })))
+    renderApp()
+    fireEvent.click(await screen.findByRole('button', { name: 'Descargar CSV' }))
+    await waitFor(() => expect(click).toHaveBeenCalledOnce())
+    expect(apiMock.mock.calls[1][0]).toBe('/api/reports/dual-program/export.csv')
+    await waitFor(() => expect(revokeObjectURL).toHaveBeenCalledWith('blob:reporte'))
+    click.mockRestore()
+    vi.useRealTimers()
+  })
+
+  it('avisa si la descarga falla sin perder el reporte (HU-S7-02 CA-04)', async () => {
+    apiMock.mockResolvedValueOnce(Response.json({ data: report }))
+      .mockResolvedValueOnce(Response.json({ message: 'Forbidden' }, { status: 403 }))
+    renderApp()
+    fireEvent.click(await screen.findByRole('button', { name: 'Descargar CSV' }))
+    expect(await screen.findByRole('alert')).toHaveTextContent('No tienes permiso para consultar el reporte ejecutivo.')
+    expect(screen.getByRole('table', { name: 'Participación por sector SCIAN' })).toBeInTheDocument()
   })
 })
