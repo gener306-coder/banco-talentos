@@ -202,3 +202,23 @@ it('never exposes student, account or location data (CA-02)', function () {
     expect(array_keys(dualProgramReport($this)->json('data.by_institution.0')))
         ->toBe(['id', 'name', 'is_active', 'active_students', 'searchable_profiles', 'received_requests', 'accepted_requests']);
 });
+
+it('reads the students and linkage requests tables once, whatever the number of institutions (T-S8-01)', function (int $institutions) {
+    foreach (range(1, $institutions) as $n) {
+        $institution = Institution::factory()->create();
+        reportStudent($institution);
+        reportStudent($institution, false);
+    }
+    $this->loginWithCookies(reportViewer())->assertOk();
+
+    $queries = [];
+    DB::listen(function ($query) use (&$queries) {
+        $queries[] = $query->sql;
+    });
+    $rows = dualProgramReport($this)->assertOk()->json('data.by_institution');
+
+    expect($rows)->toHaveCount($institutions)
+        ->and(collect($rows)->every(fn (array $row) => $row['active_students'] === 2 && $row['searchable_profiles'] === 1))->toBeTrue()
+        ->and(collect($queries)->filter(fn (string $sql) => str_contains($sql, 'from "students"'))->count())->toBe(1)
+        ->and(collect($queries)->filter(fn (string $sql) => preg_match('/from "linkage_requests"(?! inner join)/', $sql))->count())->toBe(2);
+})->with([1, 12]);
