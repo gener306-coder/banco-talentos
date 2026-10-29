@@ -14,26 +14,31 @@ Existe una única variante del logotipo, más el logotipo institucional de la Se
 
 | Archivo | URL en el navegador | Uso |
 |---|---|---|
-| `frontend/public/brand/logo.png` | `/brand/logo.png` | Fondos claros (blanco o gris claro) |
-| `frontend/public/brand/sec-economia.png` | `/brand/sec-economia.png` | Coemblema institucional, horizontal (1920 × 414 px, fondo transparente), solo sobre fondos claros |
+| `frontend/public/brand/logo.png` | `/brand/logo.png` | Versión a color, para fondos claros (blanco o gris claro) |
+| `frontend/public/brand/logob.png` | `/brand/logob.png` | Versión blanca para fondo oscuro; se usará cuando se active el modo oscuro (ver «Modo oscuro») |
+| `frontend/public/brand/sec-economia.png` | `/brand/sec-economia.png` | Coemblema institucional, horizontal (1920 × 414 px, fondo transparente) |
 
-El PNG tiene fondo transparente y mide 697 × 783 px; se le retiró únicamente el margen transparente, sin alterar el dibujo. No hay variante blanca: no colocar el logotipo sobre fondos oscuros ni sobre el color primario vino. El modo oscuro, preparado pero no activado, los mostraría sobre una pastilla clara (`.brand-plate`, ver «Modo oscuro»).
+Versión entregada el 29 de octubre de 2026, de mejor calidad que la anterior. Las dos variantes del logotipo principal son PNG con fondo transparente de **404 × 480 px**:
+- se recortaron con la misma caja (el margen transparente común más 10 px), para que ocupen exactamente el mismo espacio y se puedan intercambiar sin mover nada;
+- se redujeron desde 1102 × 1427 px, lo que da nitidez de sobra para 3× en el login y en el encabezado, con unos 130 KB cada una.
 
-Mantener la proporción y los colores originales; no recolorear, deformar ni recortar el dibujo. Fijar sólo la altura (`h-*` con `w-auto`), declarar `width={697} height={783}` para reservar el espacio y usar `alt="Nodologístico"`.
+No se alteró el dibujo ni los colores. Sin modo oscuro activo, el logotipo a color no debe ir sobre fondos oscuros ni sobre el color primario vino.
+
+Mantener la proporción y los colores originales; no recolorear, deformar ni recortar el dibujo. Fijar sólo la altura (`h-*` con `w-auto`), declarar `width={404} height={480}` para reservar el espacio y usar `alt="Nodologístico"`.
 
 Ubicaciones actuales:
 
 | Lugar | Componente | Altura |
 |---|---|---|
-| Encabezado general translúcido, junto al título | `App.tsx` | `h-11` (44 px). No se muestra en `/login` para no duplicarlo. |
-| Parte superior del formulario de login | `pages/LoginPage.tsx` | `h-32` (128 px), centrado. |
+| Encabezado general translúcido, junto al título | `App.tsx` | `h-14` (56 px); hasta 480 px, `h-11` (44 px). No se muestra en `/login` para no duplicarlo. |
+| Parte superior del formulario de login | `pages/LoginPage.tsx` | `h-36` (144 px), centrado. |
+| Secretaría de Economía, extremo derecho del encabezado general | `App.tsx` (`.app-bar-partner`) | `h-11` (44 px), centrado verticalmente con el logotipo principal y separado del título por un filete `neutral-200`. Se muestra en todas las vistas, también en `/login`. Hasta 480 px: `h-[1.6rem]`, con el título a 1.15rem. |
 
-En las tres ubicaciones el logotipo va dentro de `.brand-plate`. En el tema claro la pastilla es transparente y no ocupa espacio; en el oscuro es un fondo claro redondeado.
-| Secretaría de Economía, extremo derecho del encabezado general | `App.tsx` (`.app-bar-partner`) | `h-11` (44 px), la misma altura que el logotipo principal y centrado con él; separado del título por un filete `neutral-200`. Se muestra en todas las vistas, también en `/login`. Hasta 480 px: `h-[1.6rem]` y el logotipo principal `h-9`, con el título a 1.15rem, para caber en una línea. |
+En todas las ubicaciones el logotipo va dentro de `.brand-plate`. En el tema claro la pastilla es transparente y no ocupa espacio.
 
 El logotipo de la Secretaría de Economía se usa tal cual: `alt="Secretaría de Economía"`, `width={1920} height={414}` y solo altura fija (`w-auto`), sin recolorear ni recortar el escudo ni el texto.
 
-A 44 px el texto «nodologístico» del logotipo no es legible; el símbolo identifica la marca y el título textual permanece en el `h1`. Para un tamaño menor, solicitar una versión horizontal o un símbolo en SVG.
+A 56 px el símbolo se reconoce con claridad y el texto «nodologístico» se distingue, aunque es pequeño; el título textual permanece en el `h1`. Para un tamaño menor, solicitar una versión horizontal o un símbolo en SVG.
 
 ## Paleta y tokens
 
