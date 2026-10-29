@@ -25,4 +25,6 @@ export const UsersIcon = () => <Icon><circle cx="6" cy="5.5" r="2.5" /><path d="
 export const BriefcaseIcon = () => <Icon><rect x="1.5" y="4.5" width="13" height="9" rx="1.5" /><path d="M5.5 4.5V3a1 1 0 0 1 1-1h3a1 1 0 0 1 1 1v1.5M1.5 8.5h13" /></Icon>
 // Reporte ejecutivo (HU-S7-01).
 export const ChartIcon = () => <Icon><path d="M2 13.5h12M4 11V7.5M7 11V4M10 11V6M13 11V2.5" /></Icon>
+// Bitácora (HU-S7-03).
+export const ClipboardIcon = () => <Icon><rect x="3" y="2.5" width="10" height="11.5" rx="1.5" /><path d="M6 2.5V2h4v.5M5.5 6.5h5M5.5 9h5M5.5 11.5h3" /></Icon>
 export const IdCardIcon = () => <Icon><rect x="1.5" y="3" width="13" height="10" rx="1.5" /><circle cx="5.5" cy="7.5" r="1.5" /><path d="M3.5 11c.4-1 1.1-1.5 2-1.5s1.6.5 2 1.5M9.5 6.5h3M9.5 9h3" /></Icon>
