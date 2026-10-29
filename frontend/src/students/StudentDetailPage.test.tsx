@@ -86,7 +86,7 @@ describe('expediente del alumno HU-S2-03', () => {
     apiMock.mockResolvedValueOnce(Response.json({ data: [detail().data], meta: { current_page: 1, last_page: 1, total: 1 } }))
       .mockResolvedValueOnce(Response.json(detail()))
     renderApp('/students')
-    fireEvent.click(await screen.findByRole('link', { name: 'López García' }))
+    fireEvent.click(await screen.findByRole('link', { name: 'Ver detalle de López García, María Fernanda' }))
     expect(screen.getByLabelText('Ruta actual').textContent).toBe('/students/3')
     expect(await screen.findByRole('heading', { level: 2, name: 'María Fernanda López García' })).toBeInTheDocument()
     const identity = screen.getByRole('region', { name: 'Identidad (uso interno)' })

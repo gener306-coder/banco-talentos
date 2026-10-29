@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Http\Controllers\Concerns\FindsOwnedStudent;
+use App\Http\Requests\ListStudentsRequest;
 use App\Http\Requests\StoreStudentRequest;
 use App\Http\Requests\UpdateStudentIdentityRequest;
 use App\Http\Requests\UpdateStudentProfileRequest;
@@ -17,7 +18,8 @@ use Illuminate\Validation\ValidationException;
 
 /**
  * Padrón estudiantil (HU-S2-02), expediente (HU-S2-03) y baja lógica (HU-S2-04) de la institución de la sesión. Todas las
- * consultas se acotan al institution_id del usuario autenticado; el cliente nunca lo elige.
+ * consultas se acotan al institution_id del usuario autenticado; el cliente nunca lo elige. El padrón admite búsqueda
+ * por matrícula o nombre y filtro por estado (HU-S8-01).
  */
 class StudentController extends Controller
 {
@@ -25,11 +27,27 @@ class StudentController extends Controller
 
     private const PER_PAGE = 50;
 
-    public function index(Request $request): JsonResponse
+    public function index(ListStudentsRequest $request): JsonResponse
     {
+        $status = $request->validated('status');
+        // HU-S8-01 CA-01: cada palabra debe aparecer en la matrícula, los nombres o algún apellido, sin distinguir
+        // mayúsculas; la búsqueda es literal (% y _ no son comodines), como la de Empresas.
+        $words = preg_split('/\s+/u', mb_strtolower(trim((string) $request->validated('q'))), -1, PREG_SPLIT_NO_EMPTY);
+
         $page = Student::query()
             ->where('students.institution_id', $request->user()->institution_id)
+            ->when($status !== null, fn ($query) => $query->where('students.is_active', $status === 'active'))
             ->join('student_identities', 'student_identities.student_id', '=', 'students.id')
+            ->when($words !== [], function ($query) use ($words): void {
+                foreach ($words as $word) {
+                    $pattern = '%'.addcslashes($word, '\\%_').'%';
+                    $query->where(fn ($match) => $match
+                        ->whereRaw('lower(student_identities.enrollment_number) LIKE ?', [$pattern])
+                        ->orWhereRaw('lower(student_identities.given_names) LIKE ?', [$pattern])
+                        ->orWhereRaw('lower(student_identities.first_surname) LIKE ?', [$pattern])
+                        ->orWhereRaw('lower(student_identities.second_surname) LIKE ?', [$pattern]));
+                }
+            })
             ->orderBy('student_identities.first_surname')
             ->orderBy('student_identities.second_surname')
             ->orderBy('student_identities.given_names')

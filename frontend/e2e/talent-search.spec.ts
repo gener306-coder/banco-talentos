@@ -4,6 +4,7 @@ import { expect, test } from '@playwright/test'
 import type { Page } from '@playwright/test'
 import { ADMIN_STATE } from './support/admin'
 import { INSTITUTION_STATE } from './support/institution'
+import { openFromRoster } from './support/students'
 import { createOpportunity, openCompanySession } from './support/company'
 
 test.use({ storageState: ADMIN_STATE })
@@ -19,7 +20,7 @@ async function publishStudent(page: Page, data: { surname: string; enrollment: s
   await register.getByRole('button', { name: 'Registrar alumno', exact: true }).click()
   await expect(register.getByRole('status')).toContainText('Alumno registrado')
   await register.getByRole('button', { name: 'Cerrar', exact: true }).click()
-  await page.getByRole('link', { name: data.surname, exact: true }).click()
+  await openFromRoster(page, data.surname)
 
   const profile = page.getByRole('region', { name: 'Expediente público' })
   await profile.getByLabel('Carrera o programa educativo').fill('Ingeniería en Datos')
