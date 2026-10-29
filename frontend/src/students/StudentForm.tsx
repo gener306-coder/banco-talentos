@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import type { FocusEvent, FormEvent } from 'react'
 import { useApiMutation } from '../lib/useApiRequest'
 import { PendingLabel } from '../ui/forms'
@@ -12,12 +12,12 @@ const ENROLLMENT_PATTERN = /^[A-Za-z0-9][A-Za-z0-9./-]*$/
 const ENROLLMENT_FORMAT = 'La matrícula solo admite letras, números, guion, punto y diagonal, sin espacios.'
 
 type StudentFormProps =
-  | { student?: undefined; onCreated: (student: Student) => void }
+  | { student?: undefined; onCreated: (student: Student) => void; onCompleteProfile: (student: Student) => void }
   | { student: StudentDetail; onUpdated: (student: StudentDetail) => void }
 
 /**
- * Identidad interna del alumno. Sin `student`, da de alta y queda listo para capturar el siguiente
- * (HU-S2-02); con `student`, corrige su matrícula y nombre (HU-S2-03 CA-07).
+ * Identidad interna del alumno. Sin `student`, da de alta (HU-S2-02) y pregunta si completar el expediente del alumno
+ * recién registrado o registrar otro (HU-S8-02); con `student`, corrige su matrícula y nombre (HU-S2-03 CA-07).
  * La institución la asigna el servidor (HU-S2-02 CA-03); el formulario no la envía.
  */
 export function StudentForm(props: StudentFormProps) {
@@ -33,6 +33,12 @@ export function StudentForm(props: StudentFormProps) {
   const mutation = useApiMutation(studentMessages)
   const errors = { ...mutation.failure?.errors, ...localErrors }
   const enrollment = useRef<HTMLInputElement>(null)
+  const completeButton = useRef<HTMLButtonElement>(null)
+
+  // HU-S8-02 CA-04: al registrar, el foco pasa a la acción principal.
+  useEffect(() => {
+    if (created) completeButton.current?.focus()
+  }, [created])
 
   function set(field: keyof typeof emptyStudent, value: string) {
     setValues((current) => ({ ...current, [field]: value }))
@@ -77,8 +83,14 @@ export function StudentForm(props: StudentFormProps) {
       setCreated(student)
       setValues(emptyStudent)
       onCreated(student)
-      enrollment.current?.focus()
     })
+  }
+
+  /** Vuelve al formulario vacío para el siguiente alumno, como antes de HU-S8-02. */
+  function registerAnother() {
+    setCreated(null)
+    // El formulario se monta de nuevo en este render; el foco se mueve en el siguiente cuadro.
+    requestAnimationFrame(() => enrollment.current?.focus())
   }
 
   const describedBy = (field: string, extra?: string) =>
@@ -90,40 +102,52 @@ export function StudentForm(props: StudentFormProps) {
     <section className="institution-account" aria-labelledby="student-form-title">
       <h3 id="student-form-title">{editing ? 'Corregir identidad' : 'Registrar alumno'}</h3>
       <p className="privacy-note" id="student-privacy">La matrícula y el nombre son de uso exclusivo de tu institución y no se mostrarán a las empresas.</p>
-      {created && <p className="institution-success" role="status">
-        Alumno registrado: {fullName(created)}. Puedes registrar el siguiente.
-      </p>}
-      {mutation.failure && mutation.failure.status !== 422 && <InstitutionRequestError failure={mutation.failure} />}
-      <form onSubmit={(event) => { void submit(event) }} aria-busy={mutation.pending} noValidate>
-        <label htmlFor="student-enrollment_number">Matrícula o control interno</label>
-        <input id="student-enrollment_number" ref={enrollment} name="enrollment_number" type="text" autoComplete="off" required maxLength={30}
-          value={values.enrollment_number} disabled={mutation.pending} aria-invalid={Boolean(errors.enrollment_number?.length)}
-          aria-describedby={describedBy('enrollment_number', 'student-privacy')}
-          onBlur={checkEnrollment} onChange={(event) => set('enrollment_number', event.target.value)} />
-        {fieldError('enrollment_number')}
-        <label htmlFor="student-given_names">Nombre(s)</label>
-        <input id="student-given_names" name="given_names" type="text" autoComplete="off" required maxLength={120}
-          value={values.given_names} disabled={mutation.pending} aria-invalid={Boolean(errors.given_names?.length)}
-          aria-describedby={describedBy('given_names')} onChange={(event) => set('given_names', event.target.value)} />
-        {fieldError('given_names')}
-        <label htmlFor="student-first_surname">Primer apellido</label>
-        <input id="student-first_surname" name="first_surname" type="text" autoComplete="off" required maxLength={120}
-          value={values.first_surname} disabled={mutation.pending} aria-invalid={Boolean(errors.first_surname?.length)}
-          aria-describedby={describedBy('first_surname')} onChange={(event) => set('first_surname', event.target.value)} />
-        {fieldError('first_surname')}
-        <label htmlFor="student-second_surname">Segundo apellido (opcional)</label>
-        <input id="student-second_surname" name="second_surname" type="text" autoComplete="off" maxLength={120}
-          value={values.second_surname} disabled={mutation.pending} aria-invalid={Boolean(errors.second_surname?.length)}
-          aria-describedby={describedBy('second_surname')} onChange={(event) => set('second_surname', event.target.value)} />
-        {fieldError('second_surname')}
-        <div className="actions">
-          <button type="submit" disabled={mutation.pending}>
-            {editing
-              ? <PendingLabel pending={mutation.pending} label="Guardar identidad" pendingLabel="Guardando identidad…" />
-              : <PendingLabel pending={mutation.pending} label="Registrar alumno" pendingLabel="Registrando alumno…" />}
-          </button>
-        </div>
-      </form>
+      {created && !props.student
+        ? (
+          <div>
+            <p className="institution-success" role="status">Alumno registrado: {fullName(created)}. ¿Qué quieres hacer ahora?</p>
+            <p>Completa ahora su expediente público, seguro facultativo y CV, o sigue registrando alumnos.</p>
+            <div className="actions">
+              <button type="button" ref={completeButton} onClick={() => props.onCompleteProfile(created)}>Completar expediente</button>
+              <button type="button" className="secondary" onClick={registerAnother}>Registrar otro alumno</button>
+            </div>
+          </div>
+        )
+        : (
+          <>
+            {mutation.failure && mutation.failure.status !== 422 && <InstitutionRequestError failure={mutation.failure} />}
+            <form onSubmit={(event) => { void submit(event) }} aria-busy={mutation.pending} noValidate>
+              <label htmlFor="student-enrollment_number">Matrícula o control interno</label>
+              <input id="student-enrollment_number" ref={enrollment} name="enrollment_number" type="text" autoComplete="off" required maxLength={30}
+                value={values.enrollment_number} disabled={mutation.pending} aria-invalid={Boolean(errors.enrollment_number?.length)}
+                aria-describedby={describedBy('enrollment_number', 'student-privacy')}
+                onBlur={checkEnrollment} onChange={(event) => set('enrollment_number', event.target.value)} />
+              {fieldError('enrollment_number')}
+              <label htmlFor="student-given_names">Nombre(s)</label>
+              <input id="student-given_names" name="given_names" type="text" autoComplete="off" required maxLength={120}
+                value={values.given_names} disabled={mutation.pending} aria-invalid={Boolean(errors.given_names?.length)}
+                aria-describedby={describedBy('given_names')} onChange={(event) => set('given_names', event.target.value)} />
+              {fieldError('given_names')}
+              <label htmlFor="student-first_surname">Primer apellido</label>
+              <input id="student-first_surname" name="first_surname" type="text" autoComplete="off" required maxLength={120}
+                value={values.first_surname} disabled={mutation.pending} aria-invalid={Boolean(errors.first_surname?.length)}
+                aria-describedby={describedBy('first_surname')} onChange={(event) => set('first_surname', event.target.value)} />
+              {fieldError('first_surname')}
+              <label htmlFor="student-second_surname">Segundo apellido (opcional)</label>
+              <input id="student-second_surname" name="second_surname" type="text" autoComplete="off" maxLength={120}
+                value={values.second_surname} disabled={mutation.pending} aria-invalid={Boolean(errors.second_surname?.length)}
+                aria-describedby={describedBy('second_surname')} onChange={(event) => set('second_surname', event.target.value)} />
+              {fieldError('second_surname')}
+              <div className="actions">
+                <button type="submit" disabled={mutation.pending}>
+                  {editing
+                    ? <PendingLabel pending={mutation.pending} label="Guardar identidad" pendingLabel="Guardando identidad…" />
+                    : <PendingLabel pending={mutation.pending} label="Registrar alumno" pendingLabel="Registrando alumno…" />}
+                </button>
+              </div>
+            </form>
+          </>
+        )}
     </section>
   )
 }

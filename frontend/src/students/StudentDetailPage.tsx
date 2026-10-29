@@ -1,5 +1,5 @@
-import { useCallback, useRef, useState } from 'react'
-import { Link, useParams } from 'react-router'
+import { useCallback, useEffect, useRef, useState } from 'react'
+import { Link, useLocation, useParams } from 'react-router'
 import { InstitutionRequestError } from '../institutions/InstitutionLayout'
 import { useApiMutation, useApiRequest } from '../lib/useApiRequest'
 import { ConfirmDialog } from '../ui/ConfirmDialog'
@@ -12,6 +12,9 @@ import { StudentForm } from './StudentForm'
 import { StudentProfileForm } from './StudentProfileForm'
 import { StudentSocialSecuritySection } from './StudentSocialSecuritySection'
 import { StudentStatus } from './StudentStatus'
+
+const isCompleteProfileState = (state: unknown) =>
+  typeof state === 'object' && state !== null && 'completeProfile' in state && state.completeProfile === true
 
 /** Detalle de un alumno propio: identidad interna y expediente público (HU-S2-03), seguro facultativo (HU-S3-02) y estado (HU-S2-04). */
 function StudentDetailView({ id }: { id: string }) {
@@ -27,6 +30,16 @@ function StudentDetailView({ id }: { id: string }) {
   const [confirming, setConfirming] = useState(false)
   // El aviso del estado va junto a su botón, al final de la vista; el de identidad, arriba.
   const [statusNotice, setStatusNotice] = useState<string | null>(null)
+  // HU-S8-02 CA-02: al llegar desde el alta, el foco va al primer campo del expediente público una sola vez.
+  const location = useLocation()
+  const completeProfile = useRef(isCompleteProfileState(location.state))
+  useEffect(() => {
+    if (!data || !completeProfile.current) return
+    completeProfile.current = false
+    const field = document.getElementById('student-profile-program')
+    field?.scrollIntoView?.({ block: 'center' })
+    field?.focus()
+  }, [data])
 
   // Inactivar oculta al alumno del Banco de Talentos: se confirma. Reactivar no tiene consecuencias que confirmar.
   function requestStatusChange() {

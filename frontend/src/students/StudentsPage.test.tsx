@@ -96,7 +96,7 @@ describe('padrón de alumnos HU-S2-02', () => {
     expect(await screen.findByRole('heading', { name: 'Aún no hay alumnos registrados.' })).toBeInTheDocument()
   })
 
-  it('registra un alumno sin enviar la institución, actualiza el padrón y queda listo para el siguiente', async () => {
+  it('registra un alumno sin enviar la institución, actualiza el padrón y permite registrar otro (HU-S8-02 CA-01)', async () => {
     apiMock.mockResolvedValueOnce(Response.json({ data: [], meta: meta(0) }))
       .mockResolvedValueOnce(Response.json({ data: row(9, 'A-009', 'Eva', 'Báez', 'Soto') }, { status: 201 }))
       .mockResolvedValueOnce(Response.json({ data: [row(9, 'A-009', 'Eva', 'Báez', 'Soto')], meta: meta(1) }))
@@ -105,12 +105,44 @@ describe('padrón de alumnos HU-S2-02', () => {
     expect(within(dialog).getByLabelText('Matrícula o control interno')).toHaveAccessibleDescription(/uso exclusivo de tu institución/)
     fill(dialog, { 'Matrícula o control interno': ' A-009 ', 'Nombre(s)': 'Eva', 'Primer apellido': 'Báez', 'Segundo apellido (opcional)': 'Soto' })
     fireEvent.click(within(dialog).getByRole('button', { name: 'Registrar alumno' }))
-    expect(await within(dialog).findByText('Alumno registrado: Eva Báez Soto. Puedes registrar el siguiente.')).toHaveAttribute('role', 'status')
+    expect(await within(dialog).findByText('Alumno registrado: Eva Báez Soto. ¿Qué quieres hacer ahora?')).toHaveAttribute('role', 'status')
     expect(JSON.parse(writes()[0][1]?.body as string)).toEqual({ enrollment_number: 'A-009', given_names: 'Eva', first_surname: 'Báez', second_surname: 'Soto' })
-    expect(within(dialog).getByLabelText('Matrícula o control interno')).toHaveValue('')
-    expect(within(dialog).getByLabelText('Matrícula o control interno')).toHaveFocus()
+    // HU-S8-02 CA-04: la pregunta sustituye al formulario y el foco va a la acción principal.
+    await waitFor(() => expect(within(dialog).getByRole('button', { name: 'Completar expediente' })).toHaveFocus())
+    expect(within(dialog).queryByLabelText('Matrícula o control interno')).not.toBeInTheDocument()
     await waitFor(() => expect(apiMock).toHaveBeenCalledTimes(3))
     expect(await screen.findByText('A-009')).toBeInTheDocument()
+
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Registrar otro alumno' }))
+    expect(within(dialog).getByLabelText('Matrícula o control interno')).toHaveValue('')
+    await waitFor(() => expect(within(dialog).getByLabelText('Matrícula o control interno')).toHaveFocus())
+    expect(within(dialog).queryByRole('status')).not.toBeInTheDocument()
+    expect(screen.getByLabelText('Ruta actual').textContent).toBe('/students')
+  })
+
+  it('completa el expediente del alumno recién registrado con el foco en «Expediente público» (HU-S8-02 CA-02, CA-03)', async () => {
+    const created = row(9, 'A-009', 'Eva', 'Báez', 'Soto')
+    const detail = { ...created, profile: { program: null, period_type: null, period_number: null, dual_available: null, state_code: null,
+      municipality_code: null, municipality: null, pending_municipality: null, can_relocate: null } }
+    apiMock.mockImplementation(async (path) => {
+      const url = String(path)
+      if (url === '/api/students') return Response.json({ data: created }, { status: 201 })
+      if (url.startsWith('/api/students?')) return Response.json({ data: [], meta: meta(0) })
+      if (url === '/api/students/9') return Response.json({ data: detail })
+      if (url === '/api/students/9/social-security') return Response.json({ data: { nss: null, document: null } })
+      return new Response(null, { status: 404 })
+    })
+    renderApp()
+    const dialog = await openForm()
+    fill(dialog, { 'Matrícula o control interno': 'A-009', 'Nombre(s)': 'Eva', 'Primer apellido': 'Báez' })
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Registrar alumno' }))
+    fireEvent.click(await within(dialog).findByRole('button', { name: 'Completar expediente' }))
+
+    expect(screen.getByLabelText('Ruta actual').textContent).toBe('/students/9')
+    expect(await screen.findByRole('heading', { level: 2, name: 'Eva Báez Soto' })).toBeInTheDocument()
+    expect(screen.queryByRole('dialog', { name: 'Registrar alumno' })).not.toBeInTheDocument()
+    const profile = screen.getByRole('region', { name: 'Expediente público' })
+    await waitFor(() => expect(within(profile).getByLabelText('Carrera o programa educativo')).toHaveFocus())
   })
 
   it('valida los campos obligatorios y el formato de la matrícula sin enviar', async () => {

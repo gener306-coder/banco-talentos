@@ -55,7 +55,7 @@ Sprint vigente desde el 29 de octubre de 2026. Sprint anterior: [sprint-7.md](sp
 
 ## HU-S8-02 — Continuar con el expediente después de registrar un alumno
 
-**Estado:** Pendiente  
+**Estado:** Completada (29 de octubre de 2026)  
 **Diseño técnico y verificación:** `docs/HU-S8-02.md`  
 **Story Points:** 3  
 **Rol:** `INSTITUTION`  
