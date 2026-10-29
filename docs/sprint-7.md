@@ -16,7 +16,7 @@ Sprint vigente desde el 28 de octubre de 2026. Sprint anterior: [sprint-6.md](sp
 1. **HU-S7-01** Reporte ejecutivo del programa de Educación Dual (`ADMIN` y `SECRETARY`).
 2. **HU-S7-02** Exportación en CSV del reporte ejecutivo y de las bandejas institucionales.
 3. **HU-S7-03** Bitácora consultable de actividad administrativa y de vinculación (`ADMIN`).
-4. **T-S7-01** Actualización integral de `Banco_de_Talentos_Documento_General.md` y `README.md`.
+4. **T-S7-01** Actualización integral de `Banco_de_Talentos_Documento_General.md` y `README.md`. **Completada** (28 de octubre de 2026): versión actualizada en [`docs/Banco_de_Talentos_Documento_General.md`](Banco_de_Talentos_Documento_General.md).
 
 ---
 
