@@ -4,7 +4,7 @@ Plataforma web que vincula instituciones educativas, empresas y la Secretaría d
 
 La visión completa del proyecto, su arquitectura, el modelo de datos y las diferencias con la propuesta original están en el [Documento General](docs/Banco_de_Talentos_Documento_General.md).
 
-Sprint vigente: [Sprint 8](docs/sprint-8.md), en curso. Sprint anterior: [Sprint 7](docs/sprint-7.md), completo. Historias construidas (cada una con su diseño técnico en `docs/HU-SN-0X.md`):
+Sprint vigente: [Sprint 8](docs/sprint-8.md), completo. Sprint anterior: [Sprint 7](docs/sprint-7.md), completo. Historias construidas (cada una con su diseño técnico en `docs/HU-SN-0X.md`):
 
 | Sprint | Historias |
 |---|---|
@@ -15,14 +15,14 @@ Sprint vigente: [Sprint 8](docs/sprint-8.md), en curso. Sprint anterior: [Sprint
 | [5](docs/sprint-5.md) | Indicadores del inicio; Oportunidades Duales y su baja lógica; solicitud de vinculación directa; bandeja de la empresa |
 | [6](docs/sprint-6.md) | Bandeja institucional; respuesta `ACEPTADA`/`RECHAZADA`; indicadores de vinculación; inactivación y restablecimiento de cuentas de Secretaría y empresa |
 | [7](docs/sprint-7.md) | Reporte ejecutivo; exportación CSV; bitácora de trazabilidad; actualización del Documento General |
-| [8](docs/sprint-8.md) | Búsqueda y filtrado del padrón de alumnos; completar el expediente justo después de registrar (en curso) |
+| [8](docs/sprint-8.md) | Búsqueda y filtrado del padrón de alumnos; completar el expediente justo después de registrar; modo oscuro con el logotipo para fondo oscuro |
 
 No hay registro público ni recuperación de contraseña iniciada por la propia cuenta.
 
 ## Stack y estructura
 
 - Laravel 13 / PHP 8.4, Sanctum 4 con sesiones y CSRF, PostgreSQL 17 + PostGIS 3.5.
-- React 19 / TypeScript 5.9 / Vite 8 sobre Node 24; Tailwind CSS 4 con los tokens de marca de [docs/design/identidad-visual.md](docs/design/identidad-visual.md). Solo tema claro; el modo oscuro está preparado pero no activado (ver «Modo oscuro» en ese documento).
+- React 19 / TypeScript 5.9 / Vite 8 sobre Node 24; Tailwind CSS 4 con los tokens de marca de [docs/design/identidad-visual.md](docs/design/identidad-visual.md), con temas claro y oscuro. El oscuro sigue la preferencia del sistema y se puede fijar desde el menú de cuenta.
 - Pest, Vitest + React Testing Library y Playwright/Chromium.
 
 ```text

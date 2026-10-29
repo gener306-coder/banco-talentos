@@ -15,14 +15,14 @@ Existe una única variante del logotipo, más el logotipo institucional de la Se
 | Archivo | URL en el navegador | Uso |
 |---|---|---|
 | `frontend/public/brand/logo.png` | `/brand/logo.png` | Versión a color, para fondos claros (blanco o gris claro) |
-| `frontend/public/brand/logob.png` | `/brand/logob.png` | Versión blanca para fondo oscuro; se usará cuando se active el modo oscuro (ver «Modo oscuro») |
+| `frontend/public/brand/logob.png` | `/brand/logob.png` | Versión blanca para fondo oscuro, que se muestra en el tema oscuro (ver «Modo oscuro») |
 | `frontend/public/brand/sec-economia.png` | `/brand/sec-economia.png` | Coemblema institucional, horizontal (1920 × 414 px, fondo transparente) |
 
 Versión entregada el 29 de octubre de 2026, de mejor calidad que la anterior. Las dos variantes del logotipo principal son PNG con fondo transparente de **404 × 480 px**:
 - se recortaron con la misma caja (el margen transparente común más 10 px), para que ocupen exactamente el mismo espacio y se puedan intercambiar sin mover nada;
 - se redujeron desde 1102 × 1427 px, lo que da nitidez de sobra para 3× en el login y en el encabezado, con unos 130 KB cada una.
 
-No se alteró el dibujo ni los colores. Sin modo oscuro activo, el logotipo a color no debe ir sobre fondos oscuros ni sobre el color primario vino.
+No se alteró el dibujo ni los colores. El logotipo a color no debe ir sobre fondos oscuros ni sobre el color primario vino; para eso está la versión blanca.
 
 Mantener la proporción y los colores originales; no recolorear, deformar ni recortar el dibujo. Fijar sólo la altura (`h-*` con `w-auto`), declarar `width={404} height={480}` para reservar el espacio y usar `alt="Nodologístico"`.
 
@@ -34,7 +34,7 @@ Ubicaciones actuales:
 | Parte superior del formulario de login | `pages/LoginPage.tsx` | `h-36` (144 px), centrado. |
 | Secretaría de Economía, extremo derecho del encabezado general | `App.tsx` (`.app-bar-partner`) | `h-11` (44 px), centrado verticalmente con el logotipo principal y separado del título por un filete `neutral-200`. Se muestra en todas las vistas, también en `/login`. Hasta 480 px: `h-[1.6rem]`, con el título a 1.15rem. |
 
-En todas las ubicaciones el logotipo va dentro de `.brand-plate`. En el tema claro la pastilla es transparente y no ocupa espacio.
+Las dos ubicaciones del logotipo de Nodologístico usan `BrandLogo`, que elige la versión según el tema.
 
 El logotipo de la Secretaría de Economía se usa tal cual: `alt="Secretaría de Economía"`, `width={1920} height={414}` y solo altura fija (`w-auto`), sin recolorear ni recortar el escudo ni el texto.
 
@@ -110,24 +110,20 @@ Tokens añadidos con el modo oscuro. En el tema claro son alias de los anteriore
 
 ## Modo oscuro
 
-**Estado: preparado, no activado** (28 de octubre de 2026). Se implementó y revisó completo, pero el responsable decidió mantener la aplicación solo en claro hasta contar con logotipos aprobados para fondo oscuro. La aplicación se muestra en claro aunque el sistema prefiera el oscuro (`e2e/theme.spec.ts`).
+**Estado: activo** desde el 29 de octubre de 2026 (HU-S8-03). Se preparó en el Sprint 6 y quedó sin activar a falta de logotipos para fondo oscuro; se activó cuando el responsable entregó `logob.png`.
 
-Queda listo y protegido por `src/ui/tokens.test.ts`:
-- el bloque de tokens oscuros;
-- los tokens `--text-strong`, `--accent-fill` y `--logo-plate`;
-- la pastilla `.brand-plate`, transparente en claro;
-- las reglas de color del encabezado basadas en tokens.
+**Activación.**
+- Sigue la preferencia del sistema (`prefers-color-scheme`).
+- El menú de cuenta ofrece **Tema: Sistema / Claro / Oscuro**, guardado solo en el navegador (`localStorage['bt-theme']`).
+- El tema se expresa como `data-theme="light" | "dark"` en `<html>`. El script de `index.html` lo fija antes del primer pintado, así que no hay destello claro.
+- `watchTheme()` (`src/ui/theme.ts`, llamado en `main.tsx`) lo mantiene al día si cambia el sistema o la elección en otra pestaña.
+
+**Pruebas que lo protegen:**
+- `src/ui/tokens.test.ts`: los dos bloques definen los mismos tokens, y el oscuro cumple los contrastes de la tabla.
+- `src/ui/theme.test.ts`: la preferencia, su persistencia y el seguimiento del sistema.
+- `e2e/theme.spec.ts`: el primer pintado, el selector y el logotipo de cada tema.
 
 Todo token nuevo debe definirse también en el bloque oscuro y cumplir el contraste.
-
-**Para activarlo:**
-1. Recuperar la activación del commit `0ac5ccc` («modo oscuro alineado a la identidad visual»): `src/ui/theme.ts` y sus pruebas, el script previo al pintado de `index.html`, `watchTheme()` en `main.tsx`, el selector «Tema» del menú de cuenta (`AccountMenu.tsx`, con sus estilos `.account-theme` y su prueba en `SessionPage.test.tsx`) y la versión de `e2e/theme.spec.ts` que comprueba el tema oscuro.
-2. Con logotipos oficiales para fondo oscuro, mostrarlos cuando el tema activo sea oscuro y retirar la pastilla. Colores del encabezado oscuro en reposo y sobre una tarjeta: `#1E1C21` y `#211F24`. Se recomiendan PNG o SVG con fondo transparente, no un fondo sólido. La variante de la Secretaría de Economía debe solicitarse a la propia Secretaría, porque incluye el Escudo Nacional.
-3. Revisar de nuevo las capturas de las vistas en ambos temas.
-
-Diseño aprobado para cuando se active:
-
-**Activación.** Sigue la preferencia del sistema (`prefers-color-scheme`) y el menú de cuenta ofrece **Tema: Sistema / Claro / Oscuro**, guardado solo en el navegador (`localStorage['bt-theme']`). El tema se expresa como `data-theme="light" | "dark"` en `<html>` y se fija antes del primer pintado.
 
 **Paleta.** El bloque `:root[data-theme='dark']` de `index.css`, que termina en `/* Fin de los tokens del tema oscuro. */`, redefine los mismos tokens con `color-scheme: dark`, así que los controles nativos también se oscurecen. Contrastes calculados con la fórmula WCAG:
 
@@ -144,13 +140,17 @@ Diseño aprobado para cuando se active:
 | `--danger-*` | `#f2a79b` / `#3a1e1b` / `#d9705f` | 7.8:1 |
 | `--success-*` | `#8fd3a6` / `#183324` / `#4f9c6a` | 7.8:1 |
 | `--status-off-*` | `#e0cdb0` / `#362e24` | 8.6:1 |
-| `--logo-plate` | `#f1f0f3` | vino del logotipo 7.2:1, guinda de la Secretaría 10.6:1 |
 
 **Vino aclarado.** `#E07A8A` es un color definido para el proyecto, no muestreado. Se usa solo como texto: títulos, enlaces, «Banco de Talentos» y bordes de botones. Las acciones primarias conservan el vino de marca `#991B30` con texto blanco y un filete `#E07A8A` que las separa del fondo oscuro.
 
 **Encabezado.** Gris oscuro translúcido con el mismo difuminado (`--glass` sobre la superficie oscura), «Educación Dual» en blanco (`--text-strong`) y «Banco de Talentos» en vino aclarado.
 
-**Logotipos.** No hay variantes para fondo oscuro. Sobre el gris oscuro, sus colores caerían a 1.2–1.7:1 (guinda de la Secretaría 1.2:1, vino y grafito de Nodologístico 1.7:1). Por eso cada logotipo se muestra tal cual, sin recolorear, sobre una pastilla clara redondeada ajustada a su tamaño, de modo que sigue sobre un fondo claro como exige la regla de arriba. Es una solución provisional que el responsable consideró visualmente insuficiente, y por eso el modo oscuro no se activó. Las variantes para fondo oscuro que aprueben los dueños de cada marca sustituirán a las pastillas sin tocar los tokens.
+**Logotipos.**
+- **Nodologístico:** `BrandLogo` (`src/ui/BrandLogo.tsx`) muestra `logo.png` en claro y `logob.png` (versión blanca) en oscuro.
+  - Elige la imagen según el `data-theme` activo (`useResolvedTheme()` observa el atributo) y cambia al instante al elegir otro tema.
+  - Las dos variantes miden lo mismo (404 × 480 px), así que el cambio no mueve nada.
+  - Ya no hay pastilla: la versión blanca se ve directamente sobre el gris oscuro.
+- **Secretaría de Economía:** se usa tal cual en ambos temas, por decisión del responsable. Sobre el gris oscuro, «Economía» en guinda y el escudo dorado se distinguen, pero con poco contraste, y el subtítulo negro «Secretaría de Economía» apenas se ve. Una variante para fondo oscuro tendría que pedirse a la Secretaría, porque incluye el Escudo Nacional.
 
 **Errores frente al vino.** La regla del tema claro se mantiene: los avisos de error se distinguen por su fondo, su borde izquierdo y `role="alert"`, no solo por el color del texto.
 

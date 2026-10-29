@@ -103,9 +103,4 @@ describe('tema oscuro', () => {
     expect(contrast(dark.get('--accent')!, dark.get('--surface')!)).toBeGreaterThanOrEqual(3)
   })
 
-  it('los logotipos quedan sobre una pastilla clara en oscuro y sin pastilla en claro', () => {
-    expect(light.get('--logo-plate')).toBe('transparent')
-    // El vino del logotipo sobre la pastilla mantiene el contraste que tiene sobre blanco.
-    expect(contrast('#991B30', dark.get('--logo-plate')!)).toBeGreaterThanOrEqual(4.5)
-  })
 })

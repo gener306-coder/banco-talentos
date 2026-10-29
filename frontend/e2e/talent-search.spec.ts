@@ -129,7 +129,9 @@ test('HU-S4-05, HU-S5-04, HU-S5-05, HU-S6-01, HU-S6-02 y HU-S6-03: una empresa e
       // HU-S6-03 CA-02: el inicio avisa de las solicitudes pendientes y enlaza a la bandeja.
       await expect(institution.getByRole('region', { name: 'Indicadores' })).toContainText(/solicitud(es)? de vinculación pendientes? de respuesta/)
       await institution.getByRole('link', { name: 'Revisar solicitudes' }).click()
+      const pending = institution.waitForResponse((response) => response.url().includes('/api/institution/linkage-requests?') && response.url().includes('status=PENDIENTE_INSTITUCION'))
       await institution.getByLabel('Estado').selectOption('PENDIENTE_INSTITUCION')
+      await pending
       const received = institution.getByRole('table', { name: 'Solicitudes de vinculación recibidas' }).getByRole('row', { name: new RegExp(opportunityTitle) })
       await expect(received.getByRole('rowheader')).toContainText(`${student.surname}, Valeria Secreta`)
       await expect(received).toContainText(student.enrollment)
@@ -180,7 +182,9 @@ test('HU-S4-05, HU-S5-04, HU-S5-05, HU-S6-01, HU-S6-02 y HU-S6-03: una empresa e
     try {
       const institution = await answering.newPage()
       await institution.goto('/institution/linkage-requests')
+      const pending = institution.waitForResponse((response) => response.url().includes('/api/institution/linkage-requests?') && response.url().includes('status=PENDIENTE_INSTITUCION'))
       await institution.getByLabel('Estado').selectOption('PENDIENTE_INSTITUCION')
+      await pending
       await institution.getByRole('table', { name: 'Solicitudes de vinculación recibidas' }).getByRole('row', { name: new RegExp(opportunityTitle) })
         .getByRole('link', { name: /Ver la solicitud/ }).click()
       const decision = institution.getByRole('region', { name: 'Responder solicitud' })
@@ -212,7 +216,10 @@ test('HU-S4-05, HU-S5-04, HU-S5-05, HU-S6-01, HU-S6-02 y HU-S6-03: una empresa e
 
     // CA-04: la empresa ve la respuesta y ya no puede cancelarla.
     await company.goto('/linkage-requests')
+    // Se espera la respuesta filtrada: antes de que llegue, la tabla aún muestra la solicitud cancelada con el mismo título.
+    const filtered = company.waitForResponse((response) => response.url().includes('/api/linkage-requests?') && response.url().includes('status=ACEPTADA'))
     await company.getByLabel('Estado').selectOption('ACEPTADA')
+    await filtered
     const acceptedRow = company.getByRole('table', { name: 'Solicitudes de vinculación enviadas' }).getByRole('row', { name: new RegExp(opportunityTitle) })
     await expect(acceptedRow).toContainText('«Coordinemos la entrevista con el área dual.»')
     await expect(acceptedRow).toContainText('Respondida el')

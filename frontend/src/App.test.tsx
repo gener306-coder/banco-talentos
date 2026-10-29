@@ -361,6 +361,26 @@ describe('identidad visual', () => {
     expect(header).toContainElement(screen.getByRole('heading', { level: 1, name: 'Banco de Talentos' }))
   })
 
+  it('usa el logotipo blanco en tema oscuro y cambia al cambiar el tema (HU-S8-03 CA-02)', async () => {
+    fetchMock.mockResolvedValueOnce(Response.json({ user }))
+    document.documentElement.dataset.theme = 'dark'
+    try {
+      renderApp('/')
+      await screen.findByRole('heading', { name: /^Hola, / })
+      const logo = screen.getByRole('img', { name: 'Nodologístico' })
+      expect(logo).toHaveAttribute('src', '/brand/logob.png')
+      expect(logo).toHaveAttribute('width', '404')
+      expect(logo).toHaveAttribute('height', '480')
+      // La Secretaría de Economía se mantiene igual en ambos temas (CA-03).
+      expect(screen.getByRole('img', { name: 'Secretaría de Economía' })).toHaveAttribute('src', '/brand/sec-economia.png')
+
+      document.documentElement.dataset.theme = 'light'
+      await waitFor(() => expect(screen.getByRole('img', { name: 'Nodologístico' })).toHaveAttribute('src', '/brand/logo.png'))
+    } finally {
+      delete document.documentElement.dataset.theme
+    }
+  })
+
   it.each(['/', '/login'])('muestra el logotipo de la Secretaría de Economía en el encabezado de %s', async (path) => {
     fetchMock.mockResolvedValueOnce(path === '/' ? Response.json({ user }) : new Response(null, { status: 401 }))
     renderApp(path)

@@ -3,10 +3,16 @@ import { useLocation } from 'react-router'
 import { roleLabels } from '../auth/api'
 import { useAuth } from '../auth/useAuth'
 import { initialsOf, organizationOf } from '../auth/user'
+import { useThemePreference } from './theme'
+import type { ThemePreference } from './theme'
+
+const THEMES: readonly { value: ThemePreference; label: string }[] = [
+  { value: 'system', label: 'Sistema' }, { value: 'light', label: 'Claro' }, { value: 'dark', label: 'Oscuro' },
+]
 
 /**
- * Menú de cuenta del encabezado (tarea transversal «Inicio por rol»): identidad de la sesión y «Cerrar sesión»,
- * disponibles en todas las vistas. El panel solo se monta mientras está abierto; se cierra con Esc, con un clic fuera
+ * Menú de cuenta del encabezado (tarea transversal «Inicio por rol»): identidad de la sesión, el tema (modo oscuro) y
+ * «Cerrar sesión», disponibles en todas las vistas. El panel solo se monta mientras está abierto; se cierra con Esc, con un clic fuera
  * o al navegar, y devuelve el foco al botón.
  */
 export function AccountMenu() {
@@ -16,6 +22,7 @@ export function AccountMenu() {
   const trigger = useRef<HTMLButtonElement>(null)
   const panelId = useId()
   const { pathname } = useLocation()
+  const [theme, setTheme] = useThemePreference()
 
   // Navegar cierra el menú (por ejemplo, tras cerrar sesión o al seguir un enlace).
   const [lastPath, setLastPath] = useState(pathname)
@@ -57,6 +64,16 @@ export function AccountMenu() {
           <p className="account-name">{user.name}</p>
           <p className="account-detail">{user.email}</p>
           <p className="account-detail">{roleLabels[user.role]}{organization && ` · ${organization}`}</p>
+          <fieldset className="choice-group inline account-theme">
+            <legend>Tema</legend>
+            {THEMES.map((option) => (
+              <div key={option.value}>
+                <input id={`${panelId}-theme-${option.value}`} type="radio" name={`${panelId}-theme`} value={option.value}
+                  checked={theme === option.value} onChange={() => setTheme(option.value)} />
+                <label htmlFor={`${panelId}-theme-${option.value}`}>{option.label}</label>
+              </div>
+            ))}
+          </fieldset>
           {message && <p className="notice" role="alert">{message}</p>}
           <button type="button" className="secondary" disabled={pending} onClick={() => { void signOut() }}>
             {pending ? 'Cerrando sesión…' : 'Cerrar sesión'}
