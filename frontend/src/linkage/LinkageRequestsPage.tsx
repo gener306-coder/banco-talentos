@@ -49,8 +49,8 @@ export function LinkageRequestsPage() {
       </nav>
       <h2 id="linkage-requests-title">Solicitudes de vinculación</h2>
       <p>Solicitudes que tu empresa envió a las instituciones educativas. La coordinación posterior ocurre fuera de la plataforma con el contacto de cada institución.</p>
-      <form className="linkage-filter" role="search" aria-label="Filtrar solicitudes" onSubmit={(event) => event.preventDefault()}>
-        <div>
+      <form className="table-search" role="search" aria-label="Filtrar solicitudes" onSubmit={(event) => event.preventDefault()}>
+        <div className="table-search-filter">
           <label htmlFor="linkage-status-filter">Estado</label>
           <select id="linkage-status-filter" value={status}
             onChange={(event) => { setPage(1); setNotice(null); setStatus(event.target.value as Status | '') }}>

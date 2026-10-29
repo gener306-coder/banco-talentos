@@ -45,8 +45,8 @@ export function AuditEventsPage() {
       </nav>
       <h2 id="audit-events-title">Bitácora</h2>
       <p>Eventos registrados en el Banco de Talentos y la cuenta que los realizó. No incluye contraseñas ni datos personales de alumnos.</p>
-      <form className="linkage-filter" role="search" aria-label="Filtrar eventos" onSubmit={(event) => event.preventDefault()}>
-        <div>
+      <form className="table-search" role="search" aria-label="Filtrar eventos" onSubmit={(event) => event.preventDefault()}>
+        <div className="table-search-filter">
           <label htmlFor="audit-type-filter">Tipo de evento</label>
           <select id="audit-type-filter" value={type} onChange={(event) => { setPage(1); setType(event.target.value as AuditEventType | '') }}>
             <option value="">Todos los eventos</option>

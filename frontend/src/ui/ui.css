@@ -352,13 +352,23 @@ textarea[aria-invalid='true'] { border-color: var(--danger-border); }
 .csv-download .notice { margin: 0; }
 }
 
-/* Búsqueda sobre una tabla y fila que abre el detalle en las tablas genéricas (padrón de alumnos, HU-S8-01). */
+/*
+ * Barra de búsqueda y filtros sobre un listado (T-S8-02): una sola fila alineada a la izquierda que se parte en
+ * pantallas estrechas. La regla global `form` de index.css apila en columna; aquí la dirección se fija en fila.
+ * `.list-toolbar` añade acciones del listado (por ejemplo «Descargar CSV») alineadas a la derecha.
+ */
 @layer components {
-.table-search { display: flex; flex-wrap: wrap; gap: 0.5rem 0.75rem; align-items: flex-end; margin: 0 0 1rem; max-width: 46rem; }
-.table-search > div { flex: 1 1 16rem; }
-.table-search > .table-search-filter { flex: 0 1 11rem; }
-.table-search input, .table-search select { width: 100%; margin-bottom: 0; }
-.table-search button { margin: 0; }
+.table-search { display: flex; flex-direction: row; flex-wrap: wrap; gap: 0.5rem 0.75rem; align-items: flex-end; margin: 0 0 1rem; }
+.table-search > .table-search-field { flex: 1 1 18rem; max-width: 28rem; }
+.table-search > .table-search-filter { flex: 0 1 14rem; }
+.table-search label { display: block; margin-bottom: 0.3rem; }
+.table-search input, .table-search select { width: 100%; margin: 0; }
+.table-search button { flex: none; margin: 0; }
+.list-toolbar { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 0.75rem 1rem; margin: 0 0 1rem; }
+.list-toolbar > .table-search, .list-toolbar > .csv-download { margin: 0; }
+@media (max-width: 40rem) {
+  .table-search > .table-search-field, .table-search > .table-search-filter { flex-basis: 100%; max-width: none; }
+}
 .data-table tbody tr[data-href] { cursor: pointer; }
 .data-table tbody tr[data-href]:hover > * { background: var(--surface-muted); }
 .data-table tbody tr:hover .pill-link .icon { transform: translateX(2px); }
