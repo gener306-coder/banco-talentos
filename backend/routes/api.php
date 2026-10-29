@@ -13,6 +13,7 @@ use App\Http\Controllers\InstitutionSetupLinkController;
 use App\Http\Controllers\LinkageRequestController;
 use App\Http\Controllers\MunicipalityController;
 use App\Http\Controllers\OpportunityController;
+use App\Http\Controllers\ReportController;
 use App\Http\Controllers\SecretaryAccountController;
 use App\Http\Controllers\SkillController;
 use App\Http\Controllers\StudentController;
@@ -28,6 +29,10 @@ Route::get('/me', [AuthController::class, 'me'])
 // Indicadores del inicio por rol (HU-S5-01): solo los de la cuenta y la organización de la sesión.
 Route::get('/dashboard', DashboardController::class)
     ->middleware(['auth:sanctum', 'active', 'role:'.implode(',', UserRole::values())]);
+
+// Reporte ejecutivo del programa de Educación Dual (HU-S7-01): solo conteos agregados para ADMIN y SECRETARY.
+Route::get('/reports/dual-program', [ReportController::class, 'dualProgram'])
+    ->middleware(['auth:sanctum', 'active', 'role:'.UserRole::ADMIN->value.','.UserRole::SECRETARY->value]);
 
 Route::bind('institution', function (string $value): Institution {
     // Evita enviar identificadores malformados o fuera de rango a PostgreSQL.
