@@ -34,6 +34,7 @@ import { StudentCvPage } from './students/StudentCvPage'
 import { StudentDetailPage } from './students/StudentDetailPage'
 import { StudentsPage } from './students/StudentsPage'
 import { AccountMenu } from './ui/AccountMenu'
+import { BrandLogo } from './ui/BrandLogo'
 import { prefersReducedMotion } from './ui/modal'
 
 function AuthRoutes() {
@@ -175,20 +176,15 @@ function App() {
         <div className={`app-bar-inner${wide ? ' wide' : ''}`}>
           {/* En /login el logotipo se muestra en el formulario; se evita duplicarlo. */}
           {pathname !== '/login' && (
-            <span className="brand-plate shrink-0">
-              <img src="/brand/logo.png" alt="Nodologístico" width={404} height={480} className="h-11 w-auto min-[481px]:h-14" />
-            </span>
+            <BrandLogo className="h-11 w-auto shrink-0 min-[481px]:h-14" />
           )}
           <div>
             <p className="eyebrow">Educación Dual</p>
             <h1>Banco de Talentos</h1>
           </div>
-          {/* Coemblema institucional: a la derecha, con la misma altura que el logotipo principal. Los logotipos van en
-              una pastilla que solo se ve en el tema oscuro, para seguir sobre fondo claro. */}
+          {/* Coemblema institucional a la derecha. Se usa tal cual en ambos temas, por decisión del responsable (HU-S8-03). */}
           <span className="app-bar-partner">
-            <span className="brand-plate">
-              <img src="/brand/sec-economia.png" alt="Secretaría de Economía" width={1920} height={414} className="h-[1.6rem] w-auto min-[481px]:h-11" />
-            </span>
+            <img src="/brand/sec-economia.png" alt="Secretaría de Economía" width={1920} height={414} className="h-[1.6rem] w-auto min-[481px]:h-11" />
           </span>
           {/* Menú de cuenta: identidad y «Cerrar sesión» en todas las vistas con sesión. */}
           {withSession && <AccountMenu />}

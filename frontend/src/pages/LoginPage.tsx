@@ -3,6 +3,7 @@ import type { FormEvent } from 'react'
 import { Navigate } from 'react-router'
 import { useAuth } from '../auth/useAuth'
 import { PendingLabel } from '../ui/forms'
+import { BrandLogo } from '../ui/BrandLogo'
 
 export function LoginPage() {
   const { user, signIn, pending, message } = useAuth()
@@ -23,9 +24,7 @@ export function LoginPage() {
 
   return (
     <section className="card" aria-labelledby="login-title">
-      <div className="brand-plate mx-auto mb-6 w-fit">
-        <img src="/brand/logo.png" alt="Nodologístico" width={404} height={480} className="block h-36 w-auto" />
-      </div>
+      <BrandLogo className="mx-auto mb-6 block h-36 w-auto" />
       <h2 id="login-title">Iniciar sesión</h2>
       <p>Ingresa con tu cuenta del sistema.</p>
       {message && <p className="notice" role="alert">{message}</p>}

@@ -40,17 +40,14 @@
   --success-border: #327a4a;
   --status-off-text: #5d4b36;
   --status-off-surface: #f2ebdf;
-  /* Pastilla de los logotipos: en claro no se ve; en oscuro los mantiene sobre un fondo claro. */
-  --logo-plate: transparent;
-  --logo-plate-padding: 0;
   --shadow: #000;
 }
 /* Fin de los tokens semánticos. */
 
 /*
- * Tema oscuro (docs/design/identidad-visual.md, «Modo oscuro»): PREPARADO, NO ACTIVADO. Nada en la aplicación fija
- * data-theme="dark", así que este bloque no se aplica; se mantiene al día para activarlo cuando haya logotipos para
- * fondo oscuro. Mismos tokens que el tema claro, con contraste mínimo de 4.5:1 en texto (src/ui/tokens.test.ts).
+ * Tema oscuro (docs/design/identidad-visual.md, «Modo oscuro»): los mismos tokens con valores para fondo oscuro,
+ * con contraste mínimo de 4.5:1 en texto (lo verifica src/ui/tokens.test.ts). El vino aclarado #E07A8A es un color
+ * del proyecto para textos, enlaces y títulos; los rellenos conservan el vino de marca con texto blanco.
  */
 :root[data-theme='dark'] {
   color-scheme: dark;
@@ -76,8 +73,6 @@
   --success-border: #4f9c6a;
   --status-off-text: #e0cdb0;
   --status-off-surface: #362e24;
-  --logo-plate: #f1f0f3;
-  --logo-plate-padding: 0.25rem 0.4rem;
   --shadow: #000;
 }
 /* Fin de los tokens del tema oscuro. */

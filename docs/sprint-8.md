@@ -4,7 +4,7 @@ Sprint vigente desde el 29 de octubre de 2026. Sprint anterior: [sprint-7.md](sp
 
 **Objetivo del Sprint:** afinar la usabilidad y el rendimiento del sistema antes del despliegue, empezando por el módulo de alumnos. La institución podrá encontrar a cualquier alumno por matrícula o nombre, con una tabla coherente con el resto del sistema, y completar el expediente justo después de registrarlo. Se aplican además las recomendaciones de la simulación de carga ([simulacion-carga.md](simulacion-carga.md)).
 
-**Story Points:** 8 (HU-S8-01 y HU-S8-02), más una tarea técnica opcional de 2.
+**Story Points:** 13 (HU-S8-01 a HU-S8-03; HU-S8-03 se aprobó durante el Sprint), más tareas técnicas: T-S8-01 (opcional, 2) y las afinaciones T-S8-02 y T-S8-03.
 
 ## Fuera de alcance
 
@@ -17,6 +17,7 @@ Sprint vigente desde el 29 de octubre de 2026. Sprint anterior: [sprint-7.md](sp
 1. **HU-S8-01** Búsqueda y filtrado del padrón de alumnos.
 2. **HU-S8-02** Continuar con el expediente después de registrar un alumno.
 3. **T-S8-01** Reporte ejecutivo con una sola agregación (opcional).
+4. **T-S8-02**, **T-S8-03** y **HU-S8-03**: afinaciones pedidas durante el Sprint (filtros de los listados, logotipo y modo oscuro).
 
 ---
 
@@ -143,21 +144,18 @@ Segunda recomendación de la simulación de carga:
 
 ---
 
-## Afinaciones pendientes
+## HU-S8-03 — Modo oscuro con el logotipo para fondo oscuro
 
-Espacio para registrar las siguientes afinaciones antes de convertirlas en historias.
-
-### Propuesta — Activar el modo oscuro con el logotipo para fondo oscuro
-
-**Estado:** Propuesta, pendiente de aprobación. No se implementa hasta que se apruebe.  
-**Story Points estimados:** 5  
+**Estado:** Completada (29 de octubre de 2026). Aprobada por el responsable el mismo día.  
+**Diseño técnico y verificación:** `docs/HU-S8-03.md`  
+**Story Points:** 5  
 **Rol:** todos
 
 **COMO** usuario del Banco de Talentos  
 **QUIERO** poder usar la aplicación en modo oscuro, con el logotipo blanco de Nodologístico  
 **PARA** trabajar con comodidad según la preferencia de mi sistema o la que elija.
 
-Criterios de aceptación propuestos:
+### Criterios de aceptación
 - **CA-01. Activación.**
   - Se recupera la activación preparada en el commit `0ac5ccc`: `src/ui/theme.ts`, el script previo al pintado de `index.html`, `watchTheme()` en `main.tsx` y el selector **Tema: Sistema / Claro / Oscuro** en el menú de cuenta.
   - Por defecto la aplicación sigue la preferencia del sistema.
@@ -172,3 +170,11 @@ Criterios de aceptación propuestos:
   - Los tokens oscuros ya existentes cumplen el contraste, y lo verifica `src/ui/tokens.test.ts`.
   - `e2e/theme.spec.ts` vuelve a comprobar el tema oscuro, la persistencia del selector y el logotipo correcto en cada tema.
   - Se revisan con capturas las vistas principales en ambos temas.
+
+---
+
+## Afinaciones pendientes
+
+Espacio para registrar las siguientes afinaciones antes de convertirlas en historias.
+
+- (vacío)
