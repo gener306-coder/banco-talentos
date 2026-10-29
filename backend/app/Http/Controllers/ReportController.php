@@ -8,8 +8,8 @@ use App\Models\Company;
 use App\Models\Institution;
 use App\Models\LinkageRequest;
 use App\Models\Opportunity;
+use App\Models\Student;
 use App\Support\CsvExport;
-use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
@@ -61,28 +61,35 @@ class ReportController extends Controller
         return ['total' => array_sum($byStatus), 'by_status' => $byStatus];
     }
 
-    /** CA-02: todas las instituciones, activas e inactivas, ordenadas por nombre. */
+    /**
+     * CA-02: todas las instituciones, activas e inactivas, ordenadas por nombre. Los conteos salen de una sola
+     * agregación por tabla (T-S8-01): alumnos y solicitudes se recorren una vez, sin importar cuántas instituciones haya.
+     */
     private function byInstitution(): array
     {
+        $students = Student::query()->toBase()
+            ->selectRaw('institution_id, count(*) FILTER (WHERE students.is_active) AS active, count(*) FILTER (WHERE '.Student::searchableCondition().') AS searchable')
+            ->groupBy('institution_id')
+            ->get()
+            ->keyBy('institution_id');
+        $linkages = LinkageRequest::query()->toBase()
+            ->selectRaw('institution_id, count(*) AS received, count(*) FILTER (WHERE status = ?) AS accepted', [LinkageRequestStatus::ACCEPTED->value])
+            ->groupBy('institution_id')
+            ->get()
+            ->keyBy('institution_id');
+
         return Institution::query()
-            ->select(['id', 'name', 'is_active'])
-            ->withCount([
-                'students as active_students' => fn (Builder $query) => $query->where('students.is_active', true),
-                'students as searchable_profiles' => fn (Builder $query) => $query->searchable(),
-                'linkageRequests as received_requests',
-                'linkageRequests as accepted_requests' => fn (Builder $query) => $query->where('status', LinkageRequestStatus::ACCEPTED),
-            ])
             ->orderBy('name')
             ->orderBy('id')
-            ->get()
+            ->get(['id', 'name', 'is_active'])
             ->map(fn (Institution $institution): array => [
                 'id' => $institution->id,
                 'name' => $institution->name,
                 'is_active' => $institution->is_active,
-                'active_students' => (int) $institution->active_students,
-                'searchable_profiles' => (int) $institution->searchable_profiles,
-                'received_requests' => (int) $institution->received_requests,
-                'accepted_requests' => (int) $institution->accepted_requests,
+                'active_students' => (int) ($students[$institution->id]->active ?? 0),
+                'searchable_profiles' => (int) ($students[$institution->id]->searchable ?? 0),
+                'received_requests' => (int) ($linkages[$institution->id]->received ?? 0),
+                'accepted_requests' => (int) ($linkages[$institution->id]->accepted ?? 0),
             ])
             ->all();
     }

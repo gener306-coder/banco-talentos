@@ -85,7 +85,7 @@ Sprint vigente desde el 29 de octubre de 2026. Sprint anterior: [sprint-7.md](sp
 
 ## T-S8-01 — Reporte ejecutivo con una sola agregación (opcional)
 
-**Estado:** Pendiente  
+**Estado:** Completada (29 de octubre de 2026)  
 **Story Points:** 2  
 **Rol:** `ADMIN`, `SECRETARY`
 
@@ -98,6 +98,15 @@ Segunda recomendación de la simulación de carga:
 - **CA-01.** La respuesta de `GET /api/reports/dual-program` y de su CSV es idéntica a la actual. Las pruebas de HU-S7-01 y HU-S7-02 siguen pasando.
 - **CA-02.** La tabla de alumnos se recorre una sola vez, sin importar cuántas instituciones haya.
 - **CA-03.** En la simulación, el p95 del reporte baja respecto a la medición del 29 de octubre de 2026 (371–385 ms).
+
+### Resultado
+
+- **Cambio aplicado:** `ReportController::byInstitution()` cuenta los alumnos activos y buscables con una sola agregación `GROUP BY institution_id` con `count(*) FILTER (…)`, y las solicitudes recibidas y aceptadas con otra. La condición de «buscable» sale de `Student::SEARCHABLE_COLUMNS`, la misma constante que usa `scopeSearchable()`, para que el reporte, el buscador y el inicio no diverjan.
+- **Medición en la simulación** (42 712 alumnos, 16 instituciones, 20 peticiones HTTP):
+  - reporte: de 371–385 ms a **68.6 ms** de p95 (p50 56.6 ms);
+  - CSV: de 376 ms a **62.3 ms** de p95.
+  - La agregación de alumnos tarda 13 ms en PostgreSQL.
+- **Pruebas:** las de HU-S7-01, HU-S7-02 y el inicio pasan sin cambios. Una prueba Pest nueva comprueba que, con 1 o con 12 instituciones, la tabla de alumnos se consulta una vez y la de solicitudes dos (resumen por estado y conteo por institución).
 
 ---
 

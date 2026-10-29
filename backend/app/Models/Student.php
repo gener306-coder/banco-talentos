@@ -47,15 +47,25 @@ class Student extends Model
         ];
     }
 
+    /** Columnas del expediente público que deben estar capturadas para que el alumno sea buscable (HU-S4-05 CA-02). */
+    public const SEARCHABLE_COLUMNS = [
+        'students.program', 'students.period_type', 'students.period_number', 'students.dual_available',
+        'students.state_code', 'students.can_relocate', 'students.location',
+    ];
+
     /**
      * Alumno ACTIVO con el expediente público capturado y su punto (HU-S4-05 CA-02). El buscador añade que la
      * institución esté activa; el inicio por rol (HU-S5-01) reutiliza la misma condición para sus conteos.
      */
     public function scopeSearchable(Builder $query): void
     {
-        $query->where('students.is_active', true)
-            ->whereNotNull(['students.program', 'students.period_type', 'students.period_number', 'students.dual_available',
-                'students.state_code', 'students.can_relocate', 'students.location']);
+        $query->where('students.is_active', true)->whereNotNull(self::SEARCHABLE_COLUMNS);
+    }
+
+    /** La misma condición que scopeSearchable() como expresión SQL, para contarla en una agregación (T-S8-01). */
+    public static function searchableCondition(): string
+    {
+        return implode(' AND ', ['students.is_active', ...array_map(fn (string $column) => "{$column} IS NOT NULL", self::SEARCHABLE_COLUMNS)]);
     }
 
     public function institution(): BelongsTo
