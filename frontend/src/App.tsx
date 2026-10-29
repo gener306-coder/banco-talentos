@@ -176,7 +176,7 @@ function App() {
           {/* En /login el logotipo se muestra en el formulario; se evita duplicarlo. */}
           {pathname !== '/login' && (
             <span className="brand-plate shrink-0">
-              <img src="/brand/logo.png" alt="Nodologístico" width={697} height={783} className="h-9 w-auto min-[481px]:h-11" />
+              <img src="/brand/logo.png" alt="Nodologístico" width={404} height={480} className="h-11 w-auto min-[481px]:h-14" />
             </span>
           )}
           <div>

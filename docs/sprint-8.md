@@ -131,8 +131,44 @@ Segunda recomendación de la simulación de carga:
 
 ---
 
+## T-S8-03 — Logotipo de mejor calidad y tamaños en el encabezado
+
+**Estado:** Completada (29 de octubre de 2026)  
+**Origen:** afinación pedida por el responsable, que entregó el logotipo a color de mejor calidad y su versión blanca para fondo oscuro.
+
+- `logo.png` y `logob.png` se recortaron con la misma caja (sin margen transparente sobrante) y se redujeron a 404 × 480 px, de unos 750 KB a unos 130 KB cada uno.
+- Encabezado: el logotipo pasa de 44 px, en los que además el dibujo quedaba encogido por el margen, a **56 px** (44 px en móvil). Login: de 128 a **144 px**.
+- `width`/`height` actualizados a 404 × 480 en `App.tsx` y `LoginPage.tsx`, y la guía `docs/design/identidad-visual.md` al día.
+- Verificado con capturas en escritorio y en móvil, en claro y con la demostración del tema oscuro.
+
+---
+
 ## Afinaciones pendientes
 
-Espacio para registrar las siguientes afinaciones antes de convertirlas en historias:
+Espacio para registrar las siguientes afinaciones antes de convertirlas en historias.
 
-- (vacío)
+### Propuesta — Activar el modo oscuro con el logotipo para fondo oscuro
+
+**Estado:** Propuesta, pendiente de aprobación. No se implementa hasta que se apruebe.  
+**Story Points estimados:** 5  
+**Rol:** todos
+
+**COMO** usuario del Banco de Talentos  
+**QUIERO** poder usar la aplicación en modo oscuro, con el logotipo blanco de Nodologístico  
+**PARA** trabajar con comodidad según la preferencia de mi sistema o la que elija.
+
+Criterios de aceptación propuestos:
+- **CA-01. Activación.**
+  - Se recupera la activación preparada en el commit `0ac5ccc`: `src/ui/theme.ts`, el script previo al pintado de `index.html`, `watchTheme()` en `main.tsx` y el selector **Tema: Sistema / Claro / Oscuro** en el menú de cuenta.
+  - Por defecto la aplicación sigue la preferencia del sistema.
+  - La elección se guarda en el navegador y el tema se aplica antes del primer pintado, sin destello claro.
+- **CA-02. Logotipo.**
+  - En tema oscuro se muestra `logob.png` en lugar de `logo.png`, sin pastilla clara, en el encabezado y en el login, con el mismo tamaño.
+  - En claro todo queda igual que hoy.
+- **CA-03. Secretaría de Economía.**
+  - Su logotipo se mantiene sin cambios en ambos temas, por decisión del responsable.
+  - Advertencia: el subtítulo negro «Secretaría de Economía» apenas se distingue sobre el gris oscuro. Una variante oficial para fondo oscuro tendría que pedirse a la Secretaría, porque incluye el Escudo Nacional.
+- **CA-04. Contraste y regresión.**
+  - Los tokens oscuros ya existentes cumplen el contraste, y lo verifica `src/ui/tokens.test.ts`.
+  - `e2e/theme.spec.ts` vuelve a comprobar el tema oscuro, la persistencia del selector y el logotipo correcto en cada tema.
+  - Se revisan con capturas las vistas principales en ambos temas.
