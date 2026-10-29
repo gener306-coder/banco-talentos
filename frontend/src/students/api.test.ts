@@ -23,8 +23,21 @@ function csrf() {
 describe('cliente del padrón de alumnos', () => {
   it('lista una página y conserva solo los campos del contrato', async () => {
     fetchMock.mockResolvedValueOnce(Response.json({ data: [{ ...record, institution_id: 9, extra: 'x' }], meta: { current_page: 2, last_page: 3, total: 101 } }))
-    await expect(listStudents(2)).resolves.toEqual({ students: [record], page: 2, lastPage: 3, total: 101 })
+    await expect(listStudents({ page: 2 })).resolves.toEqual({ students: [record], page: 2, lastPage: 3, total: 101 })
     expect(fetchMock.mock.calls[0][0]).toBe('/api/students?page=2')
+  })
+
+  it('envía la búsqueda recortada y el estado solo cuando tienen valor (HU-S8-01)', async () => {
+    const empty = () => Response.json({ data: [], meta: { current_page: 1, last_page: 1, total: 0 } })
+    fetchMock.mockResolvedValueOnce(empty()).mockResolvedValueOnce(empty()).mockResolvedValueOnce(empty())
+    await listStudents({ q: '  López & Ríos  ', status: 'inactive' })
+    await listStudents({ q: '   ', status: '' })
+    await listStudents()
+    expect(fetchMock.mock.calls.map(([path]) => path)).toEqual([
+      '/api/students?page=1&q=L%C3%B3pez+%26+R%C3%ADos&status=inactive',
+      '/api/students?page=1',
+      '/api/students?page=1',
+    ])
   })
 
   it.each([
@@ -36,7 +49,7 @@ describe('cliente del padrón de alumnos', () => {
     [{ data: [{ ...record, is_active: undefined }], meta: { current_page: 1, last_page: 1, total: 1 } }],
   ])('rechaza una respuesta de listado inesperada', async (body) => {
     fetchMock.mockResolvedValueOnce(Response.json(body))
-    await expect(listStudents(1)).rejects.toMatchObject({ status: 502 })
+    await expect(listStudents()).rejects.toMatchObject({ status: 502 })
   })
 
   it('registra con CSRF y envía solo la identidad, nunca la institución', async () => {

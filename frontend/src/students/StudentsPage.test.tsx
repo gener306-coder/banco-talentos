@@ -179,3 +179,75 @@ describe('padrón de alumnos HU-S2-02', () => {
     expect(screen.queryByRole('link', { name: 'Alumnos' })).not.toBeInTheDocument()
   })
 })
+
+describe('búsqueda y filtro del padrón HU-S8-01', () => {
+  it('busca por matrícula o nombre al enviar y vuelve a la página 1 (CA-01, CA-03)', async () => {
+    apiMock.mockResolvedValueOnce(Response.json({ data: [row(1, 'A-001', 'Ana', 'Ruiz')], meta: meta(51, 1, 2) }))
+      .mockResolvedValueOnce(Response.json({ data: [row(51, 'A-051', 'Zoe', 'Zamora')], meta: meta(51, 2, 2) }))
+      .mockResolvedValueOnce(Response.json({ data: [row(7, 'A-007', 'Ana Sofía', 'López', 'Ríos')], meta: meta(1) }))
+    renderApp()
+    fireEvent.click(await screen.findByRole('button', { name: /Siguiente/ }))
+    expect(await screen.findByText('A-051')).toBeInTheDocument()
+
+    const search = screen.getByRole('search', { name: 'Buscar alumnos' })
+    fireEvent.change(within(search).getByLabelText('Buscar por matrícula o nombre'), { target: { value: '  López Ríos ' } })
+    fireEvent.click(within(search).getByRole('button', { name: 'Buscar' }))
+    expect(await screen.findByText('A-007')).toBeInTheDocument()
+    expect(apiMock.mock.calls[2][0]).toBe('/api/students?page=1&q=L%C3%B3pez+R%C3%ADos')
+    expect(screen.getByText('Página 1 de 1 · 1 alumno')).toBeInTheDocument()
+  })
+
+  it('filtra por estado al elegirlo y lo combina con la búsqueda (CA-01, CA-03)', async () => {
+    apiMock.mockResolvedValueOnce(Response.json({ data: [row(1, 'A-001', 'Ana', 'Ruiz')], meta: meta(1) }))
+      .mockResolvedValueOnce(Response.json({ data: [{ ...row(2, 'A-002', 'Luis', 'Báez'), is_active: false }], meta: meta(1) }))
+      .mockResolvedValueOnce(Response.json({ data: [{ ...row(2, 'A-002', 'Luis', 'Báez'), is_active: false }], meta: meta(1) }))
+    renderApp()
+    await screen.findByText('A-001')
+    const search = screen.getByRole('search', { name: 'Buscar alumnos' })
+    fireEvent.change(within(search).getByLabelText('Estado'), { target: { value: 'inactive' } })
+    expect(await screen.findByText('A-002')).toBeInTheDocument()
+    expect(apiMock.mock.calls[1][0]).toBe('/api/students?page=1&status=inactive')
+
+    fireEvent.change(within(search).getByLabelText('Buscar por matrícula o nombre'), { target: { value: 'báez' } })
+    fireEvent.submit(search)
+    await waitFor(() => expect(apiMock).toHaveBeenCalledTimes(3))
+    expect(apiMock.mock.calls[2][0]).toBe('/api/students?page=1&q=b%C3%A1ez&status=inactive')
+  })
+
+  it('distingue la búsqueda sin coincidencias del padrón vacío y permite limpiar los filtros (CA-03)', async () => {
+    apiMock.mockResolvedValueOnce(Response.json({ data: [row(1, 'A-001', 'Ana', 'Ruiz')], meta: meta(1) }))
+      .mockResolvedValueOnce(Response.json({ data: [], meta: meta(0) }))
+      .mockResolvedValueOnce(Response.json({ data: [row(1, 'A-001', 'Ana', 'Ruiz')], meta: meta(1) }))
+    renderApp()
+    await screen.findByText('A-001')
+    const search = screen.getByRole('search', { name: 'Buscar alumnos' })
+    fireEvent.change(within(search).getByLabelText('Buscar por matrícula o nombre'), { target: { value: 'nadie' } })
+    fireEvent.click(within(search).getByRole('button', { name: 'Buscar' }))
+
+    expect(await screen.findByRole('heading', { name: 'Ningún alumno coincide con la búsqueda.' })).toBeInTheDocument()
+    expect(screen.getByText(/contenga «nadie»/)).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Registrar el primer alumno' })).not.toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Limpiar filtros' }))
+    expect(await screen.findByText('A-001')).toBeInTheDocument()
+    expect(apiMock.mock.calls[2][0]).toBe('/api/students?page=1')
+    expect(within(search).getByLabelText('Buscar por matrícula o nombre')).toHaveValue('')
+    expect(within(search).getByLabelText('Estado')).toHaveValue('')
+  })
+
+  it('abre el detalle con «Ver detalle» o con un clic en la fila; los apellidos ya no son enlace (CA-04)', async () => {
+    apiMock.mockResolvedValue(Response.json({ data: [row(3, 'A-003', 'María', 'López', 'García')], meta: meta(1) }))
+    const view = renderApp()
+    const table = await screen.findByRole('table', { name: 'Alumnos registrados' })
+    expect(within(table).getByRole('columnheader', { name: 'Acciones' })).toBeInTheDocument()
+    const studentRow = within(table).getByRole('row', { name: /López García/ })
+    expect(within(studentRow).queryByRole('link', { name: 'López García' })).not.toBeInTheDocument()
+    const link = within(studentRow).getByRole('link', { name: 'Ver detalle de López García, María' })
+    expect(link).toHaveAttribute('href', '/students/3')
+
+    fireEvent.click(within(studentRow).getByText('María'))
+    expect(screen.getByLabelText('Ruta actual').textContent).toBe('/students/3')
+    view.unmount()
+  })
+})
+

@@ -22,7 +22,7 @@ Sprint vigente desde el 29 de octubre de 2026. Sprint anterior: [sprint-7.md](sp
 
 ## HU-S8-01 — Búsqueda y filtrado del padrón de alumnos
 
-**Estado:** Pendiente  
+**Estado:** Completada (29 de octubre de 2026)  
 **Diseño técnico y verificación:** `docs/HU-S8-01.md`  
 **Story Points:** 5  
 **Rol:** `INSTITUTION`

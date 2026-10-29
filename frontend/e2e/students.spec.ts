@@ -1,6 +1,7 @@
 import { randomBytes } from 'node:crypto'
 import { expect, test } from '@playwright/test'
 import { INSTITUTION_STATE } from './support/institution'
+import { openFromRoster } from './support/students'
 
 // La cuenta INSTITUTION del seed está vinculada a «Institución E2E»; su sesión la crea institution.setup.ts.
 test.use({ storageState: INSTITUTION_STATE })
@@ -75,7 +76,7 @@ test('HU-S2-03: la institución completa el expediente y corrige la identidad de
   await register.getByRole('button', { name: 'Cerrar', exact: true }).click()
 
   // CA-01: el detalle se abre desde el padrón.
-  await page.getByRole('link', { name: surname, exact: true }).click()
+  await openFromRoster(page, surname)
   await expect(page).toHaveURL(/\/students\/\d+$/)
   const studentId = new URL(page.url()).pathname.split('/').pop()!
   await expect(page.getByRole('heading', { level: 2, name: `Ana Sofía ${surname}` })).toBeVisible()
@@ -140,7 +141,7 @@ test('HU-S2-04: la institución inactiva y reactiva a un alumno propio sin borra
   // CA-01: todo alumno nuevo es ACTIVO.
   const table = page.getByRole('table', { name: 'Alumnos registrados' })
   await expect(table.getByRole('row', { name: new RegExp(enrollment) }).getByText('ACTIVO', { exact: true })).toBeVisible()
-  await page.getByRole('link', { name: surname, exact: true }).click()
+  await openFromRoster(page, surname)
   const studentId = new URL(page.url()).pathname.split('/').pop()!
   const status = page.getByRole('region', { name: 'Estado en el Banco de Talentos' })
   await expect(status.getByText('ACTIVO', { exact: true })).toBeVisible()
@@ -173,7 +174,7 @@ test('HU-S2-04: la institución inactiva y reactiva a un alumno propio sin borra
   expect(deletion.status()).toBe(405)
 
   // Reactivar no pide confirmación.
-  await page.getByRole('link', { name: surname, exact: true }).click()
+  await openFromRoster(page, surname)
   await status.getByRole('button', { name: 'Reactivar alumno' }).click()
   await expect(page.getByText('Alumno reactivado correctamente.')).toBeVisible()
   await expect(status.getByText('ACTIVO', { exact: true })).toBeVisible()
@@ -209,7 +210,7 @@ test('HU-S3-02: la institución guarda el NSS y sube y descarga el comprobante d
   await register.getByRole('button', { name: 'Registrar alumno', exact: true }).click()
   await expect(register.getByRole('status')).toContainText('Alumno registrado')
   await register.getByRole('button', { name: 'Cerrar', exact: true }).click()
-  await page.getByRole('link', { name: surname, exact: true }).click()
+  await openFromRoster(page, surname)
   const studentId = new URL(page.url()).pathname.split('/').pop()!
 
   const security = page.getByRole('region', { name: 'Seguro Facultativo (IMSS)' })
@@ -275,7 +276,7 @@ test('HU-S3-01: la institución construye el CV normalizado con datos protegidos
   await register.getByRole('button', { name: 'Registrar alumno', exact: true }).click()
   await expect(register.getByRole('status')).toContainText('Alumno registrado')
   await register.getByRole('button', { name: 'Cerrar', exact: true }).click()
-  await page.getByRole('link', { name: surname, exact: true }).click()
+  await openFromRoster(page, surname)
   const studentId = new URL(page.url()).pathname.split('/').pop()!
 
   // Página propia, enlazada desde el detalle.
@@ -377,4 +378,60 @@ test('HU-S3-01: la institución construye el CV normalizado con datos protegidos
     expect(body).not.toContain(githubUrl)
     expect(body).not.toContain(`CSCO-${suffix}`)
   }
+})
+
+test('HU-S8-01: la institución busca alumnos por matrícula o nombre, los filtra por estado y abre el detalle desde «Acciones»', async ({ page }) => {
+  const suffix = randomBytes(4).toString('hex').toUpperCase()
+  const active = { enrollment: `BUS-${suffix}-1`, given: 'Renata', surname: `Buscable${suffix}` }
+  const inactive = { enrollment: `BUS-${suffix}-2`, given: 'Gael', surname: `Inactivo${suffix}` }
+
+  await page.goto('/students')
+  await page.getByRole('button', { name: /Registrar (el primer )?alumno/ }).first().click()
+  const register = page.getByRole('dialog', { name: 'Registrar alumno' })
+  for (const student of [active, inactive]) {
+    await register.getByLabel('Matrícula o control interno', { exact: true }).fill(student.enrollment)
+    await register.getByLabel('Nombre(s)', { exact: true }).fill(student.given)
+    await register.getByLabel('Primer apellido', { exact: true }).fill(student.surname)
+    await register.getByRole('button', { name: 'Registrar alumno', exact: true }).click()
+    await expect(register.getByRole('status')).toContainText(student.surname)
+  }
+  await register.getByRole('button', { name: 'Cerrar', exact: true }).click()
+
+  // Baja lógica del segundo para probar el filtro por estado.
+  await openFromRoster(page, inactive.surname)
+  const status = page.getByRole('region', { name: 'Estado en el Banco de Talentos' })
+  await status.getByRole('button', { name: 'Inactivar alumno' }).click()
+  await page.getByRole('alertdialog', { name: '¿Inactivar al alumno?' }).getByRole('button', { name: 'Inactivar', exact: true }).click()
+  await expect(status.getByText('INACTIVO', { exact: true })).toBeVisible()
+  await page.goto('/students')
+
+  const search = page.getByRole('search', { name: 'Buscar alumnos' })
+  const table = page.getByRole('table', { name: 'Alumnos registrados' })
+
+  // CA-01, CA-03: la búsqueda por fragmento de matrícula encuentra a los dos, sin distinguir mayúsculas.
+  await search.getByLabel('Buscar por matrícula o nombre').fill(`bus-${suffix.toLowerCase()}`)
+  await search.getByRole('button', { name: 'Buscar' }).click()
+  await expect(table.getByRole('row')).toHaveCount(3)
+  await expect(page.getByText('Página 1 de 1 · 2 alumnos')).toBeVisible()
+
+  // El filtro de estado se combina con la búsqueda.
+  await search.getByLabel('Estado').selectOption('inactive')
+  await expect(table.getByRole('row')).toHaveCount(2)
+  await expect(table.getByRole('row', { name: new RegExp(inactive.surname) }).getByText('INACTIVO', { exact: true })).toBeVisible()
+
+  // Sin coincidencias: mensaje y limpieza de filtros.
+  await search.getByLabel('Buscar por matrícula o nombre').fill(`${active.given} ${active.surname}`)
+  await search.getByRole('button', { name: 'Buscar' }).click()
+  await expect(page.getByRole('heading', { name: 'Ningún alumno coincide con la búsqueda.' })).toBeVisible()
+  await search.getByLabel('Estado').selectOption('active')
+  const row = table.getByRole('row', { name: new RegExp(active.surname) })
+  await expect(row).toBeVisible()
+
+  // CA-04: «Ver detalle» en la columna «Acciones» y la fila completa abren el detalle; el apellido ya no es enlace.
+  await expect(row.getByRole('link', { name: active.surname, exact: true })).toHaveCount(0)
+  await row.getByRole('cell', { name: active.given, exact: true }).click()
+  await expect(page).toHaveURL(/\/students\/\d+$/)
+  await page.goBack()
+  await page.getByRole('link', { name: `Ver detalle de ${active.surname}, ${active.given}` }).click()
+  await expect(page.getByRole('heading', { level: 2, name: `${active.given} ${active.surname}` })).toBeVisible()
 })

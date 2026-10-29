@@ -103,8 +103,23 @@ function detail(response: unknown): StudentDetail {
 
 const studentPath = (id: string | number) => `/api/students/${encodeURIComponent(String(id))}`
 
-export async function listStudents(page: number, signal?: AbortSignal): Promise<StudentPage> {
-  const response = await request(`/api/students?page=${encodeURIComponent(String(page))}`, { signal })
+/** Filtro de estado del padrón (HU-S8-01 CA-01). */
+export type StudentStatusFilter = 'active' | 'inactive'
+
+export interface StudentFilters {
+  page?: number
+  /** Matrícula, nombres o apellidos; cada palabra debe coincidir. */
+  q?: string
+  status?: StudentStatusFilter | ''
+}
+
+/** Página del padrón con la búsqueda y el filtro de estado opcionales (HU-S8-01). */
+export async function listStudents(filters: StudentFilters = {}, signal?: AbortSignal): Promise<StudentPage> {
+  const params = new URLSearchParams({ page: String(filters.page ?? 1) })
+  const q = filters.q?.trim()
+  if (q) params.set('q', q)
+  if (filters.status) params.set('status', filters.status)
+  const response = await request(`/api/students?${params.toString()}`, { signal })
   if (typeof response !== 'object' || response === null || !('data' in response) || !Array.isArray(response.data) ||
       !('meta' in response) || typeof response.meta !== 'object' || response.meta === null) throw new ApiError(502)
   const meta = response.meta
