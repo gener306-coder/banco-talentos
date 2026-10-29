@@ -7,7 +7,7 @@ import { useAuth } from '../auth/useAuth'
 import { organizationOf } from '../auth/user'
 import { getDashboard, metricKeys, metricLabels } from '../dashboard/api'
 import { useApiRequest } from '../lib/useApiRequest'
-import { AlertIcon, BriefcaseIcon, BuildingIcon, ChevronRightIcon, IdCardIcon, PlusIcon, SearchIcon, UsersIcon } from '../ui/icons'
+import { AlertIcon, BriefcaseIcon, BuildingIcon, ChartIcon, ChevronRightIcon, IdCardIcon, PlusIcon, SearchIcon, UsersIcon } from '../ui/icons'
 
 interface Section {
   to: string
@@ -28,6 +28,12 @@ const secretaryAccounts: Section = {
   description: 'Crea las cuentas del personal de la Secretaría de Economía y reenvía sus enlaces.',
 }
 
+// HU-S7-01 CA-03: reporte ejecutivo para ADMIN y SECRETARY.
+const reports: Section = {
+  to: '/reports', title: 'Reporte ejecutivo', icon: <ChartIcon />,
+  description: 'Consulta el avance del programa dual por estado de solicitud, institución y sector SCIAN.',
+}
+
 /** Acción principal y secciones de cada rol. Una cuenta sin su organización vinculada no tiene secciones. */
 function homeFor(user: User): Home | null {
   switch (user.role) {
@@ -38,6 +44,7 @@ function homeFor(user: User): Home | null {
         sections: [
           { to: '/institutions', title: 'Instituciones', icon: <BuildingIcon />, description: 'Registra instituciones educativas y administra sus cuentas.' },
           secretaryAccounts,
+          reports,
         ],
       }
     case 'SECRETARY':
@@ -47,6 +54,7 @@ function homeFor(user: User): Home | null {
         sections: [
           { to: '/companies', title: 'Empresas', icon: <BriefcaseIcon />, description: 'Registra las empresas validadas y crea sus cuentas de acceso.' },
           secretaryAccounts,
+          reports,
         ],
       }
     case 'INSTITUTION':

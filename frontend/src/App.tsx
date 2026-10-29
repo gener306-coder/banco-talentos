@@ -21,6 +21,8 @@ import { SecretaryAccountsPage } from './secretary/SecretaryAccountsPage'
 import { InstitutionLinkageRequestDetailPage } from './linkage/InstitutionLinkageRequestDetailPage'
 import { InstitutionLinkageRequestsPage } from './linkage/InstitutionLinkageRequestsPage'
 import { LinkageRequestsPage } from './linkage/LinkageRequestsPage'
+import { REPORT_VIEWERS } from './reports/api'
+import { ReportsPage } from './reports/ReportsPage'
 import { OpportunitiesPage } from './opportunities/OpportunitiesPage'
 import { OpportunityCreatePage } from './opportunities/OpportunityCreatePage'
 import { OpportunityDetailPage } from './opportunities/OpportunityDetailPage'
@@ -71,6 +73,9 @@ function AuthRoutes() {
       </Route>
       <Route element={<ProtectedRoute role={SECRETARY_ACCOUNT_MANAGERS} deniedMessage="No tienes permiso para gestionar las cuentas de la Secretaría." />}>
         <Route path="/secretary-accounts" element={<SecretaryAccountsPage />} />
+      </Route>
+      <Route element={<ProtectedRoute role={REPORT_VIEWERS} deniedMessage="No tienes permiso para consultar el reporte ejecutivo." />}>
+        <Route path="/reports" element={<ReportsPage />} />
       </Route>
       <Route element={<ProtectedRoute role="SECRETARY" deniedMessage="No tienes permiso para gestionar empresas." />}>
         <Route path="/companies" element={<CompaniesPage />} />

@@ -1,0 +1,12 @@
+/* Reporte ejecutivo (HU-S7-01): secciones y barras de proporción, solo con tokens semánticos. */
+@layer components {
+  .report-section { margin-top: 2rem; }
+  .report-section h3 { margin-bottom: 0.5rem; }
+  .report-generated { font-size: 0.9rem; color: var(--text); }
+  .report-total { font-weight: 600; margin: 0 0 0.75rem; }
+  .report-table td { font-variant-numeric: tabular-nums; }
+  .report-share { display: flex; align-items: center; gap: 0.6rem; min-width: 10rem; }
+  .report-bar { flex: 1 1 8rem; height: 0.5rem; border-radius: 999px; background: var(--surface-muted); border: 1px solid var(--border); overflow: hidden; }
+  .report-bar > span { display: block; height: 100%; background: var(--accent); }
+  .report-sector-code { font-variant-numeric: tabular-nums; font-weight: 700; }
+}
