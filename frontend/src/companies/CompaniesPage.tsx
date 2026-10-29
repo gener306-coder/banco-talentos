@@ -36,8 +36,8 @@ export function CompaniesPage() {
         <p>Empresas validadas por la Secretaría de Economía para participar en el Banco de Talentos.</p>
         <Link className="institution-button" to="/companies/new"><PlusIcon />Nueva empresa</Link>
       </div>
-      <form className="company-search" role="search" onSubmit={search}>
-        <div>
+      <form className="table-search" role="search" onSubmit={search}>
+        <div className="table-search-field">
           <label htmlFor="company-search">Buscar empresa</label>
           <input id="company-search" type="search" maxLength={200} value={draft} placeholder="Razón social, nombre comercial o RFC"
             onChange={(event) => setDraft(event.target.value)} />

@@ -47,16 +47,22 @@ export function InstitutionLinkageRequestsPage() {
   return (
     <InstitutionLinkageLayout title="Solicitudes de vinculación">
       <p>Solicitudes que las empresas enviaron para tus alumnos. Revisa cada una con el expediente del alumno antes de responder.</p>
-      <form className="linkage-filter" role="search" aria-label="Filtrar solicitudes" onSubmit={(event) => event.preventDefault()}>
-        <div>
-          <label htmlFor="institution-linkage-status-filter">Estado</label>
-          <select id="institution-linkage-status-filter" value={status}
-            onChange={(event) => { setPage(1); setStatus(event.target.value as Status | '') }}>
-            <option value="">Todos los estados</option>
-            {LINKAGE_STATUSES.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}
-          </select>
-        </div>
-      </form>
+      {/* T-S8-02: el filtro a la izquierda y «Descargar CSV» a la derecha, en la misma fila sobre la tabla. */}
+      <div className="list-toolbar">
+        <form className="table-search" role="search" aria-label="Filtrar solicitudes" onSubmit={(event) => event.preventDefault()}>
+          <div className="table-search-filter">
+            <label htmlFor="institution-linkage-status-filter">Estado</label>
+            <select id="institution-linkage-status-filter" value={status}
+              onChange={(event) => { setPage(1); setStatus(event.target.value as Status | '') }}>
+              <option value="">Todos los estados</option>
+              {LINKAGE_STATUSES.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}
+            </select>
+          </div>
+        </form>
+        {!loading && !failure && data && data.items.length > 0 && (
+          <CsvDownloadButton download={downloadCsv} prefix="solicitudes-vinculacion" messages={institutionLinkageMessages} />
+        )}
+      </div>
       {loading ? <LoadingState label="Cargando solicitudes…" variant="table" />
         : failure ? <InstitutionRequestError failure={failure} retry={refresh} page />
         : data && data.items.length === 0
@@ -67,7 +73,6 @@ export function InstitutionLinkageRequestsPage() {
               description="Aparecerán aquí cuando una empresa solicite la vinculación de alguno de tus alumnos." />
         : data && (
           <>
-            <CsvDownloadButton download={downloadCsv} prefix="solicitudes-vinculacion" messages={institutionLinkageMessages} />
             <div className="institution-table-wrapper" role="region" aria-label="Listado de solicitudes" tabIndex={0}>
               <table className="institution-table">
                 <caption className="visually-hidden">Solicitudes de vinculación recibidas</caption>

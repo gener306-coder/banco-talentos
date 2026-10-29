@@ -110,6 +110,27 @@ Segunda recomendación de la simulación de carga:
 
 ---
 
+## T-S8-02 — Distribución de los filtros sobre los listados
+
+**Estado:** Completada (29 de octubre de 2026)  
+**Origen:** afinación pedida por el responsable durante el Sprint, después de aprobarlo.  
+**Rol:** todos los que tienen listados con filtros
+
+**Problema:**
+- **Vistas afectadas:** Alumnos, Empresas, las bandejas de solicitudes de la institución y de la empresa, y la Bitácora.
+- **Qué se veía:** el buscador y el selector de estado salían apilados en columna, centrados y con huecos de unos 250 px, y la tabla quedaba muy abajo.
+- **Causa:** la regla global `form { display: flex; flex-direction: column }` de `index.css`. Los formularios de filtro (`.table-search`, `.company-search`, `.linkage-filter`) declaraban `display: flex` sin fijar la dirección, así que heredaban la columna y su `flex-basis` se convertía en altura. Ocurría desde HU-S4-02 en Empresas y desde HU-S5-05 en las bandejas.
+
+**Corrección:**
+- **Un solo estilo compartido** `.table-search` en `ui/ui.css`, con `flex-direction: row`:
+  - una fila alineada a la izquierda: campo de búsqueda flexible (`.table-search-field`, hasta 28 rem), filtros de ancho fijo (`.table-search-filter`) y botón;
+  - en pantallas de menos de 40 rem los campos ocupan el ancho completo, uno debajo de otro.
+- **Clases antiguas eliminadas:** `.company-search` y `.linkage-filter`.
+- **Bandeja de la institución:** la nueva `.list-toolbar` pone el filtro a la izquierda y **Descargar CSV** a la derecha, en la misma fila sobre la tabla.
+- **Verificación:** capturas en escritorio (1440 px) y móvil (390 px) de las nueve vistas de listado en la simulación de carga, antes y después. El buscador de talento, Oportunidades e Instituciones ya se veían bien y no cambian.
+
+---
+
 ## Afinaciones pendientes
 
 Espacio para registrar las siguientes afinaciones antes de convertirlas en historias:

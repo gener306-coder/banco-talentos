@@ -69,7 +69,7 @@ export function StudentsPage() {
         {openButton('Registrar alumno')}
       </div>
       <form className="table-search" role="search" aria-label="Buscar alumnos" onSubmit={search}>
-        <div>
+        <div className="table-search-field">
           <label htmlFor="student-search">Buscar por matrícula o nombre</label>
           <input id="student-search" type="search" maxLength={100} value={draft} placeholder="Ej. A2026-001 o López García"
             onChange={(event) => setDraft(event.target.value)} />
