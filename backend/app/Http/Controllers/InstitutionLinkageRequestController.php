@@ -9,21 +9,27 @@ use App\Models\Company;
 use App\Models\LinkageRequest;
 use App\Models\Skill;
 use App\Models\Student;
+use App\Support\CsvExport;
+use Carbon\CarbonImmutable;
+use DateTimeInterface;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 /**
  * Bandeja institucional de solicitudes de vinculación (HU-S6-01): las que las empresas enviaron para alumnos de la
  * institución de la sesión, con la identidad interna del alumno para evaluarlas. Esa identidad y el indicador del
  * seguro facultativo son de uso exclusivo de la institución; nunca forman parte de una respuesta para la empresa.
- * La institución responde las pendientes con ACEPTADA o RECHAZADA (HU-S6-02).
+ * La institución responde las pendientes con ACEPTADA o RECHAZADA (HU-S6-02) y exporta su bandeja en CSV (HU-S7-02).
  */
 class InstitutionLinkageRequestController extends Controller
 {
     private const PER_PAGE = 20;
+
+    private const EXPORT_TIMEZONE = 'America/Mexico_City';
 
     private const STUDENT_COLUMNS = 'student:id,is_active,program,period_type,period_number,dual_available,state_code,municipality_code,can_relocate';
 
@@ -54,6 +60,52 @@ class InstitutionLinkageRequestController extends Controller
                 'per_page' => self::PER_PAGE,
             ],
         ])->header('Cache-Control', 'no-store, private');
+    }
+
+    /**
+     * HU-S7-02 CA-02: solicitudes de la institución de la sesión, con el filtro opcional por estado, en el orden de la
+     * bandeja. Nunca carga el seguro facultativo del alumno. Las fechas van en la hora del centro de México.
+     */
+    public function export(ListInstitutionLinkageRequestsRequest $request): StreamedResponse
+    {
+        $status = $request->validated('status');
+        $linkages = $this->owned($request)
+            ->when($status !== null, fn (Builder $query) => $query->where('status', $status))
+            ->with([
+                'company:id,legal_name,trade_name,contact_name,contact_email,contact_phone',
+                'opportunity:id,title',
+                'student:id,program',
+                'student.identity',
+            ])
+            ->orderByDesc('created_at')
+            ->orderByDesc('id')
+            ->lazy(200)
+            ->map(fn (LinkageRequest $linkage): array => [
+                $linkage->id,
+                self::localTime($linkage->created_at),
+                $linkage->status->label(),
+                $linkage->student->identity->enrollment_number,
+                $linkage->student->identity->first_surname,
+                $linkage->student->identity->second_surname,
+                $linkage->student->identity->given_names,
+                $linkage->student->program,
+                $linkage->company->trade_name ?? $linkage->company->legal_name,
+                $linkage->company->contact_name,
+                $linkage->company->contact_email,
+                $linkage->company->contact_phone,
+                $linkage->opportunity->title,
+                self::localTime($linkage->responded_at),
+            ]);
+
+        return CsvExport::download('solicitudes-vinculacion-'.now()->format('Y-m-d').'.csv', [[[
+            'Folio', 'Fecha de solicitud', 'Estado', 'Matrícula', 'Primer apellido', 'Segundo apellido', 'Nombre(s)', 'Carrera',
+            'Empresa', 'Contacto de la empresa', 'Correo de contacto', 'Teléfono de contacto', 'Oportunidad', 'Fecha de respuesta',
+        ], $linkages]]);
+    }
+
+    private static function localTime(?DateTimeInterface $moment): ?string
+    {
+        return $moment === null ? null : CarbonImmutable::instance($moment)->setTimezone(self::EXPORT_TIMEZONE)->format('Y-m-d H:i');
     }
 
     /** CA-05: detalle completo para evaluar la solicitud. Una ajena responde igual que una inexistente (CA-02). */

@@ -8,14 +8,16 @@ use App\Models\Company;
 use App\Models\Institution;
 use App\Models\LinkageRequest;
 use App\Models\Opportunity;
+use App\Support\CsvExport;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 /**
  * Reporte ejecutivo del programa de Educación Dual (HU-S7-01). Solo conteos agregados: nunca consulta
  * student_identities ni student_social_security, ni devuelve datos de alumnos, cuentas o coordenadas. Los perfiles
  * buscables usan el mismo universo del buscador y del inicio (Student::scopeSearchable), que solo comprueba que el
- * punto exista.
+ * punto exista. HU-S7-02 exporta el desglose por institución y por sector en CSV con los mismos conteos.
  */
 class ReportController extends Controller
 {
@@ -27,6 +29,24 @@ class ReportController extends Controller
             'by_institution' => $this->byInstitution(),
             'by_sector' => $this->bySector(),
         ]])->header('Cache-Control', 'no-store, private');
+    }
+
+    /** HU-S7-02 CA-01: desglose por institución y por sector SCIAN, sin ningún dato personal de alumnos. */
+    public function export(): StreamedResponse
+    {
+        $institutions = array_map(fn (array $item): array => [
+            $item['name'], $item['is_active'] ? 'Activa' : 'Inactiva', $item['active_students'], $item['searchable_profiles'],
+            $item['received_requests'], $item['accepted_requests'],
+        ], $this->byInstitution());
+        $sectors = array_map(fn (array $item): array => [
+            $item['sector_code'], EconomicSector::from($item['sector_code'])->label(), $item['active_companies'],
+            $item['active_opportunities'], $item['accepted_requests'],
+        ], $this->bySector());
+
+        return CsvExport::download('reporte-educacion-dual-'.now()->format('Y-m-d').'.csv', [
+            [['Institución', 'Estado', 'Alumnos activos', 'Perfiles buscables', 'Solicitudes recibidas', 'Solicitudes aceptadas'], $institutions],
+            [['Código SCIAN', 'Sector', 'Empresas activas', 'Oportunidades activas', 'Solicitudes aceptadas'], $sectors],
+        ]);
     }
 
     /** CA-02: total y conteo por estado; un estado sin solicitudes vale 0. */
