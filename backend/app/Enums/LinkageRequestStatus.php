@@ -16,4 +16,15 @@ enum LinkageRequestStatus: string
 
     /** Estados que impiden repetir la solicitud de la misma empresa, alumno y oportunidad (CA-03). */
     public const ACTIVE = [self::PENDING_INSTITUTION, self::ACCEPTED];
+
+    /** Texto de la interfaz, para las exportaciones CSV (HU-S7-02). */
+    public function label(): string
+    {
+        return match ($this) {
+            self::PENDING_INSTITUTION => 'Pendiente de la institución',
+            self::ACCEPTED => 'Aceptada',
+            self::REJECTED => 'Rechazada',
+            self::CANCELLED => 'Cancelada',
+        };
+    }
 }

@@ -1,6 +1,7 @@
 import { useCallback, useRef, useState } from 'react'
 import type { FormEvent } from 'react'
 import { InstitutionRequestError } from '../institutions/InstitutionLayout'
+import { saveBlob } from '../lib/download'
 import { useApiMutation, useApiRequest } from '../lib/useApiRequest'
 import type { FailureMessages } from '../lib/useApiRequest'
 import { PendingLabel } from '../ui/forms'
@@ -16,19 +17,6 @@ const DOWNLOAD_NAME = 'comprobante-imss.pdf'
 // Solo un comprobante borrado del disco llega aquí como 404: el alumno ya se cargó.
 const downloadMessages: FailureMessages = { ...studentMessages, 404: 'No encontramos el comprobante. Vuelve a subirlo.' }
 const dateFormat = new Intl.DateTimeFormat('es-MX', { dateStyle: 'long', timeStyle: 'short' })
-
-/** Descarga un Blob con el nombre indicado sin abrirlo en una pestaña. */
-function saveBlob(blob: Blob, name: string) {
-  const url = URL.createObjectURL(blob)
-  const link = document.createElement('a')
-  link.href = url
-  link.download = name
-  document.body.append(link)
-  link.click()
-  link.remove()
-  // Se libera después del clic, cuando el navegador ya inició la descarga.
-  setTimeout(() => URL.revokeObjectURL(url), 0)
-}
 
 function NssForm({ studentId, saved, onSaved }: { studentId: number; saved: string | null; onSaved: (value: SocialSecurity) => void }) {
   const [digits, setDigits] = useState(saved ?? '')

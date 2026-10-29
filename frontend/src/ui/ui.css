@@ -344,3 +344,10 @@ textarea[aria-invalid='true'] { border-color: var(--danger-border); }
   .home-action { width: 100%; justify-content: center; }
 }
 }
+
+/* Botón «Descargar CSV» (HU-S7-02, ui/CsvDownloadButton.tsx). */
+@layer components {
+.csv-download { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem 1rem; margin: 0 0 1rem; }
+.csv-download button { margin: 0; }
+.csv-download .notice { margin: 0; }
+}

@@ -1,4 +1,5 @@
 import { randomBytes } from 'node:crypto'
+import { readFile } from 'node:fs/promises'
 import { expect, test } from '@playwright/test'
 import type { Page } from '@playwright/test'
 import { ADMIN_STATE } from './support/admin'
@@ -190,6 +191,21 @@ test('HU-S4-05, HU-S5-04, HU-S5-05, HU-S6-01, HU-S6-02 y HU-S6-03: una empresa e
       await expect(answer.getByRole('status')).toHaveText('Solicitud aceptada correctamente.')
       await expect(answer).toContainText('Aceptada')
       await expect(answer).toContainText('Coordinemos la entrevista con el área dual.')
+
+      // HU-S7-02 CA-02: la exportación CSV de la bandeja, con el filtro de estado, incluye al alumno y el contacto de la empresa.
+      await institution.goto('/institution/linkage-requests')
+      await institution.getByLabel('Estado').selectOption('ACEPTADA')
+      await expect(institution.getByRole('table', { name: 'Solicitudes de vinculación recibidas' })).toBeVisible()
+      const downloading = institution.waitForEvent('download')
+      await institution.getByRole('button', { name: 'Descargar CSV' }).click()
+      const file = await downloading
+      expect(file.suggestedFilename()).toMatch(/^solicitudes-vinculacion-\d{4}-\d{2}-\d{2}\.csv$/)
+      const csv = await readFile(await file.path(), 'utf8')
+      expect(csv.startsWith('\uFEFFFolio,"Fecha de solicitud",Estado,Matrícula,')).toBe(true)
+      const row = csv.split('\r\n').find((line) => line.includes(student.enrollment))
+      expect(row).toContain(`,Aceptada,${student.enrollment},${student.surname},`)
+      expect(row).toContain(opportunityTitle)
+      expect(csv).not.toMatch(/Pendiente de la institución|Cancelada/)
     } finally {
       await answering.close()
     }

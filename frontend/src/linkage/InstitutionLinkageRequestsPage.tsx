@@ -5,11 +5,12 @@ import { InstitutionRequestError } from '../institutions/InstitutionLayout'
 import { useApiRequest } from '../lib/useApiRequest'
 import { periodLabel } from '../students/catalogs'
 import { surnames } from '../students/api'
+import { CsvDownloadButton } from '../ui/CsvDownloadButton'
 import { ChevronLeftIcon, ChevronRightIcon, SearchIcon } from '../ui/icons'
 import { LoadingState, StateMessage } from '../ui/StateMessage'
 import { LINKAGE_STATUSES } from './api'
 import type { LinkageStatus as Status } from './api'
-import { institutionLinkageMessages, listReceivedLinkages } from './institutionApi'
+import { downloadReceivedLinkagesCsv, institutionLinkageMessages, listReceivedLinkages } from './institutionApi'
 import { LinkageStatus } from './LinkageStatus'
 import '../institutions/institutions.css'
 
@@ -33,13 +34,15 @@ export function InstitutionLinkageLayout({ title, children }: { title: string; c
 
 /**
  * Solicitudes de vinculación recibidas por la institución (HU-S6-01 CA-06): filtro por estado y tabla con el alumno
- * identificado, la empresa, la oportunidad, la fecha y el estado, con enlace al detalle.
+ * identificado, la empresa, la oportunidad, la fecha y el estado, con enlace al detalle. **Descargar CSV** exporta
+ * todas las solicitudes del filtro vigente, no solo la página visible (HU-S7-02 CA-04).
  */
 export function InstitutionLinkageRequestsPage() {
   const [page, setPage] = useState(1)
   const [status, setStatus] = useState<Status | ''>('')
   const load = useCallback((signal: AbortSignal) => listReceivedLinkages({ page, status }, signal), [page, status])
   const { data, loading, failure, refresh } = useApiRequest(load, institutionLinkageMessages)
+  const downloadCsv = useCallback(() => downloadReceivedLinkagesCsv(status), [status])
 
   return (
     <InstitutionLinkageLayout title="Solicitudes de vinculación">
@@ -64,6 +67,7 @@ export function InstitutionLinkageRequestsPage() {
               description="Aparecerán aquí cuando una empresa solicite la vinculación de alguno de tus alumnos." />
         : data && (
           <>
+            <CsvDownloadButton download={downloadCsv} prefix="solicitudes-vinculacion" messages={institutionLinkageMessages} />
             <div className="institution-table-wrapper" role="region" aria-label="Listado de solicitudes" tabIndex={0}>
               <table className="institution-table">
                 <caption className="visually-hidden">Solicitudes de vinculación recibidas</caption>

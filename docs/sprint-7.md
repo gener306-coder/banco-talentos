@@ -46,7 +46,7 @@ Sprint vigente desde el 28 de octubre de 2026. Sprint anterior: [sprint-6.md](sp
 
 ## HU-S7-02 — Exportación en CSV de reportes y bandejas
 
-**Estado:** Pendiente  
+**Estado:** Completada (28 de octubre de 2026)  
 **Diseño técnico y verificación:** `docs/HU-S7-02.md`  
 **Story Points:** 5  
 **Rol:** `ADMIN`, `SECRETARY`, `INSTITUTION`  

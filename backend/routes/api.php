@@ -31,8 +31,12 @@ Route::get('/dashboard', DashboardController::class)
     ->middleware(['auth:sanctum', 'active', 'role:'.implode(',', UserRole::values())]);
 
 // Reporte ejecutivo del programa de Educación Dual (HU-S7-01): solo conteos agregados para ADMIN y SECRETARY.
-Route::get('/reports/dual-program', [ReportController::class, 'dualProgram'])
-    ->middleware(['auth:sanctum', 'active', 'role:'.UserRole::ADMIN->value.','.UserRole::SECRETARY->value]);
+// Su exportación en CSV (HU-S7-02) contiene los mismos conteos por institución y por sector.
+Route::middleware(['auth:sanctum', 'active', 'role:'.UserRole::ADMIN->value.','.UserRole::SECRETARY->value])
+    ->group(function (): void {
+        Route::get('/reports/dual-program', [ReportController::class, 'dualProgram']);
+        Route::get('/reports/dual-program/export.csv', [ReportController::class, 'export']);
+    });
 
 Route::bind('institution', function (string $value): Institution {
     // Evita enviar identificadores malformados o fuera de rango a PostgreSQL.
@@ -182,6 +186,8 @@ Route::middleware(['auth:sanctum', 'active', 'role:'.UserRole::INSTITUTION->valu
     ->where(['linkageRequest' => '[1-9][0-9]{0,17}'])
     ->group(function (): void {
         Route::get('/', [InstitutionLinkageRequestController::class, 'index']);
+        // Exportación CSV de la bandeja (HU-S7-02).
+        Route::get('/export.csv', [InstitutionLinkageRequestController::class, 'export']);
         Route::get('{linkageRequest}', [InstitutionLinkageRequestController::class, 'show']);
         // Respuesta institucional (HU-S6-02).
         Route::patch('{linkageRequest}/decision', [InstitutionLinkageRequestController::class, 'decide']);

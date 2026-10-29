@@ -1,3 +1,4 @@
+import { readFile } from 'node:fs/promises'
 import { expect, test } from '@playwright/test'
 import type { Page } from '@playwright/test'
 import { ADMIN_STATE } from './support/admin'
@@ -30,6 +31,17 @@ test.describe('ADMIN', () => {
     await openReport(page)
     expect(responses).toHaveLength(1)
     expect(responses[0]).not.toMatch(/student_id|public_id|enrollment|given_names|nss|location|email/)
+
+    // HU-S7-02 CA-01: CSV con el desglose por institución y por sector SCIAN.
+    const downloading = page.waitForEvent('download')
+    await page.getByRole('button', { name: 'Descargar CSV' }).click()
+    const file = await downloading
+    expect(file.suggestedFilename()).toMatch(/^reporte-educacion-dual-\d{4}-\d{2}-\d{2}\.csv$/)
+    const csv = await readFile(await file.path(), 'utf8')
+    expect(csv.startsWith('\uFEFFInstitución,Estado,"Alumnos activos","Perfiles buscables","Solicitudes recibidas","Solicitudes aceptadas"\r\n')).toBe(true)
+    expect(csv).toContain('\r\n\r\n"Código SCIAN",Sector,"Empresas activas","Oportunidades activas","Solicitudes aceptadas"\r\n')
+    expect(csv).toContain('31-33,"Industrias manufactureras",')
+    expect(csv).not.toMatch(/@|Matrícula/)
   })
 })
 

@@ -3,7 +3,7 @@ import { isSectorCode } from '../companies/catalogs'
 import type { SectorCode } from '../companies/catalogs'
 import { LINKAGE_STATUSES } from '../linkage/api'
 import type { LinkageStatus } from '../linkage/api'
-import { ApiError, request } from '../lib/http'
+import { ApiError, request, requestBlob } from '../lib/http'
 import type { FailureMessages } from '../lib/useApiRequest'
 
 /** Roles con acceso al reporte ejecutivo (HU-S7-01 CA-01). */
@@ -80,4 +80,9 @@ export async function getDualProgramReport(signal?: AbortSignal): Promise<DualPr
     by_institution: data.by_institution.map(institution),
     by_sector: data.by_sector.map(sector),
   }
+}
+
+/** Exportación CSV del desglose por institución y por sector SCIAN (HU-S7-02 CA-01). */
+export function downloadDualProgramCsv(): Promise<Blob> {
+  return requestBlob('/api/reports/dual-program/export.csv')
 }
