@@ -173,6 +173,21 @@ Segunda recomendación de la simulación de carga:
 
 ---
 
+## T-S8-04 — Campos del login con iconos, ejemplos y mostrar contraseña
+
+**Estado:** Completada (29 de octubre de 2026)  
+**Origen:** afinación pedida por el responsable durante el Sprint.  
+**Rol:** todos (pantalla pública `/login`)
+
+- **Iconos:** sobre en «Correo electrónico» y candado en «Contraseña», dentro del campo a la izquierda. Son decorativos (`aria-hidden`); las etiquetas visibles no cambian.
+- **Ejemplos:** `nombre@ejemplo.com` e «Ingresa tu contraseña» como `placeholder`, sin sustituir a las etiquetas.
+- **Mostrar contraseña:** botón con ojo a la derecha del campo, nombre accesible «Mostrar contraseña» y `aria-pressed`. Al enviar, la contraseña vuelve a ocultarse junto con el borrado del campo.
+- **Estilos:** `.input-with-icon` en `ui/ui.css`, solo con tokens semánticos; iconos `MailIcon`, `EyeIcon` y `EyeOffIcon` en `ui/icons.tsx`.
+- **Casilla «Recordar»:** evaluada y descartada por el responsable. La aplicación no guarda contraseñas; de eso se encarga el gestor del navegador (`autocomplete`). Tampoco se agrega «Mantener la sesión iniciada», por el riesgo en equipos compartidos.
+- **Verificación:** prueba nueva en `App.test.tsx`; capturas en escritorio claro y oscuro y en móvil (390 px).
+
+---
+
 ## Afinaciones pendientes
 
 Espacio para registrar las siguientes afinaciones antes de convertirlas en historias.
