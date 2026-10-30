@@ -124,6 +124,26 @@ describe('acceso y sesión', () => {
     expect(await screen.findByText(user.email)).toBeInTheDocument()
   })
 
+  it('ofrece ejemplos en los campos y muestra la contraseña solo hasta el siguiente envío', async () => {
+    fetchMock.mockResolvedValueOnce(new Response(null, { status: 401 }))
+      .mockImplementationOnce(csrfResponse)
+      .mockResolvedValueOnce(Response.json({ message: 'Cuenta inactiva o no existente' }, { status: 422 }))
+    renderApp('/login')
+    await screen.findByRole('heading', { name: 'Iniciar sesión' })
+    expect(screen.getByLabelText('Correo electrónico')).toHaveAttribute('placeholder', 'nombre@ejemplo.com')
+    const password = screen.getByLabelText('Contraseña')
+    expect(password).toHaveAttribute('placeholder', 'Ingresa tu contraseña')
+    expect(password).toHaveAttribute('type', 'password')
+    const toggle = screen.getByRole('button', { name: 'Mostrar contraseña' })
+    fireEvent.click(toggle)
+    expect(toggle).toHaveAttribute('aria-pressed', 'true')
+    expect(password).toHaveAttribute('type', 'text')
+    await fillLogin()
+    expect(await screen.findByRole('alert')).toBeInTheDocument()
+    expect(password).toHaveAttribute('type', 'password')
+    expect(toggle).toHaveAttribute('aria-pressed', 'false')
+  })
+
   it.each([
     [401, 'Tu sesión terminó'],
     [419, 'Tu sesión terminó'],
