@@ -16,6 +16,7 @@ use App\Http\Controllers\LinkageRequestController;
 use App\Http\Controllers\MediaController;
 use App\Http\Controllers\MunicipalityController;
 use App\Http\Controllers\OpportunityController;
+use App\Http\Controllers\PromotionalVideoController;
 use App\Http\Controllers\ReportController;
 use App\Http\Controllers\SecretaryAccountController;
 use App\Http\Controllers\SkillController;
@@ -210,6 +211,13 @@ Route::middleware(['auth:sanctum', 'active', 'role:'.UserRole::INSTITUTION->valu
         Route::put('{video}', [InstitutionVideoController::class, 'update']);
         Route::patch('{video}/status', [InstitutionVideoController::class, 'updateStatus']);
     });
+
+// Galería de promoción dual (HU-S9-03): COMPANY, SECRETARY y ADMIN ven los videos listos de instituciones activas. Solo
+// el Administrador puede inactivar uno (moderación mínima, CA-05); reactivarlo le corresponde a la institución.
+Route::get('/promotional-videos', [PromotionalVideoController::class, 'index'])
+    ->middleware(['auth:sanctum', 'active', 'role:'.UserRole::COMPANY->value.','.UserRole::SECRETARY->value.','.UserRole::ADMIN->value]);
+Route::patch('/promotional-videos/{video}/status', [PromotionalVideoController::class, 'deactivate'])
+    ->middleware(['auth:sanctum', 'active', 'role:'.UserRole::ADMIN->value]);
 
 // Videos y pósteres del disco de medios local (HU-S9-02): la URL firmada y temporal es la credencial, como una URL
 // prefirmada de S3. Con MEDIA_DISK=s3 el navegador va directo al bucket y esta ruta no se usa.

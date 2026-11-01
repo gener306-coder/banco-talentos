@@ -171,7 +171,8 @@ Hecha en planeación, fuera del código: contenedor `debian:bookworm-slim` con F
 
 ## HU-S9-03 — Galería de promoción dual
 
-**Estado:** Pendiente  
+**Estado:** Completada (31 de octubre de 2026). El municipio de la institución (CA-02) queda pendiente porque las instituciones no lo tienen en el modelo; ver `docs/HU-S9-03.md`.  
+**Diseño técnico y verificación:** `docs/HU-S9-03.md`  
 **Story Points:** 3–5  
 **Rol:** `COMPANY`, `SECRETARY`, `ADMIN`  
 **Dependencia:** HU-S9-01
