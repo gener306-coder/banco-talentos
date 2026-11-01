@@ -16,6 +16,9 @@ final class ContactInformation
     /** Respuesta institucional (HU-S6-02 CA-01): la empresa ya tiene el contacto de la institución en su bandeja. */
     public const RESPONSE_MESSAGE = 'No incluyas enlaces, correos ni teléfonos: la empresa ya tiene el contacto de tu institución.';
 
+    /** Videos promocionales (HU-S9-01 CA-02): la empresa contacta a la institución desde la plataforma. */
+    public const VIDEO_MESSAGE = 'No incluyas enlaces, correos ni teléfonos: las empresas contactan a tu institución desde la plataforma.';
+
     private const PATTERNS = [
         '~https?://~i',
         '~\bwww\.~i',

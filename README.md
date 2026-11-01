@@ -191,6 +191,15 @@ No incluye nombres, matrículas, NSS ni ubicaciones de alumnos. **Descargar CSV*
 
 `ADMIN` abre **Bitácora** desde el inicio (`/audit-events`) para revisar, de 30 en 30 y del más reciente al más antiguo, quién creó cada cuenta, empresa y oportunidad, y quién solicitó o respondió cada vinculación. Se puede filtrar por tipo de evento. Cada evento muestra la fecha, la cuenta que lo realizó con su rol y una descripción pública del recurso; nunca contraseñas, tokens, NSS ni la identidad de alumnos. Los eventos salen de las columnas de autoría ya registradas, sin tabla adicional. Contrato y cobertura en [docs/HU-S7-03.md](docs/HU-S7-03.md).
 
+## Videos promocionales
+
+La institución sube en **Videos promocionales** (`/institution/videos`, HU-S9-01) videos MP4, MOV o WebM de hasta 250 MB y 5 minutos, con título, descripción opcional y la confirmación de que cuenta con la autorización de las personas que aparecen. La API responde `202` y el worker procesa el video en la cola `videos`:
+- lo convierte a MP4 H.264 con el lado corto a 720 px, ≤ 30 fps y SDR;
+- le quita los metadatos, incluido el GPS de los celulares;
+- genera un póster JPG.
+
+El original se borra en cualquier desenlace, y un fallo deja un motivo legible. Hasta 5 videos activos por institución. Contrato y decisiones en [docs/HU-S9-01.md](docs/HU-S9-01.md).
+
 ## Alumnos
 
 Una cuenta `INSTITUTION` con institución vinculada ve **Alumnos** en su página de sesión. El padrón (`/students`) lista solo los alumnos de su institución, 50 por página, ordenados por apellidos. **Buscar por matrícula o nombre** encuentra alumnos aunque se escriban varias palabras en cualquier orden, y **Estado** filtra activos o inactivos. Cada fila tiene **Ver detalle** y también se abre con un clic ([docs/HU-S8-01.md](docs/HU-S8-01.md)). **Registrar alumno** abre una hoja que pide matrícula o control interno, nombre(s), primer apellido y segundo apellido opcional. Al guardar pregunta qué sigue: **Completar expediente** abre el detalle del alumno nuevo con el cursor en el expediente público, y **Registrar otro alumno** limpia el formulario ([docs/HU-S8-02.md](docs/HU-S8-02.md)). La matrícula es única dentro de la institución sin distinguir mayúsculas. El servidor asigna la institución, y la matrícula y el nombre se guardan aparte (`student_identities`) como datos de uso exclusivo de la institución. No existe eliminación. Contrato y cobertura en [docs/HU-S2-02.md](docs/HU-S2-02.md).

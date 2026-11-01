@@ -7,7 +7,7 @@ import { useAuth } from '../auth/useAuth'
 import { organizationOf } from '../auth/user'
 import { getDashboard, metricKeys, metricLabels } from '../dashboard/api'
 import { useApiRequest } from '../lib/useApiRequest'
-import { AlertIcon, BriefcaseIcon, BuildingIcon, ChartIcon, ChevronRightIcon, ClipboardIcon, IdCardIcon, PlusIcon, SearchIcon, UsersIcon } from '../ui/icons'
+import { AlertIcon, BriefcaseIcon, BuildingIcon, ChartIcon, ChevronRightIcon, ClipboardIcon, IdCardIcon, PlusIcon, SearchIcon, UsersIcon, VideoIcon } from '../ui/icons'
 
 interface Section {
   to: string
@@ -66,6 +66,7 @@ function homeFor(user: User): Home | null {
         sections: [
           { to: '/students', title: 'Alumnos', icon: <UsersIcon />, description: 'Administra el padrón, el expediente y el CV de tus alumnos.' },
           { to: '/institution/linkage-requests', title: 'Solicitudes de vinculación', icon: <IdCardIcon />, description: 'Revisa las solicitudes de las empresas para tus alumnos y el contacto de cada empresa.' },
+          { to: '/institution/videos', title: 'Videos promocionales', icon: <VideoIcon />, description: 'Sube videos de tus instalaciones y proyectos para animar a las empresas a recibir alumnos.' },
         ],
       } : null
     case 'COMPANY':

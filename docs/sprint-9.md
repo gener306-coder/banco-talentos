@@ -97,13 +97,14 @@ Hecha en planeación, fuera del código: contenedor `debian:bookworm-slim` con F
   - E2E: 39 pruebas;
   - en desarrollo y en la simulación, un trabajo encolado desde el backend lo procesó el contenedor `worker`;
   - la simulación conserva sus 42 713 alumnos.
-- **Fuera de alcance:** `composer audit` reporta CVE-2026-45070 en `symfony/mime` (inyección de cabeceras de correo, severidad media). Ya existía antes de esta tarea; conviene actualizar con `composer update symfony/mime` como afinación aparte.
+- **Fuera de alcance:** `composer audit` reportó CVE-2026-45070 en `symfony/mime` (inyección de cabeceras de correo, severidad media), que ya existía antes de esta tarea. Se corrigió aparte, a pedido del responsable, al actualizar a 8.1.10 (commit `16a772f`).
 
 ---
 
 ## HU-S9-01 — Subida y procesamiento del video promocional
 
-**Estado:** Pendiente  
+**Estado:** Completada (31 de octubre de 2026)  
+**Diseño técnico y verificación:** `docs/HU-S9-01.md`  
 **Story Points:** 8  
 **Rol:** `INSTITUTION` (institución activa)
 

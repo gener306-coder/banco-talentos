@@ -33,6 +33,7 @@ import { TalentSearchPage } from './talent/TalentSearchPage'
 import { StudentCvPage } from './students/StudentCvPage'
 import { StudentDetailPage } from './students/StudentDetailPage'
 import { StudentsPage } from './students/StudentsPage'
+import { InstitutionVideosPage } from './videos/InstitutionVideosPage'
 import { AccountMenu } from './ui/AccountMenu'
 import { BrandLogo } from './ui/BrandLogo'
 import { prefersReducedMotion } from './ui/modal'
@@ -109,6 +110,9 @@ function AuthRoutes() {
       <Route element={<ProtectedRoute role="INSTITUTION" deniedMessage="No tienes permiso para consultar solicitudes de vinculación." />}>
         <Route path="/institution/linkage-requests" element={<InstitutionLinkageRequestsPage />} />
         <Route path="/institution/linkage-requests/:id" element={<InstitutionLinkageRequestDetailPage />} />
+      </Route>
+      <Route element={<ProtectedRoute role="INSTITUTION" deniedMessage="No tienes permiso para gestionar los videos promocionales." />}>
+        <Route path="/institution/videos" element={<InstitutionVideosPage />} />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

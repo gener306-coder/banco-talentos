@@ -11,6 +11,7 @@ use App\Http\Controllers\InstitutionController;
 use App\Http\Controllers\InstitutionLinkageRequestController;
 use App\Http\Controllers\InstitutionPasswordResetController;
 use App\Http\Controllers\InstitutionSetupLinkController;
+use App\Http\Controllers\InstitutionVideoController;
 use App\Http\Controllers\LinkageRequestController;
 use App\Http\Controllers\MunicipalityController;
 use App\Http\Controllers\OpportunityController;
@@ -196,4 +197,12 @@ Route::middleware(['auth:sanctum', 'active', 'role:'.UserRole::INSTITUTION->valu
         Route::get('{linkageRequest}', [InstitutionLinkageRequestController::class, 'show']);
         // Respuesta institucional (HU-S6-02).
         Route::patch('{linkageRequest}/decision', [InstitutionLinkageRequestController::class, 'decide']);
+    });
+
+// Videos promocionales del programa dual (HU-S9-01): solo INSTITUTION con institución activa y vinculada. La subida
+// responde 202 y el worker procesa el video en la cola `videos`.
+Route::middleware(['auth:sanctum', 'active', 'role:'.UserRole::INSTITUTION->value, 'institution.member'])
+    ->prefix('institution/videos')
+    ->group(function (): void {
+        Route::post('/', [InstitutionVideoController::class, 'store']);
     });
