@@ -14,6 +14,9 @@ class Institution extends Model
 
     protected $attributes = ['is_active' => true];
 
+    // Identificador de la galería de promoción dual (HU-S9-03); no cambia las respuestas de administración.
+    protected $hidden = ['public_id'];
+
     protected function casts(): array
     {
         return [

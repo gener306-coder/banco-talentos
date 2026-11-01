@@ -33,5 +33,6 @@
   .video-status.ready { background: var(--success-surface); color: var(--success-text); }
   .video-status.failed { background: var(--danger-surface); color: var(--danger-text); }
   .video-status.inactive { background: var(--status-off-surface); color: var(--status-off-text); }
+  .video-inline { display: block; width: 100%; aspect-ratio: 16 / 9; background: var(--surface-muted); object-fit: contain; }
   .video-player { display: block; width: 100%; max-height: 70vh; border-radius: 0.5rem; background: var(--surface-muted); }
 }

@@ -28,6 +28,12 @@ const secretaryAccounts: Section = {
   description: 'Crea las cuentas del personal de la Secretaría de Economía y reenvía sus enlaces.',
 }
 
+// HU-S9-03 CA-04: galería de promoción dual para ADMIN, SECRETARY y COMPANY.
+const promotion: Section = {
+  to: '/promocion', title: 'Promoción dual', icon: <VideoIcon />,
+  description: 'Mira los videos de las instituciones: instalaciones, talleres y proyectos del programa dual.',
+}
+
 // HU-S7-01 CA-03: reporte ejecutivo para ADMIN y SECRETARY.
 const reports: Section = {
   to: '/reports', title: 'Reporte ejecutivo', icon: <ChartIcon />,
@@ -47,6 +53,7 @@ function homeFor(user: User): Home | null {
           reports,
           // HU-S7-03 CA-01: solo ADMIN.
           { to: '/audit-events', title: 'Bitácora', icon: <ClipboardIcon />, description: 'Revisa quién creó cuentas, empresas, oportunidades y solicitudes de vinculación, y cuándo.' },
+          promotion,
         ],
       }
     case 'SECRETARY':
@@ -57,6 +64,7 @@ function homeFor(user: User): Home | null {
           { to: '/companies', title: 'Empresas', icon: <BriefcaseIcon />, description: 'Registra las empresas validadas y crea sus cuentas de acceso.' },
           secretaryAccounts,
           reports,
+          promotion,
         ],
       }
     case 'INSTITUTION':
@@ -76,6 +84,7 @@ function homeFor(user: User): Home | null {
           { to: '/talent', title: 'Buscar talento', icon: <SearchIcon />, description: 'Explora perfiles anónimos por habilidades, idiomas y distancia.' },
           { to: '/opportunities', title: 'Oportunidades Duales', icon: <BriefcaseIcon />, description: 'Registra los proyectos, perfiles y lugares de tu empresa para alumnos de Educación Dual.' },
           { to: '/linkage-requests', title: 'Solicitudes de vinculación', icon: <IdCardIcon />, description: 'Da seguimiento a las solicitudes enviadas y consulta el contacto de cada institución.' },
+          promotion,
         ],
       } : null
   }

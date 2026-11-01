@@ -33,7 +33,9 @@ import { TalentSearchPage } from './talent/TalentSearchPage'
 import { StudentCvPage } from './students/StudentCvPage'
 import { StudentDetailPage } from './students/StudentDetailPage'
 import { StudentsPage } from './students/StudentsPage'
+import { GALLERY_VIEWERS } from './videos/galleryApi'
 import { InstitutionVideosPage } from './videos/InstitutionVideosPage'
+import { PromotionalVideosPage } from './videos/PromotionalVideosPage'
 import { AccountMenu } from './ui/AccountMenu'
 import { BrandLogo } from './ui/BrandLogo'
 import { prefersReducedMotion } from './ui/modal'
@@ -113,6 +115,9 @@ function AuthRoutes() {
       </Route>
       <Route element={<ProtectedRoute role="INSTITUTION" deniedMessage="No tienes permiso para gestionar los videos promocionales." />}>
         <Route path="/institution/videos" element={<InstitutionVideosPage />} />
+      </Route>
+      <Route element={<ProtectedRoute role={GALLERY_VIEWERS} deniedMessage="No tienes permiso para consultar la galería de promoción dual." />}>
+        <Route path="/promocion" element={<PromotionalVideosPage />} />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
