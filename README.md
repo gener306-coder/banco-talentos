@@ -200,6 +200,12 @@ La institución sube en **Videos promocionales** (`/institution/videos`, HU-S9-0
 
 El original se borra en cualquier desenlace, y un fallo deja un motivo legible. Hasta 5 videos activos por institución. Contrato y decisiones en [docs/HU-S9-01.md](docs/HU-S9-01.md).
 
+En la misma vista (HU-S9-02) la institución ve sus videos con su estado, que se actualiza cada 5 s mientras alguno se procesa. También puede reproducirlos, corregir su título y descripción, e inactivarlos o activarlos dentro de la cuota. Los archivos nunca son públicos:
+- en local se sirven por `/api/media/...` con una firma temporal y relativa, y soporte de `Range` para el reproductor;
+- con `MEDIA_DISK=s3` se usan URLs prefirmadas del bucket.
+
+Contrato en [docs/HU-S9-02.md](docs/HU-S9-02.md).
+
 ## Alumnos
 
 Una cuenta `INSTITUTION` con institución vinculada ve **Alumnos** en su página de sesión. El padrón (`/students`) lista solo los alumnos de su institución, 50 por página, ordenados por apellidos. **Buscar por matrícula o nombre** encuentra alumnos aunque se escriban varias palabras en cualquier orden, y **Estado** filtra activos o inactivos. Cada fila tiene **Ver detalle** y también se abre con un clic ([docs/HU-S8-01.md](docs/HU-S8-01.md)). **Registrar alumno** abre una hoja que pide matrícula o control interno, nombre(s), primer apellido y segundo apellido opcional. Al guardar pregunta qué sigue: **Completar expediente** abre el detalle del alumno nuevo con el cursor en el expediente público, y **Registrar otro alumno** limpia el formulario ([docs/HU-S8-02.md](docs/HU-S8-02.md)). La matrícula es única dentro de la institución sin distinguir mayúsculas. El servidor asigna la institución, y la matrícula y el nombre se guardan aparte (`student_identities`) como datos de uso exclusivo de la institución. No existe eliminación. Contrato y cobertura en [docs/HU-S2-02.md](docs/HU-S2-02.md).

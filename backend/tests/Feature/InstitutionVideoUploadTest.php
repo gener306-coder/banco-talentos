@@ -120,8 +120,9 @@ describe('subida (CA-01, CA-02, CA-04)', function () {
         // Solo los campos del contrato: sin id interno ni rutas.
         expect(array_keys($response->json('data')))->toBe([
             'public_id', 'title', 'description', 'status', 'is_active', 'duration_seconds', 'width', 'height',
-            'original_bytes', 'output_bytes', 'failure_reason', 'created_at',
+            'original_bytes', 'output_bytes', 'failure_reason', 'created_at', 'poster_url', 'video_url',
         ]);
+        expect($response->json('data.poster_url'))->toBeNull()->and($response->json('data.video_url'))->toBeNull();
 
         $video = InstitutionVideo::query()->sole();
         expect($video->public_id)->toBe($response->json('data.public_id'))

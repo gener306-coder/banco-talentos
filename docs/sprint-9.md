@@ -146,7 +146,8 @@ Hecha en planeación, fuera del código: contenedor `debian:bookworm-slim` con F
 
 ## HU-S9-02 — Gestión de mis videos
 
-**Estado:** Pendiente  
+**Estado:** Completada (31 de octubre de 2026)  
+**Diseño técnico y verificación:** `docs/HU-S9-02.md`. Adelanta de HU-S9-03 las URLs firmadas (su CA-03), que el póster y la vista previa necesitan.  
 **Story Points:** 3  
 **Rol:** `INSTITUTION`  
 **Dependencia:** HU-S9-01

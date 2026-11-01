@@ -13,6 +13,7 @@ use App\Http\Controllers\InstitutionPasswordResetController;
 use App\Http\Controllers\InstitutionSetupLinkController;
 use App\Http\Controllers\InstitutionVideoController;
 use App\Http\Controllers\LinkageRequestController;
+use App\Http\Controllers\MediaController;
 use App\Http\Controllers\MunicipalityController;
 use App\Http\Controllers\OpportunityController;
 use App\Http\Controllers\ReportController;
@@ -199,10 +200,20 @@ Route::middleware(['auth:sanctum', 'active', 'role:'.UserRole::INSTITUTION->valu
         Route::patch('{linkageRequest}/decision', [InstitutionLinkageRequestController::class, 'decide']);
     });
 
-// Videos promocionales del programa dual (HU-S9-01): solo INSTITUTION con institución activa y vinculada. La subida
-// responde 202 y el worker procesa el video en la cola `videos`.
+// Videos promocionales del programa dual (HU-S9-01, HU-S9-02): solo INSTITUTION con institución activa y vinculada.
+// La subida responde 202 y el worker procesa el video en la cola `videos`. {video} es el public_id.
 Route::middleware(['auth:sanctum', 'active', 'role:'.UserRole::INSTITUTION->value, 'institution.member'])
     ->prefix('institution/videos')
     ->group(function (): void {
+        Route::get('/', [InstitutionVideoController::class, 'index']);
         Route::post('/', [InstitutionVideoController::class, 'store']);
+        Route::put('{video}', [InstitutionVideoController::class, 'update']);
+        Route::patch('{video}/status', [InstitutionVideoController::class, 'updateStatus']);
     });
+
+// Videos y pósteres del disco de medios local (HU-S9-02): la URL firmada y temporal es la credencial, como una URL
+// prefirmada de S3. Con MEDIA_DISK=s3 el navegador va directo al bucket y esta ruta no se usa.
+Route::get('/media/{path}', MediaController::class)
+    ->where('path', 'videos/[0-9]+/[0-9a-f-]{36}\\.(mp4|jpg)')
+    ->middleware('signed:relative')
+    ->name('media.show');

@@ -18,6 +18,9 @@ export interface InstitutionVideo {
   output_bytes: number | null
   failure_reason: string | null
   created_at: string
+  /** URLs firmadas y temporales (HU-S9-02); solo existen cuando el video está READY. */
+  poster_url: string | null
+  video_url: string | null
 }
 
 export interface VideoInput {
@@ -35,6 +38,7 @@ export const VIDEO_CONTACT_MESSAGE = 'No incluyas enlaces, correos ni teléfonos
 
 export const videoMessages: FailureMessages = {
   403: 'No tienes permiso para gestionar los videos de tu institución.',
+  404: 'El video no existe.',
   // Un proxy o el servidor rechazan el cuerpo antes de validarlo.
   413: 'El video no debe superar 250 MB.',
 }
@@ -59,14 +63,42 @@ function video(response: unknown): InstitutionVideo {
       !['PROCESSING', 'READY', 'FAILED'].includes(data.status as string) || typeof data.is_active !== 'boolean' ||
       !isCount(data.duration_seconds) || !isCount(data.width) || !isCount(data.height) ||
       typeof data.original_bytes !== 'number' || !isCount(data.output_bytes) ||
-      (data.failure_reason !== null && !isText(data.failure_reason)) || !isText(data.created_at)) throw new ApiError(502)
+      (data.failure_reason !== null && !isText(data.failure_reason)) || !isText(data.created_at) ||
+      (data.poster_url !== null && !isText(data.poster_url)) || (data.video_url !== null && !isText(data.video_url))) throw new ApiError(502)
   // Solo se conservan los campos del contrato.
   return {
     public_id: data.public_id, title: data.title, description: data.description, status: data.status as VideoStatus,
     is_active: data.is_active, duration_seconds: data.duration_seconds, width: data.width, height: data.height,
     original_bytes: data.original_bytes, output_bytes: data.output_bytes, failure_reason: data.failure_reason,
-    created_at: data.created_at,
+    created_at: data.created_at, poster_url: data.poster_url, video_url: data.video_url,
   }
+}
+
+function videos(response: unknown): InstitutionVideo[] {
+  if (typeof response !== 'object' || response === null || !('data' in response) || !Array.isArray(response.data)) throw new ApiError(502)
+  return response.data.map((item: unknown) => video({ data: item }))
+}
+
+const videoPath = (publicId: string) => `/api/institution/videos/${encodeURIComponent(publicId)}`
+
+/** Videos de la institución de la sesión, del más reciente al más antiguo (HU-S9-02 CA-01). */
+export async function listVideos(signal?: AbortSignal): Promise<InstitutionVideo[]> {
+  return videos(await request('/api/institution/videos', { signal }))
+}
+
+export async function updateVideo(publicId: string, input: { title: string; description: string }): Promise<InstitutionVideo> {
+  await request('/sanctum/csrf-cookie')
+  return video(await request(videoPath(publicId), { method: 'PUT', body: JSON.stringify(input) }))
+}
+
+export async function updateVideoStatus(publicId: string, isActive: boolean): Promise<InstitutionVideo> {
+  await request('/sanctum/csrf-cookie')
+  return video(await request(`${videoPath(publicId)}/status`, { method: 'PATCH', body: JSON.stringify({ is_active: isActive }) }))
+}
+
+/** «1:32»: duración legible de un video. */
+export function duration(seconds: number): string {
+  return `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}`
 }
 
 /** Misma lectura de errores que request(): campos del 422 y código de acceso (por ejemplo, INSTITUTION_INACTIVE). */
