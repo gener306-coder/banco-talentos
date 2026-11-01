@@ -15,4 +15,23 @@
   .video-upload-progress progress::-webkit-progress-bar { background: var(--surface-muted); }
   .video-upload-progress progress::-webkit-progress-value { background: var(--accent-fill); }
   .video-upload-progress progress::-moz-progress-bar { background: var(--accent-fill); }
+
+  /* Listado de videos (HU-S9-02 CA-05): retícula de tarjetas dentro de --page-wide. */
+  .video-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(16rem, 1fr)); gap: 1.25rem; margin: 1.5rem 0 0; padding: 0; list-style: none; }
+  .video-card { display: flex; flex-direction: column; overflow: hidden; border: 1px solid var(--border); border-radius: 0.75rem; background: var(--surface); }
+  .video-poster { position: relative; display: grid; place-items: center; aspect-ratio: 16 / 9; background: var(--surface-muted); color: var(--text); }
+  .video-poster img { width: 100%; height: 100%; object-fit: cover; }
+  .video-poster svg { width: 2rem; height: 2rem; }
+  .video-duration { position: absolute; right: 0.5rem; bottom: 0.5rem; padding: 0.1rem 0.45rem; border-radius: 0.35rem; background: var(--surface); color: var(--text-strong); font-size: 0.8rem; font-weight: 600; font-variant-numeric: tabular-nums; }
+  .video-card-body { display: grid; gap: 0.5rem; padding: 1rem; }
+  .video-card-body h3 { margin: 0; font-size: 1rem; overflow-wrap: anywhere; }
+  .video-card-body p { margin: 0; }
+  .video-card-body .actions { margin-top: 0.25rem; }
+  .video-meta { color: var(--text); font-size: 0.85rem; }
+  .video-status { justify-self: start; padding: 0.15rem 0.6rem; border-radius: 999px; font-size: 0.8rem; font-weight: 700; white-space: nowrap; }
+  .video-status.processing { background: var(--tint); color: var(--accent); }
+  .video-status.ready { background: var(--success-surface); color: var(--success-text); }
+  .video-status.failed { background: var(--danger-surface); color: var(--danger-text); }
+  .video-status.inactive { background: var(--status-off-surface); color: var(--status-off-text); }
+  .video-player { display: block; width: 100%; max-height: 70vh; border-radius: 0.5rem; background: var(--surface-muted); }
 }
