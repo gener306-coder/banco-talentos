@@ -29,6 +29,7 @@ export const ChartIcon = () => <Icon><path d="M2 13.5h12M4 11V7.5M7 11V4M10 11V6
 export const ClipboardIcon = () => <Icon><rect x="3" y="2.5" width="10" height="11.5" rx="1.5" /><path d="M6 2.5V2h4v.5M5.5 6.5h5M5.5 9h5M5.5 11.5h3" /></Icon>
 export const IdCardIcon = () => <Icon><rect x="1.5" y="3" width="13" height="10" rx="1.5" /><circle cx="5.5" cy="7.5" r="1.5" /><path d="M3.5 11c.4-1 1.1-1.5 2-1.5s1.6.5 2 1.5M9.5 6.5h3M9.5 9h3" /></Icon>
 // Login (T-S8-04): campos de correo y contraseña, y mostrar u ocultar la contraseña.
+export const VideoIcon = () => <Icon><rect x="1.5" y="3.5" width="9.5" height="9" rx="1.5" /><path d="m11 7 3.5-2v6L11 9" /></Icon>
 export const MailIcon = () => <Icon><rect x="1.5" y="3.5" width="13" height="9" rx="1.5" /><path d="m2 4.5 6 4.5 6-4.5" /></Icon>
 export const EyeIcon = () => <Icon><path d="M1.5 8S4 3.5 8 3.5 14.5 8 14.5 8 12 12.5 8 12.5 1.5 8 1.5 8Z" /><circle cx="8" cy="8" r="2" /></Icon>
 export const EyeOffIcon = () => <Icon><path d="M6.6 3.7A6 6 0 0 1 8 3.5c4 0 6.5 4.5 6.5 4.5a11 11 0 0 1-1.7 2.2M4.2 4.8C2.5 6 1.5 8 1.5 8S4 12.5 8 12.5a6 6 0 0 0 3.2-.9M6.6 6.6a2 2 0 0 0 2.8 2.8M2 2l12 12" /></Icon>
