@@ -16,6 +16,14 @@ return [
     'default' => env('FILESYSTEM_DISK', 'local'),
 
     /*
+    | T-S9-01: disco de los videos promocionales y sus pósteres. "media" (local) en desarrollo y pruebas;
+    | "s3" en producción, con cualquier almacenamiento compatible (S3, R2, Spaces, MinIO). Cambiarlo no
+    | requiere cambios de código. Los archivos nunca son públicos: se sirven con URLs firmadas temporales.
+    */
+
+    'media_disk' => env('MEDIA_DISK', 'media'),
+
+    /*
     |--------------------------------------------------------------------------
     | Filesystem Disks
     |--------------------------------------------------------------------------
@@ -33,6 +41,14 @@ return [
         'local' => [
             'driver' => 'local',
             'root' => storage_path('app/private'),
+            'serve' => false,
+            'throw' => false,
+            'report' => false,
+        ],
+
+        'media' => [
+            'driver' => 'local',
+            'root' => storage_path('app/media'),
             'serve' => false,
             'throw' => false,
             'report' => false,

@@ -49,7 +49,7 @@ Sprint vigente desde el 31 de octubre de 2026; historias aprobadas por el respon
 
 ## T-S9-01 — Infraestructura de medios en local
 
-**Estado:** Pendiente  
+**Estado:** Completada (31 de octubre de 2026)  
 **Story Points:** 3  
 **Rol:** técnica
 
@@ -82,6 +82,22 @@ Hecha en planeación, fuera del código: contenedor `debian:bookworm-slim` con F
 - **Video vertical con GPS** (sintético de 1080×1920 con etiqueta `location`): sale a 720×1280 y sin la etiqueta.
 - **Corrección al comando propuesto:** el filtro `fps=30` *sube* a 30 fps un video de 24 (la primera prueba salió a 30 fps). El job debe agregar `fps=30` solo cuando ffprobe reporte más de 30 fps. CA-05 de HU-S9-01 se interpreta así.
 - Pendiente: probar un video HDR/HEVC real de iPhone; este no lo era.
+
+### Resultado
+
+- **Imagen:** `docker/backend/Dockerfile` instala `ffmpeg` 5.1.9 y la extensión `pcntl`, y copia `docker/backend/php.ini` (250M/260M/600 s). `pcntl` no estaba en el plan: sin ella `queue:work` no puede cortar un trabajo que rebasa su `--timeout`, y la imagen `php:8.4-cli` no la trae.
+- **Cola:** `config/queue.php` usa `database` por defecto, con `retry_after` de 960 s (mayor que el timeout de 900 s), `after_commit` y fallidos en `failed_jobs` (`database-uuids`). Migración `2026_10_31_000000_create_jobs_tables`. Pest conserva `sync`.
+- **Worker:**
+  - **desarrollo:** servicio `worker` con `queue:listen`, que relee el código en cada trabajo;
+  - **simulación:** servicio `worker` con `queue:work` y la clave y el storage de la simulación (`scripts/simulation.sh up` lo inicia);
+  - **E2E:** `queue:work` en segundo plano dentro del backend de pruebas, porque su clave y su storage son efímeros y propios del contenedor; un servicio aparte no los compartiría.
+- **Disco:** `config('filesystems.media_disk')` toma `MEDIA_DISK`: `media` (`storage/app/media`, privado, excluido de Git) o `s3`. Se agregó `league/flysystem-aws-s3-v3`, y las variables `AWS_*` van vacías en `.env.example`.
+- **Verificación:**
+  - Pest completo: 1281 pruebas, incluidas las 6 nuevas de `MediaInfrastructureTest`;
+  - E2E: 39 pruebas;
+  - en desarrollo y en la simulación, un trabajo encolado desde el backend lo procesó el contenedor `worker`;
+  - la simulación conserva sus 42 713 alumnos.
+- **Fuera de alcance:** `composer audit` reporta CVE-2026-45070 en `symfony/mime` (inyección de cabeceras de correo, severidad media). Ya existía antes de esta tarea; conviene actualizar con `composer update symfony/mime` como afinación aparte.
 
 ---
 

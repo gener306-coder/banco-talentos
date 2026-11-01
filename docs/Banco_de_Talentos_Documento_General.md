@@ -155,8 +155,8 @@ La especificación contiene **28 requisitos no funcionales**. Así se atienden:
 | API | REST | REST JSON bajo `/api` |
 | Autenticación | Laravel Sanctum | Sanctum 4 con sesión y CSRF (sin tokens de acceso) |
 | Base de datos | PostgreSQL + PostGIS | PostgreSQL 17 + PostGIS 3.5 |
-| Caché/colas | Redis cuando sea necesario | Sin Redis: sesiones y caché en PostgreSQL |
-| Archivos | Local / S3 | Disco local privado de Laravel |
+| Caché/colas | Redis cuando sea necesario | Sin Redis: sesiones, caché y cola en PostgreSQL, con un worker propio (T-S9-01) |
+| Archivos | Local / S3 | Disco local privado de Laravel; el disco de videos (`MEDIA_DISK`) cambia a S3 por configuración (T-S9-01) |
 | Correo | — | SMTP; Mailpit en desarrollo y en E2E |
 | Contenedores | Docker + Compose | Docker Compose para desarrollo (`compose.yaml`) y pruebas (`compose.testing.yaml`) |
 | IaC e imágenes | Terraform, Packer | No implementado |

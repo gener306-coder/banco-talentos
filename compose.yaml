@@ -48,6 +48,7 @@ services:
       DB_DATABASE: ${POSTGRES_DB:-banco_talentos}
       DB_USERNAME: ${POSTGRES_USER:-banco_talentos}
       DB_PASSWORD: ${POSTGRES_PASSWORD:-local_password}
+      QUEUE_CONNECTION: database
     ports:
       - "127.0.0.1:${BACKEND_PORT:-8000}:8000"
     volumes:
@@ -64,6 +65,41 @@ services:
       timeout: 5s
       retries: 10
       start_period: 120s
+
+  # T-S9-01: procesa la cola (videos promocionales) fuera de la petición HTTP, con la misma imagen y el mismo
+  # código. queue:listen relee el código en cada trabajo, así que no hay que reiniciarlo al editar.
+  worker:
+    build:
+      context: .
+      dockerfile: docker/backend/Dockerfile
+      args:
+        LOCAL_UID: ${LOCAL_UID:-1000}
+        LOCAL_GID: ${LOCAL_GID:-1000}
+    init: true
+    command: ["php", "artisan", "queue:listen", "--queue=videos,default", "--timeout=900", "--tries=2"]
+    environment:
+      MAIL_MAILER: smtp
+      MAIL_HOST: mailpit
+      MAIL_PORT: 1025
+      MAIL_TIMEOUT: 10
+      MAIL_FROM_ADDRESS: no-reply@banco-talentos.test
+      APP_ENV: local
+      APP_DEBUG: "true"
+      APP_URL: http://localhost:${BACKEND_PORT:-8000}
+      FRONTEND_URL: http://localhost:${FRONTEND_PORT:-5173}
+      DB_CONNECTION: pgsql
+      DB_HOST: db
+      DB_PORT: 5432
+      DB_DATABASE: ${POSTGRES_DB:-banco_talentos}
+      DB_USERNAME: ${POSTGRES_USER:-banco_talentos}
+      DB_PASSWORD: ${POSTGRES_PASSWORD:-local_password}
+      QUEUE_CONNECTION: database
+    volumes:
+      - ./backend:/app:z
+      - backend_vendor:/app/vendor
+    depends_on:
+      backend:
+        condition: service_healthy
 
   frontend:
     build:

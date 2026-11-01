@@ -64,6 +64,7 @@ services:
       MAIL_HOST: mailpit
       MAIL_PORT: 1025
       MAIL_FROM_ADDRESS: no-reply@banco-talentos.test
+      QUEUE_CONNECTION: database
     ports:
       - "127.0.0.1:${SIM_BACKEND_PORT:-8100}:8000"
     volumes:
@@ -82,6 +83,40 @@ services:
       timeout: 5s
       retries: 60
       start_period: 60s
+
+  # T-S9-01: worker de la cola con la misma imagen, clave y storage de la simulación, como en producción.
+  worker:
+    image: banco-talentos-backend-sim
+    init: true
+    entrypoint: ["sh", "/sim-entrypoint.sh"]
+    command: ["work"]
+    environment:
+      APP_ENV: simulation
+      APP_DEBUG: "false"
+      APP_URL: http://localhost:${SIM_BACKEND_PORT:-8100}
+      FRONTEND_URL: http://localhost:${SIM_FRONTEND_PORT:-5180}
+      DB_CONNECTION: pgsql
+      DB_HOST: db
+      DB_PORT: 5432
+      DB_DATABASE: banco_talentos_sim
+      DB_USERNAME: banco_talentos_sim
+      DB_PASSWORD: local_sim_password
+      DB_URL: ""
+      CACHE_STORE: database
+      LOG_LEVEL: warning
+      MAIL_MAILER: smtp
+      MAIL_HOST: mailpit
+      MAIL_PORT: 1025
+      MAIL_FROM_ADDRESS: no-reply@banco-talentos.test
+      QUEUE_CONNECTION: database
+    volumes:
+      - ./backend:/app:z
+      - sim_vendor:/app/vendor
+      - sim_state:/sim-state
+      - ./docker/simulation/backend-entrypoint.sh:/sim-entrypoint.sh:ro,Z
+    depends_on:
+      backend:
+        condition: service_healthy
 
   frontend:
     image: banco-talentos-frontend-sim

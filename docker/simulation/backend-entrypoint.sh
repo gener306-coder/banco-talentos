@@ -21,12 +21,18 @@ export APP_PACKAGES_CACHE=/sim-state/cache/packages.php
 export APP_ROUTES_CACHE=/sim-state/cache/routes.php
 export APP_EVENTS_CACHE=/sim-state/cache/events.php
 mkdir -p /sim-state/cache "$LARAVEL_STORAGE_PATH/framework/cache/data" "$LARAVEL_STORAGE_PATH/framework/sessions" \
-    "$LARAVEL_STORAGE_PATH/framework/views" "$LARAVEL_STORAGE_PATH/logs" "$LARAVEL_STORAGE_PATH/app/private"
+    "$LARAVEL_STORAGE_PATH/framework/views" "$LARAVEL_STORAGE_PATH/logs" "$LARAVEL_STORAGE_PATH/app/private" \
+    "$LARAVEL_STORAGE_PATH/app/media"
 
 if [ "${1:-}" = serve ]; then
     composer install --no-interaction --prefer-dist --no-progress
     php artisan migrate --force --no-interaction
     exec php artisan serve --host=0.0.0.0 --port=8000 --no-reload
+fi
+
+# El backend ya instaló dependencias y migró: el worker solo espera a que esté sano (depends_on).
+if [ "${1:-}" = work ]; then
+    exec php artisan queue:work --queue=videos,default --timeout=900 --tries=2
 fi
 
 exec "$@"
