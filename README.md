@@ -22,6 +22,7 @@ No hay registro público ni recuperación de contraseña iniciada por la propia 
 ## Stack y estructura
 
 - Laravel 13 / PHP 8.4, Sanctum 4 con sesiones y CSRF, PostgreSQL 17 + PostGIS 3.5.
+- Cola en PostgreSQL (sin Redis) con un worker propio y FFmpeg 5.1 en la imagen del backend, para procesar los videos promocionales (Sprint 9).
 - React 19 / TypeScript 5.9 / Vite 8 sobre Node 24; Tailwind CSS 4 con los tokens de marca de [docs/design/identidad-visual.md](docs/design/identidad-visual.md), con temas claro y oscuro. El oscuro sigue la preferencia del sistema y se puede fijar desde el menú de cuenta.
 - Pest, Vitest + React Testing Library y Playwright/Chromium.
 
@@ -32,7 +33,7 @@ frontend/                SPA React por módulos (auth, institutions, companies, 
                          opportunities, linkage, reports, audit, ui), pruebas Vitest y E2E en frontend/e2e
 docker/                  Imágenes y configuración de desarrollo/pruebas
 docs/                    Documento General, Sprints, diseño técnico de cada historia e identidad visual (docs/design/)
-compose.yaml             Entorno de desarrollo (incluye Mailpit)
+compose.yaml             Entorno de desarrollo (incluye Mailpit y el worker de la cola)
 compose.testing.yaml     Entorno aislado de pruebas
 scripts/test-backend.sh   Ejecuta Pest con PostgreSQL temporal
 scripts/test-e2e.sh       Ejecuta Chromium con API y base de pruebas reales
@@ -67,6 +68,12 @@ docker compose exec backend php artisan auth:create-user
 | Salud | <http://localhost:8000/up> |
 | PostgreSQL | `localhost:5432` |
 | Mailpit (buzón local) | <http://localhost:8025> |
+
+### Cola y medios (T-S9-01)
+
+El servicio `worker` usa la imagen y el código del backend y procesa la cola `database` (tablas `jobs` y `failed_jobs`), primero `videos` y luego `default`, con un límite de 900 s por trabajo. En desarrollo corre `queue:listen`, que relee el código en cada trabajo, así que no hace falta reiniciarlo al editar. Compose fija `QUEUE_CONNECTION=database` en backend y worker; Pest conserva `sync`. Los trabajos fallidos se consultan con `docker compose exec backend php artisan queue:failed`.
+
+Los videos y sus pósteres se guardan en el disco que indica `MEDIA_DISK`: `media` (`storage/app/media`, privado) en local o `s3` en producción, con las variables `AWS_*` de `backend/.env.example`. Las credenciales nunca se versionan. La imagen incluye `ffmpeg`, `ffprobe` y la extensión `pcntl`, que permite cortar un trabajo que rebasa su límite, y acepta subidas de hasta 250 MB.
 
 Los puertos se publican sólo en `127.0.0.1` y se configuran mediante `FRONTEND_PORT`, `BACKEND_PORT`, `DB_PORT` y `MAILPIT_PORT`. El SMTP de Mailpit (`mailpit:1025`) sólo es accesible dentro de la red Docker. Utiliza de forma consistente `localhost` o `127.0.0.1`; sus cookies son distintas. Vite reenvía `/api`, `/sanctum` y `/up` al backend. Compose ajusta los dominios de Sanctum al puerto del frontend.
 
@@ -214,7 +221,7 @@ docker compose exec frontend npm run build
 sh scripts/test-e2e.sh
 ```
 
-Los scripts usan el proyecto Compose independiente `banco-talentos-tests`, sin puertos publicados ni el volumen PostgreSQL de desarrollo. PostgreSQL utiliza almacenamiento temporal; Pest y E2E tienen bases distintas. Las sesiones, cachés y clave de aplicación de ese entorno también son independientes. Las pruebas Pest comprueban la base de destino antes de aplicar migraciones destructivas. El E2E incluye un Mailpit efímero, sin puertos publicados, del que lee los correos que envía el backend; Pest no lo utiliza y conserva el mailer `array`.
+Los scripts usan el proyecto Compose independiente `banco-talentos-tests`, sin puertos publicados ni el volumen PostgreSQL de desarrollo. PostgreSQL utiliza almacenamiento temporal; Pest y E2E tienen bases distintas. Las sesiones, cachés y clave de aplicación de ese entorno también son independientes. Las pruebas Pest comprueban la base de destino antes de aplicar migraciones destructivas. El backend de E2E arranca también un worker de la cola dentro del mismo contenedor, porque su clave y su storage son efímeros y propios. El E2E incluye un Mailpit efímero, sin puertos publicados, del que lee los correos que envía el backend; Pest no lo utiliza y conserva el mailer `array`.
 
 Cada script limpia sus contenedores y red al terminar; el volumen `test_vendor` conserva sólo dependencias. Ejecuta los dos scripts secuencialmente, porque comparten el proyecto de pruebas. El E2E genera credenciales efímeras separadas para ADMIN e INSTITUTION, no las imprime y no guarda trazas de red. ADMIN e INSTITUTION inician sesión una sola vez (`e2e/admin.setup.ts` y `e2e/institution.setup.ts`); a partir de ellas, `e2e/secretary.setup.ts` y `e2e/company.setup.ts` crean una cuenta `SECRETARY` y una empresa con su cuenta `COMPANY` (T-S5-01). Los escenarios reutilizan esas sesiones, guardadas dentro del contenedor de pruebas en `playwright/.auth/` (excluido de Git), para no agotar el límite de intentos de login. Chromium y sus bibliotecas se instalan en la imagen de pruebas, no en tu equipo ni en el contenedor de desarrollo. La primera construcción requiere Internet y puede tardar varios minutos.
 
@@ -239,7 +246,7 @@ Las cuentas de demostración son `admin@sim.test`, `secretaria01@sim.test`, `ins
 
 ```bash
 docker compose ps
-docker compose logs -f backend frontend db
+docker compose logs -f backend worker frontend db
 docker compose exec backend php artisan route:list
 docker compose exec backend composer validate --strict
 docker compose exec backend composer lint

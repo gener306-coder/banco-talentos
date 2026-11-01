@@ -20,7 +20,7 @@ export APP_ROUTES_CACHE="$test_storage/routes.php"
 export APP_EVENTS_CACHE="$test_storage/events.php"
 mkdir -p "$LARAVEL_STORAGE_PATH/framework/cache/data" \
     "$LARAVEL_STORAGE_PATH/framework/sessions" \
-    "$LARAVEL_STORAGE_PATH/framework/views" "$LARAVEL_STORAGE_PATH/logs"
+    "$LARAVEL_STORAGE_PATH/framework/views" "$LARAVEL_STORAGE_PATH/logs" "$LARAVEL_STORAGE_PATH/app/media"
 composer install --no-interaction --prefer-dist --no-progress
 
 if [ "${1:-}" = serve-e2e ]; then
@@ -30,6 +30,10 @@ if [ "${1:-}" = serve-e2e ]; then
         MAIL_FROM_ADDRESS=no-reply@banco-talentos.test
     php artisan migrate --force --no-interaction
     php tests/Fixtures/seed-e2e.php
+    # T-S9-01: el worker de E2E corre en este contenedor porque la clave y el storage son efímeros y propios de
+    # él; un contenedor aparte no los compartiría. init: true recoge el proceso al terminar.
+    export QUEUE_CONNECTION=database
+    php artisan queue:work --queue=videos,default --timeout=900 --tries=2 &
     exec php artisan serve --host=0.0.0.0 --port=8000 --no-reload
 fi
 

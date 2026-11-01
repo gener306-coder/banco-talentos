@@ -18,7 +18,7 @@ command="${1:-}"
 
 case "$command" in
     up)
-        compose up -d --build --wait backend frontend
+        compose up -d --build --wait backend worker frontend
         echo "Simulación lista: frontend http://localhost:${SIM_FRONTEND_PORT:-5180} · API http://localhost:${SIM_BACKEND_PORT:-8100}"
         ;;
     seed)
