@@ -318,12 +318,12 @@ ADMIN / SECRETARÍA ── indicadores, reporte ejecutivo, CSV y bitácora
 - bitácora de eventos que hoy no tienen columna de autoría (ediciones, cambios de estado, restablecimientos, inicios de sesión);
 - notificaciones a las cuentas;
 - modo oscuro, cuando existan logotipos para fondo oscuro;
-- multimedia, casos de éxito y verificación automática de credenciales.
+- multimedia, casos de éxito y verificación automática de credenciales. Los videos promocionales de las instituciones están propuestos para el Sprint 9 ([sprint-9.md](sprint-9.md)).
 
 **Operación e infraestructura:**
 
 - despliegue en nube con HTTPS, respaldos y recuperación;
-- infraestructura como código (Terraform, Packer) e integración continua;
+- infraestructura como código (Terraform, Packer) e integración continua, propuestas para el Sprint 10 sobre AWS (avance en [sprint-9.md](sprint-9.md));
 - pruebas de carga para validar los objetivos de rendimiento;
 - Redis u Octane solo si las pruebas lo justifican.
 

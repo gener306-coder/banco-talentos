@@ -1,6 +1,6 @@
 # Sprint 8 — Afinación previa al despliegue
 
-Sprint vigente desde el 29 de octubre de 2026. Sprint anterior: [sprint-7.md](sprint-7.md) (histórico).
+Sprint vigente del 29 al 31 de octubre de 2026; cerrado con todas sus historias y tareas completadas. Sprint anterior: [sprint-7.md](sprint-7.md) (histórico). Sprint siguiente: [sprint-9.md](sprint-9.md).
 
 **Objetivo del Sprint:** afinar la usabilidad y el rendimiento del sistema antes del despliegue, empezando por el módulo de alumnos. La institución podrá encontrar a cualquier alumno por matrícula o nombre, con una tabla coherente con el resto del sistema, y completar el expediente justo después de registrarlo. Se aplican además las recomendaciones de la simulación de carga ([simulacion-carga.md](simulacion-carga.md)).
 
