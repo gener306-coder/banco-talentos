@@ -46,6 +46,8 @@ class FakeXhr {
 }
 
 beforeEach(() => {
+  URL.createObjectURL = vi.fn(() => 'blob:local')
+  URL.revokeObjectURL = vi.fn()
   FakeXhr.last = null
   fetchMock.mockReset()
   videosMock.mockReset()
@@ -83,7 +85,7 @@ function fill(form: HTMLElement, { title = 'Talleres de manufactura', file = vid
   if (consent) fireEvent.click(within(form).getByLabelText(/Confirmo que cuento con la autorización/))
 }
 
-const submit = (form: HTMLElement) => fireEvent.click(within(form).getByRole('button', { name: 'Subir video' }))
+const submit = (form: HTMLElement) => fireEvent.click(within(form).getByRole('button', { name: 'Subir historia' }))
 
 describe('videos promocionales HU-S9-01', () => {
   it('aparece en el inicio de la institución', async () => {
@@ -112,7 +114,7 @@ describe('videos promocionales HU-S9-01', () => {
     expect(within(form).getByRole('progressbar', { name: 'Subiendo video: 42 %' })).toHaveValue(42)
     // A lectores de pantalla solo se anuncia cada 25 %.
     expect(within(form).getByText('Subiendo video: 25 %')).toHaveAttribute('role', 'status')
-    expect(within(form).getByRole('button', { name: 'Subiendo video…' })).toBeDisabled()
+    expect(within(form).getByRole('button', { name: 'Subiendo historia…' })).toBeDisabled()
 
     act(() => xhr.respond(202, { data: received }))
     expect(await screen.findByText(/Recibimos «Talleres de manufactura»\. Procesando…/)).toHaveAttribute('role', 'status')
@@ -305,5 +307,98 @@ describe('gestión de mis videos HU-S9-02', () => {
 
     expect(await within(grid).findByRole('heading', { name: 'Talleres de manufactura' })).toBeInTheDocument()
     expect(within(grid).getAllByRole('listitem')).toHaveLength(2)
+  })
+})
+
+describe('formulario de subida HU-S9-07', () => {
+  const dropzone = (form: HTMLElement) => form.querySelector('.video-dropzone')!
+  const preview = (form: HTMLElement, name = 'promocion.mp4') => within(form).findByLabelText(`Video: ${name}`)
+
+  it('invita a arrastrar o elegir, con un input real para el teclado', async () => {
+    const form = await openForm()
+    expect(within(form).getByText('Arrastra tu video o elige un archivo')).toBeInTheDocument()
+    expect(within(form).getByText('MP4, MOV o WebM, hasta 250 MB y 5 minutos')).toBeInTheDocument()
+    expect(within(form).getByLabelText('Archivo de video')).toHaveAttribute('type', 'file')
+  })
+
+  it('acepta un archivo arrastrado y marca la zona mientras está encima', async () => {
+    const form = await openForm()
+    fireEvent.dragOver(dropzone(form))
+    expect(dropzone(form)).toHaveAttribute('data-dragging', 'true')
+
+    fireEvent.drop(dropzone(form), { dataTransfer: { files: [video()] } })
+    expect(dropzone(form)).toHaveAttribute('data-dragging', 'false')
+    expect(await preview(form)).toHaveAttribute('src', 'blob:local#t=0.1')
+  })
+
+  it('rechaza un formato inválido también al arrastrar', async () => {
+    const form = await openForm()
+    fireEvent.drop(dropzone(form), { dataTransfer: { files: [video('promocion.avi', 4096, 'video/x-msvideo')] } })
+    expect(within(form).getByText('El video debe ser MP4, MOV o WebM.')).toBeInTheDocument()
+  })
+
+  it('muestra la vista previa local sin subir nada y ofrece cambiar el video', async () => {
+    const form = await openForm()
+    fill(form)
+    const player = await preview(form)
+
+    expect(URL.createObjectURL).toHaveBeenCalledTimes(1)
+    expect(player).toHaveAttribute('preload', 'metadata')
+    expect(within(form).getByText('promocion.mp4')).toBeInTheDocument()
+    expect(within(form).getByRole('button', { name: 'Cambiar video' })).toBeInTheDocument()
+    expect(FakeXhr.last).toBeNull()
+  })
+
+  it('libera la URL local al cambiar de archivo', async () => {
+    const form = await openForm()
+    fill(form)
+    await preview(form)
+
+    fireEvent.change(within(form).getByLabelText('Archivo de video'), { target: { files: [video('otro.mp4')] } })
+    await preview(form, 'otro.mp4')
+    await waitFor(() => expect(URL.revokeObjectURL).toHaveBeenCalledWith('blob:local'))
+  })
+
+  it('desmonta la vista previa al cerrar la hoja, para que no siga sonando', async () => {
+    const form = await openForm()
+    fill(form)
+    await preview(form)
+
+    fireEvent.click(within(form).getByRole('button', { name: 'Cerrar' }))
+    await waitFor(() => expect(form.querySelector('video')).toBeNull())
+    // El archivo elegido se conserva.
+    expect(within(form).getByText('promocion.mp4')).toBeInTheDocument()
+  })
+
+  it('avisa si dura más de 5 minutos, antes de subirlo', async () => {
+    const form = await openForm()
+    fill(form)
+    const player = await preview(form)
+    Object.defineProperty(player, 'duration', { value: 301 })
+
+    fireEvent.loadedMetadata(player)
+    expect(await within(form).findByText('El video dura más de 5 minutos. Recórtalo y vuelve a subirlo.')).toBeInTheDocument()
+    submit(form)
+    expect(FakeXhr.last).toBeNull()
+  })
+
+  it('si el navegador no puede mostrarlo, lo dice y no bloquea la subida', async () => {
+    const form = await openForm()
+    fill(form, { file: video('iphone.mov', 4096, 'video/quicktime') })
+    fireEvent.error(await preview(form, 'iphone.mov'))
+
+    expect(await within(form).findByText(/Este navegador no puede mostrar la vista previa/)).toBeInTheDocument()
+    expect(within(form).queryByRole('alert')).not.toBeInTheDocument()
+    submit(form)
+    await waitFor(() => expect(FakeXhr.last).not.toBeNull())
+    expect((FakeXhr.last!.body?.get('video') as File).name).toBe('iphone.mov')
+  })
+
+  it('la casilla no ocupa todo el ancho: el texto la acompaña dentro de su etiqueta', async () => {
+    const form = await openForm()
+    const checkbox = within(form).getByRole('checkbox', { name: /Confirmo que cuento con la autorización/ })
+    expect(checkbox.closest('label')).toHaveClass('video-consent')
+    fireEvent.click(checkbox.closest('label')!)
+    expect(checkbox).toBeChecked()
   })
 })

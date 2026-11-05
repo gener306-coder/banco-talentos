@@ -270,6 +270,28 @@ Los videos son testimonios de alumnos que están o estuvieron en el Dual en una 
 
 ---
 
+## HU-S9-07 — Formulario de subida con vista previa
+
+**Estado:** Completada (4 de noviembre de 2026). Aprobada por el responsable el mismo día.  
+**Diseño técnico y verificación:** `docs/HU-S9-07.md`  
+**Rol:** `INSTITUTION`
+
+**COMO** institución educativa  
+**QUIERO** un formulario claro donde pueda revisar el video antes de subirlo  
+**PARA** no esperar minutos subiendo el archivo equivocado.
+
+### Criterios de aceptación
+
+- **CA-01.** [Diseño] Dos columnas desde 720 px, con el video a un lado y título y descripción al otro; una columna en móvil, con el video primero.
+- **CA-02.** [Elegir] Arrastrar o elegir archivo, con un `input` real accesible por teclado. Las validaciones de formato y peso aplican igual en ambos casos.
+- **CA-03.** [Vista previa] Reproduce el archivo local sin subir nada. Se libera al cambiarlo y se desmonta al cerrar la hoja.
+- **CA-04.** [Duración] Avisa antes de subir si dura más de 5 minutos. El servidor sigue siendo quien decide.
+- **CA-05.** [Sin bloqueo] Si el navegador no puede mostrar el archivo, lo explica y la subida sigue disponible.
+- **CA-06.** [Consentimiento] Casilla alineada al inicio de su texto, dentro de una tarjeta con toda el área clicable.
+- **CA-07.** [Contrato] No cambia lo que se envía a la API.
+
+---
+
 ## Sprint 10 (avance) — Despliegue en nube con infraestructura como código
 
 No forma parte de este Sprint; se detallará en `docs/sprint-10.md`. Se anota para que el Sprint 9 quede alineado:

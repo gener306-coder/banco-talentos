@@ -91,10 +91,10 @@ describe('carrusel del inicio HU-S9-06', () => {
 
   it('se detiene con el foco de teclado dentro y sigue al salir', async () => {
     const region = await carousel()
-    vi.spyOn(Element.prototype, 'matches').mockImplementation(function (this: Element, selector: string) { return selector === ':focus-visible' })
     const next = within(region).getByRole('button', { name: 'Historia siguiente' })
+    const matches = vi.spyOn(next, 'matches').mockReturnValue(true)
     fireEvent.focusIn(next)
-    vi.mocked(Element.prototype.matches).mockRestore()
+    matches.mockRestore()
     await advance(20000)
     expect(scrollTo).not.toHaveBeenCalled()
 

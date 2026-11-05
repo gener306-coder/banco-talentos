@@ -4,11 +4,13 @@ import { InstitutionRequestError } from '../institutions/InstitutionLayout'
 import { useApiMutation } from '../lib/useApiRequest'
 import { hasContactInformation } from '../students/cvCatalogs'
 import { PendingLabel } from '../ui/forms'
-import { isVideoFile, MAX_VIDEO_BYTES, uploadVideo, VIDEO_ACCEPT, VIDEO_CONTACT_MESSAGE, VIDEO_LIMITS, videoMessages } from './api'
+import { isVideoFile, MAX_VIDEO_BYTES, uploadVideo, VIDEO_CONTACT_MESSAGE, VIDEO_LIMITS, videoMessages } from './api'
 import type { InstitutionVideo } from './api'
+import { VideoDropzone } from './VideoDropzone'
 import './videos.css'
 
 const emptyValues = { title: '', description: '' }
+const TOO_LONG = 'El video dura más de 5 minutos. Recórtalo y vuelve a subirlo.'
 
 /** Copia de los errores sin el del campo indicado. */
 function without(errors: Record<string, string>, field: string): Record<string, string> {
@@ -17,14 +19,18 @@ function without(errors: Record<string, string>, field: string): Record<string, 
   return rest
 }
 
+/** Igual que App\Support\Video\VideoProcessor::MAX_SECONDS, que sigue siendo quien decide. */
+const MAX_VIDEO_SECONDS = 300
+
 /** Avance anunciado a lectores de pantalla solo cada 25 %, para no saturarlos durante una subida de minutos. */
 const announced = (fraction: number) => Math.floor(fraction * 4) * 25
 
 /**
- * Subida de un video promocional (HU-S9-01 CA-07): título, descripción, archivo y consentimiento, con barra de
- * progreso y opción de cancelar. Al recibirlo, el servidor lo deja «Procesando…» y lo procesa en segundo plano.
+ * Subida de una historia (HU-S9-01 CA-07, HU-S9-07): el video con su vista previa local a un lado, título y descripción
+ * al otro, y debajo el consentimiento, el progreso y la opción de cancelar. Al recibirlo, el servidor lo deja
+ * «Procesando…» y lo procesa en segundo plano.
  */
-export function VideoUploadForm({ onUploaded }: { onUploaded: (video: InstitutionVideo) => void }) {
+export function VideoUploadForm({ open, onUploaded }: { open: boolean; onUploaded: (video: InstitutionVideo) => void }) {
   const [values, setValues] = useState(emptyValues)
   const [consent, setConsent] = useState(false)
   const [file, setFile] = useState<File | null>(null)
@@ -101,44 +107,47 @@ export function VideoUploadForm({ onUploaded }: { onUploaded: (video: Institutio
   const percent = progress === null ? 0 : Math.round(progress * 100)
 
   return (
-    <section className="institution-account" aria-labelledby="video-form-title">
-      <h3 id="video-form-title">Subir una historia</h3>
-      <p className="privacy-note" id="video-privacy">Comparte la experiencia de tus alumnos en el programa dual. La verán las empresas, la Secretaría y el Administrador con sesión, y se publica en cuanto termina de procesarse.</p>
+    <section className="institution-account video-form" aria-labelledby="video-form-title">
+      <header className="video-form-header">
+        <h3 id="video-form-title">Subir una historia</h3>
+        <p className="privacy-note" id="video-privacy">Comparte la experiencia de tus alumnos en el programa dual. La verán las empresas, la Secretaría y el Administrador con sesión, y se publica en cuanto termina de procesarse.</p>
+      </header>
       {failure && <InstitutionRequestError failure={failure} />}
       {cancelled && !mutation.pending && <p className="notice" role="status">Subida cancelada. Tus datos se conservaron.</p>}
       <form onSubmit={(event) => { void submit(event) }} aria-busy={mutation.pending} noValidate>
-        <fieldset disabled={mutation.pending}>
-          <legend className="visually-hidden">Datos del video</legend>
-          <label htmlFor="video-title">Título</label>
-          <input id="video-title" name="title" type="text" autoComplete="off" required maxLength={VIDEO_LIMITS.title}
-            placeholder="Ej. Mi experiencia en manufactura" value={values.title} aria-invalid={Boolean(error('title'))}
-            aria-describedby={describedBy('title')} onChange={(event) => set('title', event.target.value)} />
-          {fieldError('title')}
-
-          <label htmlFor="video-description">Descripción (opcional)</label>
-          <textarea id="video-description" name="description" rows={4} maxLength={VIDEO_LIMITS.description} value={values.description}
-            aria-invalid={Boolean(error('description'))} aria-describedby={describedBy('description', 'video-description-count')}
-            onChange={(event) => set('description', event.target.value)} />
-          <p className="field-hint" id="video-description-count">{values.description.length} de {VIDEO_LIMITS.description} caracteres · sin enlaces, correos ni teléfonos</p>
-          {fieldError('description')}
-
-          <label htmlFor="video-file">Archivo de video</label>
-          <input key={inputKey} id="video-file" name="video" type="file" accept={VIDEO_ACCEPT}
-            aria-invalid={Boolean(error('video'))} aria-describedby={describedBy('video', 'video-file-hint')}
-            onChange={(event) => choose(event.target.files?.[0] ?? null)} />
-          <p className="field-hint" id="video-file-hint">
-            MP4, MOV o WebM, hasta 250 MB y 5 minutos.{file ? ` Seleccionado: ${file.name}.` : ''}
-          </p>
-          {fieldError('video')}
-
-          <div className="check">
-            <input id="video-consent" name="consent" type="checkbox" checked={consent} aria-invalid={Boolean(error('consent'))}
-              aria-describedby={describedBy('consent')}
-              onChange={(event) => { setConsent(event.target.checked); setLocalErrors((current) => without(current, 'consent')) }} />
-            <label htmlFor="video-consent">Confirmo que cuento con la autorización de las personas y empresas que aparecen o se mencionan en el video.</label>
+        <div className="video-form-grid">
+          <div className="video-form-media">
+            <VideoDropzone file={file} resetKey={inputKey} disabled={mutation.pending} invalid={Boolean(error('video'))}
+              describedBy={error('video') ? 'video-video-error' : undefined} showPreview={open} onChoose={choose}
+              onDuration={(seconds) => { if (seconds > MAX_VIDEO_SECONDS) setLocalErrors((current) => ({ ...current, video: TOO_LONG })) }} />
+            {fieldError('video')}
           </div>
-          {fieldError('consent')}
-        </fieldset>
+          <fieldset disabled={mutation.pending}>
+            <legend className="visually-hidden">Datos del video</legend>
+            <label htmlFor="video-title">Título</label>
+            <input id="video-title" name="title" type="text" autoComplete="off" required maxLength={VIDEO_LIMITS.title}
+              placeholder="Ej. Mi experiencia en manufactura" value={values.title} aria-invalid={Boolean(error('title'))}
+              aria-describedby={describedBy('title', 'video-title-count')} onChange={(event) => set('title', event.target.value)} />
+            <p className="field-hint" id="video-title-count">{values.title.length} de {VIDEO_LIMITS.title} caracteres</p>
+            {fieldError('title')}
+
+            <label htmlFor="video-description">Descripción (opcional)</label>
+            <textarea id="video-description" name="description" rows={5} maxLength={VIDEO_LIMITS.description} value={values.description}
+              placeholder="Cuenta en pocas líneas de qué trata esta historia."
+              aria-invalid={Boolean(error('description'))} aria-describedby={describedBy('description', 'video-description-count')}
+              onChange={(event) => set('description', event.target.value)} />
+            <p className="field-hint" id="video-description-count">{values.description.length} de {VIDEO_LIMITS.description} caracteres · sin enlaces, correos ni teléfonos</p>
+            {fieldError('description')}
+          </fieldset>
+        </div>
+
+        <label className="video-consent" data-invalid={Boolean(error('consent'))}>
+          <input id="video-consent" name="consent" type="checkbox" checked={consent} disabled={mutation.pending} aria-invalid={Boolean(error('consent'))}
+            aria-describedby={describedBy('consent')}
+            onChange={(event) => { setConsent(event.target.checked); setLocalErrors((current) => without(current, 'consent')) }} />
+          <span>Confirmo que cuento con la autorización de las personas y empresas que aparecen o se mencionan en el video.</span>
+        </label>
+        {fieldError('consent')}
 
         {progress !== null && (
           <div className="video-upload-progress">
@@ -148,11 +157,11 @@ export function VideoUploadForm({ onUploaded }: { onUploaded: (video: Institutio
           </div>
         )}
 
-        <div className="actions">
-          <button type="submit" disabled={mutation.pending}>
-            <PendingLabel pending={mutation.pending} label="Subir video" pendingLabel="Subiendo video…" />
-          </button>
+        <div className="actions video-form-actions">
           {mutation.pending && <button type="button" className="secondary" onClick={cancel}>Cancelar subida</button>}
+          <button type="submit" disabled={mutation.pending}>
+            <PendingLabel pending={mutation.pending} label="Subir historia" pendingLabel="Subiendo historia…" />
+          </button>
         </div>
       </form>
     </section>
