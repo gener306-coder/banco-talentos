@@ -29,6 +29,8 @@ beforeEach(() => {
   fetchMock.mockImplementation(async (path, init) => {
     if (path === '/api/me') return Response.json({ user })
     if (path === '/api/dashboard') return new Promise<Response>(() => undefined)
+    // Módulo destacado del inicio (HU-S9-05): ajeno a estas pruebas.
+    if (typeof path === 'string' && path.startsWith('/api/promotional-videos')) return new Promise<Response>(() => undefined)
     if (path === '/sanctum/csrf-cookie') {
       document.cookie = 'XSRF-TOKEN=csrf; Path=/'
       return new Response(null, { status: 204 })

@@ -32,6 +32,8 @@ beforeEach(() => {
     if (path === '/api/me') return Response.json({ user })
     // Indicadores del inicio (HU-S5-01): ajenos a estas pruebas, quedan pendientes sin consumir respuestas.
     if (path === '/api/dashboard') return new Promise<Response>(() => undefined)
+    // Módulo destacado del inicio (HU-S9-05): ajeno a estas pruebas.
+    if (typeof path === 'string' && path.startsWith('/api/promotional-videos')) return new Promise<Response>(() => undefined)
     // Solicitudes ya enviadas para el perfil (HU-S5-05 CA-04): ninguna en estas pruebas.
     if (typeof path === 'string' && path.startsWith('/api/linkage-requests?')) {
       return Response.json({ data: [], meta: { current_page: 1, last_page: 1, total: 0, per_page: 20 } })
@@ -46,6 +48,12 @@ beforeEach(() => {
 afterEach(() => vi.unstubAllGlobals())
 
 describe('buscador de talento HU-S4-05', () => {
+  it('enlaza a las Historias del Dual sin relacionarlas con los perfiles (HU-S9-05 CA-03)', async () => {
+    renderApp()
+    const link = await screen.findByRole('link', { name: /Alumnos que ya vivieron el Dual/ })
+    expect(link).toHaveAttribute('href', '/promocion')
+  })
+
   it('ofrece el buscador a COMPANY desde el inicio y lo niega a otros roles (CA-01)', async () => {
     const view = renderApp('/')
     expect(await screen.findByText('ManuGolfo')).toBeInTheDocument()

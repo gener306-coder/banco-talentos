@@ -7,6 +7,7 @@ import { useAuth } from '../auth/useAuth'
 import { organizationOf } from '../auth/user'
 import { getDashboard, metricKeys, metricLabels } from '../dashboard/api'
 import { useApiRequest } from '../lib/useApiRequest'
+import { DualStoriesSpotlight } from '../videos/DualStoriesSpotlight'
 import { AlertIcon, BriefcaseIcon, BuildingIcon, ChartIcon, ChevronRightIcon, ClipboardIcon, IdCardIcon, PlusIcon, SearchIcon, UsersIcon, VideoIcon } from '../ui/icons'
 
 interface Section {
@@ -82,9 +83,10 @@ function homeFor(user: User): Home | null {
         label: 'Empresa',
         sections: [
           { to: '/talent', title: 'Buscar talento', icon: <SearchIcon />, description: 'Explora perfiles anónimos por habilidades, idiomas y distancia.' },
+          // HU-S9-05: en segundo lugar, para que no pase desapercibida.
+          promotion,
           { to: '/opportunities', title: 'Oportunidades Duales', icon: <BriefcaseIcon />, description: 'Registra los proyectos, perfiles y lugares de tu empresa para alumnos de Educación Dual.' },
           { to: '/linkage-requests', title: 'Solicitudes de vinculación', icon: <IdCardIcon />, description: 'Da seguimiento a las solicitudes enviadas y consulta el contacto de cada institución.' },
-          promotion,
         ],
       } : null
   }
@@ -192,6 +194,7 @@ export function SessionPage() {
         </div>
       )}
       {user.role === 'COMPANY' && home && <TalentShortcut />}
+      {user.role === 'COMPANY' && home && <DualStoriesSpotlight />}
       {home && <HomeIndicators role={user.role} />}
 
       {home

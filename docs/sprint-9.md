@@ -229,6 +229,27 @@ Los videos son testimonios de alumnos que están o estuvieron en el Dual en una 
 
 ---
 
+## HU-S9-05 — Que las Historias del Dual no pasen desapercibidas
+
+**Estado:** Completada (4 de noviembre de 2026). Aprobada por el responsable el mismo día.  
+**Diseño técnico y verificación:** `docs/HU-S9-05.md`  
+**Rol:** `COMPANY`  
+**Dependencia:** HU-S9-04
+
+**COMO** responsable del programa  
+**QUIERO** que las empresas encuentren las historias sin buscarlas  
+**PARA** que el testimonio de los alumnos las anime a recibir alumnos.
+
+### Criterios de aceptación
+
+- **CA-01.** [Módulo destacado] El inicio de la empresa muestra, debajo de **Buscar talento** y sobre los indicadores, la historia más reciente y hasta dos más, con **Ver todas las historias**. No reproduce nada ahí. Sin historias o con error, no aparece.
+- **CA-02.** [Enlace] Cada historia abre `/promocion?video={public_id}`, y el feed se coloca en ella.
+- **CA-03.** [Buscador] `/talent` tiene una franja hacia las historias, sin relación con los perfiles, que siguen anónimos.
+- **CA-04.** [Tarjeta] En el inicio de la empresa, **Historias del Dual** pasa a la segunda posición.
+- **CA-05.** [Otros roles] Administrador y Secretaría no ven el módulo ni la franja.
+
+---
+
 ## Sprint 10 (avance) — Despliegue en nube con infraestructura como código
 
 No forma parte de este Sprint; se detallará en `docs/sprint-10.md`. Se anota para que el Sprint 9 quede alineado:
