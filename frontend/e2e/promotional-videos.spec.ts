@@ -38,9 +38,13 @@ test('la institución publica una historia y la empresa la encuentra y la reprod
 
   const { context, page: company } = await openCompanySession(browser, baseURL)
   try {
-    // HU-S9-05: la historia está en el inicio de la empresa, sin buscarla.
+    // HU-S9-05, HU-S9-06: la historia está en el carrusel del inicio, y el clic abre su vista previa ahí mismo.
     const spotlight = company.getByRole('region', { name: 'Alumnos que ya vivieron el Dual en una empresa' })
-    await spotlight.getByRole('link', { name: new RegExp(`^Ver la historia ${title}, de `) }).click()
+    await spotlight.getByRole('button', { name: new RegExp(`^Ver la vista previa de ${title}, de `) }).click()
+    await expect(company).toHaveURL(/\/$/)
+    const preview = company.getByRole('dialog', { name: title })
+    await expect(preview.getByLabel(new RegExp(`^Video: ${title}, de `))).toBeVisible()
+    await preview.getByRole('link', { name: 'Ver todas las historias' }).click()
     await expect(company).toHaveURL(/\/promocion\?video=[0-9a-f-]{36}$/)
 
     const story = company.getByRole('article', { name: title })
