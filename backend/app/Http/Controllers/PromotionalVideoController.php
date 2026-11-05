@@ -66,6 +66,8 @@ class PromotionalVideoController extends Controller
             'title' => $video->title,
             'description' => $video->description,
             'duration_seconds' => $video->duration_seconds,
+            'width' => $video->width,
+            'height' => $video->height,
             'institution' => [
                 'public_id' => $video->institution->public_id,
                 'name' => $video->institution->name,

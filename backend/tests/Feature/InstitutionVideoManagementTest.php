@@ -90,11 +90,11 @@ describe('listado (CA-01)', function () {
         expect(collect($response->json('data'))->pluck('title')->all())->toBe(['En proceso', 'Publicado', 'Fallido'])
             ->and(array_keys($response->json('data.0')))->toBe([
                 'public_id', 'title', 'description', 'status', 'is_active', 'duration_seconds', 'width', 'height',
-                'original_bytes', 'output_bytes', 'failure_reason', 'created_at', 'poster_url', 'video_url',
+                'failure_reason', 'created_at', 'poster_url', 'video_url',
             ]);
         $response->assertJsonPath('data.1.status', 'READY')
             ->assertJsonPath('data.1.duration_seconds', 92)
-            ->assertJsonPath('data.1.output_bytes', 4096)
+            ->assertJsonMissingPath('data.1.output_bytes')
             ->assertJsonPath('data.2.failure_reason', 'El archivo no contiene una pista de video.')
             ->assertJsonPath('data.0.poster_url', null)
             ->assertJsonPath('data.2.video_url', null);

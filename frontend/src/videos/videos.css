@@ -33,6 +33,79 @@
   .video-status.ready { background: var(--success-surface); color: var(--success-text); }
   .video-status.failed { background: var(--danger-surface); color: var(--danger-text); }
   .video-status.inactive { background: var(--status-off-surface); color: var(--status-off-text); }
-  .video-inline { display: block; width: 100%; aspect-ratio: 16 / 9; background: var(--surface-muted); object-fit: contain; }
-  .video-player { display: block; width: 100%; max-height: 70vh; border-radius: 0.5rem; background: var(--surface-muted); }
+
+  /* Reproductor propio (HU-S9-04). Un video siempre es oscuro: --on-media y --media-backdrop no cambian con el tema. */
+  .story-player { position: relative; overflow: hidden; width: 100%; aspect-ratio: 16 / 9; border-radius: 1.25rem; background: var(--media-backdrop); color: var(--on-media); isolation: isolate;
+    box-shadow: 0 18px 44px -22px color-mix(in srgb, var(--shadow) 55%, transparent); }
+  .story-player[data-orientation='vertical'] { aspect-ratio: 4 / 5; max-height: 80vh; }
+  .story-player:fullscreen { border-radius: 0; aspect-ratio: auto; max-height: none; }
+  .story-player:focus-visible { outline: 3px solid var(--focus-ring); outline-offset: 3px; }
+  .story-player-video { position: relative; z-index: 1; display: block; width: 100%; height: 100%; object-fit: contain; cursor: pointer; }
+  .story-player-backdrop { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; filter: blur(28px) brightness(0.55); transform: scale(1.15); }
+
+  .story-player button { display: inline-grid; place-items: center; margin: 0; padding: 0; border: 0; color: var(--on-media); font: inherit; }
+  .story-player button:focus-visible, .story-player-seek:focus-visible { outline: 2px solid var(--on-media); outline-offset: 2px; }
+  .story-player .icon { width: 1.15rem; height: 1.15rem; }
+  .story-player-control { width: 2.75rem; height: 2.75rem; flex: none; border-radius: 999px; background: transparent; transition: background 150ms ease-out, transform 100ms ease-out; }
+  .story-player-control.wide { width: auto; padding: 0 1.1rem; background: color-mix(in srgb, var(--on-media) 18%, transparent); font-weight: 600; }
+  .story-player-control:active, .story-player-play:active { transform: scale(0.97); }
+  .story-player .story-player-play { position: absolute; z-index: 3; top: 50%; left: 50%; width: 4.5rem; height: 4.5rem; margin: -2.25rem 0 0 -2.25rem; border-radius: 999px;
+    background: color-mix(in srgb, var(--media-backdrop) 55%, transparent); -webkit-backdrop-filter: blur(20px) saturate(180%); backdrop-filter: blur(20px) saturate(180%);
+    box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--on-media) 22%, transparent); transition: transform 300ms var(--spring); }
+  .story-player-play .icon { width: 1.75rem; height: 1.75rem; }
+  .story-player .story-player-sound { position: absolute; z-index: 3; top: 0.75rem; right: 0.75rem; background: color-mix(in srgb, var(--media-backdrop) 55%, transparent);
+    -webkit-backdrop-filter: blur(20px) saturate(180%); backdrop-filter: blur(20px) saturate(180%); }
+
+  /* La barra se materializa sobre un degradado que asegura el contraste en cuadros claros. */
+  .story-player-bar { position: absolute; z-index: 2; inset: auto 0 0; display: flex; align-items: center; gap: 0.35rem; padding: 2.5rem 0.6rem 0.5rem;
+    background: linear-gradient(to top, color-mix(in srgb, var(--media-backdrop) 78%, transparent), transparent);
+    transition: opacity 300ms var(--spring), transform 300ms var(--spring); }
+  .story-player[data-controls='hidden'] .story-player-bar { opacity: 0; transform: translateY(0.4rem); pointer-events: none; }
+  .story-player[data-controls='hidden'] { cursor: none; }
+  .story-player-time { flex: none; padding: 0 0.3rem; font-size: 0.82rem; font-weight: 600; font-variant-numeric: tabular-nums; }
+  .story-player-seek { flex: 1; min-width: 0; height: 2.75rem; margin: 0; padding: 0; border: 0; border-radius: 0; background: transparent; appearance: none; cursor: pointer; }
+  .story-player-seek::-webkit-slider-runnable-track { height: 0.3rem; border-radius: 999px;
+    background: linear-gradient(to right, var(--on-media) var(--story-progress, 0%), color-mix(in srgb, var(--on-media) 32%, transparent) var(--story-progress, 0%)); }
+  .story-player-seek::-webkit-slider-thumb { width: 0.9rem; height: 0.9rem; margin-top: -0.3rem; border-radius: 50%; background: var(--on-media); appearance: none; }
+  .story-player-seek::-moz-range-track { height: 0.3rem; border-radius: 999px; background: color-mix(in srgb, var(--on-media) 32%, transparent); }
+  .story-player-seek::-moz-range-progress { height: 0.3rem; border-radius: 999px; background: var(--on-media); }
+  .story-player-seek::-moz-range-thumb { width: 0.9rem; height: 0.9rem; border: 0; border-radius: 50%; background: var(--on-media); }
+  .story-player-spinner { position: absolute; z-index: 3; top: 50%; left: 50%; width: 2.5rem; height: 2.5rem; margin: -1.25rem 0 0 -1.25rem; border-radius: 50%;
+    border: 3px solid color-mix(in srgb, var(--on-media) 28%, transparent); border-top-color: var(--on-media); animation: story-player-spin 800ms linear infinite; }
+  @keyframes story-player-spin { to { transform: rotate(360deg); } }
+  .story-player-failure { position: absolute; z-index: 4; inset: 0; display: grid; place-content: center; justify-items: center; gap: 0.75rem; padding: 1rem; text-align: center;
+    background: color-mix(in srgb, var(--media-backdrop) 72%, transparent); }
+  .story-player-failure p { margin: 0; color: var(--on-media); }
+  @media (hover: hover) {
+    .story-player-control:hover { background: color-mix(in srgb, var(--on-media) 18%, transparent); }
+    .story-player .story-player-play:hover { transform: scale(1.06); }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .story-player-bar, .story-player .story-player-play, .story-player-control { transition: none; }
+    .story-player[data-controls='hidden'] .story-player-bar { transform: none; }
+    .story-player-spinner { animation-duration: 2s; }
+  }
+  @media (prefers-reduced-transparency: reduce) {
+    .story-player .story-player-play, .story-player .story-player-sound { background: var(--media-backdrop); -webkit-backdrop-filter: none; backdrop-filter: none; }
+  }
+  @media (max-width: 480px) {
+    .story-player { border-radius: 0.9rem; }
+    .story-player-time { display: none; }
+  }
+
+  /* Feed de Historias del Dual (HU-S9-04): una columna de lectura centrada dentro de --page-wide. */
+  .story-feed { display: grid; gap: 3.25rem; max-width: var(--content-readable); margin: 2rem auto 0; }
+  .story-intro { max-width: var(--content-readable); }
+  .story { display: grid; gap: 1rem; scroll-margin-top: 6rem; }
+  .story:focus { outline: none; }
+  .story-byline { display: flex; align-items: center; gap: 0.7rem; }
+  .story-avatar { display: grid; place-items: center; flex: none; width: 2.5rem; height: 2.5rem; border-radius: 50%; background: var(--tint); color: var(--accent); font-size: 0.85rem; font-weight: 700; }
+  .story-institution { margin: 0; color: var(--text); font-size: 0.92rem; font-weight: 600; }
+  .story-text { display: grid; gap: 0.35rem; }
+  .story-text h3 { margin: 0; font-size: 1.3rem; line-height: 1.25; overflow-wrap: anywhere; }
+  .story-description { margin: 0; color: var(--text); overflow-wrap: anywhere; }
+  .story-description[data-clamped='true'] { display: -webkit-box; overflow: hidden; -webkit-box-orient: vertical; -webkit-line-clamp: 3; line-clamp: 3; }
+  .story button.story-more { justify-self: start; padding: 0.15rem 0; border: 0; background: transparent; color: var(--accent); font-weight: 600; }
+  .story-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 0.6rem; }
+  .story-more-wrapper { display: grid; justify-items: center; margin-top: 2.5rem; }
 }

@@ -114,13 +114,13 @@ describe('subida (CA-01, CA-02, CA-04)', function () {
             ->assertJsonPath('data.status', 'PROCESSING')
             ->assertJsonPath('data.title', 'Talleres de manufactura')
             ->assertJsonPath('data.is_active', true)
-            ->assertJsonPath('data.original_bytes', 4096 * 1024)
-            ->assertJsonPath('data.output_bytes', null);
+            ->assertJsonMissingPath('data.original_bytes')
+            ->assertJsonMissingPath('data.output_bytes');
 
         // Solo los campos del contrato: sin id interno ni rutas.
         expect(array_keys($response->json('data')))->toBe([
             'public_id', 'title', 'description', 'status', 'is_active', 'duration_seconds', 'width', 'height',
-            'original_bytes', 'output_bytes', 'failure_reason', 'created_at', 'poster_url', 'video_url',
+            'failure_reason', 'created_at', 'poster_url', 'video_url',
         ]);
         expect($response->json('data.poster_url'))->toBeNull()->and($response->json('data.video_url'))->toBeNull();
 
@@ -130,6 +130,7 @@ describe('subida (CA-01, CA-02, CA-04)', function () {
             ->and($video->created_by)->toBe($this->account->id)
             ->and($video->status)->toBe(VideoStatus::PROCESSING)
             ->and($video->consent_confirmed_at)->not->toBeNull()
+            ->and($video->original_bytes)->toBe(4096 * 1024)
             ->and($video->source_path)->toBe('videos/originals/'.$this->institution->id.'/'.$video->public_id.'.mp4');
 
         Storage::disk('local')->assertExists($video->source_path);
@@ -164,8 +165,8 @@ describe('subida (CA-01, CA-02, CA-04)', function () {
         'descripción larga' => [['description' => str_repeat('a', 1001)], fn () => videoUpload(), 'description', 'La descripción no debe superar 1000 caracteres.'],
         'contacto en el título' => [['title' => 'Escríbenos a promo@escuela.mx'], fn () => videoUpload(), 'title', ContactInformation::VIDEO_MESSAGE],
         'contacto en la descripción' => [['description' => 'Visita https://escuela.mx'], fn () => videoUpload(), 'description', ContactInformation::VIDEO_MESSAGE],
-        'sin consentimiento' => [['consent' => null], fn () => videoUpload(), 'consent', 'Confirma que cuentas con la autorización de las personas que aparecen en el video.'],
-        'consentimiento negado' => [['consent' => '0'], fn () => videoUpload(), 'consent', 'Confirma que cuentas con la autorización de las personas que aparecen en el video.'],
+        'sin consentimiento' => [['consent' => null], fn () => videoUpload(), 'consent', 'Confirma que cuentas con la autorización de las personas y empresas que aparecen o se mencionan en el video.'],
+        'consentimiento negado' => [['consent' => '0'], fn () => videoUpload(), 'consent', 'Confirma que cuentas con la autorización de las personas y empresas que aparecen o se mencionan en el video.'],
     ]);
 });
 

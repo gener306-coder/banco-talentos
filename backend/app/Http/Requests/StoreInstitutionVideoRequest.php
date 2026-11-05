@@ -40,7 +40,7 @@ class StoreInstitutionVideoRequest extends FormRequest
             'title.required' => 'El título es obligatorio.',
             'title.max' => 'El título no debe superar 120 caracteres.',
             'description.max' => 'La descripción no debe superar 1000 caracteres.',
-            'consent.accepted' => 'Confirma que cuentas con la autorización de las personas que aparecen en el video.',
+            'consent.accepted' => 'Confirma que cuentas con la autorización de las personas y empresas que aparecen o se mencionan en el video.',
         ];
     }
 }

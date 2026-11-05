@@ -6,9 +6,10 @@ import { ConfirmDialog } from '../ui/ConfirmDialog'
 import { ChevronLeftIcon, PlusIcon, VideoIcon } from '../ui/icons'
 import { Sheet } from '../ui/Sheet'
 import { LoadingState, StateMessage } from '../ui/StateMessage'
-import { duration, fileSize, listVideos, updateVideoStatus, videoMessages } from './api'
+import { duration, listVideos, updateVideoStatus, videoMessages } from './api'
 import type { InstitutionVideo, VideoStatus } from './api'
 import { VideoEditForm } from './VideoEditForm'
+import { VideoPlayer } from './VideoPlayer'
 import { VideoUploadForm } from './VideoUploadForm'
 import './videos.css'
 
@@ -24,7 +25,7 @@ function VideoStatusBadge({ video }: { video: InstitutionVideo }) {
 }
 
 /**
- * Videos promocionales de la institución (HU-S9-01, HU-S9-02): subida, estado en vivo mientras se procesan, vista
+ * Historias del Dual de la institución (HU-S9-01, HU-S9-02): subida, estado en vivo mientras se procesan, vista
  * previa, edición de textos y baja lógica con confirmación.
  */
 export function InstitutionVideosPage() {
@@ -72,9 +73,9 @@ export function InstitutionVideosPage() {
       <nav className="page-navigation" aria-label="Navegación de videos">
         <Link className="plain" to="/" aria-label="Volver al inicio"><ChevronLeftIcon />Inicio</Link>
       </nav>
-      <h2 id="institution-videos-title">Videos promocionales</h2>
+      <h2 id="institution-videos-title">Historias del Dual</h2>
       <div className="page-toolbar">
-        <p>Muestra a las empresas tus instalaciones, talleres y proyectos del programa dual. Puedes tener hasta 5 videos activos de máximo 5 minutos cada uno.</p>
+        <p>Comparte con las empresas la experiencia de tus alumnos en el programa dual. Puedes tener hasta 5 videos activos de máximo 5 minutos cada uno.</p>
         {uploadButton('Subir video')}
       </div>
       {received && (
@@ -88,8 +89,8 @@ export function InstitutionVideosPage() {
       {loading ? <LoadingState label="Cargando videos…" variant="table" />
         : failure ? <InstitutionRequestError failure={failure} retry={refresh} page />
         : data && data.length === 0
-          ? <StateMessage kind="empty" icon={<VideoIcon />} title="Aún no hay videos promocionales."
-            description="Sube un video de tus instalaciones o proyectos; lo optimizamos y lo publicamos para las empresas."
+          ? <StateMessage kind="empty" icon={<VideoIcon />} title="Aún no hay historias."
+            description="Sube el testimonio de un alumno en el programa dual; lo optimizamos y lo publicamos para las empresas."
             action={uploadButton('Subir el primer video')} />
         : data && (
           <ul className="video-grid" aria-label="Tus videos">
@@ -106,7 +107,6 @@ export function InstitutionVideosPage() {
                   <VideoStatusBadge video={video} />
                   <p className="video-meta">
                     Subido el {dateFormat.format(new Date(video.created_at))}
-                    {video.output_bytes !== null && ` · ${fileSize(video.output_bytes)} (original ${fileSize(video.original_bytes)})`}
                   </p>
                   {video.status === 'FAILED' && video.failure_reason && <p className="notice-muted">{video.failure_reason}</p>}
                   <div className="actions">
@@ -141,8 +141,10 @@ export function InstitutionVideosPage() {
           <section className="institution-account" aria-labelledby="video-watch-title">
             <h3 id="video-watch-title">{watching.title}</h3>
             {/* key: al cambiar de video se monta un reproductor nuevo y se detiene el anterior. */}
-            <video key={watching.public_id} className="video-player" controls preload="metadata" playsInline
-              poster={watching.poster_url ?? undefined} src={watching.video_url ?? undefined} aria-label={`Video: ${watching.title}`} />
+            {watching.video_url && (
+              <VideoPlayer key={watching.public_id} src={watching.video_url} poster={watching.poster_url} label={watching.title}
+                durationSeconds={watching.duration_seconds} width={watching.width} height={watching.height} />
+            )}
             {watching.description && <p>{watching.description}</p>}
           </section>
         )}

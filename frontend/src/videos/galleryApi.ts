@@ -2,7 +2,7 @@ import type { Role } from '../auth/api'
 import { ApiError, request } from '../lib/http'
 import type { FailureMessages } from '../lib/useApiRequest'
 
-/** Galería de promoción dual (HU-S9-03): COMPANY, SECRETARY y ADMIN. */
+/** Historias del Dual (HU-S9-03, HU-S9-04): testimonios en video para COMPANY, SECRETARY y ADMIN. */
 export const GALLERY_VIEWERS: readonly Role[] = ['COMPANY', 'SECRETARY', 'ADMIN']
 
 export interface PromotionalVideo {
@@ -10,6 +10,8 @@ export interface PromotionalVideo {
   title: string
   description: string | null
   duration_seconds: number
+  width: number
+  height: number
   institution: { public_id: string; name: string }
   poster_url: string
   video_url: string
@@ -23,7 +25,7 @@ export interface PromotionalVideoPage {
 }
 
 export const galleryMessages: FailureMessages = {
-  403: 'No tienes permiso para consultar la galería de promoción dual.',
+  403: 'No tienes permiso para consultar las Historias del Dual.',
   404: 'El video no existe.',
 }
 
@@ -35,12 +37,12 @@ function promotionalVideo(item: unknown): PromotionalVideo {
   const data = item as Record<string, unknown>
   const institution = data.institution as Record<string, unknown> | null
   if (!isText(data.public_id) || !isText(data.title) || (data.description !== null && !isText(data.description)) ||
-      !isCount(data.duration_seconds) || typeof institution !== 'object' || institution === null ||
+      !isCount(data.duration_seconds) || !isCount(data.width) || !isCount(data.height) || typeof institution !== 'object' || institution === null ||
       !isText(institution.public_id) || !isText(institution.name) || !isText(data.poster_url) || !isText(data.video_url)) throw new ApiError(502)
   // Solo se conservan los campos del contrato.
   return {
     public_id: data.public_id, title: data.title, description: data.description, duration_seconds: data.duration_seconds,
-    institution: { public_id: institution.public_id, name: institution.name }, poster_url: data.poster_url, video_url: data.video_url,
+    width: data.width, height: data.height, institution: { public_id: institution.public_id, name: institution.name }, poster_url: data.poster_url, video_url: data.video_url,
   }
 }
 

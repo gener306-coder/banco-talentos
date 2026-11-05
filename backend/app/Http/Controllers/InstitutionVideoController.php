@@ -156,8 +156,6 @@ class InstitutionVideoController extends Controller
             'duration_seconds' => $video->duration_seconds,
             'width' => $video->width,
             'height' => $video->height,
-            'original_bytes' => $video->original_bytes,
-            'output_bytes' => $video->output_bytes,
             'failure_reason' => $video->failure_reason,
             'created_at' => $video->created_at?->toISOString(),
             'poster_url' => $ready ? MediaUrl::temporary($video->poster_path) : null,
