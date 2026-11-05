@@ -33,6 +33,11 @@ interface VideoPlayerProps {
   onMutedChange?: (muted: boolean) => void
   /** Al reintentar tras un fallo: la URL firmada pudo vencer, así que el feed pide URLs nuevas. */
   onRetry?: () => void
+  /** `none` salvo un archivo local, que no se descarga de ningún lado (vista previa antes de subir, HU-S9-07). */
+  preload?: 'none' | 'metadata'
+  onMetadata?: (metadata: { duration: number; width: number; height: number }) => void
+  /** El navegador no puede mostrar este archivo. Con ella, quien la pasa decide qué mostrar en lugar de «Reintentar». */
+  onUnplayable?: () => void
 }
 
 /**
@@ -40,7 +45,7 @@ interface VideoPlayerProps {
  * nativos. Quita la opción, no impide copiar el archivo con herramientas de desarrollador. `preload="none"`: nada se
  * descarga hasta reproducir.
  */
-export function VideoPlayer({ src, poster, label, durationSeconds, width, height, autoPlay = false, muted: sharedMuted, onMutedChange, onRetry }: VideoPlayerProps) {
+export function VideoPlayer({ src, poster, label, durationSeconds, width, height, autoPlay = false, muted: sharedMuted, onMutedChange, onRetry, preload = 'none', onMetadata, onUnplayable }: VideoPlayerProps) {
   const container = useRef<HTMLDivElement>(null)
   const video = useRef<HTMLVideoElement>(null)
   const hideTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
@@ -195,7 +200,7 @@ export function VideoPlayer({ src, poster, label, durationSeconds, width, height
       onKeyDown={onKeyDown} onPointerMove={(event) => { if (event.pointerType !== 'touch') revealControls() }}
       onPointerDown={(event) => { lastPointer.current = event.pointerType }} onFocus={revealControls}>
       {vertical && poster && <img className="story-player-backdrop" src={poster} alt="" aria-hidden="true" />}
-      <video ref={video} className="story-player-video" src={src} poster={poster ?? undefined} preload="none" playsInline
+      <video ref={video} className="story-player-video" src={src} poster={poster ?? undefined} preload={preload} playsInline
         controlsList="nodownload" disablePictureInPicture aria-label={`Video: ${label}`}
         onContextMenu={(event) => event.preventDefault()} onClick={pressVideo}
         onPlay={(event) => {
@@ -209,7 +214,16 @@ export function VideoPlayer({ src, poster, label, durationSeconds, width, height
         onWaiting={() => setWaiting(true)} onPlaying={() => setWaiting(false)} onCanPlay={() => setWaiting(false)}
         onTimeUpdate={(event) => setTime(event.currentTarget.currentTime)}
         onDurationChange={(event) => { if (Number.isFinite(event.currentTarget.duration)) setTotal(event.currentTarget.duration) }}
-        onError={() => { setWaiting(false); setPlaying(false); setFailed(true) }} />
+        onLoadedMetadata={(event) => {
+          const { duration: seconds, videoWidth, videoHeight } = event.currentTarget
+          if (Number.isFinite(seconds)) onMetadata?.({ duration: seconds, width: videoWidth, height: videoHeight })
+        }}
+        onError={() => {
+          setWaiting(false)
+          setPlaying(false)
+          if (onUnplayable) onUnplayable()
+          else setFailed(true)
+        }} />
 
       {failed
         ? (

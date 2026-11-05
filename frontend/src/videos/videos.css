@@ -16,6 +16,49 @@
   .video-upload-progress progress::-webkit-progress-value { background: var(--accent-fill); }
   .video-upload-progress progress::-moz-progress-bar { background: var(--accent-fill); }
 
+  /* Formulario de subida (HU-S9-07): el video a un lado y los textos al otro; en móvil, el video primero. */
+  .video-form-header { margin-bottom: 1.25rem; }
+  .video-form-header h3 { margin: 0 0 0.3rem; color: var(--text-strong); font-size: 1.35rem; line-height: 1.2; }
+  .video-form-header p { margin: 0; }
+  .video-form-grid { display: grid; gap: 1.25rem; }
+  .video-form-grid > fieldset { min-width: 0; margin: 0; padding: 0; border: 0; }
+  .video-form-grid textarea { display: block; }
+  .video-form-media { display: grid; align-content: start; gap: 0.6rem; min-width: 0; }
+  .video-form-media .field-error { margin: 0; }
+  @media (min-width: 720px) { .video-form-grid { grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr); gap: 1.75rem; } }
+
+  .video-dropzone { display: grid; gap: 0.7rem; min-width: 0; }
+  .video-dropzone-area { display: grid; place-content: center; justify-items: center; gap: 0.35rem; aspect-ratio: 16 / 9; padding: 1rem; border: 2px dashed var(--border-strong); border-radius: 1.25rem;
+    background: var(--surface-muted); color: var(--text); font-weight: 400; text-align: center; cursor: pointer; transition: background 200ms ease-out, border-color 200ms ease-out, transform 300ms var(--spring); }
+  .video-dropzone-area strong { color: var(--text-strong); font-weight: 600; }
+  .video-dropzone-area > span:last-child { font-size: 0.85rem; }
+  .video-dropzone-icon { display: grid; place-items: center; width: 3rem; height: 3rem; margin-bottom: 0.3rem; border-radius: 50%; background: var(--tint); color: var(--accent); }
+  .video-dropzone-icon .icon { width: 1.35rem; height: 1.35rem; }
+  .video-dropzone[data-dragging='true'] .video-dropzone-area { border-color: var(--accent); background: var(--tint); transform: scale(1.01); }
+  .video-dropzone[data-invalid='true'] .video-dropzone-area { border-color: var(--danger-border); }
+  /* El input real está oculto a la vista: el foco se muestra en la zona. */
+  .video-dropzone input:focus-visible + .video-dropzone-area { outline: 3px solid var(--focus-ring); outline-offset: 2px; }
+  .video-dropzone input:focus-visible ~ .video-file-row button { outline: 3px solid var(--focus-ring); outline-offset: 2px; }
+  .video-dropzone .story-player { box-shadow: none; }
+  .video-file-row { display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; min-width: 0; }
+  .video-file-name { min-width: 0; overflow: hidden; color: var(--text-strong); font-size: 0.9rem; font-weight: 600; text-overflow: ellipsis; white-space: nowrap; }
+  .video-file-row button { flex: none; }
+  .video-file-fallback { display: grid; place-content: center; justify-items: center; gap: 0.5rem; aspect-ratio: 16 / 9; padding: 1rem; border-radius: 1.25rem; background: var(--surface-muted); color: var(--text); text-align: center; }
+  .video-file-fallback p { margin: 0; font-size: 0.9rem; }
+  .video-file-fallback .icon { width: 1.75rem; height: 1.75rem; color: var(--accent); }
+
+  /* El estilo global input { width: 100% } centraba la casilla: aquí queda alineada al inicio del texto. */
+  .video-consent { display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: start; gap: 0.7rem; margin-top: 1.25rem; padding: 0.9rem 1rem; border: 1px solid transparent; border-radius: 0.9rem; background: var(--tint); color: var(--text); font-weight: 400; cursor: pointer; }
+  .video-consent[data-invalid='true'] { border-color: var(--danger-border); }
+  .video-consent input { width: 1.15rem; height: 1.15rem; margin: 0.15rem 0 0; accent-color: var(--accent-fill); cursor: pointer; }
+  .video-form .video-consent + .field-error { margin: 0.4rem 0 0; }
+  .video-form-actions { justify-content: flex-end; margin-top: 1rem; }
+  @media (hover: hover) { .video-dropzone-area:hover { border-color: var(--accent); background: var(--tint); } }
+  @media (prefers-reduced-motion: reduce) {
+    .video-dropzone-area { transition: none; }
+    .video-dropzone[data-dragging='true'] .video-dropzone-area { transform: none; }
+  }
+
   /* Listado de videos (HU-S9-02 CA-05): retícula de tarjetas dentro de --page-wide. */
   .video-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(16rem, 1fr)); gap: 1.25rem; margin: 1.5rem 0 0; padding: 0; list-style: none; }
   .video-card { display: flex; flex-direction: column; overflow: hidden; border: 1px solid var(--border); border-radius: 0.75rem; background: var(--surface); }
@@ -143,7 +186,8 @@
   .spotlight button.spotlight-dot { display: inline-grid; place-items: center; width: 1.5rem; height: 2.75rem; margin: 0; padding: 0; border: 0; background: transparent; }
   .spotlight-dot::before { content: ''; width: 0.5rem; height: 0.5rem; border-radius: 50%; background: var(--border-strong); transition: width 300ms var(--spring), background 200ms ease-out; }
   .spotlight-dot[aria-current='true']::before { width: 1.1rem; border-radius: 999px; background: var(--accent); }
-  .spotlight-preview h3 { margin: 1rem 0 0.15rem; color: var(--text-strong); font-size: 1.3rem; line-height: 1.25; overflow-wrap: anywhere; }
+  .spotlight-preview .story-player { margin-bottom: 1rem; }
+  .spotlight-preview h3 { margin: 0 0 0.15rem; color: var(--text-strong); font-size: 1.3rem; line-height: 1.25; overflow-wrap: anywhere; }
   .spotlight-preview h3:focus { outline: none; }
   .spotlight-preview .story-description { margin: 0.5rem 0 0; }
   .spotlight-preview .story-actions { margin-top: 1rem; }

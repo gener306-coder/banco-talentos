@@ -195,7 +195,7 @@ No incluye nombres, matrículas, NSS ni ubicaciones de alumnos. **Descargar CSV*
 
 Son testimonios en video de alumnos que están o estuvieron en el programa dual en una empresa.
 
-La institución sube en **Historias del Dual** (`/institution/videos`, HU-S9-01) videos MP4, MOV o WebM de hasta 250 MB y 5 minutos, con título, descripción opcional y la confirmación de que cuenta con la autorización de las personas y empresas que aparecen o se mencionan. La API responde `202` y el worker procesa el video en la cola `videos`:
+La institución sube en **Historias del Dual** (`/institution/videos`; HU-S9-01 y HU-S9-07), arrastrando o eligiendo el archivo y con una vista previa local antes de subirlo, videos MP4, MOV o WebM de hasta 250 MB y 5 minutos, con título, descripción opcional y la confirmación de que cuenta con la autorización de las personas y empresas que aparecen o se mencionan. La API responde `202` y el worker procesa el video en la cola `videos`:
 - lo convierte a MP4 H.264 con el lado corto a 720 px, ≤ 30 fps y SDR;
 - le quita los metadatos, incluido el GPS de los celulares;
 - genera un póster JPG.
@@ -208,7 +208,7 @@ En la misma vista (HU-S9-02) la institución ve sus videos con su estado, que se
 
 Contrato en [docs/HU-S9-02.md](docs/HU-S9-02.md).
 
-Las empresas, la Secretaría y el Administrador ven las historias publicadas de las instituciones activas en un feed (`/promocion`; HU-S9-03 y HU-S9-04), con un reproductor propio sin opción de descarga. El video visible arranca sin sonido, salvo con movimiento reducido o ahorro de datos. El Administrador puede inactivar una historia inapropiada; solo la institución puede reactivarla. La empresa las encuentra también en un módulo destacado de su inicio y en una franja del buscador de talento (HU-S9-05). Contrato y decisiones en [docs/HU-S9-03.md](docs/HU-S9-03.md), [docs/HU-S9-04.md](docs/HU-S9-04.md) y [docs/HU-S9-05.md](docs/HU-S9-05.md).
+Las empresas, la Secretaría y el Administrador ven las historias publicadas de las instituciones activas en un feed (`/promocion`; HU-S9-03 y HU-S9-04), con un reproductor propio sin opción de descarga. El video visible arranca sin sonido, salvo con movimiento reducido o ahorro de datos. El Administrador puede inactivar una historia inapropiada; solo la institución puede reactivarla. La empresa las encuentra también en un carrusel de su inicio, con vista previa al hacer clic (HU-S9-05 y HU-S9-06), y en una franja del buscador de talento. Contrato y decisiones en [docs/HU-S9-03.md](docs/HU-S9-03.md), [docs/HU-S9-04.md](docs/HU-S9-04.md), [docs/HU-S9-05.md](docs/HU-S9-05.md), [docs/HU-S9-06.md](docs/HU-S9-06.md) y [docs/HU-S9-07.md](docs/HU-S9-07.md).
 
 ## Alumnos
 

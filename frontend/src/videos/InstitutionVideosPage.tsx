@@ -130,8 +130,8 @@ export function InstitutionVideosPage() {
           </ul>
         )}
 
-      <Sheet open={uploading} onClose={closeUpload} labelledBy="video-form-title">
-        <VideoUploadForm onUploaded={(video) => { setReceived(video); setUploading(false); setData((current) => [video, ...(current ?? [])]) }} />
+      <Sheet open={uploading} onClose={closeUpload} labelledBy="video-form-title" large>
+        <VideoUploadForm open={uploading} onUploaded={(video) => { setReceived(video); setUploading(false); setData((current) => [video, ...(current ?? [])]) }} />
       </Sheet>
       <Sheet open={editing !== null} onClose={closeEdit} labelledBy="video-edit-title">
         {editing && <VideoEditForm key={editing.public_id} video={editing} onSaved={(video) => { replace(video); setEditing(null); setNotice('Cambios guardados.') }} />}

@@ -25,8 +25,10 @@ test('la institución publica una historia y la empresa la encuentra y la reprod
   await form.getByLabel('Título').fill(title)
   await form.getByLabel('Descripción (opcional)').fill('Cuento cómo fue mi año en la empresa.')
   await form.getByLabel('Archivo de video').setInputFiles(FIXTURE)
+  // HU-S9-07: el archivo se puede revisar antes de subirlo.
+  await expect(form.getByRole('button', { name: 'Cambiar video' })).toBeVisible()
   await form.getByLabel(/Confirmo que cuento con la autorización/).check()
-  await form.getByRole('button', { name: 'Subir video', exact: true }).click()
+  await form.getByRole('button', { name: 'Subir historia', exact: true }).click()
   await expect(page.getByText(`Recibimos «${title}». Procesando…`, { exact: false })).toBeVisible()
 
   // HU-S9-02 CA-05: la vista consulta cada 5 s hasta que el worker termina.
