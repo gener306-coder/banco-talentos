@@ -141,8 +141,10 @@ export function PromotionalVideosPage() {
       <nav className="page-navigation" aria-label="Navegación de las historias">
         <Link className="plain" to="/" aria-label="Volver al inicio"><ChevronLeftIcon />Inicio</Link>
       </nav>
-      <h2 id="promotional-videos-title">Historias del Dual</h2>
-      <p className="story-intro">Alumnos que están o estuvieron en el programa dual cuentan cómo fue su experiencia en la empresa.</p>
+      <header className="story-header">
+        <h2 id="promotional-videos-title">Historias del Dual</h2>
+        <p>Alumnos que están o estuvieron en el programa dual cuentan cómo fue su experiencia en la empresa.</p>
+      </header>
       {notice && <p className="institution-success" role="status">{notice}</p>}
       {moderation.failure && <InstitutionRequestError failure={moderation.failure} />}
 

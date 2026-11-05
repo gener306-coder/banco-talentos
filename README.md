@@ -191,9 +191,11 @@ No incluye nombres, matrículas, NSS ni ubicaciones de alumnos. **Descargar CSV*
 
 `ADMIN` abre **Bitácora** desde el inicio (`/audit-events`) para revisar, de 30 en 30 y del más reciente al más antiguo, quién creó cada cuenta, empresa y oportunidad, y quién solicitó o respondió cada vinculación. Se puede filtrar por tipo de evento. Cada evento muestra la fecha, la cuenta que lo realizó con su rol y una descripción pública del recurso; nunca contraseñas, tokens, NSS ni la identidad de alumnos. Los eventos salen de las columnas de autoría ya registradas, sin tabla adicional. Contrato y cobertura en [docs/HU-S7-03.md](docs/HU-S7-03.md).
 
-## Videos promocionales
+## Historias del Dual
 
-La institución sube en **Videos promocionales** (`/institution/videos`, HU-S9-01) videos MP4, MOV o WebM de hasta 250 MB y 5 minutos, con título, descripción opcional y la confirmación de que cuenta con la autorización de las personas que aparecen. La API responde `202` y el worker procesa el video en la cola `videos`:
+Son testimonios en video de alumnos que están o estuvieron en el programa dual en una empresa.
+
+La institución sube en **Historias del Dual** (`/institution/videos`, HU-S9-01) videos MP4, MOV o WebM de hasta 250 MB y 5 minutos, con título, descripción opcional y la confirmación de que cuenta con la autorización de las personas y empresas que aparecen o se mencionan. La API responde `202` y el worker procesa el video en la cola `videos`:
 - lo convierte a MP4 H.264 con el lado corto a 720 px, ≤ 30 fps y SDR;
 - le quita los metadatos, incluido el GPS de los celulares;
 - genera un póster JPG.
@@ -206,7 +208,7 @@ En la misma vista (HU-S9-02) la institución ve sus videos con su estado, que se
 
 Contrato en [docs/HU-S9-02.md](docs/HU-S9-02.md).
 
-Las empresas, la Secretaría y el Administrador ven en **Promoción dual** (`/promocion`, HU-S9-03) los videos publicados de las instituciones activas, de 12 en 12, con un reproductor que no descarga nada hasta reproducirse. El Administrador puede inactivar un video inapropiado; solo la institución puede reactivarlo. Contrato en [docs/HU-S9-03.md](docs/HU-S9-03.md).
+Las empresas, la Secretaría y el Administrador ven las historias publicadas de las instituciones activas en un feed (`/promocion`; HU-S9-03 y HU-S9-04), con un reproductor propio sin opción de descarga. El video visible arranca sin sonido, salvo con movimiento reducido o ahorro de datos. El Administrador puede inactivar una historia inapropiada; solo la institución puede reactivarla. La empresa las encuentra también en un módulo destacado de su inicio y en una franja del buscador de talento (HU-S9-05). Contrato y decisiones en [docs/HU-S9-03.md](docs/HU-S9-03.md), [docs/HU-S9-04.md](docs/HU-S9-04.md) y [docs/HU-S9-05.md](docs/HU-S9-05.md).
 
 ## Alumnos
 

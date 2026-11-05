@@ -103,6 +103,13 @@ Tokens añadidos con el modo oscuro. En el tema claro son alias de los anteriore
 | `--accent-fill` / `--accent-fill-hover` | `--color-brand-primary` / `-hover` | Relleno de las acciones primarias (botones, «Nueva …», menú de cuenta abierto) |
 | `--logo-plate` / `--logo-plate-padding` | `transparent` / `0` | Pastilla de los logotipos |
 
+Tokens añadidos con el reproductor de video (HU-S9-04). Tienen el mismo valor en ambos temas, porque un video siempre es oscuro:
+
+| Token | Valor | Función |
+|---|---|---|
+| `--on-media` | `#fff` | Iconos y texto sobre un video o póster |
+| `--media-backdrop` | `#000` | Fondo del reproductor y base del vidrio y el degradado de los controles (con `color-mix`) |
+
 **Regla:** en una hoja de estilos nueva, usar solo tokens semánticos. `src/ui/tokens.test.ts` falla si:
 - alguna hoja, fuera de `@theme` y de los bloques de tokens claro y oscuro, escribe un HEX, `rgb()`, `hsl()`, `black`/`white` o un `var(--color-…)` directamente;
 - un `.tsx` usa utilidades de color de Tailwind (`text-|bg-|border-brand-*`, `neutral`, `white`, `black`), que fijarían el tema claro;
