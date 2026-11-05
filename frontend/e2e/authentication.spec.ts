@@ -32,7 +32,7 @@ test('login → área protegida → recarga → logout invalida también la cook
   await page.getByLabel('Contraseña', { exact: true }).fill(password!)
   await page.getByRole('button', { name: 'Iniciar sesión', exact: true }).click()
   await expect(page).toHaveURL(`${baseURL}/`)
-  await expect(page.getByText(email!, { exact: true })).toBeVisible()
+  await expect(page.getByRole('heading', { name: /^Hola, / })).toBeVisible()
   await expect(page.getByText('Institución', { exact: true })).toBeVisible()
 
   const cookies = await context.cookies()
@@ -44,7 +44,7 @@ test('login → área protegida → recarga → logout invalida también la cook
     .toEqual({ local: 0, session: 0 })
 
   await page.reload()
-  await expect(page.getByText(email!, { exact: true })).toBeVisible()
+  await expect(page.getByRole('heading', { name: /^Hola, / })).toBeVisible()
   // «Cerrar sesión» está en el menú de cuenta del encabezado.
   await page.getByRole('button', { name: /^Cuenta de / }).click()
   await page.getByRole('region', { name: 'Cuenta' }).getByRole('button', { name: 'Cerrar sesión', exact: true }).click()

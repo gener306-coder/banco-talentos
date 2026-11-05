@@ -130,28 +130,28 @@ function HomeIndicators({ role }: { role: Role }) {
   }
   const metrics = data?.metrics
   if (!metrics) return null
-  const pending = metrics.pending_municipality_students ?? 0
+  const missing = metrics.missing_data_students ?? 0
   // HU-S6-03 CA-02: solo la institución responde solicitudes; a la empresa le basta el contador.
   const linkages = role === 'INSTITUTION' ? metrics.pending_linkage_requests ?? 0 : 0
 
   return (
     <section className="home-indicators" aria-label="Indicadores">
       {linkages > 0 && (
-        <p className="pending-notice home-notice home-linkage-notice">
+        <p className="pending-notice home-notice home-action-notice home-linkage-notice">
           <AlertIcon />
           <span>
-            {linkages === 1 ? 'Tienes 1 solicitud de vinculación' : `Tienes ${count.format(linkages)} solicitudes de vinculación`} pendiente{linkages === 1 ? '' : 's'} de respuesta.{' '}
-            <Link to="/institution/linkage-requests">Revisar solicitudes</Link>
+            {linkages === 1 ? 'Tienes 1 solicitud de vinculación' : `Tienes ${count.format(linkages)} solicitudes de vinculación`} pendiente{linkages === 1 ? '' : 's'} de respuesta.
           </span>
+          <Link className="pill-link notice-action" to="/institution/linkage-requests?status=PENDIENTE_INSTITUCION">Revisar solicitudes<ChevronRightIcon /></Link>
         </p>
       )}
-      {pending > 0 && (
-        <p className="pending-notice home-notice">
+      {missing > 0 && (
+        <p className="pending-notice home-notice home-action-notice">
           <AlertIcon />
           <span>
-            {pending === 1 ? '1 alumno tiene' : `${count.format(pending)} alumnos tienen`} «Municipio por confirmar».{' '}
-            <Link to="/students">Revisar el padrón</Link>
+            {missing === 1 ? '1 alumno tiene' : `${count.format(missing)} alumnos tienen`} <strong>datos faltantes</strong>.
           </span>
+          <Link className="pill-link notice-action" to="/students?data=missing&status=active">Revisar el padrón<ChevronRightIcon /></Link>
         </p>
       )}
       <dl className="home-stats">
@@ -184,7 +184,6 @@ export function SessionPage() {
         <p className="home-meta">
           <span className="home-role">{roleLabels[user.role]}</span>
           {organization && <span>{organization}</span>}
-          <span>{user.email}</span>
         </p>
       </div>
 

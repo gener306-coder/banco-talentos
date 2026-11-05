@@ -91,7 +91,7 @@ describe('acceso administrativo a instituciones', () => {
   it.each(otherRoles)('no ofrece gestión de instituciones a %s en su sesión', async (role) => {
     sessionUser = { ...admin, role }
     renderApp('/')
-    await screen.findByText(admin.email)
+    await screen.findByRole('heading', { name: `Hola, ${admin.name}` })
     expect(screen.queryByRole('link', { name: 'Instituciones' })).not.toBeInTheDocument()
     expect(apiMock).not.toHaveBeenCalled()
   })

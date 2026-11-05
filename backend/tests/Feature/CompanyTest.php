@@ -28,6 +28,7 @@ function companyPayload(array $overrides = []): array
         'state_code' => '28',
         'municipality_code' => '28032',
         'contact_name' => 'Lucía Herrera',
+        'contact_position' => 'Recursos Humanos',
         'contact_email' => 'dual@manugolfo.test',
         'contact_phone' => '+52 (899) 123-4567',
         'validation_reference' => 'SE/DGIC/2026/0141',
@@ -74,9 +75,10 @@ it('accepts only the required fields, leaving the optional ones empty (CA-02)', 
     signInSecretary($this);
 
     $this->browserRequest('POST', '/api/companies', companyPayload([
-        'trade_name' => null, 'contact_phone' => '', 'validation_reference' => null,
+        'trade_name' => null, 'contact_position' => '', 'contact_phone' => '', 'validation_reference' => null,
     ]))->assertCreated()
         ->assertJsonPath('data.trade_name', null)
+        ->assertJsonPath('data.contact_position', null)
         ->assertJsonPath('data.contact_phone', null)
         ->assertJsonPath('data.validation_reference', null);
 });
@@ -127,6 +129,7 @@ it('validates the company without writing it', function (array $overrides, strin
     'long contact name' => [['contact_name' => str_repeat('n', 121)], 'contact_name'],
     'missing contact email' => [['contact_email' => null], 'contact_email'],
     'invalid contact email' => [['contact_email' => 'no-es-correo'], 'contact_email'],
+    'position too long' => [['contact_position' => str_repeat('a', 121)], 'contact_position'],
     'phone with letters' => [['contact_phone' => '899-CALL-NOW'], 'contact_phone'],
     'phone too short' => [['contact_phone' => '899 123 45'], 'contact_phone'],
     'phone too long' => [['contact_phone' => str_repeat('1', 21)], 'contact_phone'],

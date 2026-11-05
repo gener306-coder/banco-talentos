@@ -46,7 +46,7 @@ export async function signInWithSetupLink(browser: Browser, baseURL: string | un
   await page.getByLabel('Correo electrónico').fill(email)
   await page.getByLabel('Contraseña', { exact: true }).fill(password)
   await page.getByRole('button', { name: 'Iniciar sesión', exact: true }).click()
-  await expect(page.getByText(email, { exact: true })).toBeVisible()
+  await expect(page.getByRole('heading', { name: /^Hola, / })).toBeVisible()
   return { context, page }
 }
 

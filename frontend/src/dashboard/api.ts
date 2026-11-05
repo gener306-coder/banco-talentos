@@ -8,7 +8,7 @@ import { ApiError, request } from '../lib/http'
 export const metricKeys = {
   ADMIN: ['active_institutions', 'inactive_institutions', 'active_secretaries', 'pending_secretaries', 'active_opportunities', 'accepted_linkage_requests'],
   SECRETARY: ['active_companies', 'inactive_companies', 'pending_secretaries', 'active_opportunities', 'accepted_linkage_requests'],
-  INSTITUTION: ['active_students', 'searchable_students', 'pending_municipality_students', 'pending_linkage_requests'],
+  INSTITUTION: ['active_students', 'searchable_students', 'missing_data_students', 'pending_linkage_requests'],
   COMPANY: ['available_talent_profiles', 'active_opportunities', 'pending_linkage_requests'],
 } as const satisfies Record<Role, readonly string[]>
 
@@ -23,7 +23,7 @@ export const metricLabels: Record<MetricKey, string> = {
   inactive_companies: 'Empresas inactivas',
   active_students: 'Alumnos activos',
   searchable_students: 'Visibles en el buscador',
-  pending_municipality_students: 'Municipio por confirmar',
+  missing_data_students: 'Datos faltantes',
   available_talent_profiles: 'Perfiles disponibles',
   active_opportunities: 'Oportunidades activas',
   pending_linkage_requests: 'Solicitudes pendientes',

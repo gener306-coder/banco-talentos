@@ -37,6 +37,7 @@ class StudentController extends Controller
         $page = Student::query()
             ->where('students.institution_id', $request->user()->institution_id)
             ->when($status !== null, fn ($query) => $query->where('students.is_active', $status === 'active'))
+            ->when($request->validated('data') === 'missing', fn ($query) => $query->withMissingData())
             ->join('student_identities', 'student_identities.student_id', '=', 'students.id')
             ->when($words !== [], function ($query) use ($words): void {
                 foreach ($words as $word) {
@@ -224,6 +225,7 @@ class StudentController extends Controller
                 'pending_municipality' => $student->legacy_municipality,
                 'can_relocate' => $student->can_relocate,
             ],
+            'missing_data' => $student->missingData(),
         ]])->header('Cache-Control', 'no-store, private');
     }
 }

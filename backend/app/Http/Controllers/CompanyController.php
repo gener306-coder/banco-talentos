@@ -131,6 +131,7 @@ class CompanyController extends Controller
         return response()->json(['data' => [
             ...$this->summary($company),
             'contact_name' => $company->contact_name,
+            'contact_position' => $company->contact_position,
             'contact_email' => $company->contact_email,
             'contact_phone' => $company->contact_phone,
             'validation_reference' => $company->validation_reference,

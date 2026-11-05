@@ -7,6 +7,7 @@ import { AuthProvider } from './auth/AuthProvider'
 import { useAuth } from './auth/useAuth'
 
 const user = { id: 1, name: 'Ana García', email: 'ana@example.test', role: 'ADMIN' }
+const greeting = { name: `Hola, ${user.name}` }
 const fetchMock = vi.fn<typeof fetch>()
 
 function Location() {
@@ -70,7 +71,7 @@ describe('acceso y sesión', () => {
   ])('restaura la sesión de %s al recargar y muestra la navegación correspondiente a su rol', async (role, label) => {
     fetchMock.mockResolvedValueOnce(Response.json({ user: { ...user, role } }))
     renderApp()
-    expect(await screen.findByText(user.email)).toBeInTheDocument()
+    expect(await screen.findByRole('heading', greeting)).toBeInTheDocument()
     expect(screen.getByText(label)).toBeInTheDocument()
     expect(screen.getAllByRole('button')).toHaveLength(1)
     if (role === 'ADMIN') {
@@ -88,7 +89,7 @@ describe('acceso y sesión', () => {
   it('redirige a un usuario autenticado desde login al área protegida', async () => {
     fetchMock.mockResolvedValueOnce(Response.json({ user }))
     renderApp('/login')
-    await screen.findByText(user.email)
+    await screen.findByRole('heading', greeting)
     expect(screen.getByLabelText('Ruta actual').textContent).toBe('/')
   })
 
@@ -102,7 +103,7 @@ describe('acceso y sesión', () => {
     expect(screen.getByRole('button', { name: 'Iniciando sesión…' })).toBeDisabled()
     await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(3))
     await act(async () => { resolve(Response.json({ user })) })
-    expect(await screen.findByText(user.email)).toBeInTheDocument()
+    expect(await screen.findByRole('heading', greeting)).toBeInTheDocument()
     expect(screen.getByLabelText('Ruta actual').textContent).toBe('/')
     expect(localStorage.length).toBe(0)
     expect(sessionStorage.length).toBe(0)
@@ -121,7 +122,7 @@ describe('acceso y sesión', () => {
     expect(screen.getByLabelText('Contraseña')).toHaveValue('')
     expect(screen.getByLabelText('Ruta actual')).toHaveTextContent('/login')
     await fillLogin()
-    expect(await screen.findByText(user.email)).toBeInTheDocument()
+    expect(await screen.findByRole('heading', greeting)).toBeInTheDocument()
   })
 
   it('ofrece ejemplos en los campos y muestra la contraseña solo hasta el siguiente envío', async () => {
@@ -157,7 +158,7 @@ describe('acceso y sesión', () => {
     await fillLogin()
     expect(await screen.findByRole('alert')).toHaveTextContent(message)
     expect(screen.getByLabelText('Contraseña')).toHaveValue('')
-    expect(screen.queryByText(user.email)).not.toBeInTheDocument()
+    expect(screen.queryByRole('heading', greeting)).not.toBeInTheDocument()
   })
 
   it('permite reintentar si falla la red durante el login', async () => {
@@ -170,7 +171,7 @@ describe('acceso y sesión', () => {
     expect(await screen.findByRole('alert')).toHaveTextContent('No pudimos conectar')
     expect(screen.getByRole('button', { name: 'Iniciar sesión' })).toBeEnabled()
     await fillLogin()
-    expect(await screen.findByText(user.email)).toBeInTheDocument()
+    expect(await screen.findByRole('heading', greeting)).toBeInTheDocument()
   })
 
   it('cierra sesión después de la respuesta del servidor y deniega acceso al recargar', async () => {
@@ -180,12 +181,12 @@ describe('acceso y sesión', () => {
       .mockReturnValueOnce(new Promise<Response>((done) => { resolve = done }))
       .mockResolvedValueOnce(new Response(null, { status: 401 }))
     const view = renderApp()
-    await screen.findByText(user.email)
+    await screen.findByRole('heading', greeting)
     clickSignOut()
     expect(screen.getByRole('button', { name: 'Cerrando sesión…' })).toBeDisabled()
     await act(async () => { resolve(new Response(null, { status: 204 })) })
     expect(await screen.findByRole('heading', { name: 'Iniciar sesión' })).toBeInTheDocument()
-    expect(screen.queryByText(user.email)).not.toBeInTheDocument()
+    expect(screen.queryByRole('heading', greeting)).not.toBeInTheDocument()
     view.unmount()
     renderApp()
     await screen.findByRole('heading', { name: 'Iniciar sesión' })
@@ -197,11 +198,11 @@ describe('acceso y sesión', () => {
     fetchMock.mockResolvedValueOnce(Response.json({ user }))
       .mockResolvedValueOnce(new Response(null, { status: 401 }))
     renderApp()
-    await screen.findByText(user.email)
+    await screen.findByRole('heading', greeting)
     clickSignOut()
     expect(await screen.findByRole('heading', { name: 'Iniciar sesión' })).toBeInTheDocument()
     expect(screen.getByRole('alert')).toHaveTextContent('Tu sesión terminó')
-    expect(screen.queryByText(user.email)).not.toBeInTheDocument()
+    expect(screen.queryByRole('heading', greeting)).not.toBeInTheDocument()
   })
 
   it('conserva la sesión si el cierre sigue fallando con 419 tras renovar CSRF', async () => {
@@ -211,10 +212,10 @@ describe('acceso y sesión', () => {
       .mockImplementationOnce(csrfResponse)
       .mockResolvedValueOnce(new Response(null, { status: 419 }))
     renderApp()
-    await screen.findByText(user.email)
+    await screen.findByRole('heading', greeting)
     clickSignOut()
     expect(await screen.findByRole('alert')).toHaveTextContent('No pudimos cerrar la sesión')
-    expect(screen.getAllByText(user.email).length).toBeGreaterThan(0)
+    expect(screen.getByRole('heading', greeting)).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Cerrar sesión' })).toBeEnabled()
     expect(fetchMock).toHaveBeenCalledTimes(4)
   })
@@ -224,10 +225,10 @@ describe('acceso y sesión', () => {
     fetchMock.mockResolvedValueOnce(Response.json({ user }))
       .mockResolvedValueOnce(new Response(null, { status: 403 }))
     renderApp()
-    await screen.findByText(user.email)
+    await screen.findByRole('heading', greeting)
     clickSignOut()
     expect(await screen.findByRole('alert')).toHaveTextContent('No tienes permiso')
-    expect(screen.getAllByText(user.email).length).toBeGreaterThan(0)
+    expect(screen.getByRole('heading', greeting)).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Cerrar sesión' })).toBeEnabled()
   })
 
@@ -237,10 +238,10 @@ describe('acceso y sesión', () => {
       .mockRejectedValueOnce(new TypeError('Network error'))
       .mockResolvedValueOnce(new Response(null, { status: 204 }))
     renderApp()
-    await screen.findByText(user.email)
+    await screen.findByRole('heading', greeting)
     clickSignOut()
     expect(await screen.findByRole('alert')).toHaveTextContent('No pudimos conectar')
-    expect(screen.getAllByText(user.email).length).toBeGreaterThan(0)
+    expect(screen.getByRole('heading', greeting)).toBeInTheDocument()
     clickSignOut()
     expect(await screen.findByRole('heading', { name: 'Iniciar sesión' })).toBeInTheDocument()
   })
@@ -252,14 +253,14 @@ describe('acceso y sesión', () => {
     expect(await screen.findByRole('alert')).toHaveTextContent('No pudimos conectar')
     expect(screen.queryByRole('heading', { name: 'Iniciar sesión' })).not.toBeInTheDocument()
     fireEvent.click(screen.getByRole('button', { name: 'Reintentar' }))
-    expect(await screen.findByText(user.email)).toBeInTheDocument()
+    expect(await screen.findByRole('heading', greeting)).toBeInTheDocument()
   })
 
   it('muestra acceso denegado para un rol desconocido sin exponer el área protegida', async () => {
     fetchMock.mockResolvedValueOnce(Response.json({ user: { ...user, role: 'UNKNOWN' } }))
     renderApp()
     expect(await screen.findByRole('heading', { name: 'Acceso denegado' })).toBeInTheDocument()
-    expect(screen.queryByText(user.email)).not.toBeInTheDocument()
+    expect(screen.queryByRole('heading', greeting)).not.toBeInTheDocument()
   })
 
   // Tarea transversal «Tamaños y retícula»: vistas anchas por defecto; angostas solo las pantallas de acceso.
@@ -293,11 +294,11 @@ describe('acceso y sesión', () => {
     const staleView = renderApp()
     staleView.unmount()
     renderApp()
-    await screen.findByText(user.email)
+    await screen.findByRole('heading', greeting)
     clickSignOut()
     await screen.findByRole('heading', { name: 'Iniciar sesión' })
     await act(async () => { resolveStale(Response.json({ user })) })
-    expect(screen.queryByText(user.email)).not.toBeInTheDocument()
+    expect(screen.queryByRole('heading', greeting)).not.toBeInTheDocument()
     expect(screen.getByLabelText('Ruta actual')).toHaveTextContent('/login')
     expect(fetchMock.mock.calls[0][1]?.signal?.aborted).toBe(true)
   })

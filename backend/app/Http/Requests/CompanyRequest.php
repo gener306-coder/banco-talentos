@@ -45,6 +45,7 @@ class CompanyRequest extends FormRequest
                 Rule::exists('municipalities', 'code')->where('state_code', is_string($state) ? $state : ''),
             ],
             'contact_name' => ['required', 'string', 'max:120'],
+            'contact_position' => ['nullable', 'string', 'max:120'],
             'contact_email' => ['required', 'string', 'email', 'max:254'],
             'contact_phone' => ['nullable', 'string', 'max:20', 'regex:/^\+?[\d\s().-]+$/', function (string $attribute, mixed $value, Closure $fail): void {
                 $digits = strlen(preg_replace('/\D/', '', (string) $value));
@@ -80,6 +81,8 @@ class CompanyRequest extends FormRequest
             'contact_name.required' => 'El nombre del contacto es obligatorio.',
             'contact_name.string' => 'El nombre del contacto no es válido.',
             'contact_name.max' => 'El nombre del contacto no debe superar 120 caracteres.',
+            'contact_position.string' => 'El puesto o departamento no es válido.',
+            'contact_position.max' => 'El puesto o departamento no debe superar 120 caracteres.',
             'contact_email.required' => 'El correo del contacto es obligatorio.',
             'contact_email.string' => 'Ingresa un correo de contacto válido.',
             'contact_email.email' => 'Ingresa un correo de contacto válido.',

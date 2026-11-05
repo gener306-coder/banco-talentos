@@ -188,6 +188,62 @@ Segunda recomendación de la simulación de carga:
 
 ---
 
+## Actualización posterior al cierre (5 de noviembre de 2026)
+
+Afinaciones pedidas y aprobadas por el responsable el 5 de noviembre de 2026, durante el Sprint 9. Se registran aquí por su indicación, como actualización del Sprint de afinaciones.
+
+### T-S8-05 — «Ver detalle» en las solicitudes recibidas
+
+**Estado:** Completada (5 de noviembre de 2026)  
+**Rol:** `INSTITUTION`
+
+- El enlace usa `pill-link` con flecha, igual que los demás listados.
+
+### T-S8-06 — Puesto del contacto y correo sin salir de la plataforma
+
+**Estado:** Completada (5 de noviembre de 2026)  
+**Rol:** `SECRETARY` (captura), `INSTITUTION` (consulta), `COMPANY` (correo de la institución)
+
+- **Campo:** `companies.contact_position`, «Puesto o departamento del contacto (opcional)», hasta 120 caracteres.
+- **Consulta:** aparece en el detalle de la empresa, en el detalle de la solicitud recibida y en el CSV de solicitudes de la institución.
+- **Correo:** los enlaces `mailto:` se abren en otra pestaña (`target="_blank"`). La aplicación que responde es la predeterminada del usuario; para Gmail web, debe estar configurado como gestor de correo en el navegador.
+
+### T-S8-07 — Seguros distintos del IMSS
+
+**Estado:** Completada (5 de noviembre de 2026)  
+**Rol:** `INSTITUTION`
+
+- **Tipo:** `student_social_security.insurance_type`, `IMSS` u `OTHER`. Lo existente queda como `IMSS`.
+- **IMSS:** el NSS conserva sus 11 dígitos, su dígito verificador y su unicidad por institución.
+- **Otro seguro:** aseguradora obligatoria (`insurer_name`, hasta 120 caracteres) y número de póliza o afiliación opcional, de formato libre (`policy_number`, hasta 40 caracteres, cifrado).
+- **Completo:** basta el número o el comprobante en PDF, para cualquier tipo. El aviso de la solicitud recibida solo aparece si faltan ambos, y sigue sin bloquear la decisión.
+- **Cambio de tipo:** al guardarlo se borran el número y la aseguradora del tipo anterior. El comprobante se conserva hasta que se reemplace. La subida se habilita al guardar el tipo elegido, para que el PDF no quede asociado al tipo anterior.
+- **Privacidad:** igual que el NSS, estos datos son de resguardo exclusivo de la institución. La API de la solicitud recibida entrega el tipo, la aseguradora y si existe número, nunca el número.
+
+### T-S8-08 — Avisos del inicio que llevan al filtro exacto
+
+**Estado:** Completada (5 de noviembre de 2026)  
+**Rol:** `INSTITUTION`
+
+- **Revisar el padrón:** abre el padrón filtrado por lo mismo que cuenta el aviso. T-S8-09 sustituyó el criterio de municipio por el de datos faltantes.
+- **Solicitudes pendientes:** «Revisar solicitudes» abre `/institution/linkage-requests?status=PENDIENTE_INSTITUCION`.
+- **URL:** ambos filtros viven en la URL, así que se conservan al recargar y al volver con el navegador.
+- **Estilo:** acción `pill-link` con flecha, sin fondo ni subrayado, con el texto y la flecha resaltados en el color de su aviso. Ambos avisos llevan el remarque izquierdo en su propio color. El dato clave del aviso va en negritas, sin comillas.
+
+### T-S8-09 — Datos faltantes del alumno
+
+**Estado:** Completada (5 de noviembre de 2026)  
+**Rol:** `INSTITUTION`
+
+- **Criterio:** a un alumno le faltan datos si no tiene capturado algún campo del expediente público (`Student::PROFILE_ATTRIBUTES`) o si su seguro no tiene número ni comprobante. El seguro cuenta porque es requisito indispensable para que el alumno participe. El CV no cuenta. Un municipio por confirmar cuenta como municipio faltante.
+- **Inicio:** el indicador `pending_municipality_students` pasa a `missing_data_students` («Datos faltantes») y el aviso dice «n alumnos tienen **datos faltantes**». Solo cuenta alumnos activos: uno dado de baja no requiere acción.
+- **Padrón:** el filtro «Municipio» se sustituye por «Datos faltantes» (`/students?data=missing`), para no confundirlo con el estado o municipio geográfico. «Revisar el padrón» abre `/students?data=missing&status=active`; el filtro «Estado» también vive en la URL, y el padrón permite consultar a los inactivos. `Student::withMissingData` es la condición del aviso y del filtro.
+- **Detalle:** `GET /api/students/{id}` entrega `missing_data`, con las claves de lo que falta. El aviso aparece bajo el nombre del alumno y se actualiza al guardar el expediente o el seguro.
+- **Privacidad:** `missing_data` solo existe en los endpoints de la institución.
+- **Inicio sin correo:** el saludo ya no repite el correo de la cuenta, que sigue en el menú de cuenta del encabezado.
+
+---
+
 ## Afinaciones pendientes
 
 Espacio para registrar las siguientes afinaciones antes de convertirlas en historias.

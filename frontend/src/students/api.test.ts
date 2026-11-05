@@ -73,36 +73,39 @@ describe('cliente del padrón de alumnos', () => {
 
 describe('cliente del expediente HU-S2-03', () => {
   it('obtiene el detalle con el expediente y descarta campos fuera del contrato', async () => {
-    fetchMock.mockResolvedValueOnce(Response.json({ data: { ...record, institution_id: 9, profile: { ...emptyProfile, extra: 1 } } }))
-    await expect(getStudent('3')).resolves.toEqual({ ...record, profile: emptyProfile })
+    fetchMock.mockResolvedValueOnce(Response.json({ data: { ...record, institution_id: 9, profile: { ...emptyProfile, extra: 1 }, missing_data: [] } }))
+    await expect(getStudent('3')).resolves.toEqual({ ...record, profile: emptyProfile, missing_data: [] })
     expect(fetchMock.mock.calls[0][0]).toBe('/api/students/3')
   })
 
   it.each([
     [{ data: record }],
-    [{ data: { ...record, profile: { ...emptyProfile, state_code: '33' } } }],
-    [{ data: { ...record, profile: { ...emptyProfile, period_type: 'trimester' } } }],
-    [{ data: { ...record, profile: { ...emptyProfile, period_number: 16 } } }],
-    [{ data: { ...record, profile: { ...emptyProfile, dual_available: 'sí' } } }],
-    [{ data: { ...record, profile: { ...emptyProfile, municipality_code: '2804' } } }],
-    [{ data: { ...record, profile: { ...emptyProfile, pending_municipality: 7 } } }],
+    [{ data: { ...record, profile: { ...emptyProfile, state_code: '33' }, missing_data: [] } }],
+    [{ data: { ...record, profile: { ...emptyProfile, period_type: 'trimester' }, missing_data: [] } }],
+    [{ data: { ...record, profile: { ...emptyProfile, period_number: 16 }, missing_data: [] } }],
+    [{ data: { ...record, profile: { ...emptyProfile, dual_available: 'sí' }, missing_data: [] } }],
+    [{ data: { ...record, profile: { ...emptyProfile, municipality_code: '2804' }, missing_data: [] } }],
+    [{ data: { ...record, profile: { ...emptyProfile, pending_municipality: 7 }, missing_data: [] } }],
     [{ data: { ...record, profile: { program: null } } }],
+    [{ data: { ...record, profile: emptyProfile } }],
+    [{ data: { ...record, profile: emptyProfile, missing_data: 'insurance' } }],
+    [{ data: { ...record, profile: emptyProfile, missing_data: ['nss'] } }],
   ])('rechaza un detalle inesperado', async (body) => {
     fetchMock.mockResolvedValueOnce(Response.json(body))
     await expect(getStudent('3')).rejects.toMatchObject({ status: 502 })
   })
 
   it('guarda el expediente con CSRF enviando solo sus campos', async () => {
-    fetchMock.mockImplementationOnce(csrf).mockResolvedValueOnce(Response.json({ data: { ...record, profile: fullProfile } }))
+    fetchMock.mockImplementationOnce(csrf).mockResolvedValueOnce(Response.json({ data: { ...record, profile: fullProfile, missing_data: [] } }))
     await expect(updateStudentProfile(3, { ...fullInput, ...{ institution_id: 9, enrollment_number: 'X' } }))
-      .resolves.toEqual({ ...record, profile: fullProfile })
+      .resolves.toEqual({ ...record, profile: fullProfile, missing_data: [] })
     expect(fetchMock.mock.calls[1][0]).toBe('/api/students/3/profile')
     expect(fetchMock.mock.calls[1][1]?.method).toBe('PUT')
     expect(JSON.parse(fetchMock.mock.calls[1][1]?.body as string)).toEqual(fullInput)
   })
 
   it('corrige la identidad con CSRF enviando solo la identidad', async () => {
-    fetchMock.mockImplementationOnce(csrf).mockResolvedValueOnce(Response.json({ data: { ...record, profile: emptyProfile } }))
+    fetchMock.mockImplementationOnce(csrf).mockResolvedValueOnce(Response.json({ data: { ...record, profile: emptyProfile, missing_data: [] } }))
     const input = { enrollment_number: 'A-001', given_names: 'María', first_surname: 'López', second_surname: null }
     await updateStudentIdentity(3, { ...input, ...{ program: 'X' } })
     expect(fetchMock.mock.calls[1][0]).toBe('/api/students/3/identity')
@@ -119,8 +122,8 @@ describe('cliente del expediente HU-S2-03', () => {
 
 describe('cliente de la baja lógica HU-S2-04', () => {
   it.each([false, true])('cambia el estado a %s con CSRF enviando solo is_active', async (active) => {
-    fetchMock.mockImplementationOnce(csrf).mockResolvedValueOnce(Response.json({ data: { ...record, is_active: active, profile: emptyProfile } }))
-    await expect(setStudentStatus(3, active)).resolves.toEqual({ ...record, is_active: active, profile: emptyProfile })
+    fetchMock.mockImplementationOnce(csrf).mockResolvedValueOnce(Response.json({ data: { ...record, is_active: active, profile: emptyProfile, missing_data: [] } }))
+    await expect(setStudentStatus(3, active)).resolves.toEqual({ ...record, is_active: active, profile: emptyProfile, missing_data: [] })
     expect(fetchMock.mock.calls[1][0]).toBe('/api/students/3/status')
     expect(fetchMock.mock.calls[1][1]?.method).toBe('PATCH')
     expect(JSON.parse(fetchMock.mock.calls[1][1]?.body as string)).toEqual({ is_active: active })

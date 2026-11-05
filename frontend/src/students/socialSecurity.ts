@@ -1,6 +1,8 @@
 import { ApiError, request, requestBlob } from '../lib/http'
 
-/** Seguro facultativo (HU-S3-02): resguardo exclusivo de la institución, nunca del perfil público. */
+/** Seguro del alumno (HU-S3-02, T-S8-07): resguardo exclusivo de la institución, nunca del perfil público. */
+export type InsuranceType = 'IMSS' | 'OTHER'
+
 export interface SocialSecurityDocument {
   name: string
   size: number
@@ -8,15 +10,23 @@ export interface SocialSecurityDocument {
 }
 
 export interface SocialSecurity {
+  insurance_type: InsuranceType
   nss: string | null
+  insurer_name: string | null
+  policy_number: string | null
   document: SocialSecurityDocument | null
 }
+
+export type SocialSecurityInput =
+  | { insurance_type: 'IMSS'; nss: string | null }
+  | { insurance_type: 'OTHER'; insurer_name: string; policy_number: string | null }
 
 export const NSS_LENGTH = 11
 /** Igual que StoreStudentSocialSecurityDocumentRequest::MAX_KILOBYTES. */
 export const MAX_DOCUMENT_BYTES = 2048 * 1024
 
 const isText = (value: unknown): value is string => typeof value === 'string'
+const isOptionalText = (value: unknown): value is string | null => value === null || isText(value)
 
 function document(data: unknown): SocialSecurityDocument | null {
   if (data === null) return null
@@ -31,9 +41,15 @@ function socialSecurity(response: unknown): SocialSecurity {
   if (typeof response !== 'object' || response === null || !('data' in response) ||
       typeof response.data !== 'object' || response.data === null) throw new ApiError(502)
   const data = response.data
-  if (!('nss' in data) || (data.nss !== null && !isText(data.nss)) || !('document' in data)) throw new ApiError(502)
+  if (!('insurance_type' in data) || (data.insurance_type !== 'IMSS' && data.insurance_type !== 'OTHER') ||
+      !('nss' in data) || !isOptionalText(data.nss) ||
+      !('insurer_name' in data) || !isOptionalText(data.insurer_name) ||
+      !('policy_number' in data) || !isOptionalText(data.policy_number) || !('document' in data)) throw new ApiError(502)
   // Solo se conservan los campos del contrato.
-  return { nss: data.nss, document: document(data.document) }
+  return {
+    insurance_type: data.insurance_type, nss: data.nss, insurer_name: data.insurer_name,
+    policy_number: data.policy_number, document: document(data.document),
+  }
 }
 
 const securityPath = (id: number | string) => `/api/students/${encodeURIComponent(String(id))}/social-security`
@@ -42,9 +58,9 @@ export async function getSocialSecurity(id: number | string, signal?: AbortSigna
   return socialSecurity(await request(securityPath(id), { signal }))
 }
 
-export async function updateSocialSecurity(id: number, nss: string): Promise<SocialSecurity> {
+export async function updateSocialSecurity(id: number, input: SocialSecurityInput): Promise<SocialSecurity> {
   await request('/sanctum/csrf-cookie')
-  return socialSecurity(await request(securityPath(id), { method: 'PUT', body: JSON.stringify({ nss }) }))
+  return socialSecurity(await request(securityPath(id), { method: 'PUT', body: JSON.stringify(input) }))
 }
 
 export async function uploadSocialSecurityDocument(id: number, file: File): Promise<SocialSecurity> {

@@ -370,6 +370,7 @@ final class SimulationDataset
                 'municipality_code' => $municipality['code'],
                 'location' => DB::raw("(SELECT location FROM municipalities WHERE code = '{$municipality['code']}')"),
                 'contact_name' => $this->personName(),
+                'contact_position' => $this->chance(0.7) ? $this->pick(['Recursos Humanos', 'Jefatura de Capacitación', 'Gerencia de Planta', 'Vinculación']) : null,
                 'contact_email' => sprintf('dual@empresa%03d.%s', $i, self::DOMAIN),
                 'contact_phone' => $this->chance(0.6) ? sprintf('+52 722 %03d %04d', $this->random->getInt(100, 999), $this->random->getInt(0, 9999)) : null,
                 'validation_reference' => $this->chance(0.5) ? sprintf('SE-2026-%04d', $i) : null,

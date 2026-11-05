@@ -64,6 +64,7 @@ describe('bandeja de solicitudes HU-S5-05', () => {
     expect(within(row).getByRole('link', { name: 'Tableros de producción' })).toHaveAttribute('href', '/opportunities/12')
     expect(within(row).getByText('UT del Golfo')).toBeInTheDocument()
     expect(within(row).getByRole('link', { name: 'dual@utgolfo.edu.mx' })).toHaveAttribute('href', 'mailto:dual@utgolfo.edu.mx')
+    expect(within(row).getByRole('link', { name: 'dual@utgolfo.edu.mx' })).toHaveAttribute('target', '_blank')
     expect(within(row).getByText('Pendiente de la institución')).toBeInTheDocument()
     expect(within(row).getByRole('button', { name: /Cancelar la solicitud/ })).toBeInTheDocument()
 

@@ -297,9 +297,15 @@ textarea[aria-invalid='true'] { border-color: var(--danger-border); }
 .home-notice { display: flex; align-items: flex-start; gap: 0.5rem; }
 .home-notice > .icon { flex-shrink: 0; margin-top: 0.2rem; }
 .home-notice a { color: inherit; font-weight: 600; text-decoration: underline; }
+/* Avisos del inicio con acción (T-S8-08): remarque al inicio y acción sin fondo, con el texto y la flecha resaltados en el color del aviso. */
+.home-action-notice { flex-wrap: wrap; align-items: center; border-left: 3px solid var(--status-off-text); }
+.home-action-notice > .icon { margin-top: 0; }
+.home-action-notice > span { flex: 1 1 14rem; }
+.home-notice a.notice-action { margin-left: auto; padding-inline: 0.2rem; background: transparent; color: var(--status-off-text); font-weight: 700; text-decoration: none; }
 /* Solicitudes de vinculación por responder (HU-S6-03 CA-02): aviso destacado con el acento de la marca. */
 .home-linkage-notice { background: var(--tint); color: var(--text); border-left: 3px solid var(--accent); }
 .home-linkage-notice > .icon { color: var(--accent); }
+.home-linkage-notice a.notice-action { color: var(--accent); }
 .home-stats-failure { margin: 0 0 1.75rem; }
 .home-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(16rem, 100%), 1fr)); gap: 0.9rem; margin: 0; padding: 0; list-style: none; }
 .home-card { display: flex; align-items: flex-start; gap: 0.9rem; height: 100%; padding: 1.1rem; border: 1px solid var(--border); border-radius: 14px;

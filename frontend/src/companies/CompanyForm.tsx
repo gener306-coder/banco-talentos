@@ -15,13 +15,13 @@ type Values = Record<Field, string>
 
 const emptyValues: Values = {
   legal_name: '', trade_name: '', rfc: '', sector_code: '', state_code: '', municipality_code: '',
-  contact_name: '', contact_email: '', contact_phone: '', validation_reference: '',
+  contact_name: '', contact_position: '', contact_email: '', contact_phone: '', validation_reference: '',
 }
 
 const valuesOf = (company: Company): Values => ({
   legal_name: company.legal_name, trade_name: company.trade_name ?? '', rfc: company.rfc, sector_code: company.sector_code,
   state_code: company.state_code, municipality_code: company.municipality_code, contact_name: company.contact_name,
-  contact_email: company.contact_email, contact_phone: company.contact_phone ?? '', validation_reference: company.validation_reference ?? '',
+  contact_position: company.contact_position ?? '', contact_email: company.contact_email, contact_phone: company.contact_phone ?? '', validation_reference: company.validation_reference ?? '',
 })
 
 interface CompanyFormProps {
@@ -105,7 +105,7 @@ export function CompanyForm({ company, submitLabel, cancelTo, pending, failure, 
     await onSubmit({
       legal_name: text('legal_name'), trade_name: optional('trade_name'), rfc, sector_code: values.sector_code,
       state_code: values.state_code, municipality_code: values.municipality_code, contact_name: text('contact_name'),
-      contact_email: text('contact_email'), contact_phone: optional('contact_phone'), validation_reference: optional('validation_reference'),
+      contact_position: optional('contact_position'), contact_email: text('contact_email'), contact_phone: optional('contact_phone'), validation_reference: optional('validation_reference'),
     })
   }
 
@@ -184,6 +184,7 @@ export function CompanyForm({ company, submitLabel, cancelTo, pending, failure, 
         <fieldset disabled={pending}>
           <legend>Contacto del programa dual</legend>
           {input('contact_name', 'Nombre del contacto', { maxLength: 120, autoComplete: 'name', required: true })}
+          {input('contact_position', 'Puesto o departamento del contacto (opcional)', { maxLength: 120, autoComplete: 'organization-title' })}
           {input('contact_email', 'Correo del contacto', { maxLength: 254, type: 'email', autoComplete: 'email', required: true, onBlur: checkEmail })}
           {input('contact_phone', 'Teléfono del contacto (opcional)', { maxLength: 20, type: 'tel', autoComplete: 'tel', onBlur: checkPhone })}
         </fieldset>

@@ -15,7 +15,7 @@ const summary = {
   state_code: '28', municipality_code: '28032', municipality: 'Reynosa', is_active: true,
 }
 const company = {
-  ...summary, contact_name: 'Lucía Herrera', contact_email: 'dual@manugolfo.test', contact_phone: '899 123 4567',
+  ...summary, contact_name: 'Lucía Herrera', contact_position: 'Recursos Humanos', contact_email: 'dual@manugolfo.test', contact_phone: '899 123 4567',
   validation_reference: 'SE/2026/0141', registered_by: { id: 2, name: 'Analista' }, created_at: '2026-10-22T10:00:00Z',
 }
 const page = (companies: unknown[]) => Response.json({ data: companies, meta: { current_page: 1, last_page: 1, total: companies.length } })
@@ -66,6 +66,7 @@ async function fillCompany(form: HTMLElement) {
   fireEvent.change(municipality, { target: { value: 'reyn' } })
   fireEvent.mouseDown(await within(form).findByRole('option', { name: 'Reynosa' }))
   fireEvent.change(within(form).getByLabelText('Nombre del contacto'), { target: { value: 'Lucía Herrera' } })
+  fireEvent.change(within(form).getByLabelText('Puesto o departamento del contacto (opcional)'), { target: { value: 'Recursos Humanos' } })
   fireEvent.change(within(form).getByLabelText('Correo del contacto'), { target: { value: 'dual@manugolfo.test' } })
 }
 
@@ -107,7 +108,7 @@ describe('empresas HU-S4-02', () => {
     expect(screen.getByLabelText('Ruta actual').textContent).toBe('/companies/5')
     expect(JSON.parse(writes('POST')[0][1]?.body as string)).toEqual({
       legal_name: 'Manufacturas del Golfo', trade_name: null, rfc: 'MGO150320AB1', sector_code: '31-33', state_code: '28',
-      municipality_code: '28032', contact_name: 'Lucía Herrera', contact_email: 'dual@manugolfo.test', contact_phone: null, validation_reference: null,
+      municipality_code: '28032', contact_name: 'Lucía Herrera', contact_position: 'Recursos Humanos', contact_email: 'dual@manugolfo.test', contact_phone: null, validation_reference: null,
     })
   })
 

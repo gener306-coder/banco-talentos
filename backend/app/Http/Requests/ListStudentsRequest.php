@@ -4,7 +4,7 @@ namespace App\Http\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
 
-/** Búsqueda y filtro del padrón (HU-S8-01 CA-01): texto libre, estado y página, todos opcionales. */
+/** Búsqueda y filtros del padrón (HU-S8-01 CA-01, T-S8-09): texto libre, estado, datos faltantes y página, todos opcionales. */
 class ListStudentsRequest extends FormRequest
 {
     public const STATUSES = ['active', 'inactive'];
@@ -19,6 +19,7 @@ class ListStudentsRequest extends FormRequest
         return [
             'q' => ['nullable', 'string', 'max:100'],
             'status' => ['nullable', 'string', 'in:'.implode(',', self::STATUSES)],
+            'data' => ['nullable', 'string', 'in:missing'],
             'page' => ['nullable', 'integer', 'min:1'],
         ];
     }
@@ -30,6 +31,8 @@ class ListStudentsRequest extends FormRequest
             'q.max' => 'La búsqueda no debe superar 100 caracteres.',
             'status.string' => 'El estado no es válido.',
             'status.in' => 'El estado no es válido.',
+            'data.string' => 'El filtro de datos faltantes no es válido.',
+            'data.in' => 'El filtro de datos faltantes no es válido.',
             'page.integer' => 'La página no es válida.',
             'page.min' => 'La página no es válida.',
         ];

@@ -1,5 +1,6 @@
 <?php
 
+use App\Enums\InsuranceType;
 use App\Enums\UserRole;
 use App\Models\Company;
 use App\Models\Institution;
@@ -8,6 +9,7 @@ use App\Models\Municipality;
 use App\Models\Opportunity;
 use App\Models\Skill;
 use App\Models\Student;
+use App\Models\StudentSocialSecurity;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
@@ -21,7 +23,7 @@ beforeEach(function () {
     $this->institution = Institution::factory()->create();
     $this->account = User::factory()->forInstitution($this->institution)->create();
     $this->company = Company::factory()->create(['legal_name' => 'Manufacturas del Golfo, S.A. de C.V.', 'trade_name' => 'ManuGolfo',
-        'contact_name' => 'Laura Méndez', 'contact_email' => 'dual@manugolfo.mx', 'contact_phone' => '8331234567']);
+        'contact_name' => 'Laura Méndez', 'contact_position' => 'Recursos Humanos', 'contact_email' => 'dual@manugolfo.mx', 'contact_phone' => '8331234567']);
     $this->student = receivedStudent($this->institution, ['enrollment_number' => 'MAT-0001', 'given_names' => 'Ana Sofía',
         'first_surname' => 'García', 'second_surname' => 'López']);
     $this->opportunity = receivedOpportunity($this->company, 'Tableros de producción');
@@ -199,7 +201,7 @@ describe('detalle (CA-02, CA-05)', function () {
             'company' => [
                 'name' => 'ManuGolfo', 'municipality' => Municipality::query()->find('28041')->name,
                 'legal_name' => 'Manufacturas del Golfo, S.A. de C.V.', 'trade_name' => 'ManuGolfo', 'sector_code' => '54', 'state_code' => '28',
-                'contact_name' => 'Laura Méndez', 'contact_email' => 'dual@manugolfo.mx', 'contact_phone' => '8331234567',
+                'contact_name' => 'Laura Méndez', 'contact_position' => 'Recursos Humanos', 'contact_email' => 'dual@manugolfo.mx', 'contact_phone' => '8331234567',
             ],
             'opportunity' => [
                 'id' => $this->opportunity->id, 'title' => 'Tableros de producción', 'program' => 'Ingeniería en Datos', 'vacancies' => 2,
@@ -211,7 +213,7 @@ describe('detalle (CA-02, CA-05)', function () {
                 'id' => $this->student->id, 'enrollment_number' => 'MAT-0001', 'given_names' => 'Ana Sofía', 'first_surname' => 'García',
                 'second_surname' => 'López', 'is_active' => true, 'program' => 'Ingeniería en Datos', 'period_type' => 'semester', 'period_number' => 6,
                 'dual_available' => true, 'state_code' => '28', 'municipality' => $municipality, 'can_relocate' => false,
-                'social_security' => ['has_nss' => false, 'has_document' => false],
+                'social_security' => ['insurance_type' => 'IMSS', 'insurer_name' => null, 'has_number' => false, 'has_document' => false],
             ],
             'message' => 'Nos interesa su perfil.',
             'responded_at' => null,
@@ -220,16 +222,33 @@ describe('detalle (CA-02, CA-05)', function () {
         ]);
     });
 
-    it('reports whether the NSS and the IMSS document exist without exposing them', function (bool $nss, bool $document) {
+    it('reports whether the NSS and the document exist without exposing them', function (bool $nss, bool $document) {
         $linkage = receivedLinkage($this->company, $this->opportunity, $this->student);
         receivedSocialSecurity($this->student, $nss, $document);
         $this->loginWithCookies($this->account)->assertOk();
 
         $response = $this->browserRequest('GET', '/api/institution/linkage-requests/'.$linkage->id)->assertOk();
-        expect($response->json('data.student.social_security'))->toBe(['has_nss' => $nss, 'has_document' => $document])
+        expect($response->json('data.student.social_security'))->toBe(['insurance_type' => 'IMSS', 'insurer_name' => null, 'has_number' => $nss, 'has_document' => $document])
             ->and($response->getContent())->not->toContain('12345678903')->not->toContain('secreto.pdf')->not->toContain('vigencia.pdf')
             ->not->toContain('nss_hash')->not->toContain('document_path')->not->toContain('location');
     })->with([[true, true], [true, false], [false, true]]);
+
+    it('reports another insurance with its insurer but without its policy number', function () {
+        $linkage = receivedLinkage($this->company, $this->opportunity, $this->student);
+        $security = new StudentSocialSecurity;
+        $security->student_id = $this->student->id;
+        $security->institution_id = $this->student->institution_id;
+        $security->insurance_type = InsuranceType::OTHER;
+        $security->insurer_name = 'Seguros del Golfo';
+        $security->policy_number = 'POL-998877';
+        $security->save();
+        $this->loginWithCookies($this->account)->assertOk();
+
+        $response = $this->browserRequest('GET', '/api/institution/linkage-requests/'.$linkage->id)->assertOk();
+        expect($response->json('data.student.social_security'))
+            ->toBe(['insurance_type' => 'OTHER', 'insurer_name' => 'Seguros del Golfo', 'has_number' => true, 'has_document' => false])
+            ->and($response->getContent())->not->toContain('POL-998877')->not->toContain('policy_number');
+    });
 
     it('shows inactive students and opportunities and cancelled requests', function () {
         $linkage = receivedLinkage($this->company, $this->opportunity, $this->student, 'CANCELADA');

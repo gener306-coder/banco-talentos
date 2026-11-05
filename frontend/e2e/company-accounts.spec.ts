@@ -114,7 +114,7 @@ test('HU-S6-04: la Secretaría inactiva una cuenta de empresa (su sesión se cie
     await reset.getByLabel('Correo electrónico').fill(email)
     await reset.getByLabel('Contraseña', { exact: true }).fill(password)
     await reset.getByRole('button', { name: 'Iniciar sesión', exact: true }).click()
-    await expect(reset.getByText(email, { exact: true })).toBeVisible()
+    await expect(reset.getByRole('heading', { name: /^Hola, / })).toBeVisible()
   } finally {
     await resetContext.close()
     await secretaryContext.close()

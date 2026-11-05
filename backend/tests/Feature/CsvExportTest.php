@@ -20,7 +20,7 @@ uses(RefreshDatabase::class, InteractsWithCookieSessions::class);
 const CSV_REPORT = '/api/reports/dual-program/export.csv';
 const CSV_INBOX = '/api/institution/linkage-requests/export.csv';
 const CSV_INBOX_HEADER = ['Folio', 'Fecha de solicitud', 'Estado', 'Matrícula', 'Primer apellido', 'Segundo apellido', 'Nombre(s)', 'Carrera',
-    'Empresa', 'Contacto de la empresa', 'Correo de contacto', 'Teléfono de contacto', 'Oportunidad', 'Fecha de respuesta'];
+    'Empresa', 'Contacto de la empresa', 'Puesto o departamento del contacto', 'Correo de contacto', 'Teléfono de contacto', 'Oportunidad', 'Fecha de respuesta'];
 
 beforeEach(function () {
     $this->initializeCookieBrowser();
@@ -174,7 +174,7 @@ describe('institution inbox export (CA-02)', function () {
         $student = csvStudent($institution, ['enrollment_number' => 'MAT-001', 'given_names' => 'Ana Sofía', 'first_surname' => 'López', 'second_surname' => 'Ríos']);
         $company = Company::factory()->create([
             'legal_name' => 'Manufacturas del Golfo, S.A. de C.V.', 'trade_name' => 'ManuGolfo',
-            'contact_name' => '=cmd|calc', 'contact_email' => 'rh@manugolfo.test', 'contact_phone' => '+52 899 123 4567',
+            'contact_name' => '=cmd|calc', 'contact_position' => 'Recursos Humanos', 'contact_email' => 'rh@manugolfo.test', 'contact_phone' => '+52 899 123 4567',
         ]);
         $plain = Company::factory()->create(['legal_name' => 'Servicios Industriales, S.C.', 'trade_name' => null, 'contact_phone' => null]);
 
@@ -197,9 +197,9 @@ describe('institution inbox export (CA-02)', function () {
         expect(csvRows($response))->toBe([
             CSV_INBOX_HEADER,
             [(string) $newer->id, '2026-10-27 10:05', 'Aceptada', 'MAT-001', 'López', 'Ríos', 'Ana Sofía', 'Ingeniería Mecatrónica',
-                'ManuGolfo', "'=cmd|calc", 'rh@manugolfo.test', "'+52 899 123 4567", 'Tableros de producción', '2026-10-27 19:15'],
+                'ManuGolfo', "'=cmd|calc", 'Recursos Humanos', 'rh@manugolfo.test', "'+52 899 123 4567", 'Tableros de producción', '2026-10-27 19:15'],
             [(string) $older->id, '2026-10-20 12:30', 'Pendiente de la institución', 'MAT-001', 'López', 'Ríos', 'Ana Sofía', 'Ingeniería Mecatrónica',
-                'Servicios Industriales, S.C.', 'Responsable del programa dual', 'dual@empresa.test', '', 'Mantenimiento', ''],
+                'Servicios Industriales, S.C.', 'Responsable del programa dual', '', 'dual@empresa.test', '', 'Mantenimiento', ''],
         ]);
         expect($response->streamedContent())->not->toContain('AJENO-99')->not->toContain('12345678903')->not->toContain(str_repeat('a', 64));
     });

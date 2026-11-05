@@ -23,7 +23,7 @@ const detail = {
   message: 'Nos interesa su perfil.',
   company: {
     name: 'ManuGolfo', municipality: 'Victoria', legal_name: 'Manufacturas del Golfo, S.A. de C.V.', trade_name: 'ManuGolfo',
-    sector_code: '54', state_code: '28', contact_name: 'Laura Méndez', contact_email: 'dual@manugolfo.mx', contact_phone: '(833) 123-4567',
+    sector_code: '54', state_code: '28', contact_name: 'Laura Méndez', contact_position: 'Recursos Humanos', contact_email: 'dual@manugolfo.mx', contact_phone: '(833) 123-4567',
   },
   opportunity: {
     id: 12, title: 'Tableros de producción', program: 'Ingeniería en Datos', vacancies: 2, period_type: 'semester', period_number: 5,
@@ -32,7 +32,7 @@ const detail = {
   },
   student: {
     ...student, dual_available: true, state_code: '28', municipality: 'Reynosa', can_relocate: false,
-    social_security: { has_nss: true, has_document: true },
+    social_security: { insurance_type: 'IMSS', insurer_name: null, has_number: true, has_document: true },
   },
   responded_at: null,
   response_message: null,
@@ -85,6 +85,7 @@ describe('bandeja institucional HU-S6-01', () => {
     expect(row).toHaveTextContent('Victoria')
     expect(row).toHaveTextContent('Pendiente de la institución')
     expect(within(row).getByRole('link', { name: 'Ver la solicitud de ManuGolfo para García López, Ana Sofía' })).toHaveAttribute('href', '/institution/linkage-requests/41')
+    expect(within(row).getByRole('link', { name: 'Ver la solicitud de ManuGolfo para García López, Ana Sofía' })).toHaveClass('pill-link')
     expect(within(table).getByRole('row', { name: /Aceros del Norte/ })).toHaveTextContent('Aceptada')
   })
 
@@ -150,6 +151,20 @@ describe('exportación CSV HU-S7-02', () => {
 })
 
 describe('detalle de solicitud HU-S6-01', () => {
+  it('llega desde el aviso del inicio filtrada por pendientes (T-S8-08)', async () => {
+    apiMock.mockResolvedValueOnce(Response.json({ data: [], meta: { current_page: 1, last_page: 1, total: 0 } }))
+    renderApp('/institution/linkage-requests?status=PENDIENTE_INSTITUCION')
+    expect(await screen.findByLabelText('Estado')).toHaveValue('PENDIENTE_INSTITUCION')
+    await waitFor(() => expect(apiMock.mock.calls[0][0]).toBe('/api/institution/linkage-requests?page=1&status=PENDIENTE_INSTITUCION'))
+  })
+
+  it('ignora un estado desconocido en la URL', async () => {
+    apiMock.mockResolvedValueOnce(Response.json({ data: [], meta: { current_page: 1, last_page: 1, total: 0 } }))
+    renderApp('/institution/linkage-requests?status=INVENTADO')
+    expect(await screen.findByLabelText('Estado')).toHaveValue('')
+    await waitFor(() => expect(apiMock.mock.calls[0][0]).toBe('/api/institution/linkage-requests?page=1'))
+  })
+
   it('muestra la identidad con enlace al expediente, la oportunidad y el contacto de la empresa (CA-05, CA-06)', async () => {
     apiMock.mockResolvedValueOnce(Response.json({ data: detail }))
     renderApp('/institution/linkage-requests/41')
@@ -160,7 +175,7 @@ describe('detalle de solicitud HU-S6-01', () => {
     expect(within(studentSection).getByRole('link', { name: /Ver expediente del alumno/ })).toHaveAttribute('href', '/students/7')
     expect(screen.getByText('Nos interesa su perfil.')).toBeInTheDocument()
 
-    const security = screen.getByRole('region', { name: 'Seguro Facultativo (IMSS)' })
+    const security = screen.getByRole('region', { name: 'Seguro del alumno' })
     expect(security).toHaveTextContent('Capturado')
     expect(security).toHaveTextContent('Cargado')
     expect(within(security).queryByRole('note')).not.toBeInTheDocument()
@@ -173,20 +188,35 @@ describe('detalle de solicitud HU-S6-01', () => {
     const company = screen.getByRole('region', { name: 'Empresa y contacto del programa dual' })
     expect(company).toHaveTextContent('Manufacturas del Golfo, S.A. de C.V.')
     expect(company).toHaveTextContent('Laura Méndez')
-    expect(within(company).getByRole('link', { name: 'dual@manugolfo.mx' })).toHaveAttribute('href', 'mailto:dual@manugolfo.mx')
+    expect(company).toHaveTextContent('Recursos Humanos')
+    const email = within(company).getByRole('link', { name: 'dual@manugolfo.mx' })
+    expect(email).toHaveAttribute('href', 'mailto:dual@manugolfo.mx')
+    expect(email).toHaveAttribute('target', '_blank')
+    expect(email).toHaveAttribute('rel', 'noopener noreferrer')
     expect(within(company).getByRole('link', { name: '(833) 123-4567' })).toHaveAttribute('href', 'tel:8331234567')
   })
 
-  it.each([
-    [{ has_nss: false, has_document: true }, 'Al alumno le falta el NSS.'],
-    [{ has_nss: true, has_document: false }, 'Al alumno le falta el comprobante de vigencia del IMSS.'],
-    [{ has_nss: false, has_document: false }, 'Al alumno le falta el NSS y el comprobante de vigencia del IMSS.'],
-  ])('avisa lo que falta del Seguro Facultativo con enlace al expediente (CA-06)', async (socialSecurity, text) => {
+  it('avisa si faltan el número y el comprobante, con enlace al expediente (T-S8-07)', async () => {
+    const socialSecurity = { insurance_type: 'IMSS', insurer_name: null, has_number: false, has_document: false }
     apiMock.mockResolvedValueOnce(Response.json({ data: { ...detail, student: { ...detail.student, social_security: socialSecurity } } }))
     renderApp('/institution/linkage-requests/41')
     const note = await screen.findByRole('note')
-    expect(note).toHaveTextContent(text)
+    expect(note).toHaveTextContent('Al alumno le falta el número del seguro o el comprobante de vigencia.')
     expect(within(note).getByRole('link', { name: 'expediente' })).toHaveAttribute('href', '/students/7')
+    expect(screen.getByRole('region', { name: 'Seguro del alumno' })).toHaveTextContent('Tipo de seguroSin capturar')
+  })
+
+  it.each([
+    [{ insurance_type: 'IMSS', insurer_name: null, has_number: false, has_document: true }, 'IMSS'],
+    [{ insurance_type: 'IMSS', insurer_name: null, has_number: true, has_document: false }, 'IMSS'],
+    [{ insurance_type: 'OTHER', insurer_name: 'Seguros del Golfo', has_number: false, has_document: true }, 'Otro seguro: Seguros del Golfo'],
+    [{ insurance_type: 'OTHER', insurer_name: 'Seguros del Golfo', has_number: true, has_document: false }, 'Otro seguro: Seguros del Golfo'],
+  ])('considera completo el seguro con el número o el comprobante (T-S8-07)', async (socialSecurity, label) => {
+    apiMock.mockResolvedValueOnce(Response.json({ data: { ...detail, student: { ...detail.student, social_security: socialSecurity } } }))
+    renderApp('/institution/linkage-requests/41')
+    const region = await screen.findByRole('region', { name: 'Seguro del alumno' })
+    expect(region).toHaveTextContent(label)
+    expect(within(region).queryByRole('note')).not.toBeInTheDocument()
   })
 
   it('responde a una solicitud ajena o inexistente con el 404 del servidor (CA-02)', async () => {

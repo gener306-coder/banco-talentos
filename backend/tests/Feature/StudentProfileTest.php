@@ -87,7 +87,20 @@ it('shows an own student with its identity and an empty profile (CA-01)', functi
                 'state_code' => null, 'municipality_code' => null, 'municipality' => null, 'pending_municipality' => null,
                 'can_relocate' => null,
             ],
+            'missing_data' => ['program', 'period_type', 'period_number', 'dual_available', 'state_code', 'municipality_code', 'can_relocate', 'insurance'],
         ]]);
+});
+
+it('lists what the student is missing until the profile and the insurance proof are saved (T-S8-09)', function () {
+    signInProfileInstitution($this);
+    $this->browserRequest('PUT', '/api/students/'.$this->student->id.'/profile', profilePayload())
+        ->assertOk()->assertJsonPath('data.missing_data', ['insurance']);
+
+    $this->browserRequest('PUT', '/api/students/'.$this->student->id.'/social-security', ['insurance_type' => 'OTHER', 'insurer_name' => 'GNP', 'policy_number' => null])->assertOk();
+    $this->browserRequest('GET', '/api/students/'.$this->student->id)->assertOk()->assertJsonPath('data.missing_data', ['insurance']);
+
+    $this->browserRequest('PUT', '/api/students/'.$this->student->id.'/social-security', ['insurance_type' => 'OTHER', 'insurer_name' => 'GNP', 'policy_number' => 'POL-1'])->assertOk();
+    $this->browserRequest('GET', '/api/students/'.$this->student->id)->assertOk()->assertJsonPath('data.missing_data', []);
 });
 
 it('saves the academic, geographic and mobility profile (CA-02, CA-03, CA-04)', function () {

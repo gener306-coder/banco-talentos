@@ -7,12 +7,12 @@ const summary = {
   state_code: '28', municipality_code: '28032', municipality: 'Reynosa', is_active: true,
 } as const
 const company = {
-  ...summary, contact_name: 'Lucía', contact_email: 'dual@manugolfo.test', contact_phone: null, validation_reference: 'SE/1',
+  ...summary, contact_name: 'Lucía', contact_position: null, contact_email: 'dual@manugolfo.test', contact_phone: null, validation_reference: 'SE/1',
   registered_by: { id: 2, name: 'Analista' }, created_at: '2026-10-22T10:00:00Z',
 }
 const input = {
   legal_name: 'Manufacturas del Golfo', trade_name: 'ManuGolfo', rfc: 'MGO150320AB1', sector_code: '31-33', state_code: '28',
-  municipality_code: '28032', contact_name: 'Lucía', contact_email: 'dual@manugolfo.test', contact_phone: null, validation_reference: 'SE/1',
+  municipality_code: '28032', contact_name: 'Lucía', contact_position: null, contact_email: 'dual@manugolfo.test', contact_phone: null, validation_reference: 'SE/1',
 } as const
 
 function csrf() {

@@ -26,6 +26,9 @@ class Student extends Model
      */
     public const PROFILE_ATTRIBUTES = ['program', 'period_type', 'period_number', 'dual_available', 'state_code', 'municipality_code', 'can_relocate'];
 
+    /** Clave del seguro en missingData(), junto a las columnas del expediente (T-S8-09). */
+    public const MISSING_INSURANCE = 'insurance';
+
     protected $fillable = self::PROFILE_ATTRIBUTES;
 
     // Punto aproximado (PostGIS) derivado del municipio en el servidor; no forma parte de ninguna respuesta.
@@ -60,6 +63,31 @@ class Student extends Model
     public function scopeSearchable(Builder $query): void
     {
         $query->where('students.is_active', true)->whereNotNull(self::SEARCHABLE_COLUMNS);
+    }
+
+    /**
+     * Alumnos con datos faltantes (T-S8-09): algún campo del expediente sin capturar o un seguro sin número ni
+     * comprobante, la misma regla que missingData(). El aviso del inicio y el padrón cuentan lo mismo.
+     */
+    public function scopeWithMissingData(Builder $query): void
+    {
+        $query->where(function (Builder $missing): void {
+            foreach (self::PROFILE_ATTRIBUTES as $column) {
+                $missing->orWhereNull("students.{$column}");
+            }
+            $missing->orWhereNotExists(fn ($security) => $security->selectRaw('1')
+                ->from('student_social_security')
+                ->whereColumn('student_social_security.student_id', 'students.id')
+                ->where(fn ($proof) => $proof->whereNotNull('nss_hash')->orWhereNotNull('policy_number')->orWhereNotNull('document_path')));
+        });
+    }
+
+    /** Lo que le falta a este alumno (T-S8-09): las columnas del expediente sin capturar y `insurance` si el seguro no tiene número ni comprobante. */
+    public function missingData(): array
+    {
+        $missing = array_values(array_filter(self::PROFILE_ATTRIBUTES, fn (string $column): bool => $this->getAttribute($column) === null));
+
+        return $this->socialSecurity?->hasProof() ? $missing : [...$missing, self::MISSING_INSURANCE];
     }
 
     /** La misma condición que scopeSearchable() como expresión SQL, para contarla en una agregación (T-S8-01). */

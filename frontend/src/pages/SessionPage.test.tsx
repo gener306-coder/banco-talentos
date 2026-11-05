@@ -20,7 +20,7 @@ const emptyPage = { data: [], meta: { current_page: 1, last_page: 1, total: 0, p
 const zeroMetrics: Record<string, Record<string, number>> = {
   ADMIN: { active_institutions: 0, inactive_institutions: 0, active_secretaries: 0, pending_secretaries: 0, active_opportunities: 0, accepted_linkage_requests: 0 },
   SECRETARY: { active_companies: 0, inactive_companies: 0, pending_secretaries: 0, active_opportunities: 0, accepted_linkage_requests: 0 },
-  INSTITUTION: { active_students: 0, searchable_students: 0, pending_municipality_students: 0, pending_linkage_requests: 0 },
+  INSTITUTION: { active_students: 0, searchable_students: 0, missing_data_students: 0, pending_linkage_requests: 0 },
   COMPANY: { available_talent_profiles: 0, active_opportunities: 0, pending_linkage_requests: 0 },
 }
 /** Respuesta de GET /api/dashboard; por defecto, ceros para el rol de la sesión. */
@@ -59,7 +59,8 @@ describe('inicio por rol (tarea transversal del Sprint 4)', () => {
     renderApp()
     expect(await screen.findByRole('heading', { level: 2, name: 'Hola, Laura Torres' })).toBeInTheDocument()
     expect(screen.getByText(roleLabel, { selector: '.home-role' })).toBeInTheDocument()
-    expect(screen.getByText('laura@example.test')).toBeInTheDocument()
+    // El correo solo aparece en el menú de cuenta del encabezado.
+    expect(screen.queryByText('laura@example.test')).not.toBeInTheDocument()
     if (orgName) expect(screen.getByText(orgName)).toBeInTheDocument()
 
     if (primary) expect(screen.getByRole('link', { name: primary[0] })).toHaveAttribute('href', primary[1])
@@ -117,8 +118,8 @@ describe('indicadores del inicio (HU-S5-01 CA-07)', () => {
         ['Oportunidades activas', '30'], ['Vinculaciones aceptadas', '9']]],
     ['SECRETARY', {}, { active_companies: 1250, inactive_companies: 7, pending_secretaries: 2, active_opportunities: 2400, accepted_linkage_requests: 15 },
       [['Empresas activas', '1,250'], ['Empresas inactivas', '7'], ['Cuentas de la Secretaría pendientes', '2'], ['Oportunidades activas', '2,400'], ['Vinculaciones aceptadas', '15']]],
-    ['INSTITUTION', { institution: { id: 7, name: 'Instituto Dual' } }, { active_students: 40, searchable_students: 25, pending_municipality_students: 0, pending_linkage_requests: 0 },
-      [['Alumnos activos', '40'], ['Visibles en el buscador', '25'], ['Municipio por confirmar', '0'], ['Solicitudes pendientes', '0']]],
+    ['INSTITUTION', { institution: { id: 7, name: 'Instituto Dual' } }, { active_students: 40, searchable_students: 25, missing_data_students: 0, pending_linkage_requests: 0 },
+      [['Alumnos activos', '40'], ['Visibles en el buscador', '25'], ['Datos faltantes', '0'], ['Solicitudes pendientes', '0']]],
     ['COMPANY', { company: { id: 3, name: 'ManuGolfo' } }, { available_talent_profiles: 318, active_opportunities: 4, pending_linkage_requests: 6 },
       [['Perfiles disponibles', '318'], ['Oportunidades activas', '4'], ['Solicitudes pendientes', '6']]],
   ] as const)('%s ve sus contadores', async (role, organization, metrics, expected) => {
@@ -126,7 +127,7 @@ describe('indicadores del inicio (HU-S5-01 CA-07)', () => {
     dashboard = () => Response.json({ data: { role, metrics } })
     renderApp()
     expect(await indicators()).toEqual(expected)
-    expect(screen.queryByText(/Municipio por confirmar»/)).not.toBeInTheDocument()
+    expect(screen.queryByRole('link', { name: 'Revisar el padrón' })).not.toBeInTheDocument()
     // La empresa ve su contador de pendientes, pero el aviso es solo para la institución, que las responde.
     expect(screen.queryByRole('link', { name: 'Revisar solicitudes' })).not.toBeInTheDocument()
   })
@@ -139,20 +140,26 @@ describe('indicadores del inicio (HU-S5-01 CA-07)', () => {
     dashboard = () => Response.json({ data: { role: 'INSTITUTION', metrics: { ...zeroMetrics.INSTITUTION, pending_linkage_requests: pending } } })
     renderApp()
     const region = await screen.findByRole('region', { name: 'Indicadores' })
-    const notice = within(region).getByText(text, { exact: false })
-    expect(within(notice).getByRole('link', { name: 'Revisar solicitudes' })).toHaveAttribute('href', '/institution/linkage-requests')
+    const notice = within(region).getByText(text, { exact: false }).closest('p')!
+    const review = within(notice).getByRole('link', { name: 'Revisar solicitudes' })
+    expect(review).toHaveAttribute('href', '/institution/linkage-requests?status=PENDIENTE_INSTITUCION')
+    expect(review).toHaveClass('pill-link')
   })
 
   it.each([
-    [1, '1 alumno tiene «Municipio por confirmar».'],
-    [14, '14 alumnos tienen «Municipio por confirmar».'],
-  ])('avisa a la institución de %i alumnos con municipio por confirmar y enlaza al padrón', async (pending, text) => {
+    [1, '1 alumno tiene datos faltantes.'],
+    [14, '14 alumnos tienen datos faltantes.'],
+  ])('avisa a la institución de %i alumnos con datos faltantes y enlaza al padrón', async (missing, text) => {
     user = { ...base, role: 'INSTITUTION', institution: { id: 7, name: 'Instituto Dual' } }
-    dashboard = () => Response.json({ data: { role: 'INSTITUTION', metrics: { ...zeroMetrics.INSTITUTION, active_students: 20, searchable_students: 5, pending_municipality_students: pending } } })
+    dashboard = () => Response.json({ data: { role: 'INSTITUTION', metrics: { ...zeroMetrics.INSTITUTION, active_students: 20, searchable_students: 5, missing_data_students: missing } } })
     renderApp()
     const region = await screen.findByRole('region', { name: 'Indicadores' })
-    const notice = within(region).getByText(text, { exact: false })
-    expect(within(notice).getByRole('link', { name: 'Revisar el padrón' })).toHaveAttribute('href', '/students')
+    const review = within(region).getByRole('link', { name: 'Revisar el padrón' })
+    const notice = review.closest('p')!
+    expect(notice).toHaveTextContent(text)
+    expect(within(notice).getByText('datos faltantes').tagName).toBe('STRONG')
+    expect(review).toHaveAttribute('href', '/students?data=missing&status=active')
+    expect(review).toHaveClass('pill-link')
   })
 
   it.each([

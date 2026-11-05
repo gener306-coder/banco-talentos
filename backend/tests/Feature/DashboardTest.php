@@ -184,8 +184,11 @@ it('counts only the students of its own institution for INSTITUTION (CA-04)', fu
     dashboardStudent($institution, true, ['program' => null]);
     pendingMunicipalityStudent($institution);
     pendingMunicipalityStudent($institution, ['is_active' => false]);
-    // Confirmado: ya tiene clave de municipio aunque conserve el texto anterior.
+    // Confirmado: ya tiene clave de municipio aunque conserve el texto anterior. Sin seguro, aún le faltan datos.
     dashboardStudent($institution, true, ['legacy_municipality' => 'Reynosa']);
+    // Expediente y seguro completos: el único sin datos faltantes (T-S8-09).
+    $complete = dashboardStudent($institution);
+    DB::table('student_social_security')->insert(['student_id' => $complete->id, 'institution_id' => $institution->id, 'document_path' => 'seguros/a.pdf', 'document_name' => 'a.pdf', 'document_size' => 10, 'document_sha256' => str_repeat('a', 64), 'document_uploaded_at' => now()]);
 
     // Alumnos de otras instituciones (activa e inactiva) con todos los casos: nunca alteran los conteos.
     foreach ([Institution::factory()->create(), Institution::factory()->inactive()->create()] as $other) {
@@ -197,7 +200,7 @@ it('counts only the students of its own institution for INSTITUTION (CA-04)', fu
     $this->loginWithCookies(User::factory()->forInstitution($institution)->create())->assertOk();
 
     dashboard($this)->assertOk()->assertExactJson(['data' => ['role' => 'INSTITUTION', 'metrics' => [
-        'active_students' => 6, 'searchable_students' => 3, 'pending_municipality_students' => 2, 'pending_linkage_requests' => 0,
+        'active_students' => 7, 'searchable_students' => 4, 'missing_data_students' => 6, 'pending_linkage_requests' => 0,
     ]]]);
 });
 
@@ -208,7 +211,7 @@ it('returns zero counts to an institution without students even when others have
     $this->loginWithCookies(User::factory()->forInstitution(Institution::factory()->create())->create())->assertOk();
 
     dashboard($this)->assertOk()->assertJsonPath('data.metrics', [
-        'active_students' => 0, 'searchable_students' => 0, 'pending_municipality_students' => 0, 'pending_linkage_requests' => 0,
+        'active_students' => 0, 'searchable_students' => 0, 'missing_data_students' => 0, 'pending_linkage_requests' => 0,
     ]);
 });
 
