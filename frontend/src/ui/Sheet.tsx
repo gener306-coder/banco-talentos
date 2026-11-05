@@ -22,11 +22,13 @@ const isCompact = () => typeof window.matchMedia === 'function' && window.matchM
  * en pantallas anchas es un panel centrado. El contenido sigue montado al cerrarse, para que el
  * trabajo en curso (por ejemplo, un enlace manual generado) no se pierda al reabrir.
  */
-export function Sheet({ open, onClose, labelledBy, children }: {
+export function Sheet({ open, onClose, labelledBy, large = false, children }: {
   open: boolean
   onClose: () => void
   /** Id del título dentro del contenido que nombra el diálogo. */
   labelledBy: string
+  /** Panel de hasta 60 rem en pantallas anchas, para contenido con video o a dos columnas. */
+  large?: boolean
   children: ReactNode
 }) {
   const layer = useRef<HTMLDivElement>(null)
@@ -116,7 +118,7 @@ export function Sheet({ open, onClose, labelledBy, children }: {
   }
 
   return createPortal(
-    <div ref={layer} className={`sheet-layer ${compact ? 'compact' : 'wide'}`} hidden={!open && !closing}>
+    <div ref={layer} className={`sheet-layer ${compact ? 'compact' : 'wide'}${large ? ' large' : ''}`} hidden={!open && !closing}>
       <div ref={scrim} className="sheet-scrim" onClick={onClose} />
       <div ref={panel} className="sheet-panel" role="dialog" aria-modal="true" aria-labelledby={labelledBy}>
         <div className="sheet-header" onPointerDown={onPointerDown} onPointerMove={onPointerMove}

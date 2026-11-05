@@ -250,6 +250,26 @@ Los videos son testimonios de alumnos que están o estuvieron en el Dual en una 
 
 ---
 
+## HU-S9-06 — Carrusel y vista previa en el inicio de la empresa
+
+**Estado:** Completada (4 de noviembre de 2026). Aprobada por el responsable el mismo día.  
+**Diseño técnico y verificación:** `docs/HU-S9-06.md`  
+**Rol:** `COMPANY`  
+**Dependencia:** HU-S9-05
+
+**COMO** empresa  
+**QUIERO** que las historias de mi inicio se muevan solas y poder verlas ahí mismo  
+**PARA** descubrirlas sin salir de mi inicio.
+
+### Criterios de aceptación
+
+- **CA-01.** [Carrusel] Hasta 5 historias, con la siguiente asomando. Avanza cada 6 s con deslizamiento, vuelve al inicio al final y se puede deslizar con el dedo o el trackpad.
+- **CA-02.** [Control] Flechas, puntos y **Pausar** / **Reanudar**. Se detiene con el puntero, el foco de teclado, la vista previa abierta, la pestaña oculta o fuera de pantalla.
+- **CA-03.** [Movimiento reducido] No avanza solo y cambia sin animación.
+- **CA-04.** [Vista previa] El clic abre el video en una hoja en el mismo inicio, con **Buscar talento** y **Ver todas las historias**. Sustituye el enlace directo de HU-S9-05 CA-02. No hay ningún `<video>` hasta ese clic.
+
+---
+
 ## Sprint 10 (avance) — Despliegue en nube con infraestructura como código
 
 No forma parte de este Sprint; se detallará en `docs/sprint-10.md`. Se anota para que el Sprint 9 quede alineado:
