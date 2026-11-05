@@ -100,9 +100,10 @@ describe('galería (CA-01, CA-02)', function () {
         $response = $this->browserRequest('GET', '/api/promotional-videos')->assertOk();
         $item = $response->json('data.0');
 
-        expect(array_keys($item))->toBe(['public_id', 'title', 'description', 'duration_seconds', 'institution', 'poster_url', 'video_url'])
+        expect(array_keys($item))->toBe(['public_id', 'title', 'description', 'duration_seconds', 'width', 'height', 'institution', 'poster_url', 'video_url'])
             ->and($item['institution'])->toBe(['public_id' => $this->institution->refresh()->public_id, 'name' => 'Instituto Tecnológico Dual'])
             ->and($item['duration_seconds'])->toBe(75)
+            ->and([$item['width'], $item['height']])->toBe([1280, 720])
             ->and($item['video_url'])->toStartWith('/api/media/'.$video->video_path.'?expires=')->toContain('signature=');
         // Sin ids internos, rutas, estado de la cuota ni datos de quien lo subió.
         expect($response->getContent())->not->toContain('"id"')->not->toContain('institution_id')->not->toContain('created_by')

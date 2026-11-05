@@ -28,10 +28,10 @@ const secretaryAccounts: Section = {
   description: 'Crea las cuentas del personal de la Secretaría de Economía y reenvía sus enlaces.',
 }
 
-// HU-S9-03 CA-04: galería de promoción dual para ADMIN, SECRETARY y COMPANY.
+// HU-S9-03 CA-04: testimonios en video para ADMIN, SECRETARY y COMPANY.
 const promotion: Section = {
-  to: '/promocion', title: 'Promoción dual', icon: <VideoIcon />,
-  description: 'Mira los videos de las instituciones: instalaciones, talleres y proyectos del programa dual.',
+  to: '/promocion', title: 'Historias del Dual', icon: <VideoIcon />,
+  description: 'Mira cómo les fue a los alumnos que vivieron el programa dual en una empresa.',
 }
 
 // HU-S7-01 CA-03: reporte ejecutivo para ADMIN y SECRETARY.
@@ -74,7 +74,7 @@ function homeFor(user: User): Home | null {
         sections: [
           { to: '/students', title: 'Alumnos', icon: <UsersIcon />, description: 'Administra el padrón, el expediente y el CV de tus alumnos.' },
           { to: '/institution/linkage-requests', title: 'Solicitudes de vinculación', icon: <IdCardIcon />, description: 'Revisa las solicitudes de las empresas para tus alumnos y el contacto de cada empresa.' },
-          { to: '/institution/videos', title: 'Videos promocionales', icon: <VideoIcon />, description: 'Sube videos de tus instalaciones y proyectos para animar a las empresas a recibir alumnos.' },
+          { to: '/institution/videos', title: 'Historias del Dual', icon: <VideoIcon />, description: 'Comparte en video la experiencia de tus alumnos para animar a las empresas a recibirlos.' },
         ],
       } : null
     case 'COMPANY':

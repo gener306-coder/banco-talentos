@@ -14,8 +14,6 @@ export interface InstitutionVideo {
   duration_seconds: number | null
   width: number | null
   height: number | null
-  original_bytes: number
-  output_bytes: number | null
   failure_reason: string | null
   created_at: string
   /** URLs firmadas y temporales (HU-S9-02); solo existen cuando el video está READY. */
@@ -62,14 +60,13 @@ function video(response: unknown): InstitutionVideo {
   if (!isText(data.public_id) || !isText(data.title) || (data.description !== null && !isText(data.description)) ||
       !['PROCESSING', 'READY', 'FAILED'].includes(data.status as string) || typeof data.is_active !== 'boolean' ||
       !isCount(data.duration_seconds) || !isCount(data.width) || !isCount(data.height) ||
-      typeof data.original_bytes !== 'number' || !isCount(data.output_bytes) ||
       (data.failure_reason !== null && !isText(data.failure_reason)) || !isText(data.created_at) ||
       (data.poster_url !== null && !isText(data.poster_url)) || (data.video_url !== null && !isText(data.video_url))) throw new ApiError(502)
   // Solo se conservan los campos del contrato.
   return {
     public_id: data.public_id, title: data.title, description: data.description, status: data.status as VideoStatus,
     is_active: data.is_active, duration_seconds: data.duration_seconds, width: data.width, height: data.height,
-    original_bytes: data.original_bytes, output_bytes: data.output_bytes, failure_reason: data.failure_reason,
+    failure_reason: data.failure_reason,
     created_at: data.created_at, poster_url: data.poster_url, video_url: data.video_url,
   }
 }
@@ -167,8 +164,4 @@ export async function uploadVideo(input: VideoInput, onProgress: (fraction: numb
     xhr.send(body)
   })
   return video(response)
-}
-
-export function fileSize(bytes: number): string {
-  return bytes < 1024 * 1024 ? `${Math.max(1, Math.round(bytes / 1024))} KB` : `${(bytes / (1024 * 1024)).toFixed(1)} MB`
 }

@@ -205,6 +205,30 @@ Hecha en planeación, fuera del código: contenedor `debian:bookworm-slim` con F
 
 ---
 
+## HU-S9-04 — Feed de Historias del Dual con reproductor propio
+
+**Estado:** Completada (4 de noviembre de 2026). Aprobada por el responsable el mismo día.  
+**Diseño técnico y verificación:** `docs/HU-S9-04.md`  
+**Rol:** `COMPANY`, `SECRETARY`, `ADMIN` (feed); `INSTITUTION` (vista previa)
+
+Los videos son testimonios de alumnos que están o estuvieron en el Dual en una empresa, aclaró el responsable. La sección pasa a llamarse **Historias del Dual**.
+
+**COMO** empresa  
+**QUIERO** ver las historias en un feed bien diseñado, con controles claros  
+**PARA** conocer cómo les fue a otros y animarme a recibir alumnos.
+
+### Criterios de aceptación
+
+- **CA-01.** [Feed] Columna centrada de `--content-readable` con `role="feed"`, carga continua y el botón **Ver más historias** como alternativa. Sustituye a la retícula y a la paginación de HU-S9-03 CA-04.
+- **CA-02.** [Reproductor] Reproductor propio sin `controls` nativos, también en la vista previa de la institución: reproducir, pausar y reanudar, línea de tiempo, sonido, pantalla completa, volver a ver y teclado. Accesible y con los tokens de marca en ambos temas.
+- **CA-03.** [Reproducción automática] El video visible al 60 % arranca sin sonido y se pausa al salir; uno a la vez; una pausa del usuario se respeta; el sonido activado se mantiene. No arranca solo con movimiento reducido ni con ahorro de datos.
+- **CA-04.** [Sin descarga] Sin opción de descarga en la interfaz. Quita la opción: no impide copiar el archivo con herramientas de desarrollador.
+- **CA-05.** [Sin pesos] Ninguna vista muestra cuánto pesa o pesaba un video, y `original_bytes` y `output_bytes` salen de la API de la institución; cambia HU-S9-02 CA-01. Las columnas se conservan.
+- **CA-06.** [Textos] Textos de testimonio en todos los roles y consentimiento que cubre personas y empresas. La ruta `/promocion` y la API no cambian.
+- **CA-07.** [URL vencida] Si un video falla, **Reintentar** pide URLs firmadas nuevas.
+
+---
+
 ## Sprint 10 (avance) — Despliegue en nube con infraestructura como código
 
 No forma parte de este Sprint; se detallará en `docs/sprint-10.md`. Se anota para que el Sprint 9 quede alineado:

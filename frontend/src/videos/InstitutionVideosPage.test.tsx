@@ -7,12 +7,12 @@ import { isVideoFile, MAX_VIDEO_BYTES } from './api'
 const institutionUser = { id: 5, name: 'Coordinación', email: 'coord@example.test', role: 'INSTITUTION', institution: { id: 7, name: 'Instituto Dual' } }
 const received = {
   public_id: '6c0f7c1e-6c3b-4b49-9a1f-3a3f0f9c2d11', title: 'Talleres de manufactura', description: null, status: 'PROCESSING',
-  is_active: true, duration_seconds: null, width: null, height: null, original_bytes: 4096, output_bytes: null,
+  is_active: true, duration_seconds: null, width: null, height: null,
   failure_reason: null, created_at: '2026-10-31T18:00:00Z', poster_url: null, video_url: null,
 }
 const ready = {
   ...received, public_id: '0b8f3a52-2d4e-4f7b-8c1a-9e5d6f7a8b9c', title: 'Laboratorio de robótica', description: 'Proyectos de nuestros alumnos',
-  status: 'READY', duration_seconds: 92, width: 1280, height: 720, original_bytes: 136 * 1024 * 1024, output_bytes: 14 * 1024 * 1024,
+  status: 'READY', duration_seconds: 92, width: 1280, height: 720,
   poster_url: '/api/media/videos/7/robotica.jpg?signature=a', video_url: '/api/media/videos/7/robotica.mp4?signature=a',
 }
 const failed = { ...received, public_id: '9d2c1b0a-3e4f-4a5b-8c6d-7e8f9a0b1c2d', title: 'Video dañado', status: 'FAILED', failure_reason: 'El archivo no contiene una pista de video.' }
@@ -74,7 +74,7 @@ const video = (name = 'promocion.mp4', size = 4096, type = 'video/mp4') => {
 async function openForm() {
   render(<MemoryRouter initialEntries={['/institution/videos']}><App /></MemoryRouter>)
   fireEvent.click(await screen.findByRole('button', { name: 'Subir video' }))
-  return screen.findByRole('dialog', { name: 'Subir video promocional' })
+  return screen.findByRole('dialog', { name: 'Subir una historia' })
 }
 
 function fill(form: HTMLElement, { title = 'Talleres de manufactura', file = video(), consent = true }: { title?: string; file?: File | null; consent?: boolean } = {}) {
@@ -88,7 +88,7 @@ const submit = (form: HTMLElement) => fireEvent.click(within(form).getByRole('bu
 describe('videos promocionales HU-S9-01', () => {
   it('aparece en el inicio de la institución', async () => {
     render(<MemoryRouter initialEntries={['/']}><App /></MemoryRouter>)
-    expect(await screen.findByRole('link', { name: /Videos promocionales/ })).toHaveAttribute('href', '/institution/videos')
+    expect(await screen.findByRole('link', { name: /Historias del Dual/ })).toHaveAttribute('href', '/institution/videos')
   })
 
   it('sube el video con su progreso y lo muestra «Procesando…» (CA-07)', async () => {
@@ -116,7 +116,7 @@ describe('videos promocionales HU-S9-01', () => {
 
     act(() => xhr.respond(202, { data: received }))
     expect(await screen.findByText(/Recibimos «Talleres de manufactura»\. Procesando…/)).toHaveAttribute('role', 'status')
-    expect(screen.queryByRole('dialog', { name: 'Subir video promocional' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('dialog', { name: 'Subir una historia' })).not.toBeInTheDocument()
   })
 
   it('valida antes de subir', async () => {
@@ -125,7 +125,7 @@ describe('videos promocionales HU-S9-01', () => {
 
     expect(within(form).getByText('Selecciona el video.')).toBeInTheDocument()
     expect(within(form).getByText('El título es obligatorio.')).toBeInTheDocument()
-    expect(within(form).getByText('Confirma que cuentas con la autorización de las personas que aparecen en el video.')).toBeInTheDocument()
+    expect(within(form).getByText('Confirma que cuentas con la autorización de las personas y empresas que aparecen o se mencionan en el video.')).toBeInTheDocument()
     expect(FakeXhr.last).toBeNull()
   })
 
@@ -193,7 +193,8 @@ describe('gestión de mis videos HU-S9-02', () => {
     const published = card(grid, 'Laboratorio de robótica')
     expect(within(published).getByText('Publicado')).toBeInTheDocument()
     expect(within(published).getByText('1:32')).toBeInTheDocument()
-    expect(within(published).getByText(/14\.0 MB \(original 136\.0 MB\)/)).toBeInTheDocument()
+    // Sin información de peso (HU-S9-04).
+    expect(grid).not.toHaveTextContent(/\d\s?(MB|KB)/)
     expect(published.querySelector('img')).toHaveAttribute('src', ready.poster_url)
     expect(within(card(grid, 'Video dañado')).getByText('El archivo no contiene una pista de video.')).toBeInTheDocument()
     expect(within(card(grid, 'Video anterior')).getByText('Inactivo')).toBeInTheDocument()
@@ -203,7 +204,7 @@ describe('gestión de mis videos HU-S9-02', () => {
 
   it('muestra un estado vacío con la acción de subir', async () => {
     render(<MemoryRouter initialEntries={['/institution/videos']}><App /></MemoryRouter>)
-    expect(await screen.findByText('Aún no hay videos promocionales.')).toBeInTheDocument()
+    expect(await screen.findByText('Aún no hay historias.')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Subir el primer video' })).toBeInTheDocument()
   })
 
@@ -216,7 +217,9 @@ describe('gestión de mis videos HU-S9-02', () => {
     expect(player.tagName).toBe('VIDEO')
     expect(player).toHaveAttribute('src', ready.video_url)
     expect(player).toHaveAttribute('poster', ready.poster_url)
-    expect(player).toHaveAttribute('controls')
+    // Reproductor propio (HU-S9-04): sin controles nativos, que ofrecen descargar.
+    expect(player).not.toHaveAttribute('controls')
+    expect(within(sheet).getByRole('button', { name: 'Reproducir: Laboratorio de robótica' })).toBeInTheDocument()
   })
 
   it('edita el título y la descripción (CA-02)', async () => {
@@ -272,7 +275,7 @@ describe('gestión de mis videos HU-S9-02', () => {
       let polls = 0
       videosMock.mockImplementation(async () => {
         polls += 1
-        return Response.json({ data: [polls === 1 ? received : { ...received, status: 'READY', duration_seconds: 30, output_bytes: 2048, poster_url: '/p.jpg', video_url: '/v.mp4' }] })
+        return Response.json({ data: [polls === 1 ? received : { ...received, status: 'READY', duration_seconds: 30, poster_url: '/p.jpg', video_url: '/v.mp4' }] })
       })
 
       await act(async () => { await vi.advanceTimersByTimeAsync(5000) })
@@ -294,7 +297,7 @@ describe('gestión de mis videos HU-S9-02', () => {
   it('agrega al listado el video recién subido', async () => {
     const grid = await list([ready])
     fireEvent.click(screen.getByRole('button', { name: 'Subir video' }))
-    const form = await screen.findByRole('dialog', { name: 'Subir video promocional' })
+    const form = await screen.findByRole('dialog', { name: 'Subir una historia' })
     fill(form)
     submit(form)
     await waitFor(() => expect(FakeXhr.last).not.toBeNull())

@@ -4,7 +4,7 @@ import { InstitutionRequestError } from '../institutions/InstitutionLayout'
 import { useApiMutation } from '../lib/useApiRequest'
 import { hasContactInformation } from '../students/cvCatalogs'
 import { PendingLabel } from '../ui/forms'
-import { fileSize, isVideoFile, MAX_VIDEO_BYTES, uploadVideo, VIDEO_ACCEPT, VIDEO_CONTACT_MESSAGE, VIDEO_LIMITS, videoMessages } from './api'
+import { isVideoFile, MAX_VIDEO_BYTES, uploadVideo, VIDEO_ACCEPT, VIDEO_CONTACT_MESSAGE, VIDEO_LIMITS, videoMessages } from './api'
 import type { InstitutionVideo } from './api'
 import './videos.css'
 
@@ -64,7 +64,7 @@ export function VideoUploadForm({ onUploaded }: { onUploaded: (video: Institutio
     if (!title) found.title = 'El título es obligatorio.'
     else if (hasContactInformation(title)) found.title = VIDEO_CONTACT_MESSAGE
     if (hasContactInformation(values.description)) found.description = VIDEO_CONTACT_MESSAGE
-    if (!consent) found.consent = 'Confirma que cuentas con la autorización de las personas que aparecen en el video.'
+    if (!consent) found.consent = 'Confirma que cuentas con la autorización de las personas y empresas que aparecen o se mencionan en el video.'
     return found
   }
 
@@ -102,8 +102,8 @@ export function VideoUploadForm({ onUploaded }: { onUploaded: (video: Institutio
 
   return (
     <section className="institution-account" aria-labelledby="video-form-title">
-      <h3 id="video-form-title">Subir video promocional</h3>
-      <p className="privacy-note" id="video-privacy">Lo verán las empresas, la Secretaría y el Administrador con sesión. Se publica en cuanto termina de procesarse.</p>
+      <h3 id="video-form-title">Subir una historia</h3>
+      <p className="privacy-note" id="video-privacy">Comparte la experiencia de tus alumnos en el programa dual. La verán las empresas, la Secretaría y el Administrador con sesión, y se publica en cuanto termina de procesarse.</p>
       {failure && <InstitutionRequestError failure={failure} />}
       {cancelled && !mutation.pending && <p className="notice" role="status">Subida cancelada. Tus datos se conservaron.</p>}
       <form onSubmit={(event) => { void submit(event) }} aria-busy={mutation.pending} noValidate>
@@ -111,7 +111,7 @@ export function VideoUploadForm({ onUploaded }: { onUploaded: (video: Institutio
           <legend className="visually-hidden">Datos del video</legend>
           <label htmlFor="video-title">Título</label>
           <input id="video-title" name="title" type="text" autoComplete="off" required maxLength={VIDEO_LIMITS.title}
-            placeholder="Ej. Talleres de manufactura" value={values.title} aria-invalid={Boolean(error('title'))}
+            placeholder="Ej. Mi experiencia en manufactura" value={values.title} aria-invalid={Boolean(error('title'))}
             aria-describedby={describedBy('title')} onChange={(event) => set('title', event.target.value)} />
           {fieldError('title')}
 
@@ -127,7 +127,7 @@ export function VideoUploadForm({ onUploaded }: { onUploaded: (video: Institutio
             aria-invalid={Boolean(error('video'))} aria-describedby={describedBy('video', 'video-file-hint')}
             onChange={(event) => choose(event.target.files?.[0] ?? null)} />
           <p className="field-hint" id="video-file-hint">
-            MP4, MOV o WebM, hasta 250 MB y 5 minutos.{file ? ` Seleccionado: ${file.name} (${fileSize(file.size)}).` : ''}
+            MP4, MOV o WebM, hasta 250 MB y 5 minutos.{file ? ` Seleccionado: ${file.name}.` : ''}
           </p>
           {fieldError('video')}
 
@@ -135,7 +135,7 @@ export function VideoUploadForm({ onUploaded }: { onUploaded: (video: Institutio
             <input id="video-consent" name="consent" type="checkbox" checked={consent} aria-invalid={Boolean(error('consent'))}
               aria-describedby={describedBy('consent')}
               onChange={(event) => { setConsent(event.target.checked); setLocalErrors((current) => without(current, 'consent')) }} />
-            <label htmlFor="video-consent">Confirmo que cuento con la autorización de las personas que aparecen en el video.</label>
+            <label htmlFor="video-consent">Confirmo que cuento con la autorización de las personas y empresas que aparecen o se mencionan en el video.</label>
           </div>
           {fieldError('consent')}
         </fieldset>

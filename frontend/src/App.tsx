@@ -113,10 +113,10 @@ function AuthRoutes() {
         <Route path="/institution/linkage-requests" element={<InstitutionLinkageRequestsPage />} />
         <Route path="/institution/linkage-requests/:id" element={<InstitutionLinkageRequestDetailPage />} />
       </Route>
-      <Route element={<ProtectedRoute role="INSTITUTION" deniedMessage="No tienes permiso para gestionar los videos promocionales." />}>
+      <Route element={<ProtectedRoute role="INSTITUTION" deniedMessage="No tienes permiso para gestionar las Historias del Dual." />}>
         <Route path="/institution/videos" element={<InstitutionVideosPage />} />
       </Route>
-      <Route element={<ProtectedRoute role={GALLERY_VIEWERS} deniedMessage="No tienes permiso para consultar la galería de promoción dual." />}>
+      <Route element={<ProtectedRoute role={GALLERY_VIEWERS} deniedMessage="No tienes permiso para consultar las Historias del Dual." />}>
         <Route path="/promocion" element={<PromotionalVideosPage />} />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />

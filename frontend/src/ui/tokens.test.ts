@@ -95,6 +95,7 @@ describe('tema oscuro', () => {
     ['--status-off-text', '--status-off-surface', 4.5],
     ['--focus-ring', '--surface', 3],
     ['--border-strong', '--surface', 3],
+    ['--on-media', '--media-backdrop', 4.5],
   ] as const)('%s sobre %s alcanza %s:1', (foreground, background, minimum) => {
     expect(contrast(dark.get(foreground)!, dark.get(background)!)).toBeGreaterThanOrEqual(minimum)
   })

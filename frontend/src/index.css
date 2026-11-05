@@ -41,6 +41,9 @@
   --status-off-text: #5d4b36;
   --status-off-surface: #f2ebdf;
   --shadow: #000;
+  /* Sobre un video: siempre es oscuro, sin importar el tema (HU-S9-04). */
+  --on-media: #fff;
+  --media-backdrop: #000;
 }
 /* Fin de los tokens semánticos. */
 
@@ -74,6 +77,8 @@
   --status-off-text: #e0cdb0;
   --status-off-surface: #362e24;
   --shadow: #000;
+  --on-media: #fff;
+  --media-backdrop: #000;
 }
 /* Fin de los tokens del tema oscuro. */
 
