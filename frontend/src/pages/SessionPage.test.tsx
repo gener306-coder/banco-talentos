@@ -133,33 +133,34 @@ describe('indicadores del inicio (HU-S5-01 CA-07)', () => {
   })
 
   it.each([
-    [1, 'Tienes 1 solicitud de vinculación pendiente de respuesta.'],
-    [3, 'Tienes 3 solicitudes de vinculación pendientes de respuesta.'],
+    [1, '1 solicitud de vinculación pendiente'],
+    [3, '3 solicitudes de vinculación pendientes'],
   ])('avisa a la institución de %i solicitudes pendientes y enlaza a su bandeja (HU-S6-03 CA-02)', async (pending, text) => {
     user = { ...base, role: 'INSTITUTION', institution: { id: 7, name: 'Instituto Dual' } }
     dashboard = () => Response.json({ data: { role: 'INSTITUTION', metrics: { ...zeroMetrics.INSTITUTION, pending_linkage_requests: pending } } })
     renderApp()
     const region = await screen.findByRole('region', { name: 'Indicadores' })
-    const notice = within(region).getByText(text, { exact: false }).closest('p')!
-    const review = within(notice).getByRole('link', { name: 'Revisar solicitudes' })
+    const tasks = within(region).getByRole('list', { name: 'Por atender' })
+    const task = within(tasks).getByText(text).closest('li')!
+    expect(task).toHaveTextContent('Las empresas esperan tu respuesta para continuar.')
+    const review = within(task).getByRole('link', { name: 'Revisar solicitudes' })
     expect(review).toHaveAttribute('href', '/institution/linkage-requests?status=PENDIENTE_INSTITUCION')
-    expect(review).toHaveClass('pill-link')
+    expect(review).toHaveClass('home-task-action')
   })
 
   it.each([
-    [1, '1 alumno tiene datos faltantes.'],
-    [14, '14 alumnos tienen datos faltantes.'],
+    [1, '1 alumno con datos faltantes'],
+    [14, '14 alumnos con datos faltantes'],
   ])('avisa a la institución de %i alumnos con datos faltantes y enlaza al padrón', async (missing, text) => {
     user = { ...base, role: 'INSTITUTION', institution: { id: 7, name: 'Instituto Dual' } }
     dashboard = () => Response.json({ data: { role: 'INSTITUTION', metrics: { ...zeroMetrics.INSTITUTION, active_students: 20, searchable_students: 5, missing_data_students: missing } } })
     renderApp()
     const region = await screen.findByRole('region', { name: 'Indicadores' })
     const review = within(region).getByRole('link', { name: 'Revisar el padrón' })
-    const notice = review.closest('p')!
-    expect(notice).toHaveTextContent(text)
-    expect(within(notice).getByText('datos faltantes').tagName).toBe('STRONG')
+    const task = review.closest('li')!
+    expect(within(task).getByText(text)).toHaveClass('home-task-title')
+    expect(task).toHaveTextContent('Completa su expediente y su seguro para que puedan participar.')
     expect(review).toHaveAttribute('href', '/students?data=missing&status=active')
-    expect(review).toHaveClass('pill-link')
   })
 
   it.each([

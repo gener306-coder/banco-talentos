@@ -8,7 +8,7 @@ import { organizationOf } from '../auth/user'
 import { getDashboard, metricKeys, metricLabels } from '../dashboard/api'
 import { useApiRequest } from '../lib/useApiRequest'
 import { DualStoriesSpotlight } from '../videos/DualStoriesSpotlight'
-import { AlertIcon, BriefcaseIcon, BuildingIcon, ChartIcon, ChevronRightIcon, ClipboardIcon, IdCardIcon, PlusIcon, SearchIcon, UsersIcon, VideoIcon } from '../ui/icons'
+import { BriefcaseIcon, BuildingIcon, ChartIcon, ChevronRightIcon, ClipboardIcon, IdCardIcon, PlusIcon, SearchIcon, UsersIcon, VideoIcon } from '../ui/icons'
 
 interface Section {
   to: string
@@ -118,6 +118,30 @@ function TalentShortcut() {
 const count = new Intl.NumberFormat('es-MX')
 
 /**
+ * Pendiente del inicio (T-S8-10): conteo, motivo y acción juntos. Toda la tarjeta es clicable, pero el enlace conserva
+ * como nombre accesible solo su acción.
+ */
+function HomeTask({ kind, icon, title, description, to, action }: {
+  kind: 'linkage' | 'missing'
+  icon: ReactNode
+  title: string
+  description: string
+  to: string
+  action: string
+}) {
+  return (
+    <li className={`home-task home-task-${kind}`}>
+      <span className="home-task-icon" aria-hidden="true">{icon}</span>
+      <div className="home-task-text">
+        <p className="home-task-title">{title}</p>
+        <p className="home-task-description">{description}</p>
+        <Link className="home-task-action" to={to}>{action}<ChevronRightIcon /></Link>
+      </div>
+    </li>
+  )
+}
+
+/**
  * Indicadores del rol (HU-S5-01 CA-07, HU-S6-03 CA-02). No bloquean el inicio: mientras cargan no se muestra nada y,
  * si fallan, un aviso discreto deja las tarjetas de acceso intactas.
  */
@@ -136,23 +160,19 @@ function HomeIndicators({ role }: { role: Role }) {
 
   return (
     <section className="home-indicators" aria-label="Indicadores">
-      {linkages > 0 && (
-        <p className="pending-notice home-notice home-action-notice home-linkage-notice">
-          <AlertIcon />
-          <span>
-            {linkages === 1 ? 'Tienes 1 solicitud de vinculación' : `Tienes ${count.format(linkages)} solicitudes de vinculación`} pendiente{linkages === 1 ? '' : 's'} de respuesta.
-          </span>
-          <Link className="pill-link notice-action" to="/institution/linkage-requests?status=PENDIENTE_INSTITUCION">Revisar solicitudes<ChevronRightIcon /></Link>
-        </p>
-      )}
-      {missing > 0 && (
-        <p className="pending-notice home-notice home-action-notice">
-          <AlertIcon />
-          <span>
-            {missing === 1 ? '1 alumno tiene' : `${count.format(missing)} alumnos tienen`} <strong>datos faltantes</strong>.
-          </span>
-          <Link className="pill-link notice-action" to="/students?data=missing&status=active">Revisar el padrón<ChevronRightIcon /></Link>
-        </p>
+      {(linkages > 0 || missing > 0) && (
+        <ul className="home-tasks" aria-label="Por atender">
+          {linkages > 0 && (
+            <HomeTask kind="linkage" icon={<IdCardIcon />} to="/institution/linkage-requests?status=PENDIENTE_INSTITUCION" action="Revisar solicitudes"
+              title={linkages === 1 ? '1 solicitud de vinculación pendiente' : `${count.format(linkages)} solicitudes de vinculación pendientes`}
+              description="Las empresas esperan tu respuesta para continuar." />
+          )}
+          {missing > 0 && (
+            <HomeTask kind="missing" icon={<UsersIcon />} to="/students?data=missing&status=active" action="Revisar el padrón"
+              title={missing === 1 ? '1 alumno con datos faltantes' : `${count.format(missing)} alumnos con datos faltantes`}
+              description="Completa su expediente y su seguro para que puedan participar." />
+          )}
+        </ul>
       )}
       <dl className="home-stats">
         {metricKeys[role].map((key) => (

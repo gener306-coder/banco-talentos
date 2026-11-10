@@ -127,7 +127,7 @@ test('HU-S4-05, HU-S5-04, HU-S5-05, HU-S6-01, HU-S6-02 y HU-S6-03: una empresa e
       const institution = await receiving.newPage()
       await institution.goto('/')
       // HU-S6-03 CA-02: el inicio avisa de las solicitudes pendientes y enlaza a la bandeja.
-      await expect(institution.getByRole('region', { name: 'Indicadores' })).toContainText(/solicitud(es)? de vinculación pendientes? de respuesta/)
+      await expect(institution.getByRole('region', { name: 'Indicadores' })).toContainText(/solicitud(es)? de vinculación pendientes?/)
       await institution.getByRole('link', { name: 'Revisar solicitudes' }).click()
       const pending = institution.waitForResponse((response) => response.url().includes('/api/institution/linkage-requests?') && response.url().includes('status=PENDIENTE_INSTITUCION'))
       await institution.getByLabel('Estado').selectOption('PENDIENTE_INSTITUCION')

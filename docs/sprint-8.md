@@ -242,6 +242,16 @@ Afinaciones pedidas y aprobadas por el responsable el 5 de noviembre de 2026, du
 - **Privacidad:** `missing_data` solo existe en los endpoints de la institución.
 - **Inicio sin correo:** el saludo ya no repite el correo de la cuenta, que sigue en el menú de cuenta del encabezado.
 
+### T-S8-10 — Pendientes del inicio como tarjetas
+
+**Estado:** Completada (10 de noviembre de 2026)  
+**Rol:** `INSTITUTION`
+
+- **Problema:** en pantallas anchas la acción de cada aviso quedaba en el extremo derecho, lejos de su texto, y como enlace suelto se distinguía poco.
+- **Distribución:** los avisos pasan a la lista «Por atender»: tarjetas en dos columnas en escritorio y apiladas en móvil. Cada una muestra el ícono de su sección, el conteo como título, el motivo en una línea y la acción con flecha debajo, junto al texto.
+- **Interacción:** toda la tarjeta es clicable, pero el enlace conserva como nombre accesible solo su acción («Revisar solicitudes», «Revisar el padrón»). El foco del teclado rodea la tarjeta completa.
+- **Color:** cada tarjeta conserva el remarque izquierdo y la superficie de su aviso: acento para solicitudes, tono de pendiente para datos faltantes.
+
 ---
 
 ## Afinaciones pendientes
