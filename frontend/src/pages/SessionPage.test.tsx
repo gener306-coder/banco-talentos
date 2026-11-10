@@ -53,7 +53,7 @@ describe('inicio por rol (tarea transversal del Sprint 4)', () => {
     ['ADMIN', {}, 'Administración', 'Administrador', null, ['Nueva institución', '/institutions/new'], [['Instituciones', '/institutions'], ['Cuentas de la Secretaría', '/secretary-accounts'], ['Reporte ejecutivo', '/reports'], ['Bitácora', '/audit-events'], ['Historias del Dual', '/promocion']]],
     ['SECRETARY', {}, 'Secretaría de Economía', 'Secretaría de Economía', null, ['Registrar empresa', '/companies/new'], [['Empresas', '/companies'], ['Cuentas de la Secretaría', '/secretary-accounts'], ['Reporte ejecutivo', '/reports'], ['Historias del Dual', '/promocion']]],
     ['INSTITUTION', { institution: { id: 7, name: 'Instituto Dual' } }, 'Institución', 'Institución', 'Instituto Dual', ['Registrar alumno', '/students'], [['Alumnos', '/students'], ['Solicitudes de vinculación', '/institution/linkage-requests'], ['Historias del Dual', '/institution/videos']]],
-    ['COMPANY', { company: { id: 3, name: 'ManuGolfo' } }, 'Empresa', 'Empresa', 'ManuGolfo', null, [['Buscar talento', '/talent'], ['Historias del Dual', '/promocion'], ['Oportunidades Duales', '/opportunities'], ['Solicitudes de vinculación', '/linkage-requests']]],
+    ['COMPANY', { company: { id: 3, name: 'ManuGolfo' } }, 'Empresa', 'Empresa', 'ManuGolfo', null, [['Buscar talento', '/talent'], ['Oportunidades Duales', '/opportunities'], ['Solicitudes de vinculación', '/linkage-requests']]],
   ] as const)('%s ve su saludo, su acción principal y sus secciones', async (role, organization, navLabel, roleLabel, orgName, primary, sections) => {
     user = { ...base, role, ...organization }
     renderApp()

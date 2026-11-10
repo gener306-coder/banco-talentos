@@ -46,8 +46,28 @@ function promotionalVideo(item: unknown): PromotionalVideo {
   }
 }
 
-export async function listPromotionalVideos(page: number, signal?: AbortSignal): Promise<PromotionalVideoPage> {
-  const response = await request(`/api/promotional-videos?page=${page}`, { signal })
+/** Orden de las historias (T-S9-03). El azar usa una semilla: la misma semilla continúa la misma mezcla en cada página. */
+export type StoryOrder = { order: 'recent' } | { order: 'random'; seed: number }
+
+export interface StoryQuery {
+  sort?: StoryOrder
+  /** Historia que va primero, aunque por su orden quedara en otra página. */
+  first?: string | null
+}
+
+/** Semilla nueva para una mezcla al azar, dentro del rango que acepta la API. */
+export function randomSeed(): number {
+  return 1 + Math.floor(Math.random() * 2147483646)
+}
+
+export async function listPromotionalVideos(page: number, signal?: AbortSignal, query: StoryQuery = {}): Promise<PromotionalVideoPage> {
+  const params = new URLSearchParams({ page: String(page) })
+  if (query.sort?.order === 'random') {
+    params.set('order', 'random')
+    params.set('seed', String(query.sort.seed))
+  }
+  if (query.first) params.set('first', query.first)
+  const response = await request(`/api/promotional-videos?${params.toString()}`, { signal })
   if (typeof response !== 'object' || response === null || !('data' in response) || !Array.isArray(response.data) ||
       !('meta' in response) || typeof response.meta !== 'object' || response.meta === null) throw new ApiError(502)
   const meta = response.meta as Record<string, unknown>

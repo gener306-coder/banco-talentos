@@ -147,6 +147,8 @@ describe('Historias del Dual HU-S9-04', () => {
     await vi.waitFor(() => expect(scroll).toHaveBeenCalledTimes(1))
     expect(scroll.mock.contexts[0]).toBe(story)
     expect(story).toHaveFocus()
+    // T-S9-03: la historia del enlace va primero aunque por su orden quedara en otra página.
+    expect(galleryMock.mock.calls[0][0]).toBe(`/api/promotional-videos?page=1&first=${second.public_id}`)
   })
 
   it('el Administrador inactiva una historia tras confirmarlo y sale del feed', async () => {
@@ -172,5 +174,35 @@ describe('Historias del Dual HU-S9-04', () => {
     start('INSTITUTION')
     expect(await screen.findByText('No tienes permiso para consultar las Historias del Dual.')).toBeInTheDocument()
     expect(galleryMock).not.toHaveBeenCalled()
+  })
+})
+
+describe('orden de las historias T-S9-03', () => {
+  const urls = () => galleryMock.mock.calls.map(([url]) => String(url))
+
+  it('muestra primero las más recientes y cambia a una mezcla al azar desde la URL', async () => {
+    start('COMPANY')
+    const order = await screen.findByRole('group', { name: 'Ordenar las historias' })
+    expect(within(order).getByRole('radio', { name: 'Más recientes' })).toBeChecked()
+    expect(urls()[0]).toBe('/api/promotional-videos?page=1')
+    expect(screen.queryByRole('button', { name: 'Otra mezcla' })).not.toBeInTheDocument()
+
+    fireEvent.click(within(order).getByRole('radio', { name: 'Al azar' }))
+    await vi.waitFor(() => expect(urls()).toHaveLength(2))
+    expect(urls()[1]).toMatch(/^\/api\/promotional-videos\?page=1&order=random&seed=\d+$/)
+    expect(within(order).getByRole('radio', { name: 'Al azar' })).toBeChecked()
+  })
+
+  it('«Otra mezcla» pide otra semilla y vuelve a la primera página', async () => {
+    vi.spyOn(Math, 'random').mockReturnValueOnce(0.1).mockReturnValueOnce(0.7)
+    start('COMPANY', '/promocion?orden=azar')
+    await screen.findByRole('article', { name: promo.title })
+    const first = urls()[0]
+    expect(first).toMatch(/order=random&seed=\d+$/)
+
+    fireEvent.click(screen.getByRole('button', { name: 'Otra mezcla' }))
+    await vi.waitFor(() => expect(urls()).toHaveLength(2))
+    expect(urls()[1]).toMatch(/^\/api\/promotional-videos\?page=1&order=random&seed=\d+$/)
+    expect(urls()[1]).not.toBe(first)
   })
 })

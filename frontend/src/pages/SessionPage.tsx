@@ -83,8 +83,7 @@ function homeFor(user: User): Home | null {
         label: 'Empresa',
         sections: [
           { to: '/talent', title: 'Buscar talento', icon: <SearchIcon />, description: 'Explora perfiles anónimos por habilidades, idiomas y distancia.' },
-          // HU-S9-05: en segundo lugar, para que no pase desapercibida.
-          promotion,
+          // T-S9-02: sin tarjeta de Historias del Dual; el módulo del inicio ya lleva a todas.
           { to: '/opportunities', title: 'Oportunidades Duales', icon: <BriefcaseIcon />, description: 'Registra los proyectos, perfiles y lugares de tu empresa para alumnos de Educación Dual.' },
           { to: '/linkage-requests', title: 'Solicitudes de vinculación', icon: <IdCardIcon />, description: 'Da seguimiento a las solicitudes enviadas y consulta el contacto de cada institución.' },
         ],

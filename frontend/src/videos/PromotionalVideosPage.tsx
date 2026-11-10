@@ -1,14 +1,14 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useSearchParams } from 'react-router'
 import { useAuth } from '../auth/useAuth'
 import { InstitutionRequestError } from '../institutions/InstitutionLayout'
 import { useApiMutation, useApiRequest } from '../lib/useApiRequest'
 import { ConfirmDialog } from '../ui/ConfirmDialog'
-import { ChevronLeftIcon, ChevronRightIcon, VideoIcon } from '../ui/icons'
+import { ChevronLeftIcon, ChevronRightIcon, ShuffleIcon, VideoIcon } from '../ui/icons'
 import { prefersReducedMotion } from '../ui/modal'
 import { LoadingState, StateMessage } from '../ui/StateMessage'
-import { deactivatePromotionalVideo, galleryMessages, listPromotionalVideos } from './galleryApi'
-import type { PromotionalVideo, PromotionalVideoPage } from './galleryApi'
+import { deactivatePromotionalVideo, galleryMessages, listPromotionalVideos, randomSeed } from './galleryApi'
+import type { PromotionalVideo, PromotionalVideoPage, StoryOrder } from './galleryApi'
 import { VideoPlayer } from './VideoPlayer'
 import './videos.css'
 
@@ -70,17 +70,10 @@ function Story({ story, muted, onMutedChange, onRetry, company, moderator, moder
   )
 }
 
-/**
- * Historias del Dual (HU-S9-03, HU-S9-04): feed de testimonios de alumnos que están o estuvieron en el programa dual.
- * El video visible arranca sin sonido y el feed carga más al acercarse al final. La empresa va de cada historia al
- * buscador; el Administrador puede inactivar una (moderación mínima). `?video=` coloca el feed en esa historia.
- */
-export function PromotionalVideosPage() {
+function StoryFeed({ sort, target }: { sort: StoryOrder; target: string | null }) {
   const { user } = useAuth()
-  const [params] = useSearchParams()
-  const target = params.get('video')
   const [page, setPage] = useState(1)
-  const load = useCallback((signal: AbortSignal) => listPromotionalVideos(page, signal), [page])
+  const load = useCallback((signal: AbortSignal) => listPromotionalVideos(page, signal, { sort, first: target }), [page, sort, target])
   const { data, loading, failure, refresh } = useApiRequest(load, galleryMessages)
   const [stories, setStories] = useState<PromotionalVideo[]>([])
   const [merged, setMerged] = useState<PromotionalVideoPage | null>(null)
@@ -122,10 +115,10 @@ export function PromotionalVideosPage() {
 
   /** Una URL firmada venció (1 a 2 h): se piden de nuevo las páginas ya cargadas para obtener URLs vigentes. */
   const renewUrls = useCallback(() => {
-    void Promise.all(Array.from({ length: page }, (_, index) => listPromotionalVideos(index + 1)))
+    void Promise.all(Array.from({ length: page }, (_, index) => listPromotionalVideos(index + 1, undefined, { sort, first: target })))
       .then((pages) => setStories((current) => merge(current, pages.flatMap((result) => result.videos))))
       .catch(() => { /* El reproductor conserva su botón de reintentar. */ })
-  }, [page])
+  }, [page, sort, target])
 
   async function deactivate(video: PromotionalVideo) {
     setDeactivating(null)
@@ -137,14 +130,7 @@ export function PromotionalVideosPage() {
   }
 
   return (
-    <section className="card" aria-labelledby="promotional-videos-title">
-      <nav className="page-navigation" aria-label="Navegación de las historias">
-        <Link className="plain" to="/" aria-label="Volver al inicio"><ChevronLeftIcon />Inicio</Link>
-      </nav>
-      <header className="story-header">
-        <h2 id="promotional-videos-title">Historias del Dual</h2>
-        <p>Alumnos que están o estuvieron en el programa dual cuentan cómo fue su experiencia en la empresa.</p>
-      </header>
+    <>
       {notice && <p className="institution-success" role="status">{notice}</p>}
       {moderation.failure && <InstitutionRequestError failure={moderation.failure} />}
 
@@ -177,6 +163,61 @@ export function PromotionalVideosPage() {
         title="¿Inactivar la historia?"
         description="Dejará de mostrarse a las empresas. No se borra; la institución la verá inactiva y solo ella podrá reactivarla."
         confirmLabel="Inactivar" onConfirm={() => { if (deactivating) void deactivate(deactivating) }} onCancel={() => setDeactivating(null)} />
+    </>
+  )
+}
+
+const ORDERS = [
+  { value: 'recent', label: 'Más recientes' },
+  { value: 'random', label: 'Al azar' },
+] as const
+
+/**
+ * Historias del Dual (HU-S9-03, HU-S9-04): feed de testimonios de alumnos que están o estuvieron en el programa dual.
+ * El video visible arranca sin sonido y el feed carga más al acercarse al final. La empresa va de cada historia al
+ * buscador; el Administrador puede inactivar una (moderación mínima). `?video=` coloca el feed en esa historia.
+ */
+export function PromotionalVideosPage() {
+  const [params, setParams] = useSearchParams()
+  const target = params.get('video')
+  // T-S9-03: el orden vive en la URL; la semilla, en la página: cada visita al azar trae otra mezcla.
+  const random = params.get('orden') === 'azar'
+  const [seed, setSeed] = useState(randomSeed)
+  const sort = useMemo<StoryOrder>(() => random ? { order: 'random', seed } : { order: 'recent' }, [random, seed])
+
+  // Al elegir otro orden ya no se fija la historia que se abrió desde el inicio.
+  function choose(order: StoryOrder['order']) {
+    setParams(order === 'random' ? { orden: 'azar' } : {}, { replace: true })
+  }
+
+  return (
+    <section className="card" aria-labelledby="promotional-videos-title">
+      <nav className="page-navigation" aria-label="Navegación de las historias">
+        <Link className="plain" to="/" aria-label="Volver al inicio"><ChevronLeftIcon />Inicio</Link>
+      </nav>
+      <header className="story-header">
+        <h2 id="promotional-videos-title">Historias del Dual</h2>
+        <p>Alumnos que están o estuvieron en el programa dual cuentan cómo fue su experiencia en la empresa.</p>
+      </header>
+      <div className="story-toolbar">
+        <fieldset className="segmented">
+          <legend className="visually-hidden">Ordenar las historias</legend>
+          {ORDERS.map((option) => (
+            <label key={option.value} className="segmented-option">
+              <input type="radio" name="story-order" value={option.value} checked={sort.order === option.value}
+                onChange={() => choose(option.value)} />
+              <span>{option.value === 'random' && <ShuffleIcon />}{option.label}</span>
+            </label>
+          ))}
+        </fieldset>
+        {random && (
+          <button type="button" className="plain story-reshuffle" onClick={() => setSeed(randomSeed())}>
+            <ShuffleIcon />Otra mezcla
+          </button>
+        )}
+      </div>
+      {/* Cada orden o mezcla empieza un feed nuevo desde la primera página. */}
+      <StoryFeed key={`${sort.order}-${random ? seed : 0}-${target ?? ''}`} sort={sort} target={target} />
     </section>
   )
 }

@@ -53,7 +53,7 @@ afterEach(() => {
 })
 
 describe('carrusel del inicio HU-S9-06', () => {
-  it('muestra hasta 5 historias, con la actual debajo y enlace al feed', async () => {
+  it('muestra hasta 5 historias de la mezcla, con la actual debajo y enlace al feed', async () => {
     galleryMock.mockImplementation(async () => pageOf([1, 2, 3, 4, 5, 6].map((id) => story(id, `Historia ${id}`))))
     start()
     const region = await screen.findByRole('region', { name: HEADING })
@@ -149,6 +149,60 @@ describe('carrusel del inicio HU-S9-06', () => {
     expect(within(region).queryByRole('button', { name: /Historia siguiente|Ir a la historia|Pausar/ })).not.toBeInTheDocument()
     await advance(20000)
     expect(scrollTo).not.toHaveBeenCalled()
+  })
+})
+
+describe('historias al azar del inicio T-S9-03', () => {
+  const galleryUrl = () => String(fetchMock.mock.calls.find(([url]) => String(url).startsWith('/api/promotional-videos'))?.[0])
+
+  it('pide una mezcla al azar de toda la galería en cada visita', async () => {
+    await carousel()
+    expect(galleryUrl()).toMatch(/^\/api\/promotional-videos\?page=1&order=random&seed=\d+$/)
+  })
+
+  it('al dar la vuelta completa entra el siguiente grupo girando como un dado', async () => {
+    const region = await carousel([1, 2, 3, 4, 5, 6, 7].map((id) => story(id, `Historia ${id}`)))
+    expect(within(region).getAllByRole('group', { name: / de 5$/ })).toHaveLength(5)
+    expect(region.querySelector('[data-roll]')).toBeNull()
+
+    for (let step = 1; step <= 5; step++) await advance(6000)
+    expect(currentDot(region)).toBe(0)
+    expect(region.querySelector('.spotlight-caption')).toHaveTextContent('Historia 6')
+    const slides = within(region).getAllByRole('group', { name: / de 5$/ })
+    expect(slides.map((slide) => slide.getAttribute('data-roll'))).toEqual(['down', 'up', 'down', 'up', 'down'])
+    expect(within(slides[2]).getByRole('button')).toHaveAccessibleName('Ver la vista previa de Historia 1, de Instituto Dual')
+  })
+
+  it('con el cursor encima reproduce la historia sin sonido y detiene el carrusel', async () => {
+    const region = await carousel()
+    const poster = within(region).getByRole('button', { name: 'Ver la vista previa de Segunda, de Instituto Dual' })
+    fireEvent.pointerEnter(region, { pointerType: 'mouse' })
+    fireEvent.pointerEnter(poster, { pointerType: 'mouse' })
+    expect(poster.querySelector('video')).toBeNull()
+
+    await advance(300)
+    const video = poster.querySelector('video')!
+    expect(video).toHaveAttribute('src', story(2, '').video_url)
+    expect(video.muted).toBe(true)
+    fireEvent.playing(video)
+    expect(poster).toHaveAttribute('data-playing', 'true')
+    await advance(20000)
+    expect(scrollTo).not.toHaveBeenCalled()
+
+    fireEvent.pointerLeave(poster)
+    expect(poster.querySelector('video')).toBeNull()
+  })
+
+  it('no previsualiza con el dedo ni con movimiento reducido', async () => {
+    const region = await carousel()
+    fireEvent.pointerEnter(within(region).getByRole('button', { name: /Primera/ }), { pointerType: 'touch' })
+    await advance(1000)
+    expect(document.querySelector('video')).toBeNull()
+
+    vi.stubGlobal('matchMedia', (query: string) => ({ matches: query.includes('reduced-motion'), media: query, addEventListener() {}, removeEventListener() {} }))
+    fireEvent.pointerEnter(within(region).getByRole('button', { name: /Tercera/ }), { pointerType: 'mouse' })
+    await advance(1000)
+    expect(document.querySelector('video')).toBeNull()
   })
 })
 
