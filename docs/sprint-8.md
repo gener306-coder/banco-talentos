@@ -318,6 +318,18 @@ Afinaciones pedidas y aprobadas por el responsable el 5 de noviembre de 2026, du
 - **Bandeja de la empresa:** el perfil muestra el titular y solo la carrera; el periodo está en el perfil. La oportunidad, el título en dos líneas. La institución muestra su nombre y el responsable, con el puesto al pasar el cursor. Como la empresa no tiene un detalle de la solicitud, el correo y el teléfono siguen en la fila, pero como dos accesos redondos («Escribir a…» y «Llamar al…») en lugar de dos líneas de texto. La respuesta de la institución se recorta a dos líneas y se lee completa al pasar el cursor.
 - **Sin cambios:** la API, la exportación CSV, el filtro y el detalle.
 
+### T-S8-16 — Acciones de cuentas que se distinguen por su consecuencia
+
+**Estado:** Completada (11 de noviembre de 2026)  
+**Rol:** `ADMIN`, `SECRETARY`
+
+- **Problema:** en las cuentas de la Secretaría y en las de cada empresa, «Restablecer contraseña», «Inactivar» y «Activar» eran la misma pastilla de tinte, así que quitar el acceso se veía igual que una acción de apoyo.
+- **Tonos:**
+  - Restablecer contraseña y Reenviar enlace: acciones de apoyo, en la pastilla de tinte de marca, con ícono de llave o de sobre.
+  - Inactivar: quita el acceso, aunque se puede deshacer. Contorno en el color de peligro, sin relleno, con un candado; al pasar el cursor toma la superficie de peligro.
+  - Activar: devuelve el acceso. Tono de éxito con palomita.
+- **Alcance:** el componente compartido `useAccountAccess` y el reenvío de la fila, así que aplica igual en las dos tablas de cuentas. Los nombres accesibles y las confirmaciones no cambian.
+
 ### Prueba intermitente del CV
 
 `StudentCvTest › validates the certifications without writing them` falló una vez en la suite completa y pasa sola. Sus datasets calculaban fechas relativas («mañana», «el año siguiente») al recolectar las pruebas. Ahora son closures que Pest resuelve al ejecutar cada caso, con el reloj de la aplicación, así que siempre son futuras respecto a la validación. No se reprodujo el fallo, así que la causa exacta queda sin confirmar.

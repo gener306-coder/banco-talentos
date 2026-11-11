@@ -4,7 +4,7 @@ import { useAccountAccess } from '../accounts/useAccountAccess'
 import { useAuth } from '../auth/useAuth'
 import { InstitutionRequestError } from '../institutions/InstitutionLayout'
 import { useApiRequest } from '../lib/useApiRequest'
-import { ChevronLeftIcon, ChevronRightIcon, PlusIcon } from '../ui/icons'
+import { ChevronLeftIcon, ChevronRightIcon, MailIcon, PlusIcon } from '../ui/icons'
 import { Sheet } from '../ui/Sheet'
 import { LoadingState } from '../ui/StateMessage'
 import { listSecretaryAccounts, SECRETARY_PASSWORD_RESET_PATH, secretaryAccountStatusPath, secretaryMessages } from './api'
@@ -68,8 +68,8 @@ export function SecretaryAccountsPage() {
                         <td>
                           <div className="actions">
                             {account.status === 'pending' && (
-                              <button type="button" className="secondary" aria-label={`Reenviar enlace a ${account.name}`}
-                                onClick={() => setSheet({ kind: 'resend', email: account.email })}>Reenviar enlace</button>
+                              <button type="button" className="account-action" aria-label={`Reenviar enlace a ${account.name}`}
+                                onClick={() => setSheet({ kind: 'resend', email: account.email })}><MailIcon />Reenviar enlace</button>
                             )}
                             {access.rowActions(account)}
                           </div>
