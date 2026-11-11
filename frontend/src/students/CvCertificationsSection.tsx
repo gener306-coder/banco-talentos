@@ -1,5 +1,5 @@
 import { useCallback, useRef, useState } from 'react'
-import type { FormEvent } from 'react'
+import type { FormEvent, ReactNode } from 'react'
 import { InstitutionRequestError } from '../institutions/InstitutionLayout'
 import { useApiMutation } from '../lib/useApiRequest'
 import { ConfirmDialog } from '../ui/ConfirmDialog'
@@ -111,7 +111,7 @@ export function CvCertificationsSection({ studentId, cv, onSaved }: { studentId:
   const [openings, setOpenings] = useState(0)
   const [removing, setRemoving] = useState<CvCertification | null>(null)
   const removeButton = useRef<HTMLButtonElement | null>(null)
-  const [notice, setNotice] = useState<string | null>(null)
+  const [notice, setNotice] = useState<ReactNode>(null)
   const close = useCallback(() => setSheetOpen(false), [])
   const current = certifications.map((item) => certificationInput(item, credentials))
   const editingIndex = target !== 'new' ? certifications.findIndex((item) => item.id === target.id) : certifications.length
@@ -145,7 +145,9 @@ export function CvCertificationsSection({ studentId, cv, onSaved }: { studentId:
     const verified = certification.verified_at === null
     await review.submit(() => setCertificationReview(studentId, certification.id, verified), (updated) => {
       onSaved(updated)
-      setNotice(verified ? `«${certification.name}» quedó revisada por tu institución.` : `Se quitó la revisión de «${certification.name}».`)
+      setNotice(verified
+        ? <><strong className="notice-subject">{certification.name}</strong> quedó revisada por tu institución.</>
+        : <>Se quitó la revisión de <strong className="notice-subject">{certification.name}</strong>.</>)
     })
   }
 

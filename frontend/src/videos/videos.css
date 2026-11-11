@@ -78,7 +78,8 @@
   .video-actions button.icon-action { position: relative; display: inline-grid; place-items: center; margin: 0; padding: 0; border: 1px solid var(--border); border-radius: 50%;
     background: var(--surface); color: var(--accent); transition: background 150ms ease-out, border-color 150ms ease-out; }
   .video-actions button.icon-action .icon { width: 1.05rem; height: 1.05rem; }
-  .video-actions button.icon-action.danger { border-color: color-mix(in srgb, var(--danger-border) 45%, var(--border)); color: var(--danger-text); }
+  /* Eliminar no se deshace: círculo relleno de peligro para distinguirlo de las demás acciones. */
+  .video-actions button.icon-action.danger { border-color: var(--danger-border); background: var(--danger-border); color: var(--surface); }
   .video-actions button.icon-action:focus-visible { outline: 3px solid var(--focus-ring); outline-offset: 2px; }
   .icon-action::after { content: attr(data-tooltip); position: absolute; bottom: calc(100% + 0.4rem); left: 50%; z-index: 2; padding: 0.2rem 0.5rem; border-radius: 0.4rem;
     background: var(--text-strong); color: var(--surface); font-size: 0.75rem; font-weight: 600; white-space: nowrap; opacity: 0; pointer-events: none;
@@ -86,7 +87,7 @@
   .icon-action:focus-visible::after { opacity: 1; transform: translate(-50%, 0); }
   @media (hover: hover) {
     .video-actions button.icon-action:hover:not(:disabled) { border-color: color-mix(in srgb, var(--accent) 35%, var(--border)); background: var(--tint-hover); }
-    .video-actions button.icon-action.danger:hover:not(:disabled) { border-color: var(--danger-border); background: var(--danger-surface); }
+    .video-actions button.icon-action.danger:hover:not(:disabled) { --danger-hover: color-mix(in srgb, var(--danger-border) 82%, var(--text-strong)); border-color: var(--danger-hover); background: var(--danger-hover); }
     .icon-action:hover::after { opacity: 1; transform: translate(-50%, 0); }
   }
   @media (prefers-reduced-motion: reduce) {

@@ -1,4 +1,5 @@
 import { useCallback, useRef, useState } from 'react'
+import type { ReactNode } from 'react'
 import { Link } from 'react-router'
 import { InstitutionRequestError } from '../institutions/InstitutionLayout'
 import { useApiMutation, useApiRequest } from '../lib/useApiRequest'
@@ -25,7 +26,7 @@ export function LinkageRequestsPage() {
   const { data, loading, failure, refresh, setData } = useApiRequest(load, linkageMessages)
   const mutation = useApiMutation(linkageMessages)
   const [cancelling, setCancelling] = useState<LinkageInboxItem | null>(null)
-  const [notice, setNotice] = useState<string | null>(null)
+  const [notice, setNotice] = useState<ReactNode>(null)
   const origin = useRef<HTMLButtonElement | null>(null)
 
   async function cancel() {
@@ -35,7 +36,7 @@ export function LinkageRequestsPage() {
     setNotice(null)
     await mutation.submit(() => cancelLinkageRequest(target.id), (updated) => {
       setData((current) => current && { ...current, items: current.items.map((item) => item.id === updated.id ? updated : item) })
-      setNotice(`Solicitud para «${updated.opportunity.title}» cancelada correctamente.`)
+      setNotice(<>Solicitud para <strong className="notice-subject">{updated.opportunity.title}</strong> cancelada correctamente.</>)
     })
   }
 

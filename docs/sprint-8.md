@@ -291,6 +291,7 @@ Afinaciones pedidas y aprobadas por el responsable el 5 de noviembre de 2026, du
 - **Problema:** los avisos de éxito (`.institution-success`) y de error (`.notice`) eran bloques de esquinas rectas, sin ícono y con poco espacio. Son los que aparecen al subir, guardar, editar, eliminar o cuando algo falla, y desentonaban con las tarjetas, los botones y los pendientes del inicio.
 - **Diseño:** tarjeta con esquinas de 12 px, borde suave y el remarque izquierdo de 4 px en su color (verde de éxito o rojo de error), como los pendientes del inicio (T-S8-10). Llevan un ícono (palomita en círculo o alerta), más espacio interior y texto de 0.92 rem.
 - **Alcance:** se cambian las dos clases una sola vez, así que los avisos de toda la aplicación cambian sin tocar cada pantalla. El ícono es una máscara pintada con el token del aviso y queda fuera del flujo, así que los avisos con enlaces o botones se acomodan igual.
+- **Nombre resaltado:** el nombre de lo que cambió (un video, una oportunidad, una certificación) ya no va entre «», sino en `strong.notice-subject`: negritas y un fondo suave del color del aviso, que se distingue aunque la fuente del sistema no tenga peso negrita. Las citas literales, como el mensaje de una solicitud, conservan sus comillas.
 - **Accesibilidad:** conservan `role="status"` o `role="alert"`; con contraste alto, el borde toma el color del texto, y con movimiento reducido se mantiene la entrada sin animación.
 
 ### Prueba intermitente del CV
