@@ -45,6 +45,8 @@ async function publishStudent(page: Page, data: { surname: string; enrollment: s
 }
 
 test('HU-S4-05, HU-S5-04, HU-S5-05, HU-S6-01, HU-S6-02 y HU-S6-03: una empresa encuentra un perfil anónimo por habilidad y distancia, sin datos personales, solicita la vinculación a su institución, esta la revisa con la identidad del alumno, la empresa la cancela y, al volver a solicitarla, la institución la acepta', async ({ browser, baseURL }) => {
+  // Recorre tres sesiones (institución, empresa e institución); con la máquina cargada rebasa los 30 s por defecto.
+  test.slow()
   const suffix = randomBytes(6).toString('hex')
   const student = { surname: `Oculto${suffix}`, enrollment: `TAL-${suffix}`, headline: `Analista E2E ${suffix}`, skill: `Destreza${suffix}` }
 

@@ -442,6 +442,21 @@ textarea[aria-invalid='true'] { border-color: var(--danger-border); }
   .table-card :is(.data-table, .institution-table) :is(th, td) { padding: 0.7rem 0.75rem; }
   .table-card .pager { padding: 0.75rem; }
 }
+/*
+ * Acciones de cuentas (T-S8-16): el tono indica la consecuencia. Apoyo (restablecer, reenviar): pastilla de tinte de
+ * marca. Quitar el acceso (inactivar): contorno de peligro sin relleno. Devolver el acceso (activar): tono de éxito.
+ */
+button.account-action { display: inline-flex; align-items: center; gap: 0.4rem; padding: 0.5rem 0.85rem; border: 1px solid transparent; border-radius: 999px;
+  background: var(--tint); color: var(--accent); font-size: 0.88rem; font-weight: 600; white-space: nowrap; }
+button.account-action .icon { width: 0.95rem; height: 0.95rem; }
+button.account-action.danger { border-color: color-mix(in srgb, var(--danger-border) 55%, transparent); background: transparent; color: var(--danger-text); }
+button.account-action.positive { border-color: color-mix(in srgb, var(--success-border) 45%, transparent); background: var(--success-surface); color: var(--success-text); }
+@media (hover: hover) {
+  button.account-action:hover:not(:disabled) { background: var(--tint-hover); }
+  button.account-action.danger:hover:not(:disabled) { border-color: var(--danger-border); background: var(--danger-surface); }
+  button.account-action.positive:hover:not(:disabled) { border-color: var(--success-border); background: var(--success-surface); }
+}
+@media (prefers-contrast: more) { button.account-action { border-color: currentColor; } }
 .data-table tbody tr[data-href] { cursor: pointer; }
 .data-table tbody tr[data-href]:hover > * { background: var(--surface-muted); }
 .data-table tbody tr:hover .pill-link .icon { transform: translateX(2px); }

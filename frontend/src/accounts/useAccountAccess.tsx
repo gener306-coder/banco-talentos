@@ -3,6 +3,7 @@ import { InstitutionRequestError } from '../institutions/InstitutionLayout'
 import { useApiMutation } from '../lib/useApiRequest'
 import type { FailureMessages } from '../lib/useApiRequest'
 import { ConfirmDialog } from '../ui/ConfirmDialog'
+import { CheckIcon, KeyIcon, LockIcon } from '../ui/icons'
 import { setSetupAccountStatus, startSetupAccountPasswordReset } from './api'
 import type { SetupAccount } from './api'
 
@@ -59,17 +60,18 @@ export function useAccountAccess({ statusPath, resetPath, messages, selfId, onUp
     if (!enabled || account.status === 'pending') return null
     if (account.status === 'inactive') {
       return (
-        <button type="button" className="secondary" disabled={mutation.pending} aria-label={`Activar la cuenta de ${account.name}`}
-          onClick={() => { void activate(account) }}>Activar</button>
+        <button type="button" className="account-action positive" disabled={mutation.pending} aria-label={`Activar la cuenta de ${account.name}`}
+          onClick={() => { void activate(account) }}><CheckIcon />Activar</button>
       )
     }
     return (
       <>
-        <button type="button" className="secondary" disabled={mutation.pending} aria-label={`Restablecer la contraseña de ${account.name}`}
-          onClick={(event) => open('reset', account, event.currentTarget)}>Restablecer contraseña</button>
+        {/* T-S8-16: cada acción con el tono de su consecuencia: apoyo (tinte), quitar acceso (contorno de peligro). */}
+        <button type="button" className="account-action" disabled={mutation.pending} aria-label={`Restablecer la contraseña de ${account.name}`}
+          onClick={(event) => open('reset', account, event.currentTarget)}><KeyIcon />Restablecer contraseña</button>
         {account.id !== selfId && (
-          <button type="button" className="secondary" disabled={mutation.pending} aria-label={`Inactivar la cuenta de ${account.name}`}
-            onClick={(event) => open('deactivate', account, event.currentTarget)}>Inactivar</button>
+          <button type="button" className="account-action danger" disabled={mutation.pending} aria-label={`Inactivar la cuenta de ${account.name}`}
+            onClick={(event) => open('deactivate', account, event.currentTarget)}><LockIcon />Inactivar</button>
         )}
       </>
     )

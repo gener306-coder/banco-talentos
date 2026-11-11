@@ -4,7 +4,7 @@ import type { SetupAccountStatus } from '../accounts/api'
 import { useAccountAccess } from '../accounts/useAccountAccess'
 import { InstitutionRequestError } from '../institutions/InstitutionLayout'
 import { useApiRequest } from '../lib/useApiRequest'
-import { PlusIcon } from '../ui/icons'
+import { MailIcon, PlusIcon } from '../ui/icons'
 import { Sheet } from '../ui/Sheet'
 import { LoadingState } from '../ui/StateMessage'
 import { companyMessages, createCompanyAccount, listCompanyAccounts, resendCompanyAccountSetup } from './api'
@@ -62,8 +62,8 @@ export function CompanyAccountsSection({ companyId, active }: { companyId: numbe
                         <td>
                           <div className="actions">
                             {active && account.status === 'pending' && (
-                              <button type="button" className="secondary" aria-label={`Reenviar enlace a ${account.name}`}
-                                onClick={() => setSheet({ kind: 'resend', email: account.email })}>Reenviar enlace</button>
+                              <button type="button" className="account-action" aria-label={`Reenviar enlace a ${account.name}`}
+                                onClick={() => setSheet({ kind: 'resend', email: account.email })}><MailIcon />Reenviar enlace</button>
                             )}
                             {access.rowActions(account, active)}
                           </div>
