@@ -283,6 +283,16 @@ Afinaciones pedidas y aprobadas por el responsable el 5 de noviembre de 2026, du
 - **Edición:** `CompanyRequest` prohíbe `delivery_method` y no crea cuentas. Cambiar el nombre o el correo del contacto no modifica la cuenta. **Cuentas de la empresa** sigue disponible para más cuentas, con la misma lógica (`App\Services\CompanyAccounts`).
 - **Detalle:** la cuenta del contacto aparece en «Cuentas de la empresa» como PENDIENTE hasta que establece su contraseña.
 
+### T-S8-13 — Avisos de resultado con la identidad visual
+
+**Estado:** Completada (11 de noviembre de 2026)  
+**Rol:** todos
+
+- **Problema:** los avisos de éxito (`.institution-success`) y de error (`.notice`) eran bloques de esquinas rectas, sin ícono y con poco espacio. Son los que aparecen al subir, guardar, editar, eliminar o cuando algo falla, y desentonaban con las tarjetas, los botones y los pendientes del inicio.
+- **Diseño:** tarjeta con esquinas de 12 px, borde suave y el remarque izquierdo de 4 px en su color (verde de éxito o rojo de error), como los pendientes del inicio (T-S8-10). Llevan un ícono (palomita en círculo o alerta), más espacio interior y texto de 0.92 rem.
+- **Alcance:** se cambian las dos clases una sola vez, así que los avisos de toda la aplicación cambian sin tocar cada pantalla. El ícono es una máscara pintada con el token del aviso y queda fuera del flujo, así que los avisos con enlaces o botones se acomodan igual.
+- **Accesibilidad:** conservan `role="status"` o `role="alert"`; con contraste alto, el borde toma el color del texto, y con movimiento reducido se mantiene la entrada sin animación.
+
 ### Prueba intermitente del CV
 
 `StudentCvTest › validates the certifications without writing them` falló una vez en la suite completa y pasa sola. Sus datasets calculaban fechas relativas («mañana», «el año siguiente») al recolectar las pruebas. Ahora son closures que Pest resuelve al ejecutar cada caso, con el reloj de la aplicación, así que siempre son futuras respecto a la validación. No se reprodujo el fallo, así que la causa exacta queda sin confirmar.

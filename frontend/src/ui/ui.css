@@ -102,6 +102,22 @@ input { border-radius: 8px; }
 .spinner { width: 1em; height: 1em; border: 2px solid currentColor; border-right-color: transparent; border-radius: 50%; animation: spin 0.7s linear infinite; flex-shrink: 0; }
 @keyframes spin { to { transform: rotate(360deg); } }
 
+/*
+ * Avisos de resultado: éxito (.institution-success) y error (.notice), con el remarque izquierdo de los pendientes del
+ * inicio y su ícono. El ícono es una máscara pintada con el token del aviso y vive fuera del flujo, así que el
+ * contenido (texto, enlaces o botones) se acomoda igual que antes.
+ */
+.institution-success, .notice { position: relative; font-size: 0.92rem; line-height: 1.45; overflow-wrap: anywhere; }
+.institution-success::before, .notice::before { content: ''; position: absolute; top: 0.85rem; left: 0.95rem; width: 1.1rem; height: 1.1rem;
+  -webkit-mask: var(--notice-icon) center / contain no-repeat; mask: var(--notice-icon) center / contain no-repeat; }
+.institution-success::before { background: var(--success-border);
+  --notice-icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='8' cy='8' r='6.5'/%3E%3Cpath d='m5.2 8.2 1.9 1.9 3.7-4'/%3E%3C/svg%3E"); }
+.notice::before { background: var(--danger-border);
+  --notice-icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M8 2.5 14 13H2L8 2.5Z'/%3E%3Cpath d='M8 7v2.5M8 11.2h.01'/%3E%3C/svg%3E"); }
+.institution-success a, .notice a { color: inherit; font-weight: 600; }
+.institution-success > :last-child, .notice > :last-child { margin-bottom: 0; }
+@media (prefers-contrast: more) { .institution-success, .notice { border-color: currentColor; } }
+
 /* Materializar: los paneles llegan con desenfoque, escala y opacidad. */
 .institution-success, .manual-setup-link, .state-message, .field-error, .notice, .copy-status {
   animation: materialize var(--spring-duration) var(--spring) both; }
