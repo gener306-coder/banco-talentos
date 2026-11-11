@@ -27,7 +27,7 @@ Sprint vigente desde el 31 de octubre de 2026; historias aprobadas por el respon
 | Original | Se borra al terminar bien o al fallar | No se paga almacenamiento por el archivo de 160 MB. |
 | Entrega | URLs firmadas temporales (`Storage::temporaryUrl`, unos 60 min). En S3 son prefirmadas y no pasan por PHP; en local, una ruta firmada con `response()->file()` | La galería pide sesión, así que los archivos no son públicos. `response()->file()` soporta `Range`, que Safari exige para reproducir. |
 | Subida | Un `multipart` a la API de hasta 250 MB, con barra de progreso | Lo más simple para pocas instituciones. La subida directa a S3 con URL prefirmada queda como mejora si en producción fallan las subidas lentas. |
-| Bajas | Baja lógica `is_active` vía `PATCH .../status`; sin `DELETE` | Convención del proyecto. El archivo conservado cuesta centavos. |
+| Bajas | Baja lógica `is_active` vía `PATCH .../status` para ocultar; eliminación vía `PATCH .../deletion` para liberar espacio (T-S9-04); sin `DELETE` | Convención del proyecto. Eliminar borra los archivos y conserva un registro mínimo oculto. |
 
 ## Fuera de alcance
 
@@ -316,6 +316,30 @@ Los videos son testimonios de alumnos que están o estuvieron en el Dual en una 
 - **Relevo:** las historias nuevas entran girando como un dado, alternando hacia arriba y hacia abajo, escalonadas 70 ms. El carrusel vuelve al inicio sin deslizarse, para que el giro sea la única transición. Con movimiento reducido cambian sin animación.
 - **Feed:** control segmentado **Más recientes** / **Al azar**. El orden vive en la URL (`/promocion?orden=azar`) y la semilla en la página, así que cada visita al azar trae otra mezcla. **Otra mezcla** pide una semilla nueva y vuelve a la primera página.
 - **Enlace del inicio:** `/promocion?video={public_id}` envía `first`, así que la historia abierta desde el carrusel aparece aunque por su orden estuviera en una página lejana. Elegir otro orden ya no la fija.
+
+### T-S9-04 — La institución elimina sus videos para liberar espacio
+
+**Estado:** Completada (11 de noviembre de 2026). Pedida por el responsable el 10 de noviembre.  
+**Rol:** `INSTITUTION`  
+**Cambia:** la decisión técnica «Bajas» y HU-S9-02 CA-03.
+
+- **Problema:** inactivar un video lo ocultaba, pero conservaba su MP4 (unos 15–19 MB por minuto) y su póster, así que el almacenamiento solo crecía.
+- **Eliminar:** `PATCH /api/institution/videos/{publicId}/deletion` responde `204`. En una transacción con bloqueo, quita las rutas, lo inactiva y registra `deleted_at` y `deleted_by`. Después del commit borra el MP4 y el póster del disco de medios; si el disco falla, solo queda una advertencia en el log, sin rutas.
+- **Registro mínimo:** la fila conserva el título, el consentimiento, quién lo subió y quién lo eliminó. Las restricciones de la base garantizan que un video eliminado no tenga archivos ni esté activo.
+- **Oculto en todo:** con `SoftDeletes`, un video eliminado no aparece en el listado de la institución, en la galería ni en la cuota, y cualquier acción sobre él responde `404`, igual que uno ajeno.
+- **Límite:** un video en proceso no se elimina («Espera a que termine de procesarse para eliminarlo.»), porque el worker sigue escribiendo sus archivos. Los listos, activos o inactivos, y los fallidos sí.
+- **Interfaz:** **Eliminar**, con color de peligro, pide confirmación con `ConfirmDialog`: «Se borrará definitivamente para liberar espacio. Ya no aparecerá en las Historias del Dual y no se puede deshacer.».
+- **Sin `DELETE`:** la convención del proyecto se mantiene.
+
+### T-S9-05 — Videos de la institución en lista uniforme con acciones de ícono
+
+**Estado:** Completada (11 de noviembre de 2026). Pedida por el responsable el mismo día.  
+**Rol:** `INSTITUTION`  
+**Cambia:** la retícula de tarjetas de HU-S9-02 CA-05.
+
+- **Lista uniforme:** el mosaico de tarjetas se sustituye por filas iguales a todo el ancho de la página. Cada fila tiene una miniatura fija de 16:9 con la duración, el título en una línea (completo en `title`), la insignia de estado, la fecha y, si falló, el motivo en dos líneas. En móvil, las acciones pasan a una fila propia.
+- **Acciones de ícono:** Ver (reproducir), Editar (lápiz), Inactivar y Activar (ojo tachado y ojo) y Eliminar (bote, en color de peligro). Son círculos con los tokens de marca, y el verbo aparece en una etiqueta al pasar el cursor o con el foco del teclado.
+- **Accesibilidad:** cada botón conserva su nombre accesible completo («Editar {título}»). El orden es fijo, y una acción que no aplica deja su hueco para que los íconos coincidan entre filas.
 
 ---
 

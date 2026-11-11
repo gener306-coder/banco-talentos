@@ -59,18 +59,47 @@
     .video-dropzone[data-dragging='true'] .video-dropzone-area { transform: none; }
   }
 
-  /* Listado de videos (HU-S9-02 CA-05): retícula de tarjetas dentro de --page-wide. */
-  .video-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(16rem, 1fr)); gap: 1.25rem; margin: 1.5rem 0 0; padding: 0; list-style: none; }
-  .video-card { display: flex; flex-direction: column; overflow: hidden; border: 1px solid var(--border); border-radius: 0.75rem; background: var(--surface); }
-  .video-poster { position: relative; display: grid; place-items: center; aspect-ratio: 16 / 9; background: var(--surface-muted); color: var(--text); }
-  .video-poster img { width: 100%; height: 100%; object-fit: cover; }
-  .video-poster svg { width: 2rem; height: 2rem; }
-  .video-duration { position: absolute; right: 0.5rem; bottom: 0.5rem; padding: 0.1rem 0.45rem; border-radius: 0.35rem; background: var(--surface); color: var(--text-strong); font-size: 0.8rem; font-weight: 600; font-variant-numeric: tabular-nums; }
-  .video-card-body { display: grid; gap: 0.5rem; padding: 1rem; }
-  .video-card-body h3 { margin: 0; font-size: 1rem; overflow-wrap: anywhere; }
-  .video-card-body p { margin: 0; }
-  .video-card-body .actions { margin-top: 0.25rem; }
-  .video-meta { color: var(--text); font-size: 0.85rem; }
+  /* Listado de videos (HU-S9-02 CA-05, T-S9-05): filas uniformes con miniatura fija, texto y acciones de ícono. */
+  .video-list { display: grid; gap: 0.75rem; margin: 1.5rem 0 0; padding: 0; list-style: none; }
+  .video-row { display: grid; grid-template-columns: 9rem minmax(0, 1fr) auto; align-items: center; gap: 1rem; min-height: 6.5rem;
+    padding: 0.75rem; border: 1px solid var(--border); border-radius: 0.9rem; background: var(--surface); }
+  .video-thumb { position: relative; display: grid; place-items: center; overflow: hidden; aspect-ratio: 16 / 9; border-radius: 0.6rem; background: var(--surface-muted); color: var(--text); }
+  .video-thumb img { width: 100%; height: 100%; object-fit: cover; }
+  .video-thumb svg { width: 1.5rem; height: 1.5rem; }
+  .video-duration { position: absolute; right: 0.35rem; bottom: 0.35rem; padding: 0.05rem 0.4rem; border-radius: 0.35rem; background: var(--surface); color: var(--text-strong); font-size: 0.75rem; font-weight: 600; font-variant-numeric: tabular-nums; }
+  .video-info { display: grid; gap: 0.35rem; min-width: 0; }
+  .video-info h3 { margin: 0; overflow: hidden; font-size: 1rem; text-overflow: ellipsis; white-space: nowrap; }
+  .video-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 0.35rem 0.75rem; color: var(--text); font-size: 0.85rem; }
+  .video-failure { display: -webkit-box; margin: 0; overflow: hidden; color: var(--text); font-size: 0.85rem; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2; }
+  .video-actions { display: flex; gap: 0.4rem; }
+
+  /* Acción de ícono: círculo con el ícono en el acento; el verbo aparece al pasar el cursor o con el foco del teclado. */
+  .icon-action, .icon-action-slot { flex: none; width: 2.5rem; height: 2.5rem; }
+  .video-actions button.icon-action { position: relative; display: inline-grid; place-items: center; margin: 0; padding: 0; border: 1px solid var(--border); border-radius: 50%;
+    background: var(--surface); color: var(--accent); transition: background 150ms ease-out, border-color 150ms ease-out; }
+  .video-actions button.icon-action .icon { width: 1.05rem; height: 1.05rem; }
+  .video-actions button.icon-action.danger { border-color: color-mix(in srgb, var(--danger-border) 45%, var(--border)); color: var(--danger-text); }
+  .video-actions button.icon-action:focus-visible { outline: 3px solid var(--focus-ring); outline-offset: 2px; }
+  .icon-action::after { content: attr(data-tooltip); position: absolute; bottom: calc(100% + 0.4rem); left: 50%; z-index: 2; padding: 0.2rem 0.5rem; border-radius: 0.4rem;
+    background: var(--text-strong); color: var(--surface); font-size: 0.75rem; font-weight: 600; white-space: nowrap; opacity: 0; pointer-events: none;
+    transform: translate(-50%, 0.2rem); transition: opacity 120ms ease-out, transform 120ms ease-out; }
+  .icon-action:focus-visible::after { opacity: 1; transform: translate(-50%, 0); }
+  @media (hover: hover) {
+    .video-actions button.icon-action:hover:not(:disabled) { border-color: color-mix(in srgb, var(--accent) 35%, var(--border)); background: var(--tint-hover); }
+    .video-actions button.icon-action.danger:hover:not(:disabled) { border-color: var(--danger-border); background: var(--danger-surface); }
+    .icon-action:hover::after { opacity: 1; transform: translate(-50%, 0); }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .video-actions button.icon-action, .icon-action::after { transition: none; }
+  }
+  @media (prefers-contrast: more) {
+    .video-row, .video-actions button.icon-action { border-color: var(--border-strong); }
+  }
+  @media (max-width: 600px) {
+    .video-row { grid-template-columns: 6.5rem minmax(0, 1fr); }
+    .video-actions { grid-column: 1 / -1; justify-content: flex-end; }
+    .icon-action, .icon-action-slot { width: 2.75rem; height: 2.75rem; }
+  }
   .video-status { justify-self: start; padding: 0.15rem 0.6rem; border-radius: 999px; font-size: 0.8rem; font-weight: 700; white-space: nowrap; }
   .video-status.processing { background: var(--tint); color: var(--accent); }
   .video-status.ready { background: var(--success-surface); color: var(--success-text); }

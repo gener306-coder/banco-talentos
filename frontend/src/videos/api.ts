@@ -94,6 +94,12 @@ export async function updateVideoStatus(publicId: string, isActive: boolean): Pr
   return video(await request(`${videoPath(publicId)}/status`, { method: 'PATCH', body: JSON.stringify({ is_active: isActive }) }))
 }
 
+/** T-S9-04: borra el MP4 y el póster para liberar espacio; el video desaparece del listado y de las Historias. */
+export async function deleteVideo(publicId: string): Promise<void> {
+  await request('/sanctum/csrf-cookie')
+  await request(`${videoPath(publicId)}/deletion`, { method: 'PATCH' })
+}
+
 /** «1:32»: duración legible de un video. */
 export function duration(seconds: number): string {
   return `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}`

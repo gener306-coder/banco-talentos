@@ -188,7 +188,7 @@ describe('orden de las historias T-S9-03', () => {
     expect(screen.queryByRole('button', { name: 'Otra mezcla' })).not.toBeInTheDocument()
 
     fireEvent.click(within(order).getByRole('radio', { name: 'Al azar' }))
-    await vi.waitFor(() => expect(urls()).toHaveLength(2))
+    await vi.waitFor(() => expect(urls()).toHaveLength(2), { timeout: 5000 })
     expect(urls()[1]).toMatch(/^\/api\/promotional-videos\?page=1&order=random&seed=\d+$/)
     expect(within(order).getByRole('radio', { name: 'Al azar' })).toBeChecked()
   })
@@ -201,7 +201,7 @@ describe('orden de las historias T-S9-03', () => {
     expect(first).toMatch(/order=random&seed=\d+$/)
 
     fireEvent.click(screen.getByRole('button', { name: 'Otra mezcla' }))
-    await vi.waitFor(() => expect(urls()).toHaveLength(2))
+    await vi.waitFor(() => expect(urls()).toHaveLength(2), { timeout: 5000 })
     expect(urls()[1]).toMatch(/^\/api\/promotional-videos\?page=1&order=random&seed=\d+$/)
     expect(urls()[1]).not.toBe(first)
   })

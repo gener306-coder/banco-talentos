@@ -102,3 +102,34 @@ test('el reproductor arranca sin sonido, pausa, reanuda y ofrece el sonido', asy
     await context.close()
   }
 })
+
+test('T-S9-04: la institución elimina una historia y deja de estar en la galería', async ({ page, browser, baseURL }) => {
+  const title = `Para eliminar E2E ${randomBytes(4).toString('hex')}`
+
+  await page.goto('/institution/videos')
+  await page.getByRole('button', { name: /Subir (el primer )?video/ }).first().click()
+  const form = page.getByRole('dialog', { name: 'Subir una historia' })
+  await form.getByLabel('Título').fill(title)
+  await form.getByLabel('Archivo de video').setInputFiles(FIXTURE)
+  await form.getByLabel(/Confirmo que cuento con la autorización/).check()
+  await form.getByRole('button', { name: 'Subir historia', exact: true }).click()
+  const card = page.getByRole('listitem').filter({ has: page.getByRole('heading', { name: title }) })
+  await expect(card.getByText('Publicado')).toBeVisible({ timeout: 60_000 })
+
+  await card.getByRole('button', { name: `Eliminar ${title}` }).click()
+  await page.getByRole('alertdialog', { name: '¿Eliminar el video?' }).getByRole('button', { name: 'Eliminar', exact: true }).click()
+  await expect(page.getByText(`Eliminaste «${title}» y se liberó su espacio.`)).toBeVisible()
+  await expect(page.getByRole('heading', { name: title })).toHaveCount(0)
+  await page.reload()
+  await expect(page.getByRole('heading', { name: 'Historias del Dual' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: title })).toHaveCount(0)
+
+  const { context, page: company } = await openCompanySession(browser, baseURL)
+  try {
+    const gallery = company.waitForResponse((response) => response.url().includes('/api/promotional-videos?'))
+    await company.goto('/promocion?orden=azar')
+    expect(JSON.stringify(await (await gallery).json())).not.toContain(title)
+  } finally {
+    await context.close()
+  }
+})
