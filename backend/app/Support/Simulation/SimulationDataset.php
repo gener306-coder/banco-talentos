@@ -101,7 +101,7 @@ final class SimulationDataset
     {
         $rows = [];
         for ($i = 1; $i <= 8; $i++) {
-            $rows[] = $this->user($this->personName().' (Secretaría)', sprintf('secretaria%02d', $i), 'SECRETARY',
+            $rows[] = $this->user($this->personName(), sprintf('secretaria%02d', $i), 'SECRETARY',
                 $this->start->subDays(25 - $i), ['created_by' => $admin]);
         }
         $this->report('Cuentas de la Secretaría', count($rows));
