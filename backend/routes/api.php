@@ -210,6 +210,8 @@ Route::middleware(['auth:sanctum', 'active', 'role:'.UserRole::INSTITUTION->valu
         Route::post('/', [InstitutionVideoController::class, 'store']);
         Route::put('{video}', [InstitutionVideoController::class, 'update']);
         Route::patch('{video}/status', [InstitutionVideoController::class, 'updateStatus']);
+        // T-S9-04: elimina los archivos para liberar espacio; no es una ruta DELETE.
+        Route::patch('{video}/deletion', [InstitutionVideoController::class, 'delete']);
     });
 
 // Galería de promoción dual (HU-S9-03): COMPANY, SECRETARY y ADMIN ven los videos listos de instituciones activas. Solo

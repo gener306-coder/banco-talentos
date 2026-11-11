@@ -6,17 +6,20 @@ use App\Enums\VideoStatus;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 /**
  * Video promocional del programa dual de una institución (HU-S9-01). La institución, la autoría, el estado y las
  * rutas los asigna el servidor; solo el título y la descripción vienen de la petición. Las rutas internas nunca
- * forman parte de una respuesta.
+ * forman parte de una respuesta. Un video eliminado (T-S9-04) ya no tiene archivos y queda fuera de toda consulta.
  */
 class InstitutionVideo extends Model
 {
+    use SoftDeletes;
+
     protected $fillable = ['title', 'description'];
 
-    protected $hidden = ['id', 'institution_id', 'created_by', 'source_path', 'video_path', 'poster_path'];
+    protected $hidden = ['id', 'institution_id', 'created_by', 'deleted_by', 'source_path', 'video_path', 'poster_path'];
 
     // Igual que los DEFAULT de las columnas, para que un video recién creado los refleje sin recargarse.
     protected $attributes = ['status' => 'PROCESSING', 'is_active' => true];

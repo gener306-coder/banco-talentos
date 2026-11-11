@@ -12,7 +12,9 @@ use App\Models\InstitutionVideo;
 use App\Support\Video\MediaUrl;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\Response;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
@@ -100,6 +102,47 @@ class InstitutionVideoController extends Controller
         });
 
         return $this->present($record);
+    }
+
+    /**
+     * T-S9-04: borra el MP4 y el póster para liberar espacio y deja un registro mínimo oculto con quién lo eliminó.
+     * Un video en proceso no se elimina: el worker sigue escribiendo sus archivos. Los archivos se borran después del
+     * commit; si el disco falla, el registro ya no los referencia y solo queda una advertencia.
+     */
+    public function delete(Request $request, string $video): Response
+    {
+        $record = $this->owned($request, $video);
+
+        $paths = DB::transaction(function () use ($record, $request): array {
+            $locked = InstitutionVideo::query()->lockForUpdate()->findOrFail($record->id);
+            if ($locked->status === VideoStatus::PROCESSING) {
+                throw ValidationException::withMessages(['video' => ['Espera a que termine de procesarse para eliminarlo.']]);
+            }
+
+            $paths = array_values(array_filter([$locked->video_path, $locked->poster_path]));
+            $locked->forceFill([
+                'video_path' => null,
+                'poster_path' => null,
+                'is_active' => false,
+                'deleted_by' => $request->user()->id,
+                'deleted_at' => now(),
+            ])->save();
+
+            return $paths;
+        });
+
+        DB::afterCommit(function () use ($paths, $record): void {
+            try {
+                Storage::disk(config('filesystems.media_disk'))->delete($paths);
+            } catch (Throwable $exception) {
+                Log::warning('No se pudieron borrar los archivos de un video eliminado.', [
+                    'video_id' => $record->id,
+                    'exception_type' => $exception::class,
+                ]);
+            }
+        });
+
+        return response()->noContent()->header('Cache-Control', 'no-store, private');
     }
 
     /**

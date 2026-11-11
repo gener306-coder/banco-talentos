@@ -3,10 +3,10 @@ import { Link } from 'react-router'
 import { InstitutionRequestError } from '../institutions/InstitutionLayout'
 import { useApiMutation, useApiRequest } from '../lib/useApiRequest'
 import { ConfirmDialog } from '../ui/ConfirmDialog'
-import { ChevronLeftIcon, PlusIcon, VideoIcon } from '../ui/icons'
+import { ChevronLeftIcon, EyeIcon, EyeOffIcon, PencilIcon, PlayIcon, PlusIcon, TrashIcon, VideoIcon } from '../ui/icons'
 import { Sheet } from '../ui/Sheet'
 import { LoadingState, StateMessage } from '../ui/StateMessage'
-import { duration, listVideos, updateVideoStatus, videoMessages } from './api'
+import { deleteVideo, duration, listVideos, updateVideoStatus, videoMessages } from './api'
 import type { InstitutionVideo, VideoStatus } from './api'
 import { VideoEditForm } from './VideoEditForm'
 import { VideoPlayer } from './VideoPlayer'
@@ -35,9 +35,12 @@ export function InstitutionVideosPage() {
   const [editing, setEditing] = useState<InstitutionVideo | null>(null)
   const [watching, setWatching] = useState<InstitutionVideo | null>(null)
   const [deactivating, setDeactivating] = useState<InstitutionVideo | null>(null)
+  const [deleting, setDeleting] = useState<InstitutionVideo | null>(null)
   const [notice, setNotice] = useState<string | null>(null)
   const status = useApiMutation(videoMessages)
   const statusButton = useRef<HTMLButtonElement | null>(null)
+  const removal = useApiMutation(videoMessages)
+  const deleteButton = useRef<HTMLButtonElement | null>(null)
   const closeUpload = useCallback(() => setUploading(false), [])
   const closeEdit = useCallback(() => setEditing(null), [])
   const closeWatch = useCallback(() => setWatching(null), [])
@@ -65,8 +68,19 @@ export function InstitutionVideosPage() {
     })
   }
 
+  // T-S9-04: borra los archivos para liberar espacio; ya no hay nada que reactivar.
+  async function remove(video: InstitutionVideo) {
+    setDeleting(null)
+    setNotice(null)
+    await removal.submit(() => deleteVideo(video.public_id), () => {
+      setData((current) => current?.filter((item) => item.public_id !== video.public_id) ?? current)
+      setNotice(`Eliminaste «${video.title}» y se liberó su espacio.`)
+    })
+  }
+
   const uploadButton = (label: string) => <button type="button" onClick={() => setUploading(true)}><PlusIcon />{label}</button>
   const statusFailure = status.failure && (status.failure.errors.is_active?.join(' ') ?? status.failure.message)
+  const removalFailure = removal.failure && (removal.failure.errors.video?.join(' ') ?? removal.failure.message)
 
   return (
     <section className="card" aria-labelledby="institution-videos-title">
@@ -85,6 +99,7 @@ export function InstitutionVideosPage() {
       )}
       {notice && <p className="institution-success" role="status">{notice}</p>}
       {statusFailure && <p className="notice" role="alert">{statusFailure}</p>}
+      {removalFailure && <p className="notice" role="alert">{removalFailure}</p>}
 
       {loading ? <LoadingState label="Cargando videos…" variant="table" />
         : failure ? <InstitutionRequestError failure={failure} retry={refresh} page />
@@ -93,37 +108,49 @@ export function InstitutionVideosPage() {
             description="Sube el testimonio de un alumno en el programa dual; lo optimizamos y lo publicamos para las empresas."
             action={uploadButton('Subir el primer video')} />
         : data && (
-          <ul className="video-grid" aria-label="Tus videos">
+          <ul className="video-list" aria-label="Tus videos">
             {data.map((video) => (
-              <li key={video.public_id} className="video-card">
-                <div className="video-poster">
+              <li key={video.public_id} className="video-row">
+                <div className="video-thumb">
                   {video.poster_url
                     ? <img src={video.poster_url} alt="" loading="lazy" />
                     : <span aria-hidden="true"><VideoIcon /></span>}
                   {video.duration_seconds !== null && <span className="video-duration">{duration(video.duration_seconds)}</span>}
                 </div>
-                <div className="video-card-body">
-                  <h3>{video.title}</h3>
-                  <VideoStatusBadge video={video} />
-                  <p className="video-meta">
-                    Subido el {dateFormat.format(new Date(video.created_at))}
-                  </p>
-                  {video.status === 'FAILED' && video.failure_reason && <p className="notice-muted">{video.failure_reason}</p>}
-                  <div className="actions">
-                    {video.status === 'READY' && video.video_url && (
-                      <button type="button" className="secondary" onClick={() => setWatching(video)} aria-label={`Ver ${video.title}`}>Ver</button>
-                    )}
-                    <button type="button" className="secondary" onClick={() => setEditing(video)} aria-label={`Editar ${video.title}`}>Editar</button>
-                    {video.is_active
-                      ? (
-                        <button type="button" className="secondary" disabled={status.pending} aria-label={`Inactivar ${video.title}`}
-                          onClick={(event) => { statusButton.current = event.currentTarget; setDeactivating(video) }}>Inactivar</button>
-                      )
-                      : (
-                        <button type="button" className="secondary" disabled={status.pending} aria-label={`Activar ${video.title}`}
-                          onClick={() => { void changeStatus(video, true) }}>Activar</button>
-                      )}
+                <div className="video-info">
+                  <h3 title={video.title}>{video.title}</h3>
+                  <div className="video-meta">
+                    <VideoStatusBadge video={video} />
+                    <span>Subido el {dateFormat.format(new Date(video.created_at))}</span>
                   </div>
+                  {video.status === 'FAILED' && video.failure_reason && <p className="video-failure">{video.failure_reason}</p>}
+                </div>
+                {/* T-S9-05: orden fijo; una acción que no aplica deja su hueco para que los íconos coincidan entre filas. */}
+                <div className="video-actions">
+                  {video.status === 'READY' && video.video_url
+                    ? (
+                      <button type="button" className="icon-action" data-tooltip="Ver" aria-label={`Ver ${video.title}`}
+                        onClick={() => setWatching(video)}><PlayIcon /></button>
+                    )
+                    : <span className="icon-action-slot" aria-hidden="true" />}
+                  <button type="button" className="icon-action" data-tooltip="Editar" aria-label={`Editar ${video.title}`}
+                    onClick={() => setEditing(video)}><PencilIcon /></button>
+                  {video.is_active
+                    ? (
+                      <button type="button" className="icon-action" data-tooltip="Inactivar" disabled={status.pending} aria-label={`Inactivar ${video.title}`}
+                        onClick={(event) => { statusButton.current = event.currentTarget; setDeactivating(video) }}><EyeOffIcon /></button>
+                    )
+                    : (
+                      <button type="button" className="icon-action" data-tooltip="Activar" disabled={status.pending} aria-label={`Activar ${video.title}`}
+                        onClick={() => { void changeStatus(video, true) }}><EyeIcon /></button>
+                    )}
+                  {/* Un video en proceso no se elimina: el servidor sigue escribiendo sus archivos. */}
+                  {video.status !== 'PROCESSING'
+                    ? (
+                      <button type="button" className="icon-action danger" data-tooltip="Eliminar" disabled={removal.pending} aria-label={`Eliminar ${video.title}`}
+                        onClick={(event) => { deleteButton.current = event.currentTarget; setDeleting(video) }}><TrashIcon /></button>
+                    )
+                    : <span className="icon-action-slot" aria-hidden="true" />}
                 </div>
               </li>
             ))}
@@ -153,6 +180,10 @@ export function InstitutionVideosPage() {
         title="¿Inactivar el video?"
         description="Dejará de mostrarse a las empresas. No se borra y podrás activarlo después, si tu institución tiene menos de 5 videos activos."
         confirmLabel="Inactivar" onConfirm={() => { if (deactivating) void changeStatus(deactivating, false) }} onCancel={() => setDeactivating(null)} />
+      <ConfirmDialog open={deleting !== null} origin={deleteButton}
+        title="¿Eliminar el video?"
+        description="Se borrará definitivamente para liberar espacio. Ya no aparecerá en las Historias del Dual y no se puede deshacer."
+        confirmLabel="Eliminar" onConfirm={() => { if (deleting) void remove(deleting) }} onCancel={() => setDeleting(null)} />
     </section>
   )
 }

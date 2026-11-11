@@ -93,6 +93,16 @@ describe('galería (CA-01, CA-02)', function () {
         expect(collect($response->json('data'))->pluck('title')->all())->toBe(['Reciente', 'Antiguo']);
     });
 
+    it('never shows a deleted video (T-S9-04)', function () {
+        $kept = galleryVideo($this->institution, 'Se queda');
+        $deleted = galleryVideo($this->institution, 'Eliminado');
+        $deleted->forceFill(['video_path' => null, 'poster_path' => null, 'is_active' => false, 'deleted_by' => $deleted->created_by, 'deleted_at' => now()])->save();
+        signInToGallery($this, UserRole::COMPANY);
+
+        expect(array_column($this->browserRequest('GET', '/api/promotional-videos')->assertOk()->json('data'), 'title'))->toBe(['Se queda']);
+        expect($kept->exists)->toBeTrue();
+    });
+
     it('exposes only the explicit fields, with signed URLs', function () {
         $video = galleryVideo($this->institution, 'Talleres');
         signInToGallery($this, UserRole::COMPANY);

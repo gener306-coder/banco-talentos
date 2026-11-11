@@ -7,7 +7,9 @@ use App\Models\InstitutionVideo;
 use App\Models\User;
 use App\Support\ContactInformation;
 use App\Support\Video\MediaUrl;
+use Illuminate\Database\QueryException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Tests\Support\InteractsWithCookieSessions;
@@ -227,6 +229,80 @@ describe('baja lógica (CA-03)', function () {
         'número' => [['is_active' => 0], 'is_active'],
         'otro campo' => [['is_active' => false, 'title' => 'Otro'], 'title'],
     ]);
+});
+
+describe('eliminación (T-S9-04)', function () {
+    it('deletes the files of a ready or failed video and keeps a hidden record of who deleted it', function (bool $active, VideoStatus $status) {
+        $video = managedVideo($this->institution, ['is_active' => $active], $status);
+        $files = array_filter([$video->video_path, $video->poster_path]);
+        $this->loginWithCookies($this->account)->assertOk();
+
+        $this->browserRequest('PATCH', videoUrl($video, '/deletion'))->assertNoContent()->assertHeader('Cache-Control', 'no-store, private');
+
+        foreach ($files as $file) {
+            Storage::disk('media')->assertMissing($file);
+        }
+        $record = InstitutionVideo::withTrashed()->find($video->id);
+        expect($record->trashed())->toBeTrue()
+            ->and($record->deleted_by)->toBe($this->account->id)
+            ->and($record->video_path)->toBeNull()
+            ->and($record->poster_path)->toBeNull()
+            ->and($record->is_active)->toBeFalse()
+            ->and($record->title)->toBe('Talleres')
+            ->and($record->consent_confirmed_at)->not->toBeNull();
+        $this->browserRequest('GET', '/api/institution/videos')->assertOk()->assertExactJson(['data' => []]);
+    })->with([
+        'listo y activo' => [true, VideoStatus::READY],
+        'listo e inactivo' => [false, VideoStatus::READY],
+        'fallido' => [false, VideoStatus::FAILED],
+    ]);
+
+    it('frees a place in the quota of 5 active videos', function () {
+        $videos = collect(range(1, 5))->map(fn () => managedVideo($this->institution));
+        $inactive = managedVideo($this->institution, ['is_active' => false]);
+        $this->loginWithCookies($this->account)->assertOk();
+
+        $this->browserRequest('PATCH', videoUrl($inactive, '/status'), ['is_active' => true])->assertStatus(422);
+        $this->browserRequest('PATCH', videoUrl($videos->first(), '/deletion'))->assertNoContent();
+        $this->browserRequest('PATCH', videoUrl($inactive, '/status'), ['is_active' => true])->assertOk();
+    });
+
+    it('does not delete a video that is still processing', function () {
+        $video = managedVideo($this->institution, [], VideoStatus::PROCESSING);
+        $this->loginWithCookies($this->account)->assertOk();
+
+        $this->browserRequest('PATCH', videoUrl($video, '/deletion'))
+            ->assertStatus(422)->assertJsonPath('errors.video.0', 'Espera a que termine de procesarse para eliminarlo.');
+        expect(InstitutionVideo::find($video->id))->not->toBeNull();
+    });
+
+    it('answers 404 for a foreign, unknown, malformed or already deleted video, and 403 for other roles', function () {
+        $video = managedVideo($this->institution);
+        $this->loginWithCookies($this->account)->assertOk();
+
+        $this->browserRequest('PATCH', videoUrl($this->foreign, '/deletion'))->assertNotFound();
+        $this->browserRequest('PATCH', videoUrl((string) Str::uuid(), '/deletion'))->assertNotFound();
+        $this->browserRequest('PATCH', videoUrl('no-es-uuid', '/deletion'))->assertNotFound();
+        $this->browserRequest('PATCH', videoUrl($video, '/deletion'))->assertNoContent();
+        $this->browserRequest('PATCH', videoUrl($video, '/deletion'))->assertNotFound();
+        $this->browserRequest('PATCH', videoUrl($video, '/status'), ['is_active' => true])->assertNotFound();
+        Storage::disk('media')->assertExists($this->foreign->video_path);
+
+        $other = managedVideo($this->institution);
+        foreach ([UserRole::ADMIN, UserRole::SECRETARY, UserRole::COMPANY] as $role) {
+            $user = $role === UserRole::COMPANY ? User::factory()->forCompany()->create() : User::factory()->role($role)->create();
+            $this->loginWithCookies($user)->assertOk();
+            $this->browserRequest('PATCH', videoUrl($other, '/deletion'))->assertForbidden();
+        }
+        expect(InstitutionVideo::find($other->id))->not->toBeNull();
+    });
+
+    it('rejects a deleted video that keeps its files in the database', function () {
+        $video = managedVideo($this->institution);
+
+        expect(fn () => DB::table('institution_videos')->where('id', $video->id)->update(['deleted_at' => now(), 'deleted_by' => $this->account->id, 'is_active' => false]))
+            ->toThrow(QueryException::class, 'institution_videos_deleted_check');
+    });
 });
 
 describe('anti-IDOR (CA-04)', function () {

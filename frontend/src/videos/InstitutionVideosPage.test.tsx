@@ -262,6 +262,51 @@ describe('gestión de mis videos HU-S9-02', () => {
     expect(JSON.parse(String(calls('PATCH')[1][1]?.body))).toEqual({ is_active: true })
   })
 
+  it('ofrece las acciones como íconos con su nombre accesible y su etiqueta (T-S9-05)', async () => {
+    const grid = await list([ready, received])
+    const row = within(grid).getAllByRole('listitem')[0]
+    for (const [verb, tooltip] of [['Ver', 'Ver'], ['Editar', 'Editar'], ['Inactivar', 'Inactivar'], ['Eliminar', 'Eliminar']]) {
+      const button = within(row).getByRole('button', { name: `${verb} ${ready.title}` })
+      expect(button).toHaveAttribute('data-tooltip', tooltip)
+      expect(button).toHaveTextContent('')
+      expect(button.querySelector('svg')).not.toBeNull()
+    }
+    // Un video en proceso no se puede ver ni eliminar todavía, pero sus columnas se conservan.
+    const processing = within(grid).getAllByRole('listitem')[1]
+    expect(within(processing).getAllByRole('button').map((button) => button.getAttribute('aria-label'))).toEqual([`Editar ${received.title}`, `Inactivar ${received.title}`])
+    expect(processing.querySelectorAll('.icon-action-slot')).toHaveLength(2)
+  })
+
+  it('elimina un video tras confirmarlo y lo quita de la lista (T-S9-04)', async () => {
+    const grid = await list([ready, failed, received])
+    videosMock.mockImplementation(async (_path, options) => options?.method === 'PATCH' ? new Response(null, { status: 204 }) : Response.json({ data: [ready, failed, received] }))
+
+    // Un video en proceso no se puede eliminar todavía.
+    expect(within(grid).queryByRole('button', { name: `Eliminar ${received.title}` })).not.toBeInTheDocument()
+    fireEvent.click(within(grid).getByRole('button', { name: 'Eliminar Laboratorio de robótica' }))
+    const dialog = await screen.findByRole('alertdialog', { name: '¿Eliminar el video?' })
+    expect(dialog).toHaveTextContent('no se puede deshacer')
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Cancelar' }))
+    expect(calls('PATCH')).toHaveLength(0)
+
+    fireEvent.click(within(grid).getByRole('button', { name: 'Eliminar Laboratorio de robótica' }))
+    fireEvent.click(within(await screen.findByRole('alertdialog', { name: '¿Eliminar el video?' })).getByRole('button', { name: 'Eliminar' }))
+    expect(await screen.findByText('Eliminaste «Laboratorio de robótica» y se liberó su espacio.')).toHaveAttribute('role', 'status')
+    expect(within(grid).queryByText('Laboratorio de robótica')).not.toBeInTheDocument()
+    expect(within(grid).getByText(failed.title)).toBeInTheDocument()
+    expect(calls('PATCH')[0][0]).toBe(`/api/institution/videos/${ready.public_id}/deletion`)
+  })
+
+  it('explica si el video aún se está procesando al eliminarlo (T-S9-04)', async () => {
+    const grid = await list([failed])
+    videosMock.mockImplementation(async () => Response.json({ errors: { video: ['Espera a que termine de procesarse para eliminarlo.'] } }, { status: 422 }))
+
+    fireEvent.click(within(grid).getByRole('button', { name: `Eliminar ${failed.title}` }))
+    fireEvent.click(within(await screen.findByRole('alertdialog', { name: '¿Eliminar el video?' })).getByRole('button', { name: 'Eliminar' }))
+    expect(await screen.findByRole('alert')).toHaveTextContent('Espera a que termine de procesarse para eliminarlo.')
+    expect(within(grid).getByText(failed.title)).toBeInTheDocument()
+  })
+
   it('explica cuando reactivar rebasaría la cuota (CA-03)', async () => {
     const grid = await list([{ ...ready, is_active: false }])
     videosMock.mockImplementation(async () => Response.json({ errors: { is_active: ['Tu institución ya tiene 5 videos activos.'] } }, { status: 422 }))
