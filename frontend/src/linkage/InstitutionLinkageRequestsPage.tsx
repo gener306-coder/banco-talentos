@@ -3,7 +3,6 @@ import type { ReactNode } from 'react'
 import { Link, useLocation, useSearchParams } from 'react-router'
 import { InstitutionRequestError } from '../institutions/InstitutionLayout'
 import { useApiRequest } from '../lib/useApiRequest'
-import { periodLabel } from '../students/catalogs'
 import { surnames } from '../students/api'
 import { CsvDownloadButton } from '../ui/CsvDownloadButton'
 import { ChevronLeftIcon, ChevronRightIcon, SearchIcon } from '../ui/icons'
@@ -81,7 +80,7 @@ export function InstitutionLinkageRequestsPage() {
           <>
             <div className="table-card">
               <div className="institution-table-wrapper" role="region" aria-label="Listado de solicitudes" tabIndex={0}>
-                <table className="institution-table has-actions">
+                <table className="institution-table has-actions linkage-inbox">
                   <caption className="visually-hidden">Solicitudes de vinculación recibidas</caption>
                   <thead><tr><th scope="col">Alumno</th><th scope="col">Empresa</th><th scope="col">Oportunidad</th><th scope="col">Recibida</th><th scope="col">Estado</th><th scope="col">Detalle</th></tr></thead>
                   <tbody>
@@ -89,16 +88,14 @@ export function InstitutionLinkageRequestsPage() {
                       const name = `${surnames(item.student)}, ${item.student.given_names}`
                       return (
                         <tr key={item.id}>
+                          {/* T-S8-15: solo lo que identifica; la carrera y el periodo están en el detalle. */}
                           <th scope="row">
                             {name}
-                            <span className="linkage-profile-meta">
-                              {[item.student.enrollment_number, item.student.program,
-                                item.student.period_type && item.student.period_number ? periodLabel(item.student.period_type, item.student.period_number) : null].filter(Boolean).join(' · ')}
-                            </span>
+                            <span className="linkage-meta mono">{item.student.enrollment_number}</span>
                           </th>
-                          <td>{item.company.name}{item.company.municipality && <span className="linkage-profile-meta">{item.company.municipality}</span>}</td>
-                          <td>{item.opportunity.title}<span className="linkage-profile-meta">{item.opportunity.program}</span></td>
-                          <td>{dateFormat.format(new Date(item.created_at))}</td>
+                          <td>{item.company.name}{item.company.municipality && <span className="linkage-meta">{item.company.municipality}</span>}</td>
+                          <td><span className="linkage-title" title={item.opportunity.title}>{item.opportunity.title}</span></td>
+                          <td className="nowrap">{dateFormat.format(new Date(item.created_at))}</td>
                           <td><LinkageStatus status={item.status} /></td>
                           <td>
                             <Link className="pill-link" to={`/institution/linkage-requests/${item.id}`} aria-label={`Ver la solicitud de ${item.company.name} para ${name}`}>Ver detalle<ChevronRightIcon /></Link>

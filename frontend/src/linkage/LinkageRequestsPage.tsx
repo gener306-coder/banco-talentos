@@ -3,9 +3,8 @@ import type { ReactNode } from 'react'
 import { Link } from 'react-router'
 import { InstitutionRequestError } from '../institutions/InstitutionLayout'
 import { useApiMutation, useApiRequest } from '../lib/useApiRequest'
-import { periodLabel } from '../students/catalogs'
 import { ConfirmDialog } from '../ui/ConfirmDialog'
-import { ChevronLeftIcon, ChevronRightIcon, SearchIcon } from '../ui/icons'
+import { ChevronLeftIcon, ChevronRightIcon, MailIcon, PhoneIcon, SearchIcon } from '../ui/icons'
 import { LoadingState, StateMessage } from '../ui/StateMessage'
 import { cancelLinkageRequest, LINKAGE_STATUSES, linkageMessages, listLinkageRequests } from './api'
 import type { LinkageInboxItem, LinkageStatus as Status } from './api'
@@ -75,7 +74,7 @@ export function LinkageRequestsPage() {
           <>
             <div className="table-card">
               <div className="institution-table-wrapper" role="region" aria-label="Listado de solicitudes" tabIndex={0}>
-                <table className="institution-table has-actions">
+                <table className="institution-table has-actions linkage-sent">
                   <caption className="visually-hidden">Solicitudes de vinculación enviadas</caption>
                   <thead><tr><th scope="col">Perfil</th><th scope="col">Oportunidad</th><th scope="col">Institución</th><th scope="col">Enviada</th><th scope="col">Estado</th><th scope="col">Acciones</th></tr></thead>
                   <tbody>
@@ -83,27 +82,33 @@ export function LinkageRequestsPage() {
                       const headline = item.profile.headline ?? 'Perfil sin titular'
                       return (
                         <tr key={item.id}>
+                          {/* T-S8-15: lo esencial de cada columna; el periodo y el puesto quedan a un paso (perfil y cursor). */}
                           <th scope="row">
                             <Link to={`/talent/${item.profile.public_id}`}>{headline}</Link>
-                            <span className="linkage-profile-meta">
-                              {[item.profile.program, item.profile.period_type && item.profile.period_number ? periodLabel(item.profile.period_type, item.profile.period_number) : null].filter(Boolean).join(' · ')}
-                            </span>
+                            {item.profile.program && <span className="linkage-meta">{item.profile.program}</span>}
                           </th>
-                          <td><Link to={`/opportunities/${item.opportunity.id}`}>{item.opportunity.title}</Link></td>
+                          <td><Link className="linkage-title" to={`/opportunities/${item.opportunity.id}`} title={item.opportunity.title}>{item.opportunity.title}</Link></td>
                           <td>
                             {item.institution.name}
                             {item.institution.contact_name && (
-                              <span className="linkage-profile-meta">{[item.institution.contact_name, item.institution.contact_position].filter(Boolean).join(' · ')}</span>
+                              <span className="linkage-meta" title={item.institution.contact_position ?? undefined}>{item.institution.contact_name}</span>
                             )}
-                            <a className="linkage-profile-meta" href={`mailto:${item.institution.contact_email}`} target="_blank" rel="noopener noreferrer">{item.institution.contact_email}</a>
-                            {item.institution.contact_phone && <a className="linkage-profile-meta" href={`tel:${item.institution.contact_phone.replace(/[^\d+]/g, '')}`}>{item.institution.contact_phone}</a>}
+                            {/* El contacto sigue a un clic, sin ocupar dos líneas de texto. */}
+                            <span className="linkage-contact">
+                              <a href={`mailto:${item.institution.contact_email}`} target="_blank" rel="noopener noreferrer"
+                                aria-label={`Escribir a ${item.institution.contact_email}`} title={item.institution.contact_email}><MailIcon /></a>
+                              {item.institution.contact_phone && (
+                                <a href={`tel:${item.institution.contact_phone.replace(/[^\d+]/g, '')}`}
+                                  aria-label={`Llamar al ${item.institution.contact_phone}`} title={item.institution.contact_phone}><PhoneIcon /></a>
+                              )}
+                            </span>
                           </td>
-                          <td>{dateFormat.format(new Date(item.created_at))}</td>
+                          <td className="nowrap">{dateFormat.format(new Date(item.created_at))}</td>
                           <td>
                             <LinkageStatus status={item.status} />
                             {/* Respuesta de la institución (HU-S6-02 CA-04). */}
-                            {item.responded_at && <span className="linkage-profile-meta">Respondida el {dateFormat.format(new Date(item.responded_at))}</span>}
-                            {item.response_message && <span className="linkage-profile-meta linkage-response">«{item.response_message}»</span>}
+                            {item.responded_at && <span className="linkage-meta">Respondida el {dateFormat.format(new Date(item.responded_at))}</span>}
+                            {item.response_message && <span className="linkage-meta linkage-response" title={item.response_message}>«{item.response_message}»</span>}
                           </td>
                           <td>
                             {item.status === 'PENDIENTE_INSTITUCION'

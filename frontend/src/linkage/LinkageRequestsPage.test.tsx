@@ -62,14 +62,16 @@ describe('bandeja de solicitudes HU-S5-05', () => {
     expect(apiMock.mock.calls[0][0]).toBe('/api/linkage-requests?page=1')
     const row = within(table).getByRole('row', { name: /Tableros de producción/ })
     expect(within(row).getByRole('link', { name: 'Analista de datos' })).toHaveAttribute('href', `/talent/${publicId}`)
-    expect(within(row).getByText('Ingeniería en Datos · 6.º semestre')).toBeInTheDocument()
+    // T-S8-15: solo la carrera; el periodo está en el perfil.
+    expect(within(row).getByText('Ingeniería en Datos')).toBeInTheDocument()
+    expect(row).not.toHaveTextContent('6.º semestre')
     expect(within(row).getByRole('link', { name: 'Tableros de producción' })).toHaveAttribute('href', '/opportunities/12')
     expect(within(row).getByText('UT del Golfo')).toBeInTheDocument()
-    expect(within(row).getByRole('link', { name: 'dual@utgolfo.edu.mx' })).toHaveAttribute('href', 'mailto:dual@utgolfo.edu.mx')
-    expect(within(row).getByRole('link', { name: 'dual@utgolfo.edu.mx' })).toHaveAttribute('target', '_blank')
+    expect(within(row).getByRole('link', { name: 'Escribir a dual@utgolfo.edu.mx' })).toHaveAttribute('href', 'mailto:dual@utgolfo.edu.mx')
+    expect(within(row).getByRole('link', { name: 'Escribir a dual@utgolfo.edu.mx' })).toHaveAttribute('target', '_blank')
     // T-S8-11: responsable de la institución con su puesto, y su teléfono opcional listo para llamar.
-    expect(within(row).getByText('Laura Méndez · Coordinación Dual')).toBeInTheDocument()
-    expect(within(row).getByRole('link', { name: '+52 833 357 4800' })).toHaveAttribute('href', 'tel:+528333574800')
+    expect(within(row).getByText('Laura Méndez')).toHaveAttribute('title', 'Coordinación Dual')
+    expect(within(row).getByRole('link', { name: 'Llamar al +52 833 357 4800' })).toHaveAttribute('href', 'tel:+528333574800')
     expect(within(row).getByText('Pendiente de la institución')).toBeInTheDocument()
     expect(within(row).getByRole('button', { name: /Cancelar la solicitud/ })).toBeInTheDocument()
 

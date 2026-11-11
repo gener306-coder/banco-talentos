@@ -10,4 +10,23 @@
 .linkage-decision { max-width: var(--content-readable); }
 .linkage-decision > fieldset { margin: 0; padding: 0; border: 0; min-width: 0; }
 .linkage-decision textarea { width: 100%; resize: vertical; }
-.linkage-response { max-width: 22rem; white-space: pre-line; }
+.linkage-meta.linkage-response { display: -webkit-box; max-width: 22rem; overflow: hidden; white-space: pre-line; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2; }
+/* T-S8-15: dato secundario discreto bajo el principal, y títulos largos en dos líneas como máximo. */
+.linkage-meta { display: block; margin-top: 0.15rem; color: var(--text); font-size: 0.8rem; font-weight: 400; }
+.linkage-meta.mono { font-family: ui-monospace, monospace; font-variant-numeric: tabular-nums; letter-spacing: 0.01em; }
+.linkage-title { display: -webkit-box; overflow: hidden; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2; }
+.institution-table td.nowrap { white-space: nowrap; }
+/* Nombres de alumno y empresa en una línea siempre que quepan; la oportunidad toma el espacio restante. */
+.linkage-inbox tbody th[scope='row'] { min-width: 12.5rem; }
+.linkage-inbox tbody td:nth-of-type(1) { min-width: 12rem; }
+/* Contacto de la institución en la bandeja de la empresa: dos accesos redondos en lugar de dos líneas de texto. */
+.linkage-contact { display: flex; gap: 0.35rem; margin-top: 0.4rem; }
+.linkage-contact a { display: inline-grid; place-items: center; width: 2rem; height: 2rem; border-radius: 50%; background: var(--tint); color: var(--accent); }
+.linkage-contact a .icon { width: 0.95rem; height: 0.95rem; }
+.linkage-contact a:focus-visible { outline: 3px solid var(--focus-ring); outline-offset: 2px; }
+@media (hover: hover) { .linkage-contact a:hover { background: var(--tint-hover); } }
+@media (prefers-contrast: more) { .linkage-contact a { border: 1px solid var(--accent); } }
+/* Bandeja de la empresa: el perfil y la oportunidad comparten el espacio, y la institución cabe en una o dos líneas. */
+.linkage-sent tbody th[scope='row'] { min-width: 11rem; }
+.linkage-sent tbody td:nth-of-type(1) { min-width: 11rem; }
+.linkage-sent tbody td:nth-of-type(2) { min-width: 13.5rem; }

@@ -306,6 +306,18 @@ Afinaciones pedidas y aprobadas por el responsable el 5 de noviembre de 2026, du
 - **Estado:** la insignia `StudentStatus` suma un punto de color delante del texto, también en el detalle del alumno y en la solicitud.
 - **Sin cambios de contenido:** se conservan los textos, los roles, los nombres accesibles y el desplazamiento horizontal en móvil.
 
+### T-S8-15 — Bandejas de solicitudes sin saturar
+
+**Estado:** Completada (11 de noviembre de 2026)  
+**Rol:** `INSTITUTION`, `COMPANY`
+
+- **Problema:** las columnas «Alumno» y «Oportunidad» juntaban el nombre, la matrícula, la carrera, el periodo y la carrera de la oportunidad, que casi siempre repetía la del alumno. Con los anchos de tabla, los nombres se partían en varias líneas.
+- **Alumno:** el nombre como dato principal y debajo solo la matrícula, en monoespaciada y discreta, que es como la institución identifica al alumno. La carrera y el periodo siguen en el detalle de la solicitud.
+- **Oportunidad:** solo el título, en dos líneas como máximo; el título completo aparece al pasar el cursor.
+- **Empresa:** conserva el municipio debajo del nombre. Alumno y empresa tienen un ancho mínimo para mantenerse en una línea, y la fecha no se parte.
+- **Bandeja de la empresa:** el perfil muestra el titular y solo la carrera; el periodo está en el perfil. La oportunidad, el título en dos líneas. La institución muestra su nombre y el responsable, con el puesto al pasar el cursor. Como la empresa no tiene un detalle de la solicitud, el correo y el teléfono siguen en la fila, pero como dos accesos redondos («Escribir a…» y «Llamar al…») en lugar de dos líneas de texto. La respuesta de la institución se recorta a dos líneas y se lee completa al pasar el cursor.
+- **Sin cambios:** la API, la exportación CSV, el filtro y el detalle.
+
 ### Prueba intermitente del CV
 
 `StudentCvTest › validates the certifications without writing them` falló una vez en la suite completa y pasa sola. Sus datasets calculaban fechas relativas («mañana», «el año siguiente») al recolectar las pruebas. Ahora son closures que Pest resuelve al ejecutar cada caso, con el reloj de la aplicación, así que siempre son futuras respecto a la validación. No se reprodujo el fallo, así que la causa exacta queda sin confirmar.
