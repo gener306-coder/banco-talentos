@@ -36,36 +36,38 @@ export function OpportunitiesPage() {
             action={<Link className="institution-button" to="/opportunities/new"><PlusIcon />Registrar la primera oportunidad</Link>} />
         : data && (
           <>
-            <div className="institution-table-wrapper" role="region" aria-label="Listado de oportunidades" tabIndex={0}>
-              <table className="institution-table">
-                <caption className="visually-hidden">Oportunidades de la empresa</caption>
-                <thead><tr><th scope="col">Oportunidad</th><th scope="col">Municipio</th><th scope="col">Lugares</th><th scope="col">Habilidades</th><th scope="col">Estado</th><th scope="col">Acciones</th></tr></thead>
-                <tbody>
-                  {data.opportunities.map((opportunity) => {
-                    const href = `/opportunities/${opportunity.id}`
-                    return (
-                      <tr key={opportunity.id} data-href={href} onClick={(event) => openRow(event, href)}>
-                        <th scope="row">{opportunity.title}<span className="option-meta"> · {opportunity.program}</span></th>
-                        <td>{opportunity.municipality ?? opportunity.municipality_code}</td>
-                        <td>{opportunity.vacancies}</td>
-                        <td>{opportunity.skills.length ? <SkillTags skills={opportunity.skills} label={`Habilidades de ${opportunity.title}`} /> : '—'}</td>
-                        <td><InstitutionStatus active={opportunity.is_active} /></td>
-                        <td><Link className="pill-link" to={href} aria-label={`Ver detalle de ${opportunity.title}`}>Ver detalle<ChevronRightIcon /></Link></td>
-                      </tr>
-                    )
-                  })}
-                </tbody>
-              </table>
-            </div>
-            {data.lastPage > 1 && (
-              <div className="pager">
-                <p>Página {data.page} de {data.lastPage} · {data.total} oportunidades</p>
-                <div className="actions">
-                  <button type="button" className="secondary" disabled={data.page <= 1} onClick={() => setPage(data.page - 1)}><ChevronLeftIcon />Anterior</button>
-                  <button type="button" className="secondary" disabled={data.page >= data.lastPage} onClick={() => setPage(data.page + 1)}>Siguiente<ChevronRightIcon /></button>
-                </div>
+            <div className="table-card">
+              <div className="institution-table-wrapper" role="region" aria-label="Listado de oportunidades" tabIndex={0}>
+                <table className="institution-table has-actions">
+                  <caption className="visually-hidden">Oportunidades de la empresa</caption>
+                  <thead><tr><th scope="col">Oportunidad</th><th scope="col">Municipio</th><th scope="col">Lugares</th><th scope="col">Habilidades</th><th scope="col">Estado</th><th scope="col">Acciones</th></tr></thead>
+                  <tbody>
+                    {data.opportunities.map((opportunity) => {
+                      const href = `/opportunities/${opportunity.id}`
+                      return (
+                        <tr key={opportunity.id} data-href={href} onClick={(event) => openRow(event, href)}>
+                          <th scope="row">{opportunity.title}<span className="option-meta"> · {opportunity.program}</span></th>
+                          <td>{opportunity.municipality ?? opportunity.municipality_code}</td>
+                          <td>{opportunity.vacancies}</td>
+                          <td>{opportunity.skills.length ? <SkillTags skills={opportunity.skills} label={`Habilidades de ${opportunity.title}`} /> : '—'}</td>
+                          <td><InstitutionStatus active={opportunity.is_active} /></td>
+                          <td><Link className="pill-link" to={href} aria-label={`Ver detalle de ${opportunity.title}`}>Ver detalle<ChevronRightIcon /></Link></td>
+                        </tr>
+                      )
+                    })}
+                  </tbody>
+                </table>
               </div>
-            )}
+              {data.lastPage > 1 && (
+                <div className="pager">
+                  <p>Página {data.page} de {data.lastPage} · {data.total} oportunidades</p>
+                  <div className="actions">
+                    <button type="button" className="secondary" disabled={data.page <= 1} onClick={() => setPage(data.page - 1)}><ChevronLeftIcon />Anterior</button>
+                    <button type="button" className="secondary" disabled={data.page >= data.lastPage} onClick={() => setPage(data.page + 1)}>Siguiente<ChevronRightIcon /></button>
+                  </div>
+                </div>
+              )}
+            </div>
           </>
         )}
     </OpportunityLayout>

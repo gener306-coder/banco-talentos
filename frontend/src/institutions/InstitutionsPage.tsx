@@ -30,25 +30,27 @@ export function InstitutionsPage() {
             description="Registra la primera institución para empezar a crear sus cuentas y enlaces de configuración."
             action={<Link className="institution-button" to="/institutions/new"><PlusIcon />Registrar la primera institución</Link>} />
         : data && (
-          <div className="institution-table-wrapper" role="region" aria-label="Listado de instituciones" tabIndex={0}>
-            <table className="institution-table">
-              <caption className="visually-hidden">Instituciones registradas</caption>
-              <thead><tr><th scope="col">Nombre</th><th scope="col">CCT</th><th scope="col">Correo de contacto</th><th scope="col">Estado</th><th scope="col">Acciones</th></tr></thead>
-              <tbody>
-                {data.map((institution) => {
-                  const href = `/institutions/${institution.id}`
-                  return (
-                    <tr key={institution.id} data-href={href} onClick={(event) => openRow(event, href)}>
-                      <th scope="row">{institution.name}</th>
-                      <td>{institution.cct}</td>
-                      <td>{institution.contact_email}</td>
-                      <td><InstitutionStatus active={institution.is_active} /></td>
-                      <td><Link className="pill-link" to={href} aria-label={`Ver detalle de ${institution.name}`}>Ver detalle<ChevronRightIcon /></Link></td>
-                    </tr>
-                  )
-                })}
-              </tbody>
-            </table>
+          <div className="table-card">
+            <div className="institution-table-wrapper" role="region" aria-label="Listado de instituciones" tabIndex={0}>
+              <table className="institution-table has-actions">
+                <caption className="visually-hidden">Instituciones registradas</caption>
+                <thead><tr><th scope="col">Nombre</th><th scope="col">CCT</th><th scope="col">Correo de contacto</th><th scope="col">Estado</th><th scope="col">Acciones</th></tr></thead>
+                <tbody>
+                  {data.map((institution) => {
+                    const href = `/institutions/${institution.id}`
+                    return (
+                      <tr key={institution.id} data-href={href} onClick={(event) => openRow(event, href)}>
+                        <th scope="row">{institution.name}</th>
+                        <td>{institution.cct}</td>
+                        <td>{institution.contact_email}</td>
+                        <td><InstitutionStatus active={institution.is_active} /></td>
+                        <td><Link className="pill-link" to={href} aria-label={`Ver detalle de ${institution.name}`}>Ver detalle<ChevronRightIcon /></Link></td>
+                      </tr>
+                    )
+                  })}
+                </tbody>
+              </table>
+            </div>
           </div>
         )}
     </InstitutionLayout>

@@ -279,7 +279,9 @@ textarea[aria-invalid='true'] { border-color: var(--danger-border); }
   .cv-row .row-remove { grid-row: 1; grid-column: 2; }
 }
 /* Estado del alumno (HU-S2-04): mismos colores de estado que .institution-status. */
-.student-status { display: inline-block; white-space: nowrap; border-radius: 1rem; padding: 0.2rem 0.7rem; font-size: 0.8rem; font-weight: 700; }
+.student-status { display: inline-flex; align-items: center; gap: 0.4rem; white-space: nowrap; border-radius: 1rem; padding: 0.2rem 0.7rem; font-size: 0.8rem; font-weight: 700; }
+/* T-S8-14: punto de color que refuerza el estado sin depender solo del texto. */
+.student-status::before { content: ''; width: 0.45rem; height: 0.45rem; border-radius: 50%; background: currentColor; }
 .student-status.active { color: var(--success-text); background: var(--success-surface); }
 .student-status.inactive { color: var(--status-off-text); background: var(--status-off-surface); }
 @media (max-width: 600px) {
@@ -413,6 +415,32 @@ textarea[aria-invalid='true'] { border-color: var(--danger-border); }
 .list-toolbar > .table-search, .list-toolbar > .csv-download { margin: 0; }
 @media (max-width: 40rem) {
   .table-search > .table-search-field, .table-search > .table-search-filter { flex-basis: 100%; max-width: none; }
+}
+/*
+ * Tabla en tarjeta (T-S8-14): la tabla y su paginación comparten una tarjeta con el radio de las del inicio. Encabezado
+ * en el tinte de marca con etiquetas pequeñas en mayúsculas, separadores finos y el pie con la paginación. Aplica a los
+ * dos estilos de tabla (.data-table e .institution-table).
+ */
+.table-card { margin-top: 0.25rem; overflow: hidden; border: 1px solid var(--border); border-radius: 14px; background: var(--surface); }
+.table-card + .table-card { margin-top: 1.25rem; }
+.table-card > [role='region']:focus-visible { outline: 3px solid var(--focus-ring); outline-offset: -3px; }
+.table-card :is(.data-table, .institution-table) :is(th, td) { padding: 0.85rem 1rem; vertical-align: middle; }
+.table-card :is(.data-table, .institution-table) thead { background: var(--tint); }
+.table-card :is(.data-table, .institution-table) thead th { padding-block: 0.7rem; border-bottom-color: var(--border); color: var(--accent);
+  font-size: 0.75rem; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; white-space: nowrap; }
+.table-card :is(.data-table, .institution-table) tbody th { font-weight: 600; color: var(--text-strong); }
+.table-card :is(.data-table, .institution-table) tbody tr:last-child > * { border-bottom: 0; }
+/* La columna de acciones mide lo que su contenido y centra su encabezado sobre los botones. */
+.table-card .has-actions tr > :last-child { width: 1%; min-width: 0; text-align: center; white-space: nowrap; }
+.table-card .has-actions td:last-child > .actions { flex-wrap: nowrap; justify-content: center; margin: 0; }
+.table-card .pager { margin: 0; padding: 0.75rem 1rem; border-top: 1px solid var(--border); }
+.table-card .pager .actions { margin: 0; }
+@media (prefers-contrast: more) {
+  .table-card, .table-card :is(.data-table, .institution-table) :is(th, td), .table-card .pager { border-color: var(--border-strong); }
+}
+@media (max-width: 600px) {
+  .table-card :is(.data-table, .institution-table) :is(th, td) { padding: 0.7rem 0.75rem; }
+  .table-card .pager { padding: 0.75rem; }
 }
 .data-table tbody tr[data-href] { cursor: pointer; }
 .data-table tbody tr[data-href]:hover > * { background: var(--surface-muted); }

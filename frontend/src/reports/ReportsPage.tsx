@@ -23,29 +23,31 @@ function LinkageSummary({ summary }: { summary: DualProgramReport['linkage_summa
     <section className="report-section" aria-labelledby="report-linkage-title">
       <h3 id="report-linkage-title">Solicitudes de vinculación</h3>
       <p className="report-total">{count.format(summary.total)} {summary.total === 1 ? 'solicitud registrada' : 'solicitudes registradas'}</p>
-      <div className="institution-table-wrapper" role="region" aria-label="Solicitudes por estado" tabIndex={0}>
-        <table className="institution-table report-table">
-          <caption className="visually-hidden">Solicitudes de vinculación por estado</caption>
-          <thead><tr><th scope="col">Estado</th><th scope="col">Solicitudes</th><th scope="col">Proporción</th></tr></thead>
-          <tbody>
-            {LINKAGE_STATUSES.map(({ value }) => {
-              const total = summary.by_status[value]
-              const share = summary.total === 0 ? 0 : total / summary.total
-              return (
-                <tr key={value}>
-                  <th scope="row"><LinkageStatus status={value} /></th>
-                  <td>{count.format(total)}</td>
-                  <td>
-                    <span className="report-share">
-                      <span className="report-bar" aria-hidden="true"><span style={{ width: `${share * 100}%` }} /></span>
-                      {percent.format(share)}
-                    </span>
-                  </td>
-                </tr>
-              )
-            })}
-          </tbody>
-        </table>
+      <div className="table-card">
+        <div className="institution-table-wrapper" role="region" aria-label="Solicitudes por estado" tabIndex={0}>
+          <table className="institution-table report-table">
+            <caption className="visually-hidden">Solicitudes de vinculación por estado</caption>
+            <thead><tr><th scope="col">Estado</th><th scope="col">Solicitudes</th><th scope="col">Proporción</th></tr></thead>
+            <tbody>
+              {LINKAGE_STATUSES.map(({ value }) => {
+                const total = summary.by_status[value]
+                const share = summary.total === 0 ? 0 : total / summary.total
+                return (
+                  <tr key={value}>
+                    <th scope="row"><LinkageStatus status={value} /></th>
+                    <td>{count.format(total)}</td>
+                    <td>
+                      <span className="report-share">
+                        <span className="report-bar" aria-hidden="true"><span style={{ width: `${share * 100}%` }} /></span>
+                        {percent.format(share)}
+                      </span>
+                    </td>
+                  </tr>
+                )
+              })}
+            </tbody>
+          </table>
+        </div>
       </div>
     </section>
   )
@@ -58,28 +60,30 @@ function InstitutionParticipation({ items }: { items: DualProgramReport['by_inst
       {items.length === 0
         ? <p className="notice-muted">Aún no hay instituciones registradas.</p>
         : (
-          <div className="institution-table-wrapper" role="region" aria-label="Participación por institución" tabIndex={0}>
-            <table className="institution-table report-table">
-              <caption className="visually-hidden">Participación por institución educativa</caption>
-              <thead>
-                <tr>
-                  <th scope="col">Institución</th><th scope="col">Estado</th><th scope="col">Alumnos activos</th>
-                  <th scope="col">Perfiles buscables</th><th scope="col">Solicitudes recibidas</th><th scope="col">Solicitudes aceptadas</th>
-                </tr>
-              </thead>
-              <tbody>
-                {items.map((item) => (
-                  <tr key={item.id}>
-                    <th scope="row">{item.name}</th>
-                    <td><InstitutionStatus active={item.is_active} /></td>
-                    <td>{count.format(item.active_students)}</td>
-                    <td>{count.format(item.searchable_profiles)}</td>
-                    <td>{count.format(item.received_requests)}</td>
-                    <td>{count.format(item.accepted_requests)}</td>
+          <div className="table-card">
+            <div className="institution-table-wrapper" role="region" aria-label="Participación por institución" tabIndex={0}>
+              <table className="institution-table report-table">
+                <caption className="visually-hidden">Participación por institución educativa</caption>
+                <thead>
+                  <tr>
+                    <th scope="col">Institución</th><th scope="col">Estado</th><th scope="col">Alumnos activos</th>
+                    <th scope="col">Perfiles buscables</th><th scope="col">Solicitudes recibidas</th><th scope="col">Solicitudes aceptadas</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {items.map((item) => (
+                    <tr key={item.id}>
+                      <th scope="row">{item.name}</th>
+                      <td><InstitutionStatus active={item.is_active} /></td>
+                      <td>{count.format(item.active_students)}</td>
+                      <td>{count.format(item.searchable_profiles)}</td>
+                      <td>{count.format(item.received_requests)}</td>
+                      <td>{count.format(item.accepted_requests)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
         )}
     </section>
@@ -93,26 +97,28 @@ function SectorParticipation({ items }: { items: DualProgramReport['by_sector'] 
       {items.length === 0
         ? <p className="notice-muted">Aún no hay empresas registradas.</p>
         : (
-          <div className="institution-table-wrapper" role="region" aria-label="Participación por sector SCIAN" tabIndex={0}>
-            <table className="institution-table report-table">
-              <caption className="visually-hidden">Participación por sector SCIAN</caption>
-              <thead>
-                <tr>
-                  <th scope="col">Sector</th><th scope="col">Empresas activas</th>
-                  <th scope="col">Oportunidades activas</th><th scope="col">Solicitudes aceptadas</th>
-                </tr>
-              </thead>
-              <tbody>
-                {items.map((item) => (
-                  <tr key={item.sector_code}>
-                    <th scope="row"><span className="report-sector-code">{item.sector_code}</span> {sectorName(item.sector_code)}</th>
-                    <td>{count.format(item.active_companies)}</td>
-                    <td>{count.format(item.active_opportunities)}</td>
-                    <td>{count.format(item.accepted_requests)}</td>
+          <div className="table-card">
+            <div className="institution-table-wrapper" role="region" aria-label="Participación por sector SCIAN" tabIndex={0}>
+              <table className="institution-table report-table">
+                <caption className="visually-hidden">Participación por sector SCIAN</caption>
+                <thead>
+                  <tr>
+                    <th scope="col">Sector</th><th scope="col">Empresas activas</th>
+                    <th scope="col">Oportunidades activas</th><th scope="col">Solicitudes aceptadas</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {items.map((item) => (
+                    <tr key={item.sector_code}>
+                      <th scope="row"><span className="report-sector-code">{item.sector_code}</span> {sectorName(item.sector_code)}</th>
+                      <td>{count.format(item.active_companies)}</td>
+                      <td>{count.format(item.active_opportunities)}</td>
+                      <td>{count.format(item.accepted_requests)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
         )}
     </section>

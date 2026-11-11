@@ -294,6 +294,18 @@ Afinaciones pedidas y aprobadas por el responsable el 5 de noviembre de 2026, du
 - **Nombre resaltado:** el nombre de lo que cambió (un video, una oportunidad, una certificación) ya no va entre «», sino en `strong.notice-subject`: negritas y un fondo suave del color del aviso, que se distingue aunque la fuente del sistema no tenga peso negrita. Las citas literales, como el mensaje de una solicitud, conservan sus comillas.
 - **Accesibilidad:** conservan `role="status"` o `role="alert"`; con contraste alto, el borde toma el color del texto, y con movimiento reducido se mantiene la entrada sin animación.
 
+### T-S8-14 — Tablas en tarjeta
+
+**Estado:** Completada (11 de noviembre de 2026)  
+**Rol:** `INSTITUTION`
+
+- **Problema:** las tablas eran bloques planos con un encabezado gris, sin la forma de tarjeta, los radios ni las insignias del resto de la interfaz. Hay dos estilos: `.data-table` (padrón) e `.institution-table` (las demás).
+- **Propuesta elegida:** «Tabla en tarjeta», entre tres opciones (también «encabezado institucional» y «filas como tarjetas»). Se probó primero en el padrón de alumnos y, aprobada, se aplicó a las once tablas: alumnos, instituciones, empresas y sus cuentas, oportunidades, las dos bandejas de solicitudes, cuentas de la Secretaría, bitácora y los tres cuadros del reporte.
+- **Columna de acciones:** las tablas con acciones se marcan con `has-actions`. Su última columna mide lo que su contenido y centra el encabezado sobre los botones; si hay varios, quedan en una línea.
+- **Diseño:** la tabla y su paginación comparten una `.table-card` con esquinas de 14 px. El encabezado lleva el tinte de marca y etiquetas pequeñas en mayúsculas en el color de acento. Las filas tienen separadores finos, el texto centrado verticalmente y un fondo al pasar el cursor. Los apellidos van en peso 600 y la matrícula en monoespaciada, y «Ver detalle» queda alineado a la derecha. La paginación queda en el pie de la tarjeta.
+- **Estado:** la insignia `StudentStatus` suma un punto de color delante del texto, también en el detalle del alumno y en la solicitud.
+- **Sin cambios de contenido:** se conservan los textos, los roles, los nombres accesibles y el desplazamiento horizontal en móvil.
+
 ### Prueba intermitente del CV
 
 `StudentCvTest › validates the certifications without writing them` falló una vez en la suite completa y pasa sola. Sus datasets calculaban fechas relativas («mañana», «el año siguiente») al recolectar las pruebas. Ahora son closures que Pest resuelve al ejecutar cada caso, con el reloj de la aplicación, así que siempre son futuras respecto a la validación. No se reprodujo el fallo, así que la causa exacta queda sin confirmar.

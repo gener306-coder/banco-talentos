@@ -53,40 +53,42 @@ export function SecretaryAccountsPage() {
         : failure ? <InstitutionRequestError failure={failure} retry={refresh} page />
         : data && (
           <>
-            <div className="institution-table-wrapper" role="region" aria-label="Listado de cuentas de la Secretaría" tabIndex={0}>
-              <table className="institution-table">
-                <caption className="visually-hidden">Cuentas de la Secretaría</caption>
-                <thead><tr><th scope="col">Nombre</th><th scope="col">Correo de acceso</th><th scope="col">Estado</th><th scope="col">Alta</th><th scope="col">Acciones</th></tr></thead>
-                <tbody>
-                  {data.accounts.map((account) => (
-                    <tr key={account.id}>
-                      <th scope="row">{account.name}</th>
-                      <td>{account.email}</td>
-                      <td><span className={`institution-status ${account.status}`}>{statusLabels[account.status]}</span></td>
-                      <td>{dateFormat.format(new Date(account.created_at))}</td>
-                      <td>
-                        <div className="actions">
-                          {account.status === 'pending' && (
-                            <button type="button" className="secondary" aria-label={`Reenviar enlace a ${account.name}`}
-                              onClick={() => setSheet({ kind: 'resend', email: account.email })}>Reenviar enlace</button>
-                          )}
-                          {access.rowActions(account)}
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-            {data.lastPage > 1 && (
-              <div className="pager">
-                <p>Página {data.page} de {data.lastPage} · {data.total} cuentas</p>
-                <div className="actions">
-                  <button type="button" className="secondary" disabled={data.page <= 1} onClick={() => setPage(data.page - 1)}><ChevronLeftIcon />Anterior</button>
-                  <button type="button" className="secondary" disabled={data.page >= data.lastPage} onClick={() => setPage(data.page + 1)}>Siguiente<ChevronRightIcon /></button>
-                </div>
+            <div className="table-card">
+              <div className="institution-table-wrapper" role="region" aria-label="Listado de cuentas de la Secretaría" tabIndex={0}>
+                <table className="institution-table has-actions">
+                  <caption className="visually-hidden">Cuentas de la Secretaría</caption>
+                  <thead><tr><th scope="col">Nombre</th><th scope="col">Correo de acceso</th><th scope="col">Estado</th><th scope="col">Alta</th><th scope="col">Acciones</th></tr></thead>
+                  <tbody>
+                    {data.accounts.map((account) => (
+                      <tr key={account.id}>
+                        <th scope="row">{account.name}</th>
+                        <td>{account.email}</td>
+                        <td><span className={`institution-status ${account.status}`}>{statusLabels[account.status]}</span></td>
+                        <td>{dateFormat.format(new Date(account.created_at))}</td>
+                        <td>
+                          <div className="actions">
+                            {account.status === 'pending' && (
+                              <button type="button" className="secondary" aria-label={`Reenviar enlace a ${account.name}`}
+                                onClick={() => setSheet({ kind: 'resend', email: account.email })}>Reenviar enlace</button>
+                            )}
+                            {access.rowActions(account)}
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               </div>
-            )}
+              {data.lastPage > 1 && (
+                <div className="pager">
+                  <p>Página {data.page} de {data.lastPage} · {data.total} cuentas</p>
+                  <div className="actions">
+                    <button type="button" className="secondary" disabled={data.page <= 1} onClick={() => setPage(data.page - 1)}><ChevronLeftIcon />Anterior</button>
+                    <button type="button" className="secondary" disabled={data.page >= data.lastPage} onClick={() => setPage(data.page + 1)}>Siguiente<ChevronRightIcon /></button>
+                  </div>
+                </div>
+              )}
+            </div>
           </>
         )}
       {access.dialog}

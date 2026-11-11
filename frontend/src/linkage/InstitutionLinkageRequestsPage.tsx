@@ -79,44 +79,46 @@ export function InstitutionLinkageRequestsPage() {
               description="Aparecerán aquí cuando una empresa solicite la vinculación de alguno de tus alumnos." />
         : data && (
           <>
-            <div className="institution-table-wrapper" role="region" aria-label="Listado de solicitudes" tabIndex={0}>
-              <table className="institution-table">
-                <caption className="visually-hidden">Solicitudes de vinculación recibidas</caption>
-                <thead><tr><th scope="col">Alumno</th><th scope="col">Empresa</th><th scope="col">Oportunidad</th><th scope="col">Recibida</th><th scope="col">Estado</th><th scope="col">Detalle</th></tr></thead>
-                <tbody>
-                  {data.items.map((item) => {
-                    const name = `${surnames(item.student)}, ${item.student.given_names}`
-                    return (
-                      <tr key={item.id}>
-                        <th scope="row">
-                          {name}
-                          <span className="linkage-profile-meta">
-                            {[item.student.enrollment_number, item.student.program,
-                              item.student.period_type && item.student.period_number ? periodLabel(item.student.period_type, item.student.period_number) : null].filter(Boolean).join(' · ')}
-                          </span>
-                        </th>
-                        <td>{item.company.name}{item.company.municipality && <span className="linkage-profile-meta">{item.company.municipality}</span>}</td>
-                        <td>{item.opportunity.title}<span className="linkage-profile-meta">{item.opportunity.program}</span></td>
-                        <td>{dateFormat.format(new Date(item.created_at))}</td>
-                        <td><LinkageStatus status={item.status} /></td>
-                        <td>
-                          <Link className="pill-link" to={`/institution/linkage-requests/${item.id}`} aria-label={`Ver la solicitud de ${item.company.name} para ${name}`}>Ver detalle<ChevronRightIcon /></Link>
-                        </td>
-                      </tr>
-                    )
-                  })}
-                </tbody>
-              </table>
-            </div>
-            {data.lastPage > 1 && (
-              <div className="pager">
-                <p>Página {data.page} de {data.lastPage} · {data.total} solicitudes</p>
-                <div className="actions">
-                  <button type="button" className="secondary" disabled={data.page <= 1} onClick={() => setPage(data.page - 1)}><ChevronLeftIcon />Anterior</button>
-                  <button type="button" className="secondary" disabled={data.page >= data.lastPage} onClick={() => setPage(data.page + 1)}>Siguiente<ChevronRightIcon /></button>
-                </div>
+            <div className="table-card">
+              <div className="institution-table-wrapper" role="region" aria-label="Listado de solicitudes" tabIndex={0}>
+                <table className="institution-table has-actions">
+                  <caption className="visually-hidden">Solicitudes de vinculación recibidas</caption>
+                  <thead><tr><th scope="col">Alumno</th><th scope="col">Empresa</th><th scope="col">Oportunidad</th><th scope="col">Recibida</th><th scope="col">Estado</th><th scope="col">Detalle</th></tr></thead>
+                  <tbody>
+                    {data.items.map((item) => {
+                      const name = `${surnames(item.student)}, ${item.student.given_names}`
+                      return (
+                        <tr key={item.id}>
+                          <th scope="row">
+                            {name}
+                            <span className="linkage-profile-meta">
+                              {[item.student.enrollment_number, item.student.program,
+                                item.student.period_type && item.student.period_number ? periodLabel(item.student.period_type, item.student.period_number) : null].filter(Boolean).join(' · ')}
+                            </span>
+                          </th>
+                          <td>{item.company.name}{item.company.municipality && <span className="linkage-profile-meta">{item.company.municipality}</span>}</td>
+                          <td>{item.opportunity.title}<span className="linkage-profile-meta">{item.opportunity.program}</span></td>
+                          <td>{dateFormat.format(new Date(item.created_at))}</td>
+                          <td><LinkageStatus status={item.status} /></td>
+                          <td>
+                            <Link className="pill-link" to={`/institution/linkage-requests/${item.id}`} aria-label={`Ver la solicitud de ${item.company.name} para ${name}`}>Ver detalle<ChevronRightIcon /></Link>
+                          </td>
+                        </tr>
+                      )
+                    })}
+                  </tbody>
+                </table>
               </div>
-            )}
+              {data.lastPage > 1 && (
+                <div className="pager">
+                  <p>Página {data.page} de {data.lastPage} · {data.total} solicitudes</p>
+                  <div className="actions">
+                    <button type="button" className="secondary" disabled={data.page <= 1} onClick={() => setPage(data.page - 1)}><ChevronLeftIcon />Anterior</button>
+                    <button type="button" className="secondary" disabled={data.page >= data.lastPage} onClick={() => setPage(data.page + 1)}>Siguiente<ChevronRightIcon /></button>
+                  </div>
+                </div>
+              )}
+            </div>
           </>
         )}
     </InstitutionLinkageLayout>

@@ -48,29 +48,31 @@ export function CompanyAccountsSection({ companyId, active }: { companyId: numbe
         : data && (data.length === 0
           ? <p className="notice-muted">La empresa aún no tiene cuentas.</p>
           : (
-            <div className="institution-table-wrapper" role="region" aria-label="Listado de cuentas de la empresa" tabIndex={0}>
-              <table className="institution-table">
-                <caption className="visually-hidden">Cuentas de la empresa</caption>
-                <thead><tr><th scope="col">Nombre</th><th scope="col">Correo de acceso</th><th scope="col">Estado</th><th scope="col">Acciones</th></tr></thead>
-                <tbody>
-                  {data.map((account) => (
-                    <tr key={account.id}>
-                      <th scope="row">{account.name}</th>
-                      <td>{account.email}</td>
-                      <td><span className={`institution-status ${account.status}`}>{statusLabels[account.status]}</span></td>
-                      <td>
-                        <div className="actions">
-                          {active && account.status === 'pending' && (
-                            <button type="button" className="secondary" aria-label={`Reenviar enlace a ${account.name}`}
-                              onClick={() => setSheet({ kind: 'resend', email: account.email })}>Reenviar enlace</button>
-                          )}
-                          {access.rowActions(account, active)}
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+            <div className="table-card">
+              <div className="institution-table-wrapper" role="region" aria-label="Listado de cuentas de la empresa" tabIndex={0}>
+                <table className="institution-table has-actions">
+                  <caption className="visually-hidden">Cuentas de la empresa</caption>
+                  <thead><tr><th scope="col">Nombre</th><th scope="col">Correo de acceso</th><th scope="col">Estado</th><th scope="col">Acciones</th></tr></thead>
+                  <tbody>
+                    {data.map((account) => (
+                      <tr key={account.id}>
+                        <th scope="row">{account.name}</th>
+                        <td>{account.email}</td>
+                        <td><span className={`institution-status ${account.status}`}>{statusLabels[account.status]}</span></td>
+                        <td>
+                          <div className="actions">
+                            {active && account.status === 'pending' && (
+                              <button type="button" className="secondary" aria-label={`Reenviar enlace a ${account.name}`}
+                                onClick={() => setSheet({ kind: 'resend', email: account.email })}>Reenviar enlace</button>
+                            )}
+                            {access.rowActions(account, active)}
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </div>
           ))}
       {access.dialog}

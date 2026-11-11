@@ -122,9 +122,10 @@ export function StudentsPage() {
               description="Registra a tus alumnos con su matrícula y nombre. Estos datos son de uso exclusivo de tu institución."
               action={openButton('Registrar el primer alumno')} />
         : data && (
-          <>
+          // T-S8-14: la tabla y su paginación viven en una sola tarjeta.
+          <div className="table-card">
             <div className="data-table-wrapper" role="region" aria-label="Padrón de alumnos" tabIndex={0}>
-              <table className="data-table">
+              <table className="data-table has-actions">
                 <caption className="visually-hidden">Alumnos registrados</caption>
                 <thead><tr><th scope="col">Matrícula</th><th scope="col">Apellidos</th><th scope="col">Nombre(s)</th><th scope="col">Estado</th><th scope="col">Acciones</th></tr></thead>
                 <tbody>
@@ -160,7 +161,7 @@ export function StudentsPage() {
                 </div>
               )}
             </div>
-          </>
+          </div>
         )}
       <Sheet open={registering} onClose={close} labelledBy="student-form-title">
         <StudentForm onCreated={() => { void refresh() }}
