@@ -55,35 +55,37 @@ export function CompaniesPage() {
               action={<Link className="institution-button" to="/companies/new"><PlusIcon />Registrar la primera empresa</Link>} />
         : data && (
           <>
-            <div className="institution-table-wrapper" role="region" aria-label="Listado de empresas" tabIndex={0}>
-              <table className="institution-table">
-                <caption className="visually-hidden">Empresas registradas</caption>
-                <thead><tr><th scope="col">Razón social</th><th scope="col">RFC</th><th scope="col">Municipio</th><th scope="col">Estado</th><th scope="col">Acciones</th></tr></thead>
-                <tbody>
-                  {data.companies.map((company) => {
-                    const href = `/companies/${company.id}`
-                    return (
-                      <tr key={company.id} data-href={href} onClick={(event) => openRow(event, href)}>
-                        <th scope="row">{company.legal_name}{company.trade_name && <span className="option-meta"> · {company.trade_name}</span>}</th>
-                        <td>{company.rfc}</td>
-                        <td>{company.municipality ?? company.municipality_code}</td>
-                        <td><InstitutionStatus active={company.is_active} /></td>
-                        <td><Link className="pill-link" to={href} aria-label={`Ver detalle de ${company.legal_name}`}>Ver detalle<ChevronRightIcon /></Link></td>
-                      </tr>
-                    )
-                  })}
-                </tbody>
-              </table>
-            </div>
-            {data.lastPage > 1 && (
-              <div className="pager">
-                <p>Página {data.page} de {data.lastPage} · {data.total} empresas</p>
-                <div className="actions">
-                  <button type="button" className="secondary" disabled={data.page <= 1} onClick={() => setPage(data.page - 1)}><ChevronLeftIcon />Anterior</button>
-                  <button type="button" className="secondary" disabled={data.page >= data.lastPage} onClick={() => setPage(data.page + 1)}>Siguiente<ChevronRightIcon /></button>
-                </div>
+            <div className="table-card">
+              <div className="institution-table-wrapper" role="region" aria-label="Listado de empresas" tabIndex={0}>
+                <table className="institution-table has-actions">
+                  <caption className="visually-hidden">Empresas registradas</caption>
+                  <thead><tr><th scope="col">Razón social</th><th scope="col">RFC</th><th scope="col">Municipio</th><th scope="col">Estado</th><th scope="col">Acciones</th></tr></thead>
+                  <tbody>
+                    {data.companies.map((company) => {
+                      const href = `/companies/${company.id}`
+                      return (
+                        <tr key={company.id} data-href={href} onClick={(event) => openRow(event, href)}>
+                          <th scope="row">{company.legal_name}{company.trade_name && <span className="option-meta"> · {company.trade_name}</span>}</th>
+                          <td>{company.rfc}</td>
+                          <td>{company.municipality ?? company.municipality_code}</td>
+                          <td><InstitutionStatus active={company.is_active} /></td>
+                          <td><Link className="pill-link" to={href} aria-label={`Ver detalle de ${company.legal_name}`}>Ver detalle<ChevronRightIcon /></Link></td>
+                        </tr>
+                      )
+                    })}
+                  </tbody>
+                </table>
               </div>
-            )}
+              {data.lastPage > 1 && (
+                <div className="pager">
+                  <p>Página {data.page} de {data.lastPage} · {data.total} empresas</p>
+                  <div className="actions">
+                    <button type="button" className="secondary" disabled={data.page <= 1} onClick={() => setPage(data.page - 1)}><ChevronLeftIcon />Anterior</button>
+                    <button type="button" className="secondary" disabled={data.page >= data.lastPage} onClick={() => setPage(data.page + 1)}>Siguiente<ChevronRightIcon /></button>
+                  </div>
+                </div>
+              )}
+            </div>
           </>
         )}
     </CompanyLayout>

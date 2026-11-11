@@ -62,34 +62,36 @@ export function AuditEventsPage() {
             description={type ? 'Elige otro tipo o revisa todos los eventos.' : 'Aparecerán aquí cuando se creen cuentas, empresas, oportunidades o solicitudes.'} />
         : data && (
           <>
-            <div className="institution-table-wrapper" role="region" aria-label="Listado de eventos" tabIndex={0}>
-              <table className="institution-table">
-                <caption className="visually-hidden">Eventos de la bitácora</caption>
-                <thead><tr><th scope="col">Fecha</th><th scope="col">Evento</th><th scope="col">Realizó</th><th scope="col">Recurso</th></tr></thead>
-                <tbody>
-                  {data.items.map((event) => (
-                    <tr key={`${event.type}-${event.resource.id}`}>
-                      <td><time dateTime={event.occurred_at}>{dateFormat.format(new Date(event.occurred_at))}</time></td>
-                      <th scope="row">{auditEventLabel(event.type)}</th>
-                      <td>
-                        {event.actor.name}
-                        <span className="linkage-profile-meta">{roleLabels[event.actor.role]}</span>
-                      </td>
-                      <td>{describe(event)}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-            {data.lastPage > 1 && (
-              <div className="pager">
-                <p>Página {data.page} de {data.lastPage} · {data.total} eventos</p>
-                <div className="actions">
-                  <button type="button" className="secondary" disabled={data.page <= 1} onClick={() => setPage(data.page - 1)}><ChevronLeftIcon />Anterior</button>
-                  <button type="button" className="secondary" disabled={data.page >= data.lastPage} onClick={() => setPage(data.page + 1)}>Siguiente<ChevronRightIcon /></button>
-                </div>
+            <div className="table-card">
+              <div className="institution-table-wrapper" role="region" aria-label="Listado de eventos" tabIndex={0}>
+                <table className="institution-table">
+                  <caption className="visually-hidden">Eventos de la bitácora</caption>
+                  <thead><tr><th scope="col">Fecha</th><th scope="col">Evento</th><th scope="col">Realizó</th><th scope="col">Recurso</th></tr></thead>
+                  <tbody>
+                    {data.items.map((event) => (
+                      <tr key={`${event.type}-${event.resource.id}`}>
+                        <td><time dateTime={event.occurred_at}>{dateFormat.format(new Date(event.occurred_at))}</time></td>
+                        <th scope="row">{auditEventLabel(event.type)}</th>
+                        <td>
+                          {event.actor.name}
+                          <span className="linkage-profile-meta">{roleLabels[event.actor.role]}</span>
+                        </td>
+                        <td>{describe(event)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               </div>
-            )}
+              {data.lastPage > 1 && (
+                <div className="pager">
+                  <p>Página {data.page} de {data.lastPage} · {data.total} eventos</p>
+                  <div className="actions">
+                    <button type="button" className="secondary" disabled={data.page <= 1} onClick={() => setPage(data.page - 1)}><ChevronLeftIcon />Anterior</button>
+                    <button type="button" className="secondary" disabled={data.page >= data.lastPage} onClick={() => setPage(data.page + 1)}>Siguiente<ChevronRightIcon /></button>
+                  </div>
+                </div>
+              )}
+            </div>
           </>
         )}
     </section>
