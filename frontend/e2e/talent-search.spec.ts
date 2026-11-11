@@ -165,7 +165,7 @@ test('HU-S4-05, HU-S5-04, HU-S5-05, HU-S6-01, HU-S6-02 y HU-S6-03: una empresa e
     await cancel.click()
     confirm = company.getByRole('alertdialog', { name: '¿Cancelar la solicitud?' })
     await confirm.getByRole('button', { name: 'Cancelar solicitud' }).click()
-    await expect(company.getByText(`Solicitud para «${opportunityTitle}» cancelada correctamente.`)).toBeVisible()
+    await expect(company.getByRole('status').filter({ hasText: `Solicitud para ${opportunityTitle} cancelada correctamente.` })).toBeVisible()
     await expect(row).toContainText('Cancelada')
     await company.getByLabel('Estado').selectOption('CANCELADA')
     await expect(company.getByRole('table', { name: 'Solicitudes de vinculación enviadas' }).getByRole('row', { name: new RegExp(opportunityTitle) })).toBeVisible()

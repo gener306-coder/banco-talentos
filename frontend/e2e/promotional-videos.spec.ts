@@ -29,7 +29,7 @@ test('la institución publica una historia y la empresa la encuentra y la reprod
   await expect(form.getByRole('button', { name: 'Cambiar video' })).toBeVisible()
   await form.getByLabel(/Confirmo que cuento con la autorización/).check()
   await form.getByRole('button', { name: 'Subir historia', exact: true }).click()
-  await expect(page.getByText(`Recibimos «${title}». Procesando…`, { exact: false })).toBeVisible()
+  await expect(page.getByRole('status').filter({ hasText: `Recibimos ${title}. Procesando…` })).toBeVisible()
 
   // HU-S9-02 CA-05: la vista consulta cada 5 s hasta que el worker termina.
   const card = page.getByRole('listitem').filter({ has: page.getByRole('heading', { name: title }) })
@@ -118,7 +118,7 @@ test('T-S9-04: la institución elimina una historia y deja de estar en la galer�
 
   await card.getByRole('button', { name: `Eliminar ${title}` }).click()
   await page.getByRole('alertdialog', { name: '¿Eliminar el video?' }).getByRole('button', { name: 'Eliminar', exact: true }).click()
-  await expect(page.getByText(`Eliminaste «${title}» y se liberó su espacio.`)).toBeVisible()
+  await expect(page.getByRole('status').filter({ hasText: `Eliminaste ${title} y se liberó su espacio.` })).toBeVisible()
   await expect(page.getByRole('heading', { name: title })).toHaveCount(0)
   await page.reload()
   await expect(page.getByRole('heading', { name: 'Historias del Dual' })).toBeVisible()

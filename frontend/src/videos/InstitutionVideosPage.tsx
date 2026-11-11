@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
+import type { ReactNode } from 'react'
 import { Link } from 'react-router'
 import { InstitutionRequestError } from '../institutions/InstitutionLayout'
 import { useApiMutation, useApiRequest } from '../lib/useApiRequest'
@@ -36,7 +37,7 @@ export function InstitutionVideosPage() {
   const [watching, setWatching] = useState<InstitutionVideo | null>(null)
   const [deactivating, setDeactivating] = useState<InstitutionVideo | null>(null)
   const [deleting, setDeleting] = useState<InstitutionVideo | null>(null)
-  const [notice, setNotice] = useState<string | null>(null)
+  const [notice, setNotice] = useState<ReactNode>(null)
   const status = useApiMutation(videoMessages)
   const statusButton = useRef<HTMLButtonElement | null>(null)
   const removal = useApiMutation(videoMessages)
@@ -64,7 +65,9 @@ export function InstitutionVideosPage() {
     setNotice(null)
     await status.submit(() => updateVideoStatus(video.public_id, active), (updated) => {
       replace(updated)
-      setNotice(active ? `«${updated.title}» está activo de nuevo.` : `«${updated.title}» se inactivó; ya no lo verán las empresas.`)
+      setNotice(active
+        ? <><strong className="notice-subject">{updated.title}</strong> está activo de nuevo.</>
+        : <><strong className="notice-subject">{updated.title}</strong> se inactivó; ya no lo verán las empresas.</>)
     })
   }
 
@@ -74,7 +77,7 @@ export function InstitutionVideosPage() {
     setNotice(null)
     await removal.submit(() => deleteVideo(video.public_id), () => {
       setData((current) => current?.filter((item) => item.public_id !== video.public_id) ?? current)
-      setNotice(`Eliminaste «${video.title}» y se liberó su espacio.`)
+      setNotice(<>Eliminaste <strong className="notice-subject">{video.title}</strong> y se liberó su espacio.</>)
     })
   }
 
@@ -94,7 +97,7 @@ export function InstitutionVideosPage() {
       </div>
       {received && (
         <p className="institution-success" role="status">
-          Recibimos «{received.title}». Procesando… Lo optimizamos para que se reproduzca rápido; puede tardar unos minutos.
+          Recibimos <strong className="notice-subject">{received.title}</strong>. Procesando… Lo optimizamos para que se reproduzca rápido; puede tardar unos minutos.
         </p>
       )}
       {notice && <p className="institution-success" role="status">{notice}</p>}

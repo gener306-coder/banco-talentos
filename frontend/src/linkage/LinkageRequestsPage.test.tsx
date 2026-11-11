@@ -3,6 +3,8 @@ import { MemoryRouter } from 'react-router'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import App from '../App'
 
+/** Aviso cuyo texto completo, con el nombre resaltado en strong, es exactamente `text`. */
+const noticeText = (text: string) => (_: string, element: Element | null) => element?.tagName === 'P' && element.textContent === text
 const fetchMock = vi.fn<typeof fetch>()
 const apiMock = vi.fn<typeof fetch>()
 let user: Record<string, unknown>
@@ -111,7 +113,7 @@ describe('bandeja de solicitudes HU-S5-05', () => {
     fireEvent.click(button)
     dialog = await screen.findByRole('alertdialog', { name: '¿Cancelar la solicitud?' })
     fireEvent.click(within(dialog).getByRole('button', { name: 'Cancelar solicitud' }))
-    expect(await screen.findByText('Solicitud para «Tableros de producción» cancelada correctamente.')).toHaveAttribute('role', 'status')
+    expect(await screen.findByText(noticeText('Solicitud para Tableros de producción cancelada correctamente.'))).toHaveAttribute('role', 'status')
     expect(patches()[0][0]).toBe('/api/linkage-requests/41/cancel')
     expect(screen.getByText('Cancelada', { selector: '.linkage-status' })).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: /Cancelar la solicitud/ })).not.toBeInTheDocument()

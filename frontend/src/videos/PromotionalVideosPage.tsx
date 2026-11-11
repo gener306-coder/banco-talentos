@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import type { ReactNode } from 'react'
 import { Link, useSearchParams } from 'react-router'
 import { useAuth } from '../auth/useAuth'
 import { InstitutionRequestError } from '../institutions/InstitutionLayout'
@@ -79,7 +80,7 @@ function StoryFeed({ sort, target }: { sort: StoryOrder; target: string | null }
   const [merged, setMerged] = useState<PromotionalVideoPage | null>(null)
   const [muted, setMuted] = useState(true)
   const [deactivating, setDeactivating] = useState<PromotionalVideo | null>(null)
-  const [notice, setNotice] = useState<string | null>(null)
+  const [notice, setNotice] = useState<ReactNode>(null)
   const moderation = useApiMutation(galleryMessages)
   const deactivateButton = useRef<HTMLButtonElement | null>(null)
   const sentinel = useRef<HTMLDivElement>(null)
@@ -125,7 +126,7 @@ function StoryFeed({ sort, target }: { sort: StoryOrder; target: string | null }
     setNotice(null)
     await moderation.submit(() => deactivatePromotionalVideo(video.public_id), () => {
       setStories((current) => current.filter((story) => story.public_id !== video.public_id))
-      setNotice(`«${video.title}» se inactivó y ya no aparece en las historias. Solo ${video.institution.name} puede reactivarla.`)
+      setNotice(<><strong className="notice-subject">{video.title}</strong> se inactivó y ya no aparece en las historias. Solo {video.institution.name} puede reactivarla.</>)
     })
   }
 

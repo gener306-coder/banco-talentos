@@ -4,6 +4,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import App from '../App'
 import type { StudentCv } from './cv'
 
+/** Aviso cuyo texto completo, con el nombre resaltado en strong, es exactamente `text`. */
+const noticeText = (text: string) => (_: string, element: Element | null) => element?.tagName === 'P' && element.textContent === text
 const institutionUser = { id: 5, name: 'Coordinación', email: 'coord@example.test', role: 'INSTITUTION', institution: { id: 7, name: 'Instituto Dual' } }
 const emptyProfile = { program: null, period_type: null, period_number: null, dual_available: null, state_code: null, municipality_code: null, municipality: null, pending_municipality: null, can_relocate: null }
 const student = { data: { id: 3, enrollment_number: 'A-001', given_names: 'Ana', first_surname: 'López', second_surname: null, is_active: true, created_at: '2026-10-13T12:00:00Z', profile: emptyProfile, missing_data: [] } }
@@ -241,7 +243,7 @@ describe('certificaciones', () => {
     respond({ ...cv, public: { ...cv.public, certifications: [ccna] } })
     const region = await section('Certificaciones')
     fireEvent.click(within(region).getByRole('button', { name: 'Marcar como revisada CCNA' }))
-    expect(await within(region).findByText('«CCNA» quedó revisada por tu institución.')).toBeInTheDocument()
+    expect(await within(region).findByText(noticeText('CCNA quedó revisada por tu institución.'))).toBeInTheDocument()
     expect(writes()[0][0]).toBe('/api/students/3/cv/certifications/4/verification')
     expect(writes()[0][1]?.method).toBe('PATCH')
     expect(sent()).toEqual({ verified: true })
@@ -249,7 +251,7 @@ describe('certificaciones', () => {
     expect(within(region).getByText(/Revisada por Coordinación el/)).toBeInTheDocument()
 
     fireEvent.click(within(region).getByRole('button', { name: 'Quitar revisión de CCNA' }))
-    expect(await within(region).findByText('Se quitó la revisión de «CCNA».')).toBeInTheDocument()
+    expect(await within(region).findByText(noticeText('Se quitó la revisión de CCNA.'))).toBeInTheDocument()
     expect(sent(1)).toEqual({ verified: false })
   })
 

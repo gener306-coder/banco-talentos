@@ -4,6 +4,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import App from '../App'
 import { isVideoFile, MAX_VIDEO_BYTES } from './api'
 
+/** Aviso cuyo texto completo, con el nombre resaltado en strong, es exactamente `text`. */
+const noticeText = (text: string) => (_: string, element: Element | null) => element?.tagName === 'P' && element.textContent === text
 const institutionUser = { id: 5, name: 'Coordinación', email: 'coord@example.test', role: 'INSTITUTION', institution: { id: 7, name: 'Instituto Dual' } }
 const received = {
   public_id: '6c0f7c1e-6c3b-4b49-9a1f-3a3f0f9c2d11', title: 'Talleres de manufactura', description: null, status: 'PROCESSING',
@@ -117,7 +119,7 @@ describe('videos promocionales HU-S9-01', () => {
     expect(within(form).getByRole('button', { name: 'Subiendo historia…' })).toBeDisabled()
 
     act(() => xhr.respond(202, { data: received }))
-    expect(await screen.findByText(/Recibimos «Talleres de manufactura»\. Procesando…/)).toHaveAttribute('role', 'status')
+    expect(await screen.findByText((_, element) => element?.tagName === 'P' && /^Recibimos Talleres de manufactura\. Procesando…/.test(element.textContent ?? ''))).toHaveAttribute('role', 'status')
     expect(screen.queryByRole('dialog', { name: 'Subir una historia' })).not.toBeInTheDocument()
   })
 
@@ -291,7 +293,11 @@ describe('gestión de mis videos HU-S9-02', () => {
 
     fireEvent.click(within(grid).getByRole('button', { name: 'Eliminar Laboratorio de robótica' }))
     fireEvent.click(within(await screen.findByRole('alertdialog', { name: '¿Eliminar el video?' })).getByRole('button', { name: 'Eliminar' }))
-    expect(await screen.findByText('Eliminaste «Laboratorio de robótica» y se liberó su espacio.')).toHaveAttribute('role', 'status')
+    const deleted = await screen.findByText(noticeText('Eliminaste Laboratorio de robótica y se liberó su espacio.'))
+    expect(deleted).toHaveAttribute('role', 'status')
+    // El nombre se resalta sin comillas.
+    expect(within(deleted).getByText('Laboratorio de robótica').tagName).toBe('STRONG')
+    expect(deleted.textContent).not.toMatch(/[«»]/)
     expect(within(grid).queryByText('Laboratorio de robótica')).not.toBeInTheDocument()
     expect(within(grid).getByText(failed.title)).toBeInTheDocument()
     expect(calls('PATCH')[0][0]).toBe(`/api/institution/videos/${ready.public_id}/deletion`)

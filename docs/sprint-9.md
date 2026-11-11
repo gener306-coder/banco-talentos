@@ -338,7 +338,7 @@ Los videos son testimonios de alumnos que están o estuvieron en el Dual en una 
 **Cambia:** la retícula de tarjetas de HU-S9-02 CA-05.
 
 - **Lista uniforme:** el mosaico de tarjetas se sustituye por filas iguales a todo el ancho de la página. Cada fila tiene una miniatura fija de 16:9 con la duración, el título en una línea (completo en `title`), la insignia de estado, la fecha y, si falló, el motivo en dos líneas. En móvil, las acciones pasan a una fila propia.
-- **Acciones de ícono:** Ver (reproducir), Editar (lápiz), Inactivar y Activar (ojo tachado y ojo) y Eliminar (bote, en color de peligro). Son círculos con los tokens de marca, y el verbo aparece en una etiqueta al pasar el cursor o con el foco del teclado.
+- **Acciones de ícono:** Ver (reproducir), Editar (lápiz), Inactivar y Activar (ojo tachado y ojo) y Eliminar (bote), que es el único relleno: un círculo con el color de peligro y el ícono en el color de superficie, para distinguirlo de las demás acciones. Son círculos con los tokens de marca, y el verbo aparece en una etiqueta al pasar el cursor o con el foco del teclado.
 - **Accesibilidad:** cada botón conserva su nombre accesible completo («Editar {título}»). El orden es fijo, y una acción que no aplica deja su hueco para que los íconos coincidan entre filas.
 
 ---

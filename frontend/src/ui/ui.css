@@ -115,6 +115,10 @@ input { border-radius: 8px; }
 .notice::before { background: var(--danger-border);
   --notice-icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M8 2.5 14 13H2L8 2.5Z'/%3E%3Cpath d='M8 7v2.5M8 11.2h.01'/%3E%3C/svg%3E"); }
 .institution-success a, .notice a { color: inherit; font-weight: 600; }
+/* El nombre de lo que cambió se resalta sin comillas: negritas y un fondo suave del color del aviso, que se distingue
+   aunque la fuente del sistema no tenga peso negrita. */
+.notice-subject { padding: 0.05rem 0.35rem; border-radius: 0.35rem; background: color-mix(in srgb, currentColor 13%, transparent);
+  font-weight: 700; -webkit-box-decoration-break: clone; box-decoration-break: clone; }
 .institution-success > :last-child, .notice > :last-child { margin-bottom: 0; }
 @media (prefers-contrast: more) { .institution-success, .notice { border-color: currentColor; } }
 
