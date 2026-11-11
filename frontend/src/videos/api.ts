@@ -1,6 +1,7 @@
 import { accessErrorMessages, ApiError, csrfToken, request } from '../lib/http'
 import type { AccessErrorCode, ValidationErrors } from '../lib/http'
 import type { FailureMessages } from '../lib/useApiRequest'
+import { prefersReducedMotion } from '../ui/modal'
 
 /** Video promocional de la institución (HU-S9-01). Nace PROCESSING; el worker lo deja READY o FAILED. */
 export type VideoStatus = 'PROCESSING' | 'READY' | 'FAILED'
@@ -164,4 +165,10 @@ export async function uploadVideo(input: VideoInput, onProgress: (fraction: numb
     xhr.send(body)
   })
   return video(response)
+}
+
+/** Sin arranque automático si el usuario pidió reducir movimiento o ahorrar datos (HU-S9-04 CA-03, T-S9-02). */
+export function canAutoPlay(): boolean {
+  const { connection } = navigator as Navigator & { connection?: { saveData?: boolean } }
+  return !prefersReducedMotion() && !connection?.saveData
 }

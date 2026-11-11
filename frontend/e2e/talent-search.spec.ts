@@ -127,7 +127,7 @@ test('HU-S4-05, HU-S5-04, HU-S5-05, HU-S6-01, HU-S6-02 y HU-S6-03: una empresa e
       const institution = await receiving.newPage()
       await institution.goto('/')
       // HU-S6-03 CA-02: el inicio avisa de las solicitudes pendientes y enlaza a la bandeja.
-      await expect(institution.getByRole('region', { name: 'Indicadores' })).toContainText(/solicitud(es)? de vinculación pendientes? de respuesta/)
+      await expect(institution.getByRole('region', { name: 'Indicadores' })).toContainText(/solicitud(es)? de vinculación pendientes?/)
       await institution.getByRole('link', { name: 'Revisar solicitudes' }).click()
       const pending = institution.waitForResponse((response) => response.url().includes('/api/institution/linkage-requests?') && response.url().includes('status=PENDIENTE_INSTITUCION'))
       await institution.getByLabel('Estado').selectOption('PENDIENTE_INSTITUCION')
@@ -140,8 +140,8 @@ test('HU-S4-05, HU-S5-04, HU-S5-05, HU-S6-01, HU-S6-02 y HU-S6-03: una empresa e
       await expect(identity).toContainText(`Valeria Secreta ${student.surname}`)
       await expect(institution.getByText('Nos interesa su perfil para el proyecto de tableros.')).toBeVisible()
       // Sin NSS ni comprobante: aviso con enlace al expediente.
-      const missing = institution.getByRole('region', { name: 'Seguro Facultativo (IMSS)' }).getByRole('note')
-      await expect(missing).toContainText('Al alumno le falta el NSS y el comprobante de vigencia del IMSS.')
+      const missing = institution.getByRole('region', { name: 'Seguro del alumno' }).getByRole('note')
+      await expect(missing).toContainText('Al alumno le falta el número del seguro o el comprobante de vigencia.')
       await expect(institution.getByRole('region', { name: 'Empresa y contacto del programa dual' }).getByRole('link', { name: /@/ })).toHaveAttribute('href', /^mailto:/)
       await missing.getByRole('link', { name: 'expediente' }).click()
       await expect(institution.getByRole('heading', { level: 2, name: `Valeria Secreta ${student.surname}` })).toBeVisible()

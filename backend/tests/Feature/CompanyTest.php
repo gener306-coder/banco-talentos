@@ -5,9 +5,11 @@ use App\Enums\UserRole;
 use App\Models\Company;
 use App\Models\Institution;
 use App\Models\User;
+use App\Notifications\SetInitialPassword;
 use Illuminate\Database\QueryException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Notification;
 use Tests\Support\InteractsWithCookieSessions;
 
 // HU-S4-02: registro y gestión de empresas validadas por la Secretaría de Economía.
@@ -28,6 +30,7 @@ function companyPayload(array $overrides = []): array
         'state_code' => '28',
         'municipality_code' => '28032',
         'contact_name' => 'Lucía Herrera',
+        'contact_position' => 'Recursos Humanos',
         'contact_email' => 'dual@manugolfo.test',
         'contact_phone' => '+52 (899) 123-4567',
         'validation_reference' => 'SE/DGIC/2026/0141',
@@ -74,9 +77,10 @@ it('accepts only the required fields, leaving the optional ones empty (CA-02)', 
     signInSecretary($this);
 
     $this->browserRequest('POST', '/api/companies', companyPayload([
-        'trade_name' => null, 'contact_phone' => '', 'validation_reference' => null,
+        'trade_name' => null, 'contact_position' => '', 'contact_phone' => '', 'validation_reference' => null,
     ]))->assertCreated()
         ->assertJsonPath('data.trade_name', null)
+        ->assertJsonPath('data.contact_position', null)
         ->assertJsonPath('data.contact_phone', null)
         ->assertJsonPath('data.validation_reference', null);
 });
@@ -127,6 +131,7 @@ it('validates the company without writing it', function (array $overrides, strin
     'long contact name' => [['contact_name' => str_repeat('n', 121)], 'contact_name'],
     'missing contact email' => [['contact_email' => null], 'contact_email'],
     'invalid contact email' => [['contact_email' => 'no-es-correo'], 'contact_email'],
+    'position too long' => [['contact_position' => str_repeat('a', 121)], 'contact_position'],
     'phone with letters' => [['contact_phone' => '899-CALL-NOW'], 'contact_phone'],
     'phone too short' => [['contact_phone' => '899 123 45'], 'contact_phone'],
     'phone too long' => [['contact_phone' => str_repeat('1', 21)], 'contact_phone'],
@@ -146,7 +151,7 @@ it('accepts every sector of the SCIAN catalog (CA-04)', function () {
 
     foreach (EconomicSector::values() as $index => $sector) {
         $this->browserRequest('POST', '/api/companies', companyPayload([
-            'sector_code' => $sector, 'rfc' => sprintf('SEC0101%02dAB1', $index + 1),
+            'sector_code' => $sector, 'rfc' => sprintf('SEC0101%02dAB1', $index + 1), 'contact_email' => "sector{$index}@example.test",
         ]))->assertCreated()->assertJsonPath('data.sector_code', $sector);
     }
 });
@@ -304,4 +309,90 @@ it('rejects anonymous requests and requires CSRF to write', function () {
     signInSecretary($this);
     $this->browserRequest('POST', '/api/companies', companyPayload(), csrf: false)->assertStatus(419);
     expect(Company::count())->toBe(0);
+});
+
+describe('cuenta del contacto (T-S8-12)', function () {
+    it('creates the company account with the contact name and email and emails the setup link', function () {
+        Notification::fake();
+        signInSecretary($this);
+
+        $response = $this->browserRequest('POST', '/api/companies', companyPayload(['contact_email' => '  DUAL@ManuGolfo.test ']))
+            ->assertCreated()
+            ->assertHeader('Cache-Control', 'no-store, private')
+            ->assertJsonPath('data.contact_email', 'dual@manugolfo.test')
+            ->assertJsonPath('setup_delivery', 'sent')
+            ->assertJsonMissingPath('setup_url');
+
+        $account = User::query()->where('email', 'dual@manugolfo.test')->sole();
+        expect($account->role)->toBe(UserRole::COMPANY)
+            ->and($account->company_id)->toBe($response->json('data.id'))
+            ->and($account->name)->toBe('Lucía Herrera')
+            ->and($account->password_setup_required)->toBeTrue()
+            ->and($account->created_by)->toBe($this->secretary->id);
+        Notification::assertSentTo($account, SetInitialPassword::class);
+        Notification::assertCount(1);
+    });
+
+    it('returns the setup link to share instead of emailing it with manual delivery (HU-S2-01)', function () {
+        Notification::fake();
+        signInSecretary($this);
+
+        $response = $this->browserRequest('POST', '/api/companies', companyPayload(['delivery_method' => 'manual']))
+            ->assertCreated()->assertJsonPath('setup_delivery', 'manual')->assertJsonMissingPath('data.delivery_method');
+
+        expect($response->json('setup_url'))->toStartWith(rtrim(config('app.frontend_url'), '/').'/set-initial-password?');
+        Notification::assertNothingSent();
+    });
+
+    it('registers nothing when the contact email already belongs to an account, ignoring case', function () {
+        Notification::fake();
+        Institution::factory()->create();
+        User::factory()->role(UserRole::INSTITUTION)->create(['email' => 'dual@manugolfo.test']);
+        signInSecretary($this);
+
+        $this->browserRequest('POST', '/api/companies', companyPayload(['contact_email' => 'DUAL@manugolfo.test']))
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors(['contact_email' => 'El correo ya está registrado en otra cuenta.']);
+
+        $this->assertDatabaseCount('companies', 0);
+        Notification::assertNothingSent();
+    });
+
+    it('rolls the company back when the email is taken after validation', function () {
+        Notification::fake();
+        signInSecretary($this);
+        $dispatcher = Company::getEventDispatcher();
+        Company::setEventDispatcher(clone $dispatcher);
+
+        try {
+            // El FormRequest ya pasó: solo la restricción de la base puede detectar este choque.
+            Company::created(fn () => User::factory()->create(['email' => 'dual@manugolfo.test']));
+            $this->browserRequest('POST', '/api/companies', companyPayload())
+                ->assertUnprocessable()
+                ->assertJsonValidationErrors(['contact_email' => 'El correo ya está registrado en otra cuenta.']);
+        } finally {
+            Company::setEventDispatcher($dispatcher);
+        }
+
+        $this->assertDatabaseCount('companies', 0);
+        Notification::assertNothingSent();
+    });
+
+    it('validates the delivery method and never creates accounts or sends links when editing', function () {
+        Notification::fake();
+        signInSecretary($this);
+
+        $this->browserRequest('POST', '/api/companies', companyPayload(['delivery_method' => 'whatsapp']))
+            ->assertUnprocessable()->assertJsonValidationErrors(['delivery_method' => 'El método de entrega debe ser email o manual.']);
+        $id = $this->browserRequest('POST', '/api/companies', companyPayload())->assertCreated()->json('data.id');
+
+        $this->browserRequest('PUT', '/api/companies/'.$id, companyPayload(['delivery_method' => 'manual']))
+            ->assertUnprocessable()->assertJsonValidationErrors(['delivery_method' => 'Editar la empresa no envía enlaces: usa «Reenviar enlace».']);
+        $this->browserRequest('PUT', '/api/companies/'.$id, companyPayload(['contact_name' => 'Otra persona', 'contact_email' => 'nuevo@manugolfo.test']))
+            ->assertOk()->assertJsonMissingPath('setup_delivery');
+
+        $account = User::query()->where('company_id', $id)->sole();
+        expect($account->email)->toBe('dual@manugolfo.test')->and($account->name)->toBe('Lucía Herrera');
+        Notification::assertCount(1);
+    });
 });

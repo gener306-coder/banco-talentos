@@ -146,6 +146,18 @@
   .story-header { max-width: var(--content-readable); margin: 0 auto; }
   .story-header h2 { margin: 0 0 0.4rem; font-size: clamp(1.6rem, 4vw, 2.1rem); line-height: 1.15; }
   .story-header p { margin: 0; }
+  /* Orden del feed (T-S9-03): control segmentado de dos opciones y, al azar, otra mezcla. */
+  .story-toolbar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 0.6rem 1rem; max-width: var(--content-readable); margin: 1.25rem auto 0; }
+  .segmented { display: inline-flex; gap: 0.2rem; margin: 0; padding: 0.2rem; border: 1px solid var(--border); border-radius: 999px; background: var(--surface); }
+  .segmented-option { position: relative; margin: 0; font-weight: 600; cursor: pointer; }
+  .segmented-option input { position: absolute; inset: 0; width: 100%; height: 100%; margin: 0; opacity: 0; cursor: pointer; }
+  .segmented-option span { display: inline-flex; align-items: center; gap: 0.35rem; min-height: 2.25rem; padding: 0.35rem 0.95rem; border-radius: 999px; color: var(--text); font-size: 0.92rem; transition: background 150ms ease-out, color 150ms ease-out; }
+  .segmented-option input:checked + span { background: var(--accent-fill); color: var(--on-accent); }
+  .segmented-option input:focus-visible + span { outline: 3px solid var(--focus-ring); outline-offset: 2px; }
+  .story-reshuffle { display: inline-flex; align-items: center; gap: 0.35rem; font-weight: 600; }
+  @media (hover: hover) { .segmented-option input:not(:checked):hover + span { background: var(--tint); color: var(--accent); } }
+  @media (prefers-reduced-motion: reduce) { .segmented-option span { transition: none; } }
+  @media (prefers-contrast: more) { .segmented { border-color: var(--border-strong); } }
   .story { display: grid; gap: 1rem; scroll-margin-top: 6rem; }
   .story:focus { outline: none; }
   .story-byline { display: flex; align-items: center; gap: 0.7rem; }
@@ -172,8 +184,18 @@
   .spotlight button.spotlight-poster { position: relative; display: block; overflow: hidden; width: 100%; aspect-ratio: 16 / 9; margin: 0; padding: 0; border: 0; border-radius: 1rem; background: var(--media-backdrop); color: var(--on-media); }
   .spotlight button.spotlight-poster:focus-visible { outline: 3px solid var(--focus-ring); outline-offset: -3px; }
   .spotlight-poster img { display: block; width: 100%; height: 100%; object-fit: cover; transition: transform 500ms var(--spring); }
+  /* Previsualización con el cursor encima (T-S9-03): aparece cuando ya se reproduce, sin cuadro negro mientras carga. */
+  .spotlight-poster video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; opacity: 0; transition: opacity 200ms ease-out; }
+  .spotlight-poster[data-playing='true'] video { opacity: 1; }
+  .spotlight-poster[data-playing='true'] .spotlight-play { opacity: 0; }
+  /* Relevo del grupo (T-S9-03): cada historia nueva entra girando como un dado, hacia arriba o hacia abajo. */
+  .spotlight-slide[data-roll] { animation: 560ms var(--spring) var(--roll-delay, 0ms) both; transform-origin: 50% 50% -4rem; }
+  .spotlight-slide[data-roll='up'] { animation-name: spotlight-roll-up; }
+  .spotlight-slide[data-roll='down'] { animation-name: spotlight-roll-down; }
+  @keyframes spotlight-roll-up { from { opacity: 0; transform: perspective(60rem) rotateX(-90deg); } 40% { opacity: 1; } to { opacity: 1; transform: none; } }
+  @keyframes spotlight-roll-down { from { opacity: 0; transform: perspective(60rem) rotateX(90deg); } 40% { opacity: 1; } to { opacity: 1; transform: none; } }
   .spotlight-play { position: absolute; top: 50%; left: 50%; display: grid; place-items: center; width: 4rem; height: 4rem; margin: -2rem 0 0 -2rem; border-radius: 50%;
-    background: color-mix(in srgb, var(--media-backdrop) 55%, transparent); -webkit-backdrop-filter: blur(20px) saturate(180%); backdrop-filter: blur(20px) saturate(180%); transition: transform 300ms var(--spring); }
+    background: color-mix(in srgb, var(--media-backdrop) 55%, transparent); -webkit-backdrop-filter: blur(20px) saturate(180%); backdrop-filter: blur(20px) saturate(180%); transition: transform 300ms var(--spring), opacity 200ms ease-out; }
   .spotlight-play .icon { width: 1.5rem; height: 1.5rem; }
   .spotlight-duration { position: absolute; right: 0.6rem; bottom: 0.6rem; padding: 0.1rem 0.45rem; border-radius: 0.35rem; background: color-mix(in srgb, var(--media-backdrop) 62%, transparent); font-size: 0.78rem; font-weight: 600; font-variant-numeric: tabular-nums; }
   .spotlight-footer { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 0.5rem 1rem; margin-top: 0.8rem; }
@@ -197,7 +219,8 @@
     .spotlight button.spotlight-control:hover { background: var(--tint-hover); }
   }
   @media (prefers-reduced-motion: reduce) {
-    .spotlight-poster img, .spotlight-play, .spotlight-dot::before { transition: none; }
+    .spotlight-poster img, .spotlight-play, .spotlight-dot::before, .spotlight-poster video { transition: none; }
+    .spotlight-slide[data-roll] { animation: none; }
     .spotlight-poster:hover img, .spotlight-poster:hover .spotlight-play { transform: none; }
   }
   @media (prefers-reduced-transparency: reduce) {
@@ -209,10 +232,5 @@
     .spotlight button.spotlight-dot { width: 1.1rem; }
   }
 
-  /* Franja del buscador de talento (HU-S9-05). */
-  .talent-stories, .institutions a.talent-stories { display: flex; align-items: center; gap: 0.6rem; margin: 0 0 1.25rem; padding: 0.7rem 0.9rem; border-radius: 0.75rem; background: var(--tint); color: var(--text); text-decoration: none; }
-  .talent-stories > span { flex: 1; min-width: 0; }
-  .talent-stories strong { flex: none; color: var(--accent); font-weight: 600; }
-  .talent-stories .icon { flex: none; color: var(--accent); }
-  @media (hover: hover) { .talent-stories:hover, .institutions a.talent-stories:hover { background: var(--tint-hover); } }
+
 }

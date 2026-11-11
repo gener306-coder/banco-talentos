@@ -48,10 +48,10 @@ beforeEach(() => {
 afterEach(() => vi.unstubAllGlobals())
 
 describe('buscador de talento HU-S4-05', () => {
-  it('enlaza a las Historias del Dual sin relacionarlas con los perfiles (HU-S9-05 CA-03)', async () => {
+  it('no repite la entrada a las Historias del Dual en el buscador (T-S9-02)', async () => {
     renderApp()
-    const link = await screen.findByRole('link', { name: /Alumnos que ya vivieron el Dual/ })
-    expect(link).toHaveAttribute('href', '/promocion')
+    await screen.findByRole('heading', { name: 'Buscar talento' })
+    expect(screen.queryByRole('link', { name: /Historias|Ver historias/ })).not.toBeInTheDocument()
   })
 
   it('ofrece el buscador a COMPANY desde el inicio y lo niega a otros roles (CA-01)', async () => {

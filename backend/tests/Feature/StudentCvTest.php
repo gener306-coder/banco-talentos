@@ -321,7 +321,8 @@ describe('certificaciones', function () {
         'no name' => [['name' => null], 'name', 'Escribe el nombre de la certificación.'],
         'contact in name' => [['name' => 'Ver en www.credly'], 'name', ContactInformation::MESSAGE],
         'no issuer' => [['issuer' => ''], 'issuer', 'Escribe quién emitió la certificación.'],
-        'future' => [['issued_on' => now()->addDay()->toDateString(), 'expires_on' => null], 'issued_on', 'La fecha de emisión no puede ser futura.'],
+        // Las fechas relativas se calculan al ejecutar la prueba, con el reloj de la aplicación, y no al recolectar el dataset.
+        'future' => [fn () => ['issued_on' => now()->addDay()->toDateString(), 'expires_on' => null], 'issued_on', 'La fecha de emisión no puede ser futura.'],
         'bad date' => [['issued_on' => '15/06/2025'], 'issued_on', 'La fecha de emisión no es válida.'],
         'expires before' => [['issued_on' => '2025-06-15', 'expires_on' => '2025-06-14'], 'expires_on', 'La vigencia no puede terminar antes de la fecha de emisión.'],
         'http url' => [['credential_url' => 'http://www.credly.com/badges/1'], 'credential_url', 'Escribe una dirección https:// pública y válida.'],
@@ -424,7 +425,7 @@ describe('proyectos', function () {
         'url in description' => [['description' => 'Código en https://github.com/ana/inventario'], 'description', ContactInformation::MESSAGE],
         'email in role' => [['role' => 'ana@correo.com'], 'role', ContactInformation::MESSAGE],
         'phone in title' => [['title' => 'Llamar 8341234567'], 'title', ContactInformation::MESSAGE],
-        'future year' => [['year' => now()->year + 1], 'year', 'El año debe estar entre 1950 y el año actual.'],
+        'future year' => [fn () => ['year' => now()->year + 1], 'year', 'El año debe estar entre 1950 y el año actual.'],
         'url field' => [['url' => 'https://github.com/ana'], '', 'El proyecto no es válido.'],
     ]);
 });

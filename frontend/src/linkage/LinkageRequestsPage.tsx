@@ -88,7 +88,14 @@ export function LinkageRequestsPage() {
                           </span>
                         </th>
                         <td><Link to={`/opportunities/${item.opportunity.id}`}>{item.opportunity.title}</Link></td>
-                        <td>{item.institution.name}<a className="linkage-profile-meta" href={`mailto:${item.institution.contact_email}`}>{item.institution.contact_email}</a></td>
+                        <td>
+                          {item.institution.name}
+                          {item.institution.contact_name && (
+                            <span className="linkage-profile-meta">{[item.institution.contact_name, item.institution.contact_position].filter(Boolean).join(' · ')}</span>
+                          )}
+                          <a className="linkage-profile-meta" href={`mailto:${item.institution.contact_email}`} target="_blank" rel="noopener noreferrer">{item.institution.contact_email}</a>
+                          {item.institution.contact_phone && <a className="linkage-profile-meta" href={`tel:${item.institution.contact_phone.replace(/[^\d+]/g, '')}`}>{item.institution.contact_phone}</a>}
+                        </td>
                         <td>{dateFormat.format(new Date(item.created_at))}</td>
                         <td>
                           <LinkageStatus status={item.status} />

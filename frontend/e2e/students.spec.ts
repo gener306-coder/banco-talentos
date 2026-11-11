@@ -215,7 +215,7 @@ test('HU-S3-02: la institución guarda el NSS y sube y descarga el comprobante d
   await openFromRoster(page, surname)
   const studentId = new URL(page.url()).pathname.split('/').pop()!
 
-  const security = page.getByRole('region', { name: 'Seguro Facultativo (IMSS)' })
+  const security = page.getByRole('region', { name: 'Seguro del alumno' })
   await expect(security.getByText('Aún no hay comprobante.')).toBeVisible()
 
   // NSS: se agrupa al escribir y se envía solo con dígitos.
@@ -223,11 +223,11 @@ test('HU-S3-02: la institución guarda el NSS y sube y descarga el comprobante d
   await field.fill(`${nss.slice(0, 4)}-${nss.slice(4)}`)
   await expect(field).toHaveValue(`${nss.slice(0, 4)} ${nss.slice(4, 8)} ${nss.slice(8)}`)
   const savedNss = page.waitForResponse((response) => response.url().endsWith(`/api/students/${studentId}/social-security`) && response.request().method() === 'PUT')
-  await security.getByRole('button', { name: 'Guardar NSS' }).click()
+  await security.getByRole('button', { name: 'Guardar seguro' }).click()
   const nssResponse = await savedNss
   expect(nssResponse.status()).toBe(200)
-  expect(nssResponse.request().postDataJSON()).toEqual({ nss })
-  await expect(security.getByText('NSS guardado correctamente.')).toBeVisible()
+  expect(nssResponse.request().postDataJSON()).toEqual({ insurance_type: 'IMSS', nss })
+  await expect(security.getByText('Seguro guardado correctamente.')).toBeVisible()
 
   // Comprobante: subida multipart al disco privado.
   await security.getByLabel('Archivo PDF').setInputFiles({ name: `Vigencia ${suffix}.pdf`, mimeType: 'application/pdf', buffer: pdf })
@@ -245,7 +245,7 @@ test('HU-S3-02: la institución guarda el NSS y sube y descarga el comprobante d
   const downloading = page.waitForEvent('download')
   await security.getByRole('button', { name: 'Descargar comprobante' }).click()
   const download = await downloading
-  expect(download.suggestedFilename()).toBe('comprobante-imss.pdf')
+  expect(download.suggestedFilename()).toBe('comprobante-seguro.pdf')
   const stream = await download.createReadStream()
   const chunks: Buffer[] = []
   for await (const chunk of stream) chunks.push(chunk as Buffer)

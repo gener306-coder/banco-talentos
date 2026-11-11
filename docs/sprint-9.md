@@ -292,6 +292,33 @@ Los videos son testimonios de alumnos que están o estuvieron en el Dual en una 
 
 ---
 
+## Afinaciones
+
+### T-S9-02 — Historias del inicio sin repetirse y con vista al pasar el cursor
+
+**Estado:** Completada (10 de noviembre de 2026). Pedida por el responsable el mismo día.  
+**Rol:** `COMPANY`  
+**Cambia:** HU-S9-05 CA-03 y CA-04, y HU-S9-06 CA-04.
+
+- **Una sola entrada:** la empresa ya no ve la tarjeta «Historias del Dual» entre las secciones del inicio ni la franja de `/talent`. **Ver todas las historias** del carrusel lleva al feed. Administración y Secretaría conservan su tarjeta.
+- **Cursor encima:** tras 300 ms con el cursor sobre una portada del carrusel, la historia se reproduce sin sonido y en bucle, y el carrusel se detiene. Al salir vuelve a la portada. Solo responde al ratón, una historia a la vez. Con movimiento reducido o ahorro de datos solo se muestra la portada.
+- **Sin descargas de más:** el `<video>` existe solo mientras el cursor está encima o la vista previa está abierta.
+- **Se probó y se descartó:** una fila fija de 3 historias en lugar del carrusel. El responsable prefirió conservar el carrusel de HU-S9-06.
+
+### T-S9-03 — Historias al azar en el inicio y orden elegible en el feed
+
+**Estado:** Completada (10 de noviembre de 2026). Pedida por el responsable el mismo día.  
+**Rol:** `COMPANY` (inicio); `COMPANY`, `SECRETARY`, `ADMIN` (feed)  
+**Cambia:** HU-S9-05 CA-01 y HU-S9-06 CA-01.
+
+- **API:** `GET /api/promotional-videos` acepta `order=recent|random`. El azar exige `seed` (1 a 2 147 483 647) y ordena por `md5(public_id || seed)`: la misma semilla continúa la misma mezcla en cada página, sin repetir ni saltar historias. `first={public_id}` pone esa historia primero en cualquier orden. Sin `order`, el orden sigue siendo el más reciente.
+- **Inicio:** el carrusel toma 12 historias al azar de toda la galería, con una semilla nueva en cada visita, y muestra 5. Al dar la vuelta completa entra el siguiente grupo; con 5 o menos historias, el mismo grupo cambia de orden.
+- **Relevo:** las historias nuevas entran girando como un dado, alternando hacia arriba y hacia abajo, escalonadas 70 ms. El carrusel vuelve al inicio sin deslizarse, para que el giro sea la única transición. Con movimiento reducido cambian sin animación.
+- **Feed:** control segmentado **Más recientes** / **Al azar**. El orden vive en la URL (`/promocion?orden=azar`) y la semilla en la página, así que cada visita al azar trae otra mezcla. **Otra mezcla** pide una semilla nueva y vuelve a la primera página.
+- **Enlace del inicio:** `/promocion?video={public_id}` envía `first`, así que la historia abierta desde el carrusel aparece aunque por su orden estuviera en una página lejana. Elegir otro orden ya no la fija.
+
+---
+
 ## Sprint 10 (avance) — Despliegue en nube con infraestructura como código
 
 No forma parte de este Sprint; se detallará en `docs/sprint-10.md`. Se anota para que el Sprint 9 quede alineado:

@@ -44,7 +44,7 @@ export interface ReceivedLinkagePage {
   total: number
 }
 
-/** Detalle para evaluar la solicitud (CA-05); el seguro facultativo solo como indicador, sin NSS ni comprobante. */
+/** Detalle para evaluar la solicitud (CA-05); el seguro solo como indicador, sin el número ni el comprobante. */
 export interface ReceivedLinkageDetail extends ReceivedLinkage {
   message: string | null
   company: ReceivedLinkage['company'] & {
@@ -53,6 +53,7 @@ export interface ReceivedLinkageDetail extends ReceivedLinkage {
     sector_code: string
     state_code: string
     contact_name: string
+    contact_position: string | null
     contact_email: string
     contact_phone: string | null
   }
@@ -73,7 +74,7 @@ export interface ReceivedLinkageDetail extends ReceivedLinkage {
     state_code: string | null
     municipality: string | null
     can_relocate: boolean | null
-    social_security: { has_nss: boolean; has_document: boolean }
+    social_security: { insurance_type: 'IMSS' | 'OTHER'; insurer_name: string | null; has_number: boolean; has_document: boolean }
   }
   /** Respuesta (HU-S6-02 CA-05); quién respondió solo lo ve la institución. */
   responded_at: string | null
@@ -121,7 +122,7 @@ function detail(data: unknown): ReceivedLinkageDetail {
       (data.responded_by !== null && (!isObject(data.responded_by) || !isText(data.responded_by.name)))) return invalid()
   const { company, opportunity, student: person } = data
   if (!isObject(company) || !isText(company.legal_name) || !isOptionalText(company.trade_name) || !isText(company.sector_code) ||
-      !isStateCode(company.state_code) || !isText(company.contact_name) || !isText(company.contact_email) || !isOptionalText(company.contact_phone)) return invalid()
+      !isStateCode(company.state_code) || !isText(company.contact_name) || !isOptionalText(company.contact_position) || !isText(company.contact_email) || !isOptionalText(company.contact_phone)) return invalid()
   if (!isObject(opportunity) || !isPeriodType(opportunity.period_type) || !isPositiveInt(opportunity.period_number) ||
       typeof opportunity.can_relocate !== 'boolean' || !isStateCode(opportunity.state_code) || !isOptionalText(opportunity.municipality) ||
       !isText(opportunity.description) || !Array.isArray(opportunity.skills) ||
@@ -130,13 +131,14 @@ function detail(data: unknown): ReceivedLinkageDetail {
       (opportunity.min_level !== null && !isLanguageLevel(opportunity.min_level)) || typeof opportunity.is_active !== 'boolean') return invalid()
   if (!isObject(person) || !isOptionalBoolean(person.dual_available) || (person.state_code !== null && !isStateCode(person.state_code)) ||
       !isOptionalText(person.municipality) || !isOptionalBoolean(person.can_relocate) || !isObject(person.social_security) ||
-      typeof person.social_security.has_nss !== 'boolean' || typeof person.social_security.has_document !== 'boolean') return invalid()
+      (person.social_security.insurance_type !== 'IMSS' && person.social_security.insurance_type !== 'OTHER') ||
+      !isOptionalText(person.social_security.insurer_name) || typeof person.social_security.has_number !== 'boolean' || typeof person.social_security.has_document !== 'boolean') return invalid()
   return {
     ...base,
     message: data.message,
     company: {
       ...base.company, legal_name: company.legal_name, trade_name: company.trade_name, sector_code: company.sector_code,
-      state_code: company.state_code, contact_name: company.contact_name, contact_email: company.contact_email, contact_phone: company.contact_phone,
+      state_code: company.state_code, contact_name: company.contact_name, contact_position: company.contact_position, contact_email: company.contact_email, contact_phone: company.contact_phone,
     },
     opportunity: {
       ...base.opportunity, period_type: opportunity.period_type, period_number: opportunity.period_number, can_relocate: opportunity.can_relocate,
@@ -147,7 +149,10 @@ function detail(data: unknown): ReceivedLinkageDetail {
     student: {
       ...base.student, dual_available: person.dual_available, state_code: person.state_code as string | null,
       municipality: person.municipality, can_relocate: person.can_relocate,
-      social_security: { has_nss: person.social_security.has_nss, has_document: person.social_security.has_document },
+      social_security: {
+        insurance_type: person.social_security.insurance_type, insurer_name: person.social_security.insurer_name,
+        has_number: person.social_security.has_number, has_document: person.social_security.has_document,
+      },
     },
     responded_at: data.responded_at, response_message: data.response_message,
     responded_by: isObject(data.responded_by) ? { name: data.responded_by.name as string } : null,

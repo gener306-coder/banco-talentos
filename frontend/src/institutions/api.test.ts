@@ -1,7 +1,9 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { createInstitution, createInstitutionAccount, getInstitution, listInstitutions, resendInstitutionAccountSetup, setInstitutionStatus, startInstitutionPasswordReset, updateInstitution } from './api'
 
-const input = { name: 'Instituto Dual', cct: '09DIT0001A', contact_email: 'contacto@example.test' }
+const input = { name: 'Instituto Dual', cct: '09DIT0001A', contact_name: 'María López', contact_position: null, contact_email: 'contacto@example.test', contact_phone: null }
+const newInput = { ...input, delivery_method: 'email' as const }
+const setupUrl = 'http://localhost:5173/set-initial-password?email=contacto%40example.test&token=abc'
 const record = { ...input, id: 7, is_active: true, created_at: '2026-09-30T12:00:00Z', updated_at: '2026-09-30T12:00:00Z' }
 const fetchMock = vi.fn<typeof fetch>()
 
@@ -39,7 +41,6 @@ describe('cliente de instituciones', () => {
   })
 
   it.each([
-    ['POST', '/api/institutions', () => createInstitution({ ...input, ...{ is_active: false, id: 999 } }), input],
     ['PUT', '/api/institutions/7', () => updateInstitution('7', { ...input, ...{ is_active: false } }), input],
     ['PATCH', '/api/institutions/7/status', () => setInstitutionStatus('7', false), { is_active: false }],
   ] as const)('envía %s con los campos exactos y el token CSRF recién obtenido', async (method, path, action, body) => {
@@ -54,40 +55,74 @@ describe('cliente de instituciones', () => {
     expect(new Headers(options?.headers).get('Content-Type')).toBe('application/json')
   })
 
+  it('registra la institución con su responsable y devuelve si se envió el enlace (T-S8-11)', async () => {
+    fetchMock.mockImplementationOnce(csrfResponse)
+      .mockResolvedValueOnce(Response.json({ data: { ...record, contact_phone: '834 123 4567' }, setup_delivery: 'sent', setup_url: 'https://ignorado' }))
+    await expect(createInstitution({ ...newInput, contact_phone: '834 123 4567', ...{ is_active: false, id: 999 } }))
+      .resolves.toEqual({ institution: { ...record, contact_phone: '834 123 4567' }, setupDelivery: 'sent' })
+    expect(fetchMock.mock.calls[1][0]).toBe('/api/institutions')
+    expect(JSON.parse(fetchMock.mock.calls[1][1]?.body as string)).toEqual({ ...newInput, contact_phone: '834 123 4567' })
+  })
+
+  it('devuelve el enlace para compartir solo con la entrega manual (HU-S2-01, T-S8-11)', async () => {
+    fetchMock.mockImplementationOnce(csrfResponse)
+      .mockResolvedValueOnce(Response.json({ data: record, setup_delivery: 'manual', setup_url: setupUrl }))
+    await expect(createInstitution({ ...newInput, delivery_method: 'manual' }))
+      .resolves.toEqual({ institution: record, setupDelivery: 'manual', setupLink: setupUrl })
+    expect(JSON.parse(fetchMock.mock.calls[1][1]?.body as string)).toMatchObject({ delivery_method: 'manual' })
+  })
+
+  it('envía un puesto y un teléfono vacíos como null', async () => {
+    fetchMock.mockImplementationOnce(csrfResponse).mockResolvedValueOnce(Response.json({ data: record }))
+    await updateInstitution('7', { ...input, contact_position: '', contact_phone: '' })
+    expect(JSON.parse(fetchMock.mock.calls[1][1]?.body as string)).toMatchObject({ contact_position: null, contact_phone: null })
+  })
+
+  it.each([
+    [{ data: record }],
+    [{ data: record, setup_delivery: 'manual' }],
+    [{ data: record, setup_delivery: 'manual', setup_url: 'https://otro.example/phishing' }],
+    [{ data: { ...record, contact_name: 7 }, setup_delivery: 'sent' }],
+    [{ data: { ...record, contact_phone: 8341234567 }, setup_delivery: 'sent' }],
+  ])('rechaza un alta incompatible con el contrato', async (body) => {
+    fetchMock.mockImplementationOnce(csrfResponse).mockResolvedValueOnce(Response.json(body))
+    await expect(createInstitution(newInput)).rejects.toMatchObject({ status: 502 })
+  })
+
   it('conserva los errores 422 por campo para mostrarlos en el formulario', async () => {
     const errors = { cct: ['La Clave de Centro de Trabajo ya está registrada.'], contact_email: ['Correo inválido.'] }
     fetchMock.mockImplementationOnce(csrfResponse)
       .mockResolvedValueOnce(Response.json({ errors }, { status: 422 }))
-    await expect(createInstitution(input)).rejects.toMatchObject({ status: 422, errors })
+    await expect(createInstitution(newInput)).rejects.toMatchObject({ status: 422, errors })
   })
 
   it('mantiene el código 422 aunque la respuesta de errores sea inválida', async () => {
     fetchMock.mockImplementationOnce(csrfResponse)
       .mockResolvedValueOnce(new Response('invalid JSON', { status: 422 }))
-    await expect(createInstitution(input)).rejects.toMatchObject({ status: 422, errors: {} })
+    await expect(createInstitution(newInput)).rejects.toMatchObject({ status: 422, errors: {} })
   })
 
   it.each([401, 403, 419, 500])('propaga %i sin repetir una escritura', async (status) => {
     fetchMock.mockImplementationOnce(csrfResponse).mockResolvedValueOnce(new Response(null, { status }))
-    await expect(createInstitution(input)).rejects.toMatchObject({ status })
+    await expect(createInstitution(newInput)).rejects.toMatchObject({ status })
     expect(fetchMock).toHaveBeenCalledTimes(2)
   })
 
   it('no repite una escritura si se pierde la respuesta de red', async () => {
     fetchMock.mockImplementationOnce(csrfResponse).mockRejectedValueOnce(new TypeError('Failed to fetch'))
-    await expect(createInstitution(input)).rejects.toMatchObject({ status: 0 })
+    await expect(createInstitution(newInput)).rejects.toMatchObject({ status: 0 })
     expect(fetchMock).toHaveBeenCalledTimes(2)
   })
 
   it('no envía datos si falla la preparación CSRF', async () => {
     fetchMock.mockResolvedValueOnce(new Response(null, { status: 503 }))
-    await expect(createInstitution(input)).rejects.toMatchObject({ status: 503 })
+    await expect(createInstitution(newInput)).rejects.toMatchObject({ status: 503 })
     expect(fetchMock).toHaveBeenCalledTimes(1)
   })
 
   it('no envía datos sin una cookie CSRF válida', async () => {
     fetchMock.mockResolvedValueOnce(new Response(null, { status: 204 }))
-    await expect(createInstitution(input)).rejects.toMatchObject({ status: 419 })
+    await expect(createInstitution(newInput)).rejects.toMatchObject({ status: 419 })
     expect(fetchMock).toHaveBeenCalledTimes(1)
   })
 

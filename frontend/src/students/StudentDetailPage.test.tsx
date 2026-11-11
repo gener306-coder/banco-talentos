@@ -20,7 +20,7 @@ const emptyProfile = { program: null, period_type: null, period_number: null, du
 const savedInput = { program: 'Ingeniería en Sistemas', period_type: 'semester', period_number: 6, dual_available: true, state_code: '28', municipality_code: '28041', can_relocate: false }
 const savedProfile = { ...savedInput, municipality: 'Victoria', pending_municipality: null }
 const detail = (profile: Record<string, unknown> = emptyProfile, identity: Record<string, unknown> = {}) => ({
-  data: { id: 3, enrollment_number: 'A-001', given_names: 'María Fernanda', first_surname: 'López', second_surname: 'García', is_active: true, created_at: '2026-10-13T12:00:00Z', ...identity, profile },
+  data: { id: 3, enrollment_number: 'A-001', given_names: 'María Fernanda', first_surname: 'López', second_surname: 'García', is_active: true, created_at: '2026-10-13T12:00:00Z', missing_data: [], ...identity, profile },
 })
 
 function Location() {
@@ -284,6 +284,23 @@ describe('baja lógica del alumno HU-S2-04', () => {
     expect(await within(section).findByText('El alumno no existe.')).toBeInTheDocument()
     expect(within(section).getByText('ACTIVO')).toBeInTheDocument()
     expect(screen.queryByText('Alumno inactivado correctamente.')).not.toBeInTheDocument()
+  })
+})
+
+describe('datos faltantes T-S8-09', () => {
+  it('muestra al principio exactamente lo que le falta al alumno', async () => {
+    apiMock.mockResolvedValueOnce(Response.json(detail(emptyProfile, { missing_data: ['municipality_code', 'insurance'] })))
+    renderApp()
+    const label = await screen.findByText('Datos faltantes:')
+    expect(label.closest('p')).toHaveTextContent('Datos faltantes: Municipio y Seguro (número o comprobante).')
+    expect(screen.getByRole('heading', { level: 2 }).nextElementSibling).toBe(label.closest('p'))
+  })
+
+  it('no muestra el aviso a un alumno completo', async () => {
+    apiMock.mockResolvedValueOnce(Response.json(detail()))
+    renderApp()
+    await profileForm()
+    expect(screen.queryByText('Datos faltantes:')).not.toBeInTheDocument()
   })
 })
 

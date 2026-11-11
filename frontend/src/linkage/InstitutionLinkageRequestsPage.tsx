@@ -1,6 +1,6 @@
 import { useCallback, useState } from 'react'
 import type { ReactNode } from 'react'
-import { Link, useLocation } from 'react-router'
+import { Link, useLocation, useSearchParams } from 'react-router'
 import { InstitutionRequestError } from '../institutions/InstitutionLayout'
 import { useApiRequest } from '../lib/useApiRequest'
 import { periodLabel } from '../students/catalogs'
@@ -38,8 +38,14 @@ export function InstitutionLinkageLayout({ title, children }: { title: string; c
  * todas las solicitudes del filtro vigente, no solo la página visible (HU-S7-02 CA-04).
  */
 export function InstitutionLinkageRequestsPage() {
-  const [page, setPage] = useState(1)
-  const [status, setStatus] = useState<Status | ''>('')
+  // T-S8-08: el estado vive en la URL para que el aviso del inicio llegue filtrado y el filtro sobreviva al volver del detalle.
+  const [searchParams, setSearchParams] = useSearchParams()
+  const statusParam = searchParams.get('status')
+  const status: Status | '' = LINKAGE_STATUSES.find((item) => item.value === statusParam)?.value ?? ''
+  // La página pertenece al filtro con el que se eligió: al cambiarlo vuelve a la 1 sin una consulta intermedia.
+  const [paging, setPaging] = useState({ status, page: 1 })
+  const page = paging.status === status ? paging.page : 1
+  const setPage = (value: number) => setPaging({ status, page: value })
   const load = useCallback((signal: AbortSignal) => listReceivedLinkages({ page, status }, signal), [page, status])
   const { data, loading, failure, refresh } = useApiRequest(load, institutionLinkageMessages)
   const downloadCsv = useCallback(() => downloadReceivedLinkagesCsv(status), [status])
@@ -53,7 +59,7 @@ export function InstitutionLinkageRequestsPage() {
           <div className="table-search-filter">
             <label htmlFor="institution-linkage-status-filter">Estado</label>
             <select id="institution-linkage-status-filter" value={status}
-              onChange={(event) => { setPage(1); setStatus(event.target.value as Status | '') }}>
+              onChange={(event) => { setSearchParams(event.target.value ? { status: event.target.value } : {}, { replace: true }) }}>
               <option value="">Todos los estados</option>
               {LINKAGE_STATUSES.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}
             </select>
@@ -94,7 +100,7 @@ export function InstitutionLinkageRequestsPage() {
                         <td>{dateFormat.format(new Date(item.created_at))}</td>
                         <td><LinkageStatus status={item.status} /></td>
                         <td>
-                          <Link to={`/institution/linkage-requests/${item.id}`} aria-label={`Ver la solicitud de ${item.company.name} para ${name}`}>Ver detalle</Link>
+                          <Link className="pill-link" to={`/institution/linkage-requests/${item.id}`} aria-label={`Ver la solicitud de ${item.company.name} para ${name}`}>Ver detalle<ChevronRightIcon /></Link>
                         </td>
                       </tr>
                     )

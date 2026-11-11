@@ -4,8 +4,8 @@ namespace App\Http\Requests;
 
 use App\Enums\EconomicSector;
 use App\Enums\MexicanState;
+use App\Rules\PhoneNumber;
 use App\Rules\Rfc;
-use Closure;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
@@ -45,14 +45,12 @@ class CompanyRequest extends FormRequest
                 Rule::exists('municipalities', 'code')->where('state_code', is_string($state) ? $state : ''),
             ],
             'contact_name' => ['required', 'string', 'max:120'],
+            'contact_position' => ['nullable', 'string', 'max:120'],
             'contact_email' => ['required', 'string', 'email', 'max:254'],
-            'contact_phone' => ['nullable', 'string', 'max:20', 'regex:/^\+?[\d\s().-]+$/', function (string $attribute, mixed $value, Closure $fail): void {
-                $digits = strlen(preg_replace('/\D/', '', (string) $value));
-                if ($digits < 10 || $digits > 15) {
-                    $fail('El teléfono debe tener entre 10 y 15 dígitos.');
-                }
-            }],
+            'contact_phone' => ['nullable', 'string', 'max:20', new PhoneNumber],
             'validation_reference' => ['nullable', 'string', 'max:60'],
+            // La edición no crea cuentas ni envía enlaces (T-S8-12); el alta lo permite en StoreCompanyRequest.
+            'delivery_method' => ['prohibited'],
         ];
     }
 
@@ -80,15 +78,17 @@ class CompanyRequest extends FormRequest
             'contact_name.required' => 'El nombre del contacto es obligatorio.',
             'contact_name.string' => 'El nombre del contacto no es válido.',
             'contact_name.max' => 'El nombre del contacto no debe superar 120 caracteres.',
+            'contact_position.string' => 'El puesto o departamento no es válido.',
+            'contact_position.max' => 'El puesto o departamento no debe superar 120 caracteres.',
             'contact_email.required' => 'El correo del contacto es obligatorio.',
             'contact_email.string' => 'Ingresa un correo de contacto válido.',
             'contact_email.email' => 'Ingresa un correo de contacto válido.',
             'contact_email.max' => 'El correo del contacto no debe superar 254 caracteres.',
             'contact_phone.string' => 'El teléfono no es válido.',
             'contact_phone.max' => 'El teléfono no debe superar 20 caracteres.',
-            'contact_phone.regex' => 'El teléfono solo admite dígitos, espacios, paréntesis, guiones y un «+» inicial.',
             'validation_reference.string' => 'El folio de validación no es válido.',
             'validation_reference.max' => 'El folio de validación no debe superar 60 caracteres.',
+            'delivery_method.prohibited' => 'Editar la empresa no envía enlaces: usa «Reenviar enlace».',
         ];
     }
 }

@@ -1,6 +1,6 @@
 import { useCallback, useState } from 'react'
 import type { FormEvent, MouseEvent } from 'react'
-import { Link, useLocation, useNavigate } from 'react-router'
+import { Link, useLocation, useNavigate, useSearchParams } from 'react-router'
 import { InstitutionRequestError } from '../institutions/InstitutionLayout'
 import { useApiRequest } from '../lib/useApiRequest'
 import { ChevronLeftIcon, ChevronRightIcon, PlusIcon, SearchIcon } from '../ui/icons'
@@ -17,15 +17,23 @@ import { StudentStatus } from './StudentStatus'
  * la columna «Acciones» de las demás tablas del sistema (HU-S8-01).
  */
 export function StudentsPage() {
-  const [page, setPage] = useState(1)
-  // HU-S8-01: la búsqueda se aplica al enviarla; el estado, al elegirlo. Ambos vuelven a la página 1.
+  // HU-S8-01: la búsqueda se aplica al enviarla; los filtros, al elegirlos. Todos vuelven a la página 1.
   const [query, setQuery] = useState('')
   const [draft, setDraft] = useState('')
-  const [status, setStatus] = useState<StudentStatusFilter | ''>('')
-  const load = useCallback((signal: AbortSignal) => listStudents({ page, q: query, status }, signal), [page, query, status])
+  // T-S8-09: los filtros viven en la URL para que el aviso del inicio llegue filtrado y sobrevivan al volver del detalle.
+  const [searchParams, setSearchParams] = useSearchParams()
+  const statusParam = searchParams.get('status')
+  const status: StudentStatusFilter | '' = statusParam === 'active' || statusParam === 'inactive' ? statusParam : ''
+  const missingData = searchParams.get('data') === 'missing'
+  // La página pertenece a los filtros con los que se eligió: al cambiarlos vuelve a la 1 sin una consulta intermedia.
+  const filters = `${status}|${missingData}`
+  const [paging, setPaging] = useState({ filters, page: 1 })
+  const page = paging.filters === filters ? paging.page : 1
+  const setPage = (value: number) => setPaging({ filters, page: value })
+  const load = useCallback((signal: AbortSignal) => listStudents({ page, q: query, status, missingData }, signal), [page, query, status, missingData])
   const { data, loading, failure, refresh } = useApiRequest(load, studentMessages)
   const navigate = useNavigate()
-  const filtered = query !== '' || status !== ''
+  const filtered = query !== '' || status !== '' || missingData
 
   function search(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -37,7 +45,16 @@ export function StudentsPage() {
     setPage(1)
     setDraft('')
     setQuery('')
-    setStatus('')
+    setSearchParams({}, { replace: true })
+  }
+
+  function setFilter(name: 'status' | 'data', value: string) {
+    setSearchParams((current) => {
+      const next = new URLSearchParams(current)
+      if (value) next.set(name, value)
+      else next.delete(name)
+      return next
+    }, { replace: true })
   }
 
   // Toda la fila abre el detalle con el puntero; el enlace «Ver detalle» sigue siendo el control accesible (CA-04).
@@ -77,10 +94,18 @@ export function StudentsPage() {
         <div className="table-search-filter">
           <label htmlFor="student-status-filter">Estado</label>
           <select id="student-status-filter" value={status}
-            onChange={(event) => { setPage(1); setStatus(event.target.value as StudentStatusFilter | '') }}>
+            onChange={(event) => setFilter('status', event.target.value)}>
             <option value="">Todos</option>
             <option value="active">Activos</option>
             <option value="inactive">Inactivos</option>
+          </select>
+        </div>
+        <div className="table-search-filter">
+          <label htmlFor="student-data-filter">Datos faltantes</label>
+          <select id="student-data-filter" value={missingData ? 'missing' : ''}
+            onChange={(event) => setFilter('data', event.target.value)}>
+            <option value="">Todos</option>
+            <option value="missing">Por completar</option>
           </select>
         </div>
         <button type="submit" className="secondary"><SearchIcon />Buscar</button>
@@ -90,7 +115,8 @@ export function StudentsPage() {
         : data && data.total === 0
           ? filtered
             ? <StateMessage kind="empty" icon={<SearchIcon />} title="Ningún alumno coincide con la búsqueda."
-              description={query ? `No hay alumnos cuya matrícula o nombre contenga «${query}» con el estado elegido.` : 'No hay alumnos con el estado elegido.'}
+              description={missingData ? 'No hay alumnos con datos faltantes que coincidan con los filtros.'
+                : query ? `No hay alumnos cuya matrícula o nombre contenga «${query}» con el estado elegido.` : 'No hay alumnos con el estado elegido.'}
               action={<button type="button" className="secondary" onClick={clearFilters}>Limpiar filtros</button>} />
             : <StateMessage kind="empty" icon={<SearchIcon />} title="Aún no hay alumnos registrados."
               description="Registra a tus alumnos con su matrícula y nombre. Estos datos son de uso exclusivo de tu institución."

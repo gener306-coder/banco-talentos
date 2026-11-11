@@ -35,7 +35,7 @@ class StoreStudentSocialSecurityDocumentRequest extends FormRequest
     public function messages(): array
     {
         return [
-            'document.required' => 'Selecciona el comprobante de vigencia del IMSS.',
+            'document.required' => 'Selecciona el comprobante de vigencia del seguro.',
             'document.file' => 'No se pudo recibir el comprobante. Verifica que pese como máximo 2 MB.',
             'document.uploaded' => 'No se pudo recibir el comprobante. Verifica que pese como máximo 2 MB.',
             'document.extensions' => 'El comprobante debe ser un archivo PDF.',

@@ -6,7 +6,7 @@ import { useApiRequest } from '../lib/useApiRequest'
 import { MAX_PERIOD, MEXICAN_STATES } from '../students/catalogs'
 import { CV_LANGUAGES, displayName, LANGUAGE_LEVELS } from '../students/cvCatalogs'
 import { MunicipalityCombobox } from '../students/MunicipalityCombobox'
-import { ChevronLeftIcon, ChevronRightIcon, CloseIcon, PlusIcon, SearchIcon, VideoIcon } from '../ui/icons'
+import { ChevronLeftIcon, ChevronRightIcon, CloseIcon, PlusIcon, SearchIcon } from '../ui/icons'
 import { LoadingState, StateMessage } from '../ui/StateMessage'
 import { emptyFilters, MAX_SKILL_FILTERS, RADII_KM, searchTalent, talentMessages } from './api'
 import type { TalentFilters } from './api'
@@ -94,10 +94,6 @@ export function TalentSearchPage() {
       </nav>
       <h2 id="talent-title">Buscar talento</h2>
       <p>Perfiles anónimos de alumnos activos. Las instituciones administran su información; aquí no se muestran datos personales.</p>
-      {/* HU-S9-05: sin relación con los perfiles, que son anónimos. */}
-      <Link className="talent-stories" to="/promocion">
-        <VideoIcon /><span>Alumnos que ya vivieron el Dual cuentan su experiencia.</span><strong>Ver historias</strong><ChevronRightIcon />
-      </Link>
       <div className="talent-layout">
         <form className="talent-filters" role="search" aria-label="Filtros de búsqueda" onSubmit={submit} noValidate>
           <fieldset>

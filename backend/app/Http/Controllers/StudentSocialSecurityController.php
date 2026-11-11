@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\InsuranceType;
 use App\Http\Controllers\Concerns\FindsOwnedStudent;
 use App\Http\Requests\StoreStudentSocialSecurityDocumentRequest;
 use App\Http\Requests\UpdateStudentSocialSecurityRequest;
@@ -19,7 +20,7 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
 use Throwable;
 
 /**
- * Seguro facultativo (HU-S3-02): NSS y comprobante del IMSS de un alumno propio. Es resguardo
+ * Seguro del alumno (HU-S3-02, T-S8-07): IMSS u otro seguro, con su número y su comprobante. Es resguardo
  * exclusivo de la institución: nada de esto aparece en el padrón, el detalle ni el perfil público.
  */
 class StudentSocialSecurityController extends Controller
@@ -29,7 +30,7 @@ class StudentSocialSecurityController extends Controller
     /** Disco privado (storage/app/private): no se sirve por HTTP; solo se descarga por este controlador. */
     private const DISK = 'local';
 
-    private const DOWNLOAD_NAME = 'comprobante-imss.pdf';
+    private const DOWNLOAD_NAME = 'comprobante-seguro.pdf';
 
     public function show(Request $request, string $student): JsonResponse
     {
@@ -39,14 +40,24 @@ class StudentSocialSecurityController extends Controller
     public function update(UpdateStudentSocialSecurityRequest $request, string $student): JsonResponse
     {
         $record = $this->owned($request, $student, ['socialSecurity']);
-        $nss = $request->validated('nss');
+        $security = $this->recordFor($record);
+        $type = InsuranceType::from($request->validated('insurance_type'));
+        $nss = $request->validated('nss') ?: null;
 
-        if ($this->nssTaken($record, $nss)) {
+        // Basta el número o el comprobante; quien cambia desde otro seguro puede capturar el NSS después.
+        if ($type === InsuranceType::IMSS && $nss === null && $security->insurance_type === InsuranceType::IMSS && $security->document_path === null) {
+            throw ValidationException::withMessages(['nss' => ['Captura el NSS o sube el comprobante.']]);
+        }
+
+        if ($nss !== null && $this->nssTaken($record, $nss)) {
             $this->duplicateNss();
         }
 
-        $security = $this->recordFor($record);
+        // Los datos del tipo anterior no se conservan: el seguro vigente es uno solo.
+        $security->insurance_type = $type;
         $security->nss = $nss;
+        $security->insurer_name = $request->validated('insurer_name');
+        $security->policy_number = $request->validated('policy_number');
 
         try {
             DB::transaction(fn () => $security->save());
@@ -97,7 +108,7 @@ class StudentSocialSecurityController extends Controller
         $security = $this->owned($request, $student, ['socialSecurity'])->socialSecurity;
         $path = $security?->document_path;
 
-        abort_if($path === null || ! Storage::disk(self::DISK)->exists($path), 404, 'El alumno no tiene comprobante del IMSS.');
+        abort_if($path === null || ! Storage::disk(self::DISK)->exists($path), 404, 'El alumno no tiene comprobante del seguro.');
 
         return Storage::disk(self::DISK)->download($path, self::DOWNLOAD_NAME, [
             'Content-Type' => 'application/pdf',
@@ -152,7 +163,10 @@ class StudentSocialSecurityController extends Controller
         ];
 
         return response()->json(['data' => [
+            'insurance_type' => $security?->insurance_type->value ?? InsuranceType::IMSS->value,
             'nss' => $security?->nss,
+            'insurer_name' => $security?->insurer_name,
+            'policy_number' => $security?->policy_number,
             'document' => $document,
         ]])->header('Cache-Control', 'no-store, private');
     }

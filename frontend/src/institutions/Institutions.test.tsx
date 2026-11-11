@@ -8,7 +8,10 @@ const institution = {
   id: 27,
   name: 'Instituto Tecnológico del Norte',
   cct: '19EIT0001A',
+  contact_name: 'María López',
+  contact_position: null,
   contact_email: 'contacto@example.test',
+  contact_phone: null,
   is_active: true,
   created_at: '2026-09-01T12:00:00.000000Z',
   updated_at: '2026-09-01T12:00:00.000000Z',
@@ -38,16 +41,24 @@ function deferredResponse() {
   return { promise, resolve }
 }
 
+const RESPONSIBLE = 'María López'
+// El alta lo llama «Correo de la persona responsable»; la edición, «Correo de contacto» (T-S8-11).
+const EMAIL = /^Correo de /
+/** Respuesta del alta: la cuenta del responsable se creó y su enlace salió por correo (T-S8-11). */
+const created = (delivery = 'sent') => Response.json({ data: institution, setup_delivery: delivery }, { status: 201 })
+
 function fillForm(values = fields) {
   fireEvent.change(screen.getByLabelText('Nombre'), { target: { value: values.name } })
   fireEvent.change(screen.getByLabelText('CCT'), { target: { value: values.cct } })
-  fireEvent.change(screen.getByLabelText('Correo de contacto'), { target: { value: values.contact_email } })
+  const responsible = screen.queryByLabelText('Nombre de la persona responsable')
+  if (responsible) fireEvent.change(responsible, { target: { value: RESPONSIBLE } })
+  fireEvent.change(screen.getByLabelText(EMAIL), { target: { value: values.contact_email } })
 }
 
 function expectFormValues(values = fields) {
   expect(screen.getByLabelText('Nombre')).toHaveValue(values.name)
   expect(screen.getByLabelText('CCT')).toHaveValue(values.cct)
-  expect(screen.getByLabelText('Correo de contacto')).toHaveValue(values.contact_email)
+  expect(screen.getByLabelText(EMAIL)).toHaveValue(values.contact_email)
 }
 
 function writes() {
@@ -91,7 +102,7 @@ describe('acceso administrativo a instituciones', () => {
   it.each(otherRoles)('no ofrece gestión de instituciones a %s en su sesión', async (role) => {
     sessionUser = { ...admin, role }
     renderApp('/')
-    await screen.findByText(admin.email)
+    await screen.findByRole('heading', { name: `Hola, ${admin.name}` })
     expect(screen.queryByRole('link', { name: 'Instituciones' })).not.toBeInTheDocument()
     expect(apiMock).not.toHaveBeenCalled()
   })
@@ -208,22 +219,24 @@ describe('consulta de instituciones', () => {
 })
 
 describe('registro y edición de instituciones', () => {
-  it('exige los tres campos y un correo válido antes de enviar el formulario', async () => {
+  it('exige los campos obligatorios y un correo válido antes de enviar el formulario', async () => {
     renderApp('/institutions/new')
     const submit = await screen.findByRole('button', { name: 'Crear institución' })
     fireEvent.click(submit)
     expect(screen.getByLabelText('Nombre')).toBeInvalid()
     expect(screen.getByLabelText('CCT')).toBeInvalid()
-    expect(screen.getByLabelText('Correo de contacto')).toBeInvalid()
+    expect(screen.getByLabelText('Nombre de la persona responsable')).toBeInvalid()
+    expect(screen.getByLabelText('Teléfono (opcional)')).toBeValid()
+    expect(screen.getByLabelText(EMAIL)).toBeInvalid()
     expect(apiMock).not.toHaveBeenCalled()
     fillForm({ ...fields, contact_email: 'sin-arroba' })
     fireEvent.click(submit)
-    expect(screen.getByLabelText('Correo de contacto')).toBeInvalid()
+    expect(screen.getByLabelText(EMAIL)).toBeInvalid()
     expect(apiMock).not.toHaveBeenCalled()
   })
 
   it('registra únicamente los campos acordados y muestra el estado activo devuelto por el servidor', async () => {
-    apiMock.mockResolvedValueOnce(Response.json({ data: institution }, { status: 201 }))
+    apiMock.mockResolvedValueOnce(created())
       .mockResolvedValueOnce(Response.json({ data: institution }))
     renderApp('/institutions/new')
     await screen.findByRole('button', { name: 'Crear institución' })
@@ -231,13 +244,65 @@ describe('registro y edición de instituciones', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Crear institución' }))
     expect(await screen.findByText(institution.name)).toBeInTheDocument()
     expect(screen.getByText('ACTIVA')).toBeInTheDocument()
-    expect(screen.getByText('Institución registrada correctamente.')).toHaveAttribute('role', 'status')
+    expect(screen.getByText('Institución registrada. Enviamos a contacto@example.test el enlace para establecer su contraseña.')).toHaveAttribute('role', 'status')
     expect(screen.getByLabelText('Ruta actual').textContent).toBe('/institutions/27')
     expect(writes()).toHaveLength(1)
     const [path, options] = writes()[0]
     expect(path).toBe('/api/institutions')
     expect(options?.method).toBe('POST')
-    expect(JSON.parse(options?.body as string)).toEqual(fields)
+    expect(JSON.parse(options?.body as string)).toEqual({ ...fields, contact_name: RESPONSIBLE, contact_position: null, contact_phone: null, delivery_method: 'email' })
+  })
+
+  it('avisa que hay que reenviar el enlace si no se pudo enviar (T-S8-11)', async () => {
+    apiMock.mockResolvedValueOnce(created('pending')).mockResolvedValueOnce(Response.json({ data: institution }))
+    renderApp('/institutions/new')
+    await screen.findByRole('button', { name: 'Crear institución' })
+    fillForm()
+    fireEvent.click(screen.getByRole('button', { name: 'Crear institución' }))
+    expect(await screen.findByText('Institución registrada, pero no pudimos enviar el enlace. Usa «Reenviar enlace».')).toHaveAttribute('role', 'status')
+  })
+
+  it('con la entrega manual muestra el enlace para copiar en la misma página, sin guardarlo en el historial (T-S8-11)', async () => {
+    const link = 'http://localhost:5173/set-initial-password?email=contacto%40example.test&token=abc'
+    apiMock.mockResolvedValueOnce(Response.json({ data: institution, setup_delivery: 'manual', setup_url: link }, { status: 201 }))
+    renderApp('/institutions/new')
+    await screen.findByRole('button', { name: 'Crear institución' })
+    fillForm()
+    fireEvent.change(screen.getByLabelText('Puesto o departamento (opcional)'), { target: { value: ' Vinculación ' } })
+    fireEvent.click(screen.getByRole('radio', { name: /Generar un enlace para compartirlo/ }))
+    expect(screen.getByLabelText(EMAIL)).toHaveAccessibleDescription('Será el correo con el que inicie sesión. Recibirás un enlace para compartírselo.')
+    fireEvent.click(screen.getByRole('button', { name: 'Crear institución' }))
+
+    expect(await screen.findByText('Institución registrada. Copia el enlace y compártelo con María López para que establezca su contraseña.')).toHaveAttribute('role', 'status')
+    expect(screen.getByLabelText('Enlace de configuración')).toHaveValue(link)
+    expect(screen.getByRole('button', { name: 'Copiar enlace' })).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Ver la institución' })).toHaveAttribute('href', '/institutions/27')
+    expect(screen.getByLabelText('Ruta actual').textContent).toBe('/institutions/new')
+    expect(JSON.stringify(window.history.state)).not.toContain('token=abc')
+    expect(JSON.parse(writes()[0][1]?.body as string)).toMatchObject({ contact_position: 'Vinculación', delivery_method: 'manual' })
+  })
+
+  it('muestra al responsable y su puesto en el detalle (T-S8-11)', async () => {
+    apiMock.mockResolvedValueOnce(Response.json({ data: { ...institution, contact_position: 'Jefatura de Vinculación' } }))
+    renderApp('/institutions/27')
+    expect(await screen.findByText('María López')).toBeInTheDocument()
+    expect(screen.getByText('Jefatura de Vinculación')).toBeInTheDocument()
+  })
+
+  it('guarda el teléfono opcional y lo muestra en el detalle con enlace para llamar (T-S8-11)', async () => {
+    const saved = { ...institution, contact_phone: '+52 834 318 1800' }
+    apiMock.mockResolvedValueOnce(Response.json({ data: institution }))
+      .mockResolvedValueOnce(Response.json({ data: saved }))
+      .mockResolvedValueOnce(Response.json({ data: saved }))
+    renderApp('/institutions/27/edit')
+    await screen.findByRole('button', { name: 'Guardar cambios' })
+    expect(screen.getByLabelText('Nombre de la persona responsable')).toHaveValue('María López')
+    expect(screen.queryByRole('group', { name: 'Entrega del enlace de configuración' })).not.toBeInTheDocument()
+    expect(screen.getByLabelText(EMAIL)).toHaveAccessibleDescription('Cambiarlo no modifica el correo con el que la cuenta inicia sesión.')
+    fireEvent.change(screen.getByLabelText('Teléfono (opcional)'), { target: { value: ' +52 834 318 1800 ' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Guardar cambios' }))
+    expect(await screen.findByRole('link', { name: '+52 834 318 1800' })).toHaveAttribute('href', 'tel:+528343181800')
+    expect(JSON.parse(writes()[0][1]?.body as string)).toEqual({ ...fields, contact_name: RESPONSIBLE, contact_position: null, contact_phone: '+52 834 318 1800' })
   })
 
   it('carga los datos existentes y edita los tres campos mediante PUT conservando el estado', async () => {
@@ -262,7 +327,7 @@ describe('registro y edición de instituciones', () => {
     const [path, options] = writes()[0]
     expect(path).toBe('/api/institutions/27')
     expect(options?.method).toBe('PUT')
-    expect(JSON.parse(options?.body as string)).toEqual(edited)
+    expect(JSON.parse(options?.body as string)).toEqual({ ...edited, contact_name: RESPONSIBLE, contact_position: null, contact_phone: null })
   })
 
   it('presenta errores 422 por campo, accesibles y sin perder los datos introducidos', async () => {
@@ -278,7 +343,7 @@ describe('registro y edición de instituciones', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Crear institución' }))
     expect(await screen.findByRole('alert')).toHaveTextContent('Revisa los campos indicados.')
     expectFormValues()
-    for (const [label, field] of [['Nombre', 'name'], ['CCT', 'cct'], ['Correo de contacto', 'contact_email']] as const) {
+    for (const [label, field] of [['Nombre', 'name'], ['CCT', 'cct'], [EMAIL, 'contact_email']] as const) {
       expect(screen.getByLabelText(label)).toHaveAttribute('aria-invalid', 'true')
       expect(screen.getByLabelText(label)).toHaveAccessibleDescription(expect.stringContaining(errors[field][0]))
     }
@@ -316,16 +381,16 @@ describe('registro y edición de instituciones', () => {
     fireEvent.click(submit)
     await waitFor(() => expect(writes()).toHaveLength(1))
     expect(screen.getByRole('button', { name: 'Guardando…' })).toBeDisabled()
-    expect(screen.queryByText('Institución registrada correctamente.')).not.toBeInTheDocument()
+    expect(screen.queryByText(/^Institución registrada/)).not.toBeInTheDocument()
     expect(screen.getByLabelText('Ruta actual').textContent).toBe('/institutions/new')
-    await act(async () => { response.resolve(Response.json({ data: institution }, { status: 201 })) })
+    await act(async () => { response.resolve(created()) })
     expect(await screen.findByText(institution.name)).toBeInTheDocument()
     expect(writes()).toHaveLength(1)
   })
 
   it('conserva el formulario y la sesión tras un 419 y permite repetir el envío', async () => {
     apiMock.mockResolvedValueOnce(new Response(null, { status: 419 }))
-      .mockResolvedValueOnce(Response.json({ data: institution }, { status: 201 }))
+      .mockResolvedValueOnce(created())
       .mockResolvedValueOnce(Response.json({ data: institution }))
     renderApp('/institutions/new')
     await screen.findByRole('button', { name: 'Crear institución' })
@@ -342,7 +407,7 @@ describe('registro y edición de instituciones', () => {
 
   it('conserva los datos y permite reintentar un alta si falla la red', async () => {
     apiMock.mockRejectedValueOnce(new TypeError('Network error'))
-      .mockResolvedValueOnce(Response.json({ data: institution }, { status: 201 }))
+      .mockResolvedValueOnce(created())
       .mockResolvedValueOnce(Response.json({ data: institution }))
     renderApp('/institutions/new')
     await screen.findByRole('button', { name: 'Crear institución' })
@@ -350,7 +415,7 @@ describe('registro y edición de instituciones', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Crear institución' }))
     expect(await screen.findByRole('alert')).toHaveTextContent('No pudimos conectar')
     expectFormValues()
-    expect(screen.queryByText('Institución registrada correctamente.')).not.toBeInTheDocument()
+    expect(screen.queryByText(/^Institución registrada/)).not.toBeInTheDocument()
     fireEvent.click(screen.getByRole('button', { name: 'Crear institución' }))
     expect(await screen.findByText(institution.name)).toBeInTheDocument()
   })

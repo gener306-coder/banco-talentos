@@ -15,7 +15,7 @@ const summary = {
   state_code: '28', municipality_code: '28032', municipality: 'Reynosa', is_active: true,
 }
 const company = {
-  ...summary, contact_name: 'Lucía Herrera', contact_email: 'dual@manugolfo.test', contact_phone: '899 123 4567',
+  ...summary, contact_name: 'Lucía Herrera', contact_position: 'Recursos Humanos', contact_email: 'dual@manugolfo.test', contact_phone: '899 123 4567',
   validation_reference: 'SE/2026/0141', registered_by: { id: 2, name: 'Analista' }, created_at: '2026-10-22T10:00:00Z',
 }
 const page = (companies: unknown[]) => Response.json({ data: companies, meta: { current_page: 1, last_page: 1, total: companies.length } })
@@ -66,6 +66,7 @@ async function fillCompany(form: HTMLElement) {
   fireEvent.change(municipality, { target: { value: 'reyn' } })
   fireEvent.mouseDown(await within(form).findByRole('option', { name: 'Reynosa' }))
   fireEvent.change(within(form).getByLabelText('Nombre del contacto'), { target: { value: 'Lucía Herrera' } })
+  fireEvent.change(within(form).getByLabelText('Puesto o departamento del contacto (opcional)'), { target: { value: 'Recursos Humanos' } })
   fireEvent.change(within(form).getByLabelText('Correo del contacto'), { target: { value: 'dual@manugolfo.test' } })
 }
 
@@ -97,18 +98,47 @@ describe('empresas HU-S4-02', () => {
   })
 
   it('registra una empresa con el municipio del catálogo y abre su detalle (CA-02, CA-05)', async () => {
-    apiMock.mockResolvedValueOnce(Response.json({ data: company }, { status: 201 })).mockResolvedValueOnce(Response.json({ data: company }))
+    apiMock.mockResolvedValueOnce(Response.json({ data: company, setup_delivery: 'sent' }, { status: 201 })).mockResolvedValueOnce(Response.json({ data: company }))
     renderApp('/companies/new')
     const form = (await screen.findByRole('button', { name: 'Registrar empresa' })).closest('form') as HTMLElement
     await fillCompany(form)
     fireEvent.click(within(form).getByRole('button', { name: 'Registrar empresa' }))
 
-    expect(await screen.findByText('Empresa registrada correctamente.')).toHaveAttribute('role', 'status')
+    // T-S8-12: el registro crea la cuenta del contacto y le envía el enlace.
+    expect(await screen.findByText(`Empresa registrada. Enviamos a ${company.contact_email} el enlace para establecer su contraseña.`)).toHaveAttribute('role', 'status')
     expect(screen.getByLabelText('Ruta actual').textContent).toBe('/companies/5')
     expect(JSON.parse(writes('POST')[0][1]?.body as string)).toEqual({
       legal_name: 'Manufacturas del Golfo', trade_name: null, rfc: 'MGO150320AB1', sector_code: '31-33', state_code: '28',
-      municipality_code: '28032', contact_name: 'Lucía Herrera', contact_email: 'dual@manugolfo.test', contact_phone: null, validation_reference: null,
+      municipality_code: '28032', contact_name: 'Lucía Herrera', contact_position: 'Recursos Humanos', contact_email: 'dual@manugolfo.test', contact_phone: null, validation_reference: null,
+      delivery_method: 'email',
     })
+  })
+
+  it('con la entrega manual muestra el enlace del contacto para copiarlo, sin salir del registro (T-S8-12)', async () => {
+    const link = 'http://localhost:5173/set-initial-password?email=dual%40manugolfo.test&token=abc'
+    apiMock.mockResolvedValueOnce(Response.json({ data: company, setup_delivery: 'manual', setup_url: link }, { status: 201 }))
+    renderApp('/companies/new')
+    const form = (await screen.findByRole('button', { name: 'Registrar empresa' })).closest('form') as HTMLElement
+    await fillCompany(form)
+    fireEvent.click(within(form).getByRole('radio', { name: /Generar un enlace para compartirlo/ }))
+    expect(within(form).getByLabelText('Correo del contacto')).toHaveAccessibleDescription('Será el correo con el que inicie sesión. Recibirás un enlace para compartírselo.')
+    fireEvent.click(within(form).getByRole('button', { name: 'Registrar empresa' }))
+
+    expect(await screen.findByText(`Empresa registrada. Copia el enlace y compártelo con ${company.contact_name} para que establezca su contraseña.`)).toHaveAttribute('role', 'status')
+    expect(screen.getByLabelText('Enlace de configuración')).toHaveValue(link)
+    expect(screen.getByRole('link', { name: 'Ver la empresa' })).toHaveAttribute('href', '/companies/5')
+    expect(screen.getByLabelText('Ruta actual').textContent).toBe('/companies/new')
+    expect(JSON.stringify(window.history.state)).not.toContain('token=abc')
+    expect(JSON.parse(writes('POST')[0][1]?.body as string)).toMatchObject({ delivery_method: 'manual' })
+  })
+
+  it('avisa que hay que reenviar el enlace si no se pudo enviar (T-S8-12)', async () => {
+    apiMock.mockResolvedValueOnce(Response.json({ data: company, setup_delivery: 'pending' }, { status: 201 })).mockResolvedValueOnce(Response.json({ data: company }))
+    renderApp('/companies/new')
+    const form = (await screen.findByRole('button', { name: 'Registrar empresa' })).closest('form') as HTMLElement
+    await fillCompany(form)
+    fireEvent.click(within(form).getByRole('button', { name: 'Registrar empresa' }))
+    expect(await screen.findByText('Empresa registrada, pero no pudimos enviar el enlace. Usa «Reenviar enlace».')).toHaveAttribute('role', 'status')
   })
 
   it('valida en línea y no envía con errores (CA-03, CA-09)', async () => {

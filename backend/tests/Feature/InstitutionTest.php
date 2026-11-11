@@ -3,9 +3,12 @@
 use App\Enums\UserRole;
 use App\Models\Institution;
 use App\Models\User;
+use App\Notifications\SetInitialPassword;
 use Illuminate\Database\QueryException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Schema;
 use Tests\Support\InteractsWithCookieSessions;
@@ -21,6 +24,7 @@ function institutionPayload(array $overrides = []): array
     return array_replace([
         'name' => 'Instituto de Educación Dual',
         'cct' => '09DIT0001A',
+        'contact_name' => 'María Fernanda López',
         'contact_email' => 'contacto@example.test',
     ], $overrides);
 }
@@ -99,7 +103,10 @@ it('accepts field values at their supported length limits', function () {
     $payload = institutionPayload([
         'name' => str_repeat('n', 255),
         'cct' => str_repeat('c', 255),
+        'contact_name' => str_repeat('r', 120),
+        'contact_position' => str_repeat('p', 120),
         'contact_email' => str_repeat('a', 64).'@'.str_repeat('b', 62).'.'.str_repeat('c', 62).'.'.str_repeat('d', 58).'.test',
+        'contact_phone' => '+52 (834) 123-4567 8',
     ]);
 
     $this->browserRequest('POST', '/api/institutions', $payload)->assertCreated();
@@ -134,7 +141,7 @@ it('allows an administrator to update institution data while preserving its stat
         ->assertJsonPath('data.is_active', false);
 
     $this->assertDatabaseCount('institutions', 1);
-    $this->assertDatabaseHas('institutions', array_replace($payload, ['id' => $institution->id, 'is_active' => false]));
+    $this->assertDatabaseHas('institutions', array_replace(institutionPayload(), ['id' => $institution->id, 'is_active' => false]));
 });
 
 it('rejects invalid institution creation without inserting a partial record', function (array $payload, array $fields) {
@@ -466,4 +473,160 @@ it('defaults institutions to active directly in PostgreSQL', function () {
 
     expect(Institution::findOrFail($id)->is_active)->toBeTrue();
     $this->assertDatabaseHas('institutions', ['id' => $id, 'is_active' => true]);
+});
+
+describe('cuenta de la persona responsable (T-S8-11)', function () {
+    it('creates the institution account with the contact email and sends the setup link', function () {
+        Notification::fake();
+        $admin = User::factory()->role(UserRole::ADMIN)->create();
+        $this->loginWithCookies($admin)->assertOk();
+
+        $response = $this->browserRequest('POST', '/api/institutions', institutionPayload(['contact_email' => '  Contacto@Example.TEST ', 'contact_phone' => '834 123 4567']))
+            ->assertCreated()
+            ->assertHeader('Cache-Control', 'no-store, private')
+            ->assertJsonPath('data.contact_email', 'contacto@example.test')
+            ->assertJsonPath('data.contact_phone', '834 123 4567')
+            ->assertJsonPath('data.contact_name', 'María Fernanda López')
+            ->assertJsonPath('data.contact_position', null)
+            ->assertJsonPath('setup_delivery', 'sent')
+            ->assertJsonMissingPath('setup_url');
+
+        $account = User::query()->where('email', 'contacto@example.test')->sole();
+        expect($account->role)->toBe(UserRole::INSTITUTION)
+            ->and($account->institution_id)->toBe($response->json('data.id'))
+            ->and($account->name)->toBe('María Fernanda López')
+            ->and($account->is_active)->toBeTrue()
+            ->and($account->password_setup_required)->toBeTrue()
+            ->and($account->created_by)->toBe($admin->id);
+        Notification::assertSentTo($account, SetInitialPassword::class);
+        Notification::assertCount(1);
+    });
+
+    it('registers nothing when the contact email already belongs to an account, ignoring case', function () {
+        Notification::fake();
+        User::factory()->role(UserRole::SECRETARY)->create(['email' => 'contacto@example.test']);
+        $this->loginWithCookies(User::factory()->role(UserRole::ADMIN)->create())->assertOk();
+
+        $this->browserRequest('POST', '/api/institutions', institutionPayload(['contact_email' => 'CONTACTO@example.test']))
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors(['contact_email' => 'El correo ya está registrado en otra cuenta.']);
+
+        $this->assertDatabaseCount('institutions', 0);
+        expect(User::query()->where('role', UserRole::INSTITUTION->value)->count())->toBe(0);
+        Notification::assertNothingSent();
+    });
+
+    it('rolls the institution back when the email is taken after validation', function () {
+        Notification::fake();
+        $this->loginWithCookies(User::factory()->role(UserRole::ADMIN)->create())->assertOk();
+        $dispatcher = Institution::getEventDispatcher();
+        Institution::setEventDispatcher(clone $dispatcher);
+
+        try {
+            // El FormRequest ya pasó: solo la restricción de la base puede detectar este choque.
+            Institution::created(fn () => User::factory()->create(['email' => 'contacto@example.test']));
+            $this->browserRequest('POST', '/api/institutions', institutionPayload())
+                ->assertUnprocessable()
+                ->assertJsonValidationErrors(['contact_email' => 'El correo ya está registrado en otra cuenta.']);
+        } finally {
+            Institution::setEventDispatcher($dispatcher);
+        }
+
+        $this->assertDatabaseCount('institutions', 0);
+        Notification::assertNothingSent();
+    });
+
+    it('requires the name of the responsible person on creation and update', function () {
+        $institution = Institution::factory()->create();
+        $this->loginWithCookies(User::factory()->role(UserRole::ADMIN)->create())->assertOk();
+
+        foreach (['missing' => null, 'blank' => '  ', 'long' => str_repeat('r', 121)] as $value) {
+            $payload = $value === null ? Arr::except(institutionPayload(), ['contact_name']) : institutionPayload(['contact_name' => $value]);
+            $this->browserRequest('POST', '/api/institutions', $payload)->assertUnprocessable()->assertJsonValidationErrors('contact_name');
+            $this->browserRequest('PUT', '/api/institutions/'.$institution->id, $payload)->assertUnprocessable()->assertJsonValidationErrors('contact_name');
+        }
+        $this->assertDatabaseCount('institutions', 1);
+        expect(User::query()->where('role', UserRole::INSTITUTION->value)->count())->toBe(0);
+    });
+
+    it('saves the responsible person and an optional position on the institution', function () {
+        Notification::fake();
+        $this->loginWithCookies(User::factory()->role(UserRole::ADMIN)->create())->assertOk();
+        $id = $this->browserRequest('POST', '/api/institutions', institutionPayload(['contact_position' => 'Jefatura de Vinculación']))
+            ->assertCreated()->assertJsonPath('data.contact_position', 'Jefatura de Vinculación')->json('data.id');
+
+        $this->browserRequest('PUT', '/api/institutions/'.$id, institutionPayload(['contact_name' => 'Luis Pérez', 'contact_position' => '']))
+            ->assertOk()->assertJsonPath('data.contact_name', 'Luis Pérez')->assertJsonPath('data.contact_position', null);
+        $this->browserRequest('POST', '/api/institutions', institutionPayload(['cct' => 'OTRO', 'contact_email' => 'otro@example.test', 'contact_position' => str_repeat('p', 121)]))
+            ->assertUnprocessable()->assertJsonValidationErrors(['contact_position' => 'El puesto o departamento no debe superar 120 caracteres.']);
+        // La cuenta conserva el nombre con el que se creó.
+        expect(User::query()->where('institution_id', $id)->sole()->name)->toBe('María Fernanda López');
+    });
+
+    it('returns the setup link to share instead of emailing it with manual delivery (HU-S2-01)', function () {
+        Notification::fake();
+        $this->loginWithCookies(User::factory()->role(UserRole::ADMIN)->create())->assertOk();
+
+        $response = $this->browserRequest('POST', '/api/institutions', institutionPayload(['delivery_method' => 'manual']))
+            ->assertCreated()
+            ->assertHeader('Cache-Control', 'no-store, private')
+            ->assertJsonPath('setup_delivery', 'manual')
+            ->assertJsonMissingPath('data.delivery_method');
+
+        expect($response->json('setup_url'))->toStartWith(rtrim(config('app.frontend_url'), '/').'/set-initial-password?');
+        expect(User::query()->where('email', 'contacto@example.test')->sole()->password_setup_required)->toBeTrue();
+        Notification::assertNothingSent();
+    });
+
+    it('validates the delivery method and never sends links when editing', function () {
+        $institution = Institution::factory()->create();
+        $this->loginWithCookies(User::factory()->role(UserRole::ADMIN)->create())->assertOk();
+
+        $this->browserRequest('POST', '/api/institutions', institutionPayload(['delivery_method' => 'whatsapp']))
+            ->assertUnprocessable()->assertJsonValidationErrors(['delivery_method' => 'El método de entrega debe ser email o manual.']);
+        $this->browserRequest('PUT', '/api/institutions/'.$institution->id, institutionPayload(['delivery_method' => 'manual']))
+            ->assertUnprocessable()->assertJsonValidationErrors(['delivery_method' => 'Editar la institución no envía enlaces: usa «Reenviar enlace».']);
+        $this->assertDatabaseCount('institutions', 1);
+    });
+
+    it('keeps the account email when the contact email is edited', function () {
+        Notification::fake();
+        $this->loginWithCookies(User::factory()->role(UserRole::ADMIN)->create())->assertOk();
+        $id = $this->browserRequest('POST', '/api/institutions', institutionPayload())->assertCreated()->json('data.id');
+
+        $this->browserRequest('PUT', '/api/institutions/'.$id, institutionPayload(['contact_email' => 'nuevo@example.test']))
+            ->assertOk()->assertJsonPath('data.contact_email', 'nuevo@example.test');
+        expect(User::query()->where('institution_id', $id)->sole()->email)->toBe('contacto@example.test');
+    });
+});
+
+describe('teléfono de la institución (T-S8-11)', function () {
+    it('saves an optional phone on creation and update', function () {
+        Notification::fake();
+        $this->loginWithCookies(User::factory()->role(UserRole::ADMIN)->create())->assertOk();
+        $id = $this->browserRequest('POST', '/api/institutions', institutionPayload())->assertCreated()
+            ->assertJsonPath('data.contact_phone', null)->json('data.id');
+
+        $this->browserRequest('PUT', '/api/institutions/'.$id, institutionPayload(['contact_phone' => '+52 834 318 1800']))
+            ->assertOk()->assertJsonPath('data.contact_phone', '+52 834 318 1800');
+        $this->browserRequest('PUT', '/api/institutions/'.$id, institutionPayload(['contact_phone' => '']))
+            ->assertOk()->assertJsonPath('data.contact_phone', null);
+    });
+
+    it('rejects an invalid phone on creation and update', function (mixed $phone, string $message) {
+        $institution = Institution::factory()->create();
+        $this->loginWithCookies(User::factory()->role(UserRole::ADMIN)->create())->assertOk();
+
+        $this->browserRequest('POST', '/api/institutions', institutionPayload(['contact_phone' => $phone]))
+            ->assertUnprocessable()->assertJsonValidationErrors(['contact_phone' => $message]);
+        $this->browserRequest('PUT', '/api/institutions/'.$institution->id, institutionPayload(['contact_phone' => $phone]))
+            ->assertUnprocessable()->assertJsonValidationErrors(['contact_phone' => $message]);
+        $this->assertDatabaseCount('institutions', 1);
+    })->with([
+        'letters' => ['834-ABC-1234', 'El teléfono solo admite dígitos, espacios, paréntesis, guiones y un «+» inicial.'],
+        'too few digits' => ['834 123', 'El teléfono debe tener entre 10 y 15 dígitos.'],
+        'too many digits' => ['1234567890123456', 'El teléfono debe tener entre 10 y 15 dígitos.'],
+        'too long' => [str_repeat('1 ', 11), 'El teléfono no debe superar 20 caracteres.'],
+        'array' => [['8341234567'], 'El teléfono no es válido.'],
+    ]);
 });

@@ -22,7 +22,7 @@ test('HU-S5-01: la institución ve sus contadores y se actualizan al registrar u
   await page.goto('/')
   const active = await indicatorValue(page, 'Alumnos activos')
   const searchable = await indicatorValue(page, 'Visibles en el buscador')
-  await indicatorValue(page, 'Municipio por confirmar')
+  await indicatorValue(page, 'Datos faltantes')
 
   const suffix = randomBytes(6).toString('hex')
   await page.getByRole('link', { name: 'Registrar alumno' }).click()
@@ -39,27 +39,30 @@ test('HU-S5-01: la institución ve sus contadores y se actualizan al registrar u
   expect(await indicatorValue(page, 'Visibles en el buscador')).toBe(searchable)
 })
 
-test('HU-S5-01: el aviso de «Municipio por confirmar» enlaza al padrón', async ({ page }) => {
+test('HU-S5-01: el aviso de datos faltantes enlaza al padrón filtrado', async ({ page }) => {
   await page.route('**/api/dashboard', (route) => route.fulfill({
-    json: { data: { role: 'INSTITUTION', metrics: { active_students: 9, searchable_students: 4, pending_municipality_students: 3, pending_linkage_requests: 0 } } },
+    json: { data: { role: 'INSTITUTION', metrics: { active_students: 9, searchable_students: 4, missing_data_students: 3, pending_linkage_requests: 0 } } },
   }))
   await page.goto('/')
   const region = page.getByRole('region', { name: 'Indicadores' })
-  await expect(region.getByText('3 alumnos tienen «Municipio por confirmar».')).toBeVisible()
+  await expect(region.getByRole('list', { name: 'Por atender' })).toContainText('3 alumnos con datos faltantes')
   await region.getByRole('link', { name: 'Revisar el padrón' }).click()
-  await expect(page).toHaveURL(/\/students$/)
+  await expect(page).toHaveURL(/\/students\?data=missing&status=active$/)
+  await expect(page.getByLabel('Datos faltantes', { exact: true })).toHaveValue('missing')
+  await expect(page.getByLabel('Estado', { exact: true })).toHaveValue('active')
 })
 
 test('HU-S6-03: el aviso de solicitudes pendientes enlaza a la bandeja de la institución (CA-02)', async ({ page }) => {
   await page.route('**/api/dashboard', (route) => route.fulfill({
-    json: { data: { role: 'INSTITUTION', metrics: { active_students: 9, searchable_students: 4, pending_municipality_students: 0, pending_linkage_requests: 2 } } },
+    json: { data: { role: 'INSTITUTION', metrics: { active_students: 9, searchable_students: 4, missing_data_students: 0, pending_linkage_requests: 2 } } },
   }))
   await page.goto('/')
   const region = page.getByRole('region', { name: 'Indicadores' })
   await expect(indicator(page, 'Solicitudes pendientes')).toHaveText('2')
-  await expect(region.getByText('Tienes 2 solicitudes de vinculación pendientes de respuesta.')).toBeVisible()
+  await expect(region.getByText('2 solicitudes de vinculación pendientes', { exact: true })).toBeVisible()
   await region.getByRole('link', { name: 'Revisar solicitudes' }).click()
-  await expect(page).toHaveURL(/\/institution\/linkage-requests$/)
+  await expect(page).toHaveURL(/\/institution\/linkage-requests\?status=PENDIENTE_INSTITUCION$/)
+  await expect(page.getByLabel('Estado', { exact: true })).toHaveValue('PENDIENTE_INSTITUCION')
 })
 
 test('HU-S5-01: si los indicadores fallan, el inicio sigue navegable (CA-07)', async ({ page }) => {

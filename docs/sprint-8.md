@@ -188,6 +188,107 @@ Segunda recomendación de la simulación de carga:
 
 ---
 
+## Actualización posterior al cierre (5 de noviembre de 2026)
+
+Afinaciones pedidas y aprobadas por el responsable el 5 de noviembre de 2026, durante el Sprint 9. Se registran aquí por su indicación, como actualización del Sprint de afinaciones.
+
+### T-S8-05 — «Ver detalle» en las solicitudes recibidas
+
+**Estado:** Completada (5 de noviembre de 2026)  
+**Rol:** `INSTITUTION`
+
+- El enlace usa `pill-link` con flecha, igual que los demás listados.
+
+### T-S8-06 — Puesto del contacto y correo sin salir de la plataforma
+
+**Estado:** Completada (5 de noviembre de 2026)  
+**Rol:** `SECRETARY` (captura), `INSTITUTION` (consulta), `COMPANY` (correo de la institución)
+
+- **Campo:** `companies.contact_position`, «Puesto o departamento del contacto (opcional)», hasta 120 caracteres.
+- **Consulta:** aparece en el detalle de la empresa, en el detalle de la solicitud recibida y en el CSV de solicitudes de la institución.
+- **Correo:** los enlaces `mailto:` se abren en otra pestaña (`target="_blank"`). La aplicación que responde es la predeterminada del usuario; para Gmail web, debe estar configurado como gestor de correo en el navegador.
+
+### T-S8-07 — Seguros distintos del IMSS
+
+**Estado:** Completada (5 de noviembre de 2026)  
+**Rol:** `INSTITUTION`
+
+- **Tipo:** `student_social_security.insurance_type`, `IMSS` u `OTHER`. Lo existente queda como `IMSS`.
+- **IMSS:** el NSS conserva sus 11 dígitos, su dígito verificador y su unicidad por institución.
+- **Otro seguro:** aseguradora obligatoria (`insurer_name`, hasta 120 caracteres) y número de póliza o afiliación opcional, de formato libre (`policy_number`, hasta 40 caracteres, cifrado).
+- **Completo:** basta el número o el comprobante en PDF, para cualquier tipo. El aviso de la solicitud recibida solo aparece si faltan ambos, y sigue sin bloquear la decisión.
+- **Cambio de tipo:** al guardarlo se borran el número y la aseguradora del tipo anterior. El comprobante se conserva hasta que se reemplace. La subida se habilita al guardar el tipo elegido, para que el PDF no quede asociado al tipo anterior.
+- **Privacidad:** igual que el NSS, estos datos son de resguardo exclusivo de la institución. La API de la solicitud recibida entrega el tipo, la aseguradora y si existe número, nunca el número.
+
+### T-S8-08 — Avisos del inicio que llevan al filtro exacto
+
+**Estado:** Completada (5 de noviembre de 2026)  
+**Rol:** `INSTITUTION`
+
+- **Revisar el padrón:** abre el padrón filtrado por lo mismo que cuenta el aviso. T-S8-09 sustituyó el criterio de municipio por el de datos faltantes.
+- **Solicitudes pendientes:** «Revisar solicitudes» abre `/institution/linkage-requests?status=PENDIENTE_INSTITUCION`.
+- **URL:** ambos filtros viven en la URL, así que se conservan al recargar y al volver con el navegador.
+- **Estilo:** acción `pill-link` con flecha, sin fondo ni subrayado, con el texto y la flecha resaltados en el color de su aviso. Ambos avisos llevan el remarque izquierdo en su propio color. El dato clave del aviso va en negritas, sin comillas.
+
+### T-S8-09 — Datos faltantes del alumno
+
+**Estado:** Completada (5 de noviembre de 2026)  
+**Rol:** `INSTITUTION`
+
+- **Criterio:** a un alumno le faltan datos si no tiene capturado algún campo del expediente público (`Student::PROFILE_ATTRIBUTES`) o si su seguro no tiene número ni comprobante. El seguro cuenta porque es requisito indispensable para que el alumno participe. El CV no cuenta. Un municipio por confirmar cuenta como municipio faltante.
+- **Inicio:** el indicador `pending_municipality_students` pasa a `missing_data_students` («Datos faltantes») y el aviso dice «n alumnos tienen **datos faltantes**». Solo cuenta alumnos activos: uno dado de baja no requiere acción.
+- **Padrón:** el filtro «Municipio» se sustituye por «Datos faltantes» (`/students?data=missing`), para no confundirlo con el estado o municipio geográfico. «Revisar el padrón» abre `/students?data=missing&status=active`; el filtro «Estado» también vive en la URL, y el padrón permite consultar a los inactivos. `Student::withMissingData` es la condición del aviso y del filtro.
+- **Detalle:** `GET /api/students/{id}` entrega `missing_data`, con las claves de lo que falta. El aviso aparece bajo el nombre del alumno y se actualiza al guardar el expediente o el seguro.
+- **Privacidad:** `missing_data` solo existe en los endpoints de la institución.
+- **Inicio sin correo:** el saludo ya no repite el correo de la cuenta, que sigue en el menú de cuenta del encabezado.
+
+### T-S8-10 — Pendientes del inicio como tarjetas
+
+**Estado:** Completada (10 de noviembre de 2026)  
+**Rol:** `INSTITUTION`
+
+- **Problema:** en pantallas anchas la acción de cada aviso quedaba en el extremo derecho, lejos de su texto, y como enlace suelto se distinguía poco.
+- **Distribución:** los avisos pasan a la lista «Por atender»: tarjetas en dos columnas en escritorio y apiladas en móvil. Cada una muestra el ícono de su sección, el conteo como título, el motivo en una línea y la acción con flecha debajo, junto al texto.
+- **Interacción:** toda la tarjeta es clicable, pero el enlace conserva como nombre accesible solo su acción («Revisar solicitudes», «Revisar el padrón»). El foco del teclado rodea la tarjeta completa.
+- **Color:** cada tarjeta conserva el remarque izquierdo y la superficie de su aviso: acento para solicitudes, tono de pendiente para datos faltantes.
+
+### T-S8-11 — Registrar una institución crea la cuenta de su responsable
+
+**Estado:** Completada (10 de noviembre de 2026)  
+**Rol:** `ADMIN`
+
+- **Problema:** el correo de contacto de la institución solo se guardaba. La cuenta institucional se creaba aparte, desde el detalle.
+- **Responsable:** la institución guarda el nombre (`contact_name`, obligatorio al registrar y al editar, hasta 120 caracteres) y el puesto o departamento opcional (`contact_position`, hasta 120) de su persona responsable, como el contacto de las empresas. Las instituciones anteriores lo completan la primera vez que se editan.
+- **Alta:** `POST /api/institutions`, en la misma transacción, crea la institución y la cuenta `INSTITUTION` del responsable, con su nombre y el correo de contacto.
+- **Entrega del enlace:** `delivery_method` es opcional, con las mismas opciones que **Nueva cuenta institucional** (HU-S2-01):
+  - `email`, por omisión: se envía después del commit y responde `setup_delivery` `sent` o `pending`, sin el enlace. Con `pending`, el aviso pide usar **Reenviar enlace**.
+  - `manual`: responde `setup_delivery: manual` y `setup_url`, y no envía correo. La página de alta se queda abierta con el enlace para copiar y un acceso a la institución. El enlace solo vive en el estado de la página, nunca en el historial del navegador.
+- **Correo:** se normaliza a minúsculas y no puede pertenecer a otra cuenta de ningún rol. Si ya existe, no se registra ni la institución ni la cuenta, también ante dos altas simultáneas.
+- **Edición:** no crea cuentas ni envía enlaces; `delivery_method` está prohibido. Cambiar el correo de contacto, o el nombre del responsable, no modifica la cuenta. **Nueva cuenta institucional** sigue disponible para más cuentas, con la misma lógica (`App\Services\InstitutionAccounts`).
+- **Teléfono:** `institutions.contact_phone`, opcional, con la misma validación que el de las empresas (`App\Rules\PhoneNumber`: 10 a 15 dígitos).
+- **Dónde se ve:** el detalle de la institución muestra responsable, puesto, correo y teléfono. En sus solicitudes de vinculación, la empresa ve «Responsable · Puesto», el correo y el teléfono, con enlaces `mailto:` y `tel:`.
+- **Bitácora:** la cuenta creada registra `created_by`, como cualquier otra.
+
+### T-S8-12 — Registrar una empresa crea la cuenta de su contacto
+
+**Estado:** Completada (10 de noviembre de 2026)  
+**Rol:** `SECRETARY`
+
+- **Problema:** como pasaba con las instituciones antes de T-S8-11, el correo del contacto de la empresa solo se guardaba. La cuenta `COMPANY` se creaba aparte, en «Cuentas de la empresa».
+- **Alta:** `POST /api/companies` (`StoreCompanyRequest`), en la misma transacción, crea la empresa y la cuenta `COMPANY` de su contacto, con el nombre y el correo del contacto. El puesto opcional ya existía (T-S8-06).
+- **Entrega del enlace:** `delivery_method` es opcional, con las mismas opciones que en las cuentas (HU-S2-01):
+  - `email`, por omisión: se envía después del commit y responde `setup_delivery` `sent` o `pending`, sin el enlace.
+  - `manual`: responde `setup_url` y no envía correo. La página de registro se queda abierta con el enlace para copiar y «Ver la empresa». El enlace solo vive en el estado de la página.
+- **Correo:** no puede pertenecer a otra cuenta de ningún rol. Si ya existe, no se registra ni la empresa ni la cuenta, también ante dos altas simultáneas.
+- **Edición:** `CompanyRequest` prohíbe `delivery_method` y no crea cuentas. Cambiar el nombre o el correo del contacto no modifica la cuenta. **Cuentas de la empresa** sigue disponible para más cuentas, con la misma lógica (`App\Services\CompanyAccounts`).
+- **Detalle:** la cuenta del contacto aparece en «Cuentas de la empresa» como PENDIENTE hasta que establece su contraseña.
+
+### Prueba intermitente del CV
+
+`StudentCvTest › validates the certifications without writing them` falló una vez en la suite completa y pasa sola. Sus datasets calculaban fechas relativas («mañana», «el año siguiente») al recolectar las pruebas. Ahora son closures que Pest resuelve al ejecutar cada caso, con el reloj de la aplicación, así que siempre son futuras respecto a la validación. No se reprodujo el fallo, así que la causa exacta queda sin confirmar.
+
+---
+
 ## Afinaciones pendientes
 
 Espacio para registrar las siguientes afinaciones antes de convertirlas en historias.

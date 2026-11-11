@@ -19,7 +19,7 @@ async function registerCompany(page: Page, legalName: string) {
   await page.getByLabel('Nombre del contacto', { exact: true }).fill('Responsable dual')
   await page.getByLabel('Correo del contacto', { exact: true }).fill(`dual-${randomBytes(4).toString('hex')}@example.test`)
   await page.getByRole('button', { name: 'Registrar empresa', exact: true }).click()
-  await expect(page.getByText('Empresa registrada correctamente.', { exact: true })).toBeVisible()
+  await expect(page.getByRole('status').filter({ hasText: /^Empresa registrada\. Enviamos a / })).toBeVisible()
 }
 
 test('HU-S4-03: la Secretaría crea la cuenta de una empresa → la titular entra → inactivar la empresa la deja fuera', async ({ page, browser, baseURL }) => {
@@ -114,7 +114,7 @@ test('HU-S6-04: la Secretaría inactiva una cuenta de empresa (su sesión se cie
     await reset.getByLabel('Correo electrónico').fill(email)
     await reset.getByLabel('Contraseña', { exact: true }).fill(password)
     await reset.getByRole('button', { name: 'Iniciar sesión', exact: true }).click()
-    await expect(reset.getByText(email, { exact: true })).toBeVisible()
+    await expect(reset.getByRole('heading', { name: /^Hola, / })).toBeVisible()
   } finally {
     await resetContext.close()
     await secretaryContext.close()

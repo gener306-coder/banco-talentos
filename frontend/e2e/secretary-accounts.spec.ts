@@ -73,7 +73,7 @@ test('HU-S6-04: ADMIN inactiva una cuenta de la Secretaría (su sesión se cierr
     await reset.getByLabel('Correo electrónico').fill(email)
     await reset.getByLabel('Contraseña', { exact: true }).fill(password)
     await reset.getByRole('button', { name: 'Iniciar sesión', exact: true }).click()
-    await expect(reset.getByText(email, { exact: true })).toBeVisible()
+    await expect(reset.getByRole('heading', { name: /^Hola, / })).toBeVisible()
   } finally {
     await resetContext.close()
     await context.close()

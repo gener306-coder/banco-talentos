@@ -6,6 +6,7 @@ import {
 
 const fetchMock = vi.fn<typeof fetch>()
 const document = { name: 'vigencia.pdf', size: 2048, uploaded_at: '2026-10-16T12:00:00Z' }
+const base = { insurance_type: 'IMSS', nss: null, insurer_name: null, policy_number: null, document: null }
 
 beforeEach(() => {
   fetchMock.mockReset()
@@ -21,34 +22,37 @@ function csrf() {
 
 describe('cliente del seguro facultativo HU-S3-02', () => {
   it('obtiene el seguro y conserva solo los campos del contrato', async () => {
-    fetchMock.mockResolvedValueOnce(Response.json({ data: { nss: '12345678903', document: { ...document, path: 'imss/1/x.pdf' }, nss_hash: 'x' } }))
-    await expect(getSocialSecurity(3)).resolves.toEqual({ nss: '12345678903', document })
+    fetchMock.mockResolvedValueOnce(Response.json({ data: { ...base, nss: '12345678903', document: { ...document, path: 'imss/1/x.pdf' }, nss_hash: 'x' } }))
+    await expect(getSocialSecurity(3)).resolves.toEqual({ ...base, nss: '12345678903', document })
     expect(fetchMock.mock.calls[0][0]).toBe('/api/students/3/social-security')
   })
 
   it.each([
     [{ data: null }],
-    [{ data: { nss: 123, document: null } }],
-    [{ data: { nss: null } }],
-    [{ data: { nss: null, document: { name: 'x.pdf', size: '1', uploaded_at: 'x' } } }],
-    [{ data: { nss: null, document: 'x' } }],
+    [{ data: { ...base, nss: 123 } }],
+    [{ data: { insurance_type: 'IMSS', nss: null, document: null } }],
+    [{ data: { ...base, insurance_type: 'ISSSTE' } }],
+    [{ data: { ...base, policy_number: 1 } }],
+    [{ data: { insurance_type: 'IMSS', nss: null, insurer_name: null, policy_number: null } }],
+    [{ data: { ...base, document: { name: 'x.pdf', size: '1', uploaded_at: 'x' } } }],
+    [{ data: { ...base, document: 'x' } }],
   ])('rechaza una respuesta inesperada', async (body) => {
     fetchMock.mockResolvedValueOnce(Response.json(body))
     await expect(getSocialSecurity(3)).rejects.toMatchObject({ status: 502 })
   })
 
-  it('guarda el NSS con CSRF enviando solo el NSS', async () => {
-    fetchMock.mockImplementationOnce(csrf).mockResolvedValueOnce(Response.json({ data: { nss: '12345678903', document: null } }))
-    await updateSocialSecurity(3, '12345678903')
+  it('guarda el seguro con CSRF enviando solo los datos de su tipo', async () => {
+    fetchMock.mockImplementationOnce(csrf).mockResolvedValueOnce(Response.json({ data: { ...base, nss: '12345678903' } }))
+    await updateSocialSecurity(3, { insurance_type: 'IMSS', nss: '12345678903' })
     expect(fetchMock.mock.calls[1][0]).toBe('/api/students/3/social-security')
     expect(fetchMock.mock.calls[1][1]?.method).toBe('PUT')
-    expect(JSON.parse(fetchMock.mock.calls[1][1]?.body as string)).toEqual({ nss: '12345678903' })
+    expect(JSON.parse(fetchMock.mock.calls[1][1]?.body as string)).toEqual({ insurance_type: 'IMSS', nss: '12345678903' })
   })
 
   it('sube el comprobante como multipart sin forzar JSON', async () => {
-    fetchMock.mockImplementationOnce(csrf).mockResolvedValueOnce(Response.json({ data: { nss: null, document } }))
+    fetchMock.mockImplementationOnce(csrf).mockResolvedValueOnce(Response.json({ data: { ...base, document } }))
     const file = new File(['%PDF-1.7'], 'vigencia.pdf', { type: 'application/pdf' })
-    await expect(uploadSocialSecurityDocument(3, file)).resolves.toEqual({ nss: null, document })
+    await expect(uploadSocialSecurityDocument(3, file)).resolves.toEqual({ ...base, document })
     const [path, options] = fetchMock.mock.calls[1]
     expect(path).toBe('/api/students/3/social-security/document')
     expect(options?.method).toBe('POST')
@@ -64,7 +68,7 @@ describe('cliente del seguro facultativo HU-S3-02', () => {
     expect(fetchMock.mock.calls[0][0]).toBe('/api/students/3/social-security/document')
     expect(fetchMock.mock.calls[0][1]?.credentials).toBe('include')
 
-    fetchMock.mockResolvedValueOnce(Response.json({ message: 'El alumno no tiene comprobante del IMSS.' }, { status: 404 }))
+    fetchMock.mockResolvedValueOnce(Response.json({ message: 'El alumno no tiene comprobante del seguro.' }, { status: 404 }))
     await expect(downloadSocialSecurityDocument(3)).rejects.toMatchObject({ status: 404 })
   })
 

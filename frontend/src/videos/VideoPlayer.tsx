@@ -1,8 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import type { CSSProperties, KeyboardEvent } from 'react'
 import { ExitFullscreenIcon, FullscreenIcon, PauseIcon, PlayIcon, ReplayIcon, VolumeIcon, VolumeOffIcon } from '../ui/icons'
-import { prefersReducedMotion } from '../ui/modal'
-import { duration } from './api'
+import { canAutoPlay, duration } from './api'
 import './videos.css'
 
 const HIDE_CONTROLS_MS = 2500
@@ -12,11 +11,6 @@ const SKIP_SECONDS = 10
 /** Solo un video se reproduce a la vez en toda la aplicación. */
 let current: HTMLVideoElement | null = null
 
-/** Sin arranque automático si el usuario pidió reducir movimiento o ahorrar datos. */
-function canAutoPlay(): boolean {
-  const { connection } = navigator as Navigator & { connection?: { saveData?: boolean } }
-  return !prefersReducedMotion() && !connection?.saveData
-}
 
 interface VideoPlayerProps {
   src: string

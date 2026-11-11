@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\InsuranceType;
 use App\Enums\LinkageRequestStatus;
 use App\Http\Requests\DecideLinkageRequestRequest;
 use App\Http\Requests\ListInstitutionLinkageRequestsRequest;
@@ -72,7 +73,7 @@ class InstitutionLinkageRequestController extends Controller
         $linkages = $this->owned($request)
             ->when($status !== null, fn (Builder $query) => $query->where('status', $status))
             ->with([
-                'company:id,legal_name,trade_name,contact_name,contact_email,contact_phone',
+                'company:id,legal_name,trade_name,contact_name,contact_position,contact_email,contact_phone',
                 'opportunity:id,title',
                 'student:id,program',
                 'student.identity',
@@ -91,6 +92,7 @@ class InstitutionLinkageRequestController extends Controller
                 $linkage->student->program,
                 $linkage->company->trade_name ?? $linkage->company->legal_name,
                 $linkage->company->contact_name,
+                $linkage->company->contact_position,
                 $linkage->company->contact_email,
                 $linkage->company->contact_phone,
                 $linkage->opportunity->title,
@@ -99,7 +101,7 @@ class InstitutionLinkageRequestController extends Controller
 
         return CsvExport::download('solicitudes-vinculacion-'.now()->format('Y-m-d').'.csv', [[[
             'Folio', 'Fecha de solicitud', 'Estado', 'Matrícula', 'Primer apellido', 'Segundo apellido', 'Nombre(s)', 'Carrera',
-            'Empresa', 'Contacto de la empresa', 'Correo de contacto', 'Teléfono de contacto', 'Oportunidad', 'Fecha de respuesta',
+            'Empresa', 'Contacto de la empresa', 'Puesto o departamento del contacto', 'Correo de contacto', 'Teléfono de contacto', 'Oportunidad', 'Fecha de respuesta',
         ], $linkages]]);
     }
 
@@ -154,8 +156,8 @@ class InstitutionLinkageRequestController extends Controller
             self::STUDENT_COLUMNS,
             'student.identity',
             'student.municipality:code,name',
-            // Solo las columnas que dicen si hay NSS y comprobante; nunca su valor ni la ruta del PDF.
-            'student.socialSecurity:id,student_id,nss_hash,document_path',
+            // Solo lo necesario para saber qué falta del seguro; nunca se entrega el número ni la ruta del PDF.
+            'student.socialSecurity:id,student_id,insurance_type,insurer_name,nss_hash,policy_number,document_path',
             'responder:id,name',
         ]);
 
@@ -175,6 +177,7 @@ class InstitutionLinkageRequestController extends Controller
                 'sector_code' => $company->sector_code->value,
                 'state_code' => $company->state_code->value,
                 'contact_name' => $company->contact_name,
+                'contact_position' => $company->contact_position,
                 'contact_email' => $company->contact_email,
                 'contact_phone' => $company->contact_phone,
             ],
@@ -198,7 +201,10 @@ class InstitutionLinkageRequestController extends Controller
                 'municipality' => $student->municipality?->name,
                 'can_relocate' => $student->can_relocate,
                 'social_security' => [
-                    'has_nss' => $socialSecurity?->nss_hash !== null,
+                    'insurance_type' => $socialSecurity?->insurance_type->value ?? InsuranceType::IMSS->value,
+                    'insurer_name' => $socialSecurity?->insurer_name,
+                    // Se revisa el valor crudo para no descifrar la póliza.
+                    'has_number' => $socialSecurity?->nss_hash !== null || $socialSecurity?->getRawOriginal('policy_number') !== null,
                     'has_document' => $socialSecurity?->document_path !== null,
                 ],
             ],

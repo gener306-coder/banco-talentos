@@ -126,6 +126,36 @@ describe('galería (CA-01, CA-02)', function () {
         $this->browserRequest('GET', '/api/promotional-videos?institution='.Str::uuid())->assertOk()->assertJsonPath('meta.total', 0);
     });
 
+    it('mixes the stories at random, stable for the same seed across pages (T-S9-03)', function () {
+        foreach (range(1, 15) as $i) {
+            galleryVideo($this->institution, 'Video '.$i);
+        }
+        signInToGallery($this, UserRole::COMPANY);
+        $titles = fn (string $query) => array_column($this->browserRequest('GET', '/api/promotional-videos?'.$query)->assertOk()->json('data'), 'title');
+
+        $mixed = [...$titles('order=random&seed=7&page=1'), ...$titles('order=random&seed=7&page=2')];
+        expect($mixed)->toHaveCount(15)->and(array_unique($mixed))->toHaveCount(15)
+            ->and($titles('order=random&seed=7&page=1'))->toBe(array_slice($mixed, 0, 12))
+            ->and($mixed)->not->toBe(array_map(fn (int $i) => 'Video '.$i, range(15, 1)))
+            ->and([...$titles('order=random&seed=8&page=1'), ...$titles('order=random&seed=8&page=2')])->not->toBe($mixed);
+        expect($titles('order=recent'))->toBe(array_slice(array_map(fn (int $i) => 'Video '.$i, range(15, 1)), 0, 12));
+    });
+
+    it('puts the story opened from the home first, in either order (T-S9-03)', function () {
+        $oldest = galleryVideo($this->institution, 'La más antigua');
+        foreach (range(1, 13) as $i) {
+            galleryVideo($this->institution, 'Video '.$i);
+        }
+        signInToGallery($this, UserRole::COMPANY);
+
+        foreach (['', '&order=random&seed=3'] as $order) {
+            $first = $this->browserRequest('GET', '/api/promotional-videos?first='.$oldest->public_id.$order)->assertOk();
+            expect($first->json('data.0.title'))->toBe('La más antigua');
+            $second = $this->browserRequest('GET', '/api/promotional-videos?page=2&first='.$oldest->public_id.$order)->assertOk();
+            expect(array_column($second->json('data'), 'title'))->not->toContain('La más antigua');
+        }
+    });
+
     it('validates the filters', function (string $query, string $field) {
         signInToGallery($this, UserRole::COMPANY);
 
@@ -134,6 +164,11 @@ describe('galería (CA-01, CA-02)', function () {
         'institución numérica' => ['institution='.PHP_INT_MAX, 'institution'],
         'institución texto' => ['institution=itd', 'institution'],
         'página cero' => ['page=0', 'page'],
+        'orden desconocido' => ['order=popular', 'order'],
+        'al azar sin semilla' => ['order=random', 'seed'],
+        'semilla cero' => ['order=random&seed=0', 'seed'],
+        'semilla de texto' => ['order=random&seed=abc', 'seed'],
+        'primera no uuid' => ['first=1', 'first'],
     ]);
 
     it('gives every institution a unique random public_id without exposing it to administration', function () {

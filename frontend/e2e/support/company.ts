@@ -53,7 +53,7 @@ export async function registerCompany(
   const created = page.waitForResponse((response) => response.url().endsWith('/api/companies') && response.request().method() === 'POST')
   await page.getByRole('button', { name: 'Registrar empresa', exact: true }).click()
   expect((await created).status()).toBe(201)
-  await expect(page.getByText('Empresa registrada correctamente.', { exact: true })).toBeVisible()
+  await expect(page.getByRole('status').filter({ hasText: /^Empresa registrada\. Enviamos a / })).toBeVisible()
 
   return { legalName, rfc: companyRfc }
 }

@@ -2,13 +2,18 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\SetupDeliveryMethod;
 use App\Http\Requests\CompanyRequest;
+use App\Http\Requests\StoreCompanyRequest;
 use App\Http\Requests\UpdateCompanyStatusRequest;
 use App\Models\Company;
 use App\Models\Municipality;
+use App\Services\CompanyAccounts;
+use App\Services\InitialPasswordLink;
 use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
@@ -50,13 +55,34 @@ class CompanyController extends Controller
         ])->header('Cache-Control', 'no-store, private');
     }
 
-    public function store(CompanyRequest $request): JsonResponse
+    /**
+     * T-S8-12: el registro crea también la cuenta de su contacto con el correo del contacto, en la misma transacción.
+     * Después del commit le envía el enlace por correo o, con la entrega manual (HU-S2-01), lo devuelve para que la
+     * Secretaría lo comparta; con correo, el enlace nunca vuelve en la respuesta.
+     */
+    public function store(StoreCompanyRequest $request, CompanyAccounts $accounts, InitialPasswordLink $links): JsonResponse
     {
-        $company = new Company($request->validated());
+        $method = SetupDeliveryMethod::from($request->validated('delivery_method') ?? SetupDeliveryMethod::EMAIL->value);
+        $company = new Company(Arr::except($request->validated(), ['delivery_method']));
         $company->registered_by = $request->user()->id;
-        $this->save($company);
 
-        return $this->detail($company->refresh(), 201);
+        try {
+            [$user, $setupUrl] = DB::transaction(function () use ($company, $accounts, $request): array {
+                $this->save($company);
+
+                return $accounts->create($company, $company->contact_name, $company->contact_email, $request->user());
+            });
+        } catch (UniqueConstraintViolationException $exception) {
+            // Dos registros simultáneos con el mismo correo: la restricción es la última garantía.
+            if ($exception->index !== 'users_email_unique') {
+                throw $exception;
+            }
+            throw ValidationException::withMessages(['contact_email' => ['El correo ya está registrado en otra cuenta.']]);
+        }
+
+        $response = $this->detail($company->refresh(), 201);
+
+        return $response->setData([...$links->deliver($user, $setupUrl, $method, $request->user()->id), ...(array) $response->getData(true)]);
     }
 
     public function show(string $company): JsonResponse
@@ -131,6 +157,7 @@ class CompanyController extends Controller
         return response()->json(['data' => [
             ...$this->summary($company),
             'contact_name' => $company->contact_name,
+            'contact_position' => $company->contact_position,
             'contact_email' => $company->contact_email,
             'contact_phone' => $company->contact_phone,
             'validation_reference' => $company->validation_reference,

@@ -25,7 +25,8 @@ test('en móvil, los formularios del detalle se abren en hojas arrastrables que 
   await page.getByRole('link', { name: 'Nueva institución', exact: true }).click()
   await page.getByLabel('Nombre', { exact: true }).fill(`Instituto hojas E2E ${suffix}`)
   await page.getByLabel('CCT', { exact: true }).fill(`HOJAS${suffix}`)
-  await page.getByLabel('Correo de contacto', { exact: true }).fill(`contacto-hojas-${suffix}@example.test`)
+  await page.getByLabel('Nombre de la persona responsable', { exact: true }).fill('Responsable hojas')
+  await page.getByLabel('Correo de la persona responsable', { exact: true }).fill(`contacto-hojas-${suffix}@example.test`)
   await page.getByRole('button', { name: 'Crear institución', exact: true }).click()
   await expect(page).toHaveURL(/\/institutions\/\d+$/)
 

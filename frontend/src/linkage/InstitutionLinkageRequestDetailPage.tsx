@@ -18,10 +18,10 @@ import { LinkageStatus } from './LinkageStatus'
 
 const dateFormat = new Intl.DateTimeFormat('es-MX', { dateStyle: 'long' })
 
-/** Lo que falta del Seguro Facultativo, en el orden de la ficha del alumno (HU-S3-02). */
-function missingSocialSecurity({ has_nss, has_document }: ReceivedLinkageDetail['student']['social_security']): string | null {
-  const missing = [!has_nss && 'el NSS', !has_document && 'el comprobante de vigencia del IMSS'].filter(Boolean)
-  return missing.length ? missing.join(' y ') : null
+/** Tipo de seguro para mostrar: sin datos capturados todavía no se sabe si es IMSS (T-S8-07). */
+function insuranceLabel({ insurance_type, insurer_name, has_number, has_document }: ReceivedLinkageDetail['student']['social_security']): string {
+  if (insurance_type === 'OTHER') return `Otro seguro: ${insurer_name ?? 'sin aseguradora'}`
+  return has_number || has_document ? 'IMSS' : 'Sin capturar'
 }
 
 function Detail({ data, onDecided, refresh }: {
@@ -30,7 +30,7 @@ function Detail({ data, onDecided, refresh }: {
   refresh: () => Promise<void>
 }) {
   const { student, opportunity, company } = data
-  const missing = missingSocialSecurity(student.social_security)
+  const { has_number: hasNumber, has_document: hasDocument } = student.social_security
   const studentPath = `/students/${student.id}`
 
   return (
@@ -56,15 +56,16 @@ function Detail({ data, onDecided, refresh }: {
       </section>
 
       <section className="student-section" aria-labelledby="linkage-security-title">
-        <h3 id="linkage-security-title">Seguro Facultativo (IMSS)</h3>
+        <h3 id="linkage-security-title">Seguro del alumno</h3>
         <dl className="student-identity">
-          <dt>Número de Seguridad Social</dt><dd>{student.social_security.has_nss ? 'Capturado' : 'Sin capturar'}</dd>
-          <dt>Comprobante de vigencia</dt><dd>{student.social_security.has_document ? 'Cargado' : 'Sin cargar'}</dd>
+          <dt>Tipo de seguro</dt><dd>{insuranceLabel(student.social_security)}</dd>
+          <dt>Número del seguro</dt><dd>{hasNumber ? 'Capturado' : 'Sin capturar'}</dd>
+          <dt>Comprobante de vigencia</dt><dd>{hasDocument ? 'Cargado' : 'Sin cargar'}</dd>
         </dl>
-        {missing && (
+        {!hasNumber && !hasDocument && (
           <p className="pending-notice home-notice" role="note">
             <AlertIcon />
-            <span>Al alumno le falta {missing}. Complétalo en su <Link to={studentPath}>expediente</Link> antes de coordinar la vinculación.</span>
+            <span>Al alumno le falta el número del seguro o el comprobante de vigencia. Complétalo en su <Link to={studentPath}>expediente</Link> antes de coordinar la vinculación.</span>
           </p>
         )}
       </section>
@@ -96,7 +97,8 @@ function Detail({ data, onDecided, refresh }: {
           <dt>Sector</dt><dd>{sectorName(company.sector_code)}</dd>
           <dt>Ubicación</dt><dd>{[company.municipality, stateName(company.state_code)].filter(Boolean).join(', ')}</dd>
           <dt>Contacto</dt><dd>{company.contact_name}</dd>
-          <dt>Correo</dt><dd><a href={`mailto:${company.contact_email}`}>{company.contact_email}</a></dd>
+          {company.contact_position && <><dt>Puesto o departamento</dt><dd>{company.contact_position}</dd></>}
+          <dt>Correo</dt><dd><a href={`mailto:${company.contact_email}`} target="_blank" rel="noopener noreferrer">{company.contact_email}</a></dd>
           <dt>Teléfono</dt><dd>{company.contact_phone ? <a href={`tel:${company.contact_phone.replace(/[^\d+]/g, '')}`}>{company.contact_phone}</a> : 'Sin teléfono'}</dd>
         </dl>
       </section>

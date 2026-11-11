@@ -37,8 +37,23 @@ export type StudentProfile = { [K in keyof StudentProfileInput]: StudentProfileI
   pending_municipality: string | null
 }
 
+/** Lo que le falta al alumno, según el servidor (T-S8-09), con el nombre que se muestra a la institución. */
+export const missingDataLabels = {
+  program: 'Carrera o programa educativo',
+  period_type: 'Tipo de periodo',
+  period_number: 'Periodo actual',
+  dual_available: 'Disponibilidad para el programa dual',
+  state_code: 'Estado',
+  municipality_code: 'Municipio',
+  can_relocate: 'Disponibilidad para reubicarse',
+  insurance: 'Seguro (número o comprobante)',
+}
+
+export type MissingDatum = keyof typeof missingDataLabels
+
 export interface StudentDetail extends Student {
   profile: StudentProfile
+  missing_data: MissingDatum[]
 }
 
 export interface StudentPage {
@@ -95,10 +110,13 @@ function profile(data: unknown): StudentProfile {
   }
 }
 
+const isMissingDatum = (value: unknown): value is MissingDatum => typeof value === 'string' && Object.hasOwn(missingDataLabels, value)
+
 function detail(response: unknown): StudentDetail {
   if (typeof response !== 'object' || response === null || !('data' in response) ||
-      typeof response.data !== 'object' || response.data === null || !('profile' in response.data)) throw new ApiError(502)
-  return { ...student(response.data), profile: profile(response.data.profile) }
+      typeof response.data !== 'object' || response.data === null || !('profile' in response.data) ||
+      !('missing_data' in response.data) || !Array.isArray(response.data.missing_data) || !response.data.missing_data.every(isMissingDatum)) throw new ApiError(502)
+  return { ...student(response.data), profile: profile(response.data.profile), missing_data: response.data.missing_data }
 }
 
 const studentPath = (id: string | number) => `/api/students/${encodeURIComponent(String(id))}`
@@ -111,6 +129,8 @@ export interface StudentFilters {
   /** Matrícula, nombres o apellidos; cada palabra debe coincidir. */
   q?: string
   status?: StudentStatusFilter | ''
+  /** Solo los alumnos con datos faltantes (T-S8-09). */
+  missingData?: boolean
 }
 
 /** Página del padrón con la búsqueda y el filtro de estado opcionales (HU-S8-01). */
@@ -119,6 +139,7 @@ export async function listStudents(filters: StudentFilters = {}, signal?: AbortS
   const q = filters.q?.trim()
   if (q) params.set('q', q)
   if (filters.status) params.set('status', filters.status)
+  if (filters.missingData) params.set('data', 'missing')
   const response = await request(`/api/students?${params.toString()}`, { signal })
   if (typeof response !== 'object' || response === null || !('data' in response) || !Array.isArray(response.data) ||
       !('meta' in response) || typeof response.meta !== 'object' || response.meta === null) throw new ApiError(502)

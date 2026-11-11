@@ -42,7 +42,7 @@ class LinkageRequestController extends Controller
             ->with([
                 'opportunity:id,title',
                 'student:id,public_id,headline,program,period_type,period_number',
-                'institution:id,name,contact_email',
+                'institution:id,name,contact_name,contact_position,contact_email,contact_phone',
             ])
             ->orderByDesc('created_at')
             ->orderByDesc('id')
@@ -81,7 +81,7 @@ class LinkageRequestController extends Controller
             return $linkage;
         });
 
-        $linkage->load(['opportunity:id,title', 'student:id,public_id,headline,program,period_type,period_number', 'institution:id,name,contact_email']);
+        $linkage->load(['opportunity:id,title', 'student:id,public_id,headline,program,period_type,period_number', 'institution:id,name,contact_name,contact_position,contact_email,contact_phone']);
 
         return response()->json(['data' => $this->item($linkage)])->header('Cache-Control', 'no-store, private');
     }
@@ -167,7 +167,14 @@ class LinkageRequestController extends Controller
                 'period_type' => $student->period_type?->value,
                 'period_number' => $student->period_number,
             ],
-            'institution' => ['name' => $linkage->institution->name, 'contact_email' => $linkage->institution->contact_email],
+            'institution' => [
+                'name' => $linkage->institution->name,
+                // T-S8-11: responsable de la institución; null en las registradas antes de pedirlo.
+                'contact_name' => $linkage->institution->contact_name,
+                'contact_position' => $linkage->institution->contact_position,
+                'contact_email' => $linkage->institution->contact_email,
+                'contact_phone' => $linkage->institution->contact_phone,
+            ],
             // Respuesta de la institución (HU-S6-02 CA-04), sin la cuenta que respondió.
             'responded_at' => $linkage->responded_at?->toISOString(),
             'response_message' => $linkage->response_message,

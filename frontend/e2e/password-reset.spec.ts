@@ -52,7 +52,8 @@ test('ADMIN inicia el restablecimiento → la persona titular establece su nueva
   await page.getByRole('link', { name: 'Nueva institución', exact: true }).click()
   await page.getByLabel('Nombre', { exact: true }).fill(institution.name)
   await page.getByLabel('CCT', { exact: true }).fill(institution.cct)
-  await page.getByLabel('Correo de contacto', { exact: true }).fill(institution.email)
+  await page.getByLabel('Nombre de la persona responsable', { exact: true }).fill('Responsable reset')
+  await page.getByLabel('Correo de la persona responsable', { exact: true }).fill(institution.email)
   await page.getByRole('button', { name: 'Crear institución', exact: true }).click()
   await expect(page).toHaveURL(/\/institutions\/\d+$/)
   // La preparación usa la entrega manual (HU-S2-01) para obtener el enlace sin correo.
@@ -72,7 +73,7 @@ test('ADMIN inicia el restablecimiento → la persona titular establece su nueva
     await oldPage.goto(new URL(setupUrl, baseURL).toString())
     expect((await choosePassword(oldPage, account.initialPassword, 'Establecer contraseña', '/api/institution-accounts/password-setup')).status()).toBe(204)
     await signIn(oldPage, account.email, account.initialPassword)
-    await expect(oldPage.getByText(account.email, { exact: true })).toBeVisible()
+    await expect(oldPage.getByRole('heading', { name: /^Hola, / })).toBeVisible()
     expect(await me(oldSession, baseURL!)).toBe(200)
 
     // T06: el ADMIN solo identifica la cuenta; nunca ve ni escribe una contraseña.
@@ -126,7 +127,7 @@ test('ADMIN inicia el restablecimiento → la persona titular establece su nueva
     await expect(holder.getByRole('alert')).toHaveText('No fue posible iniciar sesión con esos datos.')
     await signIn(holder, account.email, account.newPassword)
     await expect(holder).toHaveURL(`${baseURL}/`)
-    await expect(holder.getByText(account.email, { exact: true })).toBeVisible()
+    await expect(holder.getByRole('heading', { name: /^Hola, / })).toBeVisible()
     await expect(holder.getByText(institution.name, { exact: true })).toBeVisible()
     expect(await me(holderContext, baseURL!)).toBe(200)
 

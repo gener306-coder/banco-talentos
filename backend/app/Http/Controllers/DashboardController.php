@@ -71,8 +71,8 @@ class DashboardController extends Controller
         return [
             'active_students' => $own()->where('students.is_active', true)->count(),
             'searchable_students' => $own()->searchable()->count(),
-            // «Municipio por confirmar» (HU-S4-04), activos o inactivos.
-            'pending_municipality_students' => $own()->whereNotNull('students.legacy_municipality')->whereNull('students.municipality_code')->count(),
+            // T-S8-09: expediente o seguro por completar, solo de alumnos activos.
+            'missing_data_students' => $own()->where('students.is_active', true)->withMissingData()->count(),
             // HU-S6-03 CA-01: solicitudes que esperan la respuesta de la institución.
             'pending_linkage_requests' => $this->pendingLinkages('institution_id', $institutionId),
         ];

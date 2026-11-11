@@ -18,7 +18,7 @@ beforeEach(function () {
     $this->initializeCookieBrowser();
     $this->company = Company::factory()->create();
     $this->account = User::factory()->forCompany($this->company)->create();
-    $this->institution = Institution::factory()->create(['name' => 'Universidad Tecnológica del Golfo', 'contact_email' => 'dual@utgolfo.edu.mx']);
+    $this->institution = Institution::factory()->create(['name' => 'Universidad Tecnológica del Golfo', 'contact_name' => 'Laura Méndez', 'contact_position' => 'Coordinación Dual', 'contact_email' => 'dual@utgolfo.edu.mx', 'contact_phone' => '+52 833 357 4800']);
     $this->student = inboxStudent($this->institution, 'Analista de datos');
     $this->opportunity = inboxOpportunity($this->company, 'Tableros de producción');
 });
@@ -129,7 +129,10 @@ describe('bandeja (CA-01, CA-02)', function () {
                 'public_id' => $this->student->public_id, 'headline' => 'Analista de datos', 'program' => 'Ingeniería en Datos',
                 'period_type' => 'semester', 'period_number' => 6,
             ],
-            'institution' => ['name' => 'Universidad Tecnológica del Golfo', 'contact_email' => 'dual@utgolfo.edu.mx'],
+            'institution' => [
+                'name' => 'Universidad Tecnológica del Golfo', 'contact_name' => 'Laura Méndez', 'contact_position' => 'Coordinación Dual',
+                'contact_email' => 'dual@utgolfo.edu.mx', 'contact_phone' => '+52 833 357 4800',
+            ],
             'responded_at' => null,
             'response_message' => null,
         ]]);

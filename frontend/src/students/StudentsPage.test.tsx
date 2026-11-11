@@ -123,7 +123,7 @@ describe('padrón de alumnos HU-S2-02', () => {
   it('completa el expediente del alumno recién registrado con el foco en «Expediente público» (HU-S8-02 CA-02, CA-03)', async () => {
     const created = row(9, 'A-009', 'Eva', 'Báez', 'Soto')
     const detail = { ...created, profile: { program: null, period_type: null, period_number: null, dual_available: null, state_code: null,
-      municipality_code: null, municipality: null, pending_municipality: null, can_relocate: null } }
+      municipality_code: null, municipality: null, pending_municipality: null, can_relocate: null }, missing_data: [] }
     apiMock.mockImplementation(async (path) => {
       const url = String(path)
       if (url === '/api/students') return Response.json({ data: created }, { status: 201 })
@@ -244,6 +244,34 @@ describe('búsqueda y filtro del padrón HU-S8-01', () => {
     fireEvent.submit(search)
     await waitFor(() => expect(apiMock).toHaveBeenCalledTimes(3))
     expect(apiMock.mock.calls[2][0]).toBe('/api/students?page=1&q=b%C3%A1ez&status=inactive')
+  })
+
+  it('llega desde el aviso del inicio filtrado por datos faltantes y permite quitar el filtro (T-S8-09)', async () => {
+    apiMock.mockResolvedValueOnce(Response.json({ data: [row(1, 'A-1', 'Ana', 'López')], meta: meta(1) }))
+      .mockResolvedValueOnce(Response.json({ data: [row(1, 'A-1', 'Ana', 'López'), row(2, 'A-2', 'Luis', 'Báez')], meta: meta(2) }))
+    render(<MemoryRouter initialEntries={['/students?data=missing']}><App /></MemoryRouter>)
+    const filter = await screen.findByLabelText('Datos faltantes')
+    expect(filter).toHaveValue('missing')
+    await screen.findByText('López')
+    expect(apiMock.mock.calls[0][0]).toBe('/api/students?page=1&data=missing')
+
+    fireEvent.change(filter, { target: { value: '' } })
+    await screen.findByText('Báez')
+    expect(apiMock.mock.calls[1][0]).toBe('/api/students?page=1')
+  })
+
+  it('llega con el estado del aviso del inicio y lo conserva al quitar el otro filtro (T-S8-09)', async () => {
+    apiMock.mockImplementation(async () => Response.json({ data: [row(1, 'A-1', 'Ana', 'López')], meta: meta(1) }))
+    render(<MemoryRouter initialEntries={['/students?data=missing&status=active']}><App /></MemoryRouter>)
+    const filter = await screen.findByLabelText('Datos faltantes')
+    expect(screen.getByLabelText('Estado')).toHaveValue('active')
+    await screen.findByText('López')
+    expect(apiMock.mock.calls[0][0]).toBe('/api/students?page=1&status=active&data=missing')
+
+    fireEvent.change(filter, { target: { value: '' } })
+    await waitFor(() => expect(apiMock).toHaveBeenCalledTimes(2))
+    expect(apiMock.mock.calls[1][0]).toBe('/api/students?page=1&status=active')
+    expect(screen.getByLabelText('Estado')).toHaveValue('active')
   })
 
   it('distingue la búsqueda sin coincidencias del padrón vacío y permite limpiar los filtros (CA-03)', async () => {

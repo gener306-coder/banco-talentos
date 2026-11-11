@@ -7,12 +7,12 @@ const summary = {
   state_code: '28', municipality_code: '28032', municipality: 'Reynosa', is_active: true,
 } as const
 const company = {
-  ...summary, contact_name: 'Lucía', contact_email: 'dual@manugolfo.test', contact_phone: null, validation_reference: 'SE/1',
+  ...summary, contact_name: 'Lucía', contact_position: null, contact_email: 'dual@manugolfo.test', contact_phone: null, validation_reference: 'SE/1',
   registered_by: { id: 2, name: 'Analista' }, created_at: '2026-10-22T10:00:00Z',
 }
 const input = {
   legal_name: 'Manufacturas del Golfo', trade_name: 'ManuGolfo', rfc: 'MGO150320AB1', sector_code: '31-33', state_code: '28',
-  municipality_code: '28032', contact_name: 'Lucía', contact_email: 'dual@manugolfo.test', contact_phone: null, validation_reference: 'SE/1',
+  municipality_code: '28032', contact_name: 'Lucía', contact_position: null, contact_email: 'dual@manugolfo.test', contact_phone: null, validation_reference: 'SE/1',
 } as const
 
 function csrf() {
@@ -55,14 +55,26 @@ describe('empresas HU-S4-02', () => {
   })
 
   it('registra y edita con CSRF enviando solo los datos de la empresa (CA-02)', async () => {
-    fetchMock.mockImplementationOnce(csrf).mockResolvedValueOnce(Response.json({ data: company }, { status: 201 }))
+    fetchMock.mockImplementationOnce(csrf).mockResolvedValueOnce(Response.json({ data: company, setup_delivery: 'sent', setup_url: 'https://ignorado' }, { status: 201 }))
       .mockImplementationOnce(csrf).mockResolvedValueOnce(Response.json({ data: company }))
-    await createCompany({ ...input, ...{ is_active: false, latitude: 1 } })
+    await expect(createCompany({ ...input, ...{ is_active: false, latitude: 1 } })).resolves.toMatchObject({ setupDelivery: 'sent' })
     await updateCompany(5, input)
     expect(fetchMock.mock.calls[1][0]).toBe('/api/companies')
-    expect(JSON.parse(fetchMock.mock.calls[1][1]?.body as string)).toEqual(input)
+    // T-S8-12: el alta indica cómo entregar el enlace de la cuenta del contacto; la edición no.
+    expect(JSON.parse(fetchMock.mock.calls[1][1]?.body as string)).toEqual({ ...input, delivery_method: 'email' })
+    expect(JSON.parse(fetchMock.mock.calls[3][1]?.body as string)).toEqual(input)
     expect(fetchMock.mock.calls[3][0]).toBe('/api/companies/5')
     expect(fetchMock.mock.calls[3][1]?.method).toBe('PUT')
+  })
+
+  it('devuelve el enlace para compartir solo con la entrega manual y rechaza respuestas fuera del contrato (T-S8-12)', async () => {
+    const link = 'http://localhost:5173/set-initial-password?email=dual%40manugolfo.test&token=abc'
+    fetchMock.mockImplementationOnce(csrf).mockResolvedValueOnce(Response.json({ data: company, setup_delivery: 'manual', setup_url: link }, { status: 201 }))
+    await expect(createCompany(input, 'manual')).resolves.toMatchObject({ setupDelivery: 'manual', setupLink: link })
+    for (const body of [{ data: company }, { data: company, setup_delivery: 'manual', setup_url: 'https://otro.example/x' }]) {
+      fetchMock.mockImplementationOnce(csrf).mockResolvedValueOnce(Response.json(body, { status: 201 }))
+      await expect(createCompany(input)).rejects.toMatchObject({ status: 502 })
+    }
   })
 
   it('cambia el estado con un booleano (CA-07)', async () => {

@@ -57,7 +57,7 @@ function CompanyDetail({ id }: { id: string }) {
               <dt>Sector económico</dt><dd>{data.sector_code} · {sectorName(data.sector_code)}</dd>
               <dt>Ubicación</dt><dd>{data.municipality ?? data.municipality_code}, {stateName(data.state_code)}</dd>
               <dt>Contacto del programa dual</dt>
-              <dd>{data.contact_name} · {data.contact_email}{data.contact_phone && ` · ${data.contact_phone}`}</dd>
+              <dd>{[data.contact_name, data.contact_position, data.contact_email, data.contact_phone].filter(Boolean).join(' · ')}</dd>
               {data.validation_reference && <><dt>Folio u oficio de validación</dt><dd>{data.validation_reference}</dd></>}
               <dt>Registrada por</dt><dd>{data.registered_by.name}, el {dateFormat.format(new Date(data.created_at))}</dd>
               <dt>Estado</dt><dd><InstitutionStatus active={data.is_active} /></dd>

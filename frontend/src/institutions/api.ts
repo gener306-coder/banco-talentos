@@ -1,12 +1,32 @@
 import { ApiError, request } from '../lib/http'
 
+/** Persona responsable (T-S8-11): su nombre también nombra la cuenta que se crea con el correo de contacto. */
 export interface InstitutionInput {
   name: string
   cct: string
+  contact_name: string
+  /** Opcional (T-S8-11). */
+  contact_position: string | null
   contact_email: string
+  /** Opcional (T-S8-11). */
+  contact_phone: string | null
 }
 
-export interface Institution extends InstitutionInput {
+/** Alta (T-S8-11): el enlace de la cuenta del responsable se envía por correo o se genera para compartirlo (HU-S2-01). */
+export interface NewInstitutionInput extends InstitutionInput {
+  delivery_method: DeliveryMethod
+}
+
+export interface CreatedInstitution {
+  institution: Institution
+  setupDelivery: SetupDelivery
+  /** Solo con la entrega manual: enlace de un solo uso que el Administrador comparte con el responsable. */
+  setupLink?: string
+}
+
+export interface Institution extends Omit<InstitutionInput, 'contact_name'> {
+  /** null en las instituciones registradas antes de pedir al responsable. */
+  contact_name: string | null
   id: number
   is_active: boolean
   created_at: string
@@ -25,7 +45,10 @@ function institution(data: unknown): Institution {
       !('id' in data) || typeof data.id !== 'number' || !Number.isSafeInteger(data.id) || data.id <= 0 ||
       !('name' in data) || typeof data.name !== 'string' ||
       !('cct' in data) || typeof data.cct !== 'string' ||
+      !('contact_name' in data) || (data.contact_name !== null && typeof data.contact_name !== 'string') ||
+      !('contact_position' in data) || (data.contact_position !== null && typeof data.contact_position !== 'string') ||
       !('contact_email' in data) || typeof data.contact_email !== 'string' ||
+      !('contact_phone' in data) || (data.contact_phone !== null && typeof data.contact_phone !== 'string') ||
       !('is_active' in data) || typeof data.is_active !== 'boolean' ||
       !('created_at' in data) || typeof data.created_at !== 'string' ||
       !('updated_at' in data) || typeof data.updated_at !== 'string') {
@@ -33,7 +56,8 @@ function institution(data: unknown): Institution {
   }
 
   return {
-    id: data.id, name: data.name, cct: data.cct, contact_email: data.contact_email,
+    id: data.id, name: data.name, cct: data.cct, contact_name: data.contact_name, contact_position: data.contact_position,
+    contact_email: data.contact_email, contact_phone: data.contact_phone,
     is_active: data.is_active, created_at: data.created_at, updated_at: data.updated_at,
   }
 }
@@ -52,19 +76,33 @@ export async function getInstitution(id: string, signal?: AbortSignal): Promise<
   return institution(responseData(await request(institutionPath(id), { signal })))
 }
 
-async function writeInstitution(path: string, method: string, body: InstitutionInput | { is_active: boolean }): Promise<Institution> {
+async function send(path: string, method: string, body: object): Promise<unknown> {
   // Preparar CSRF antes de cada envío permite reintentar manualmente un 419.
   // Las escrituras nunca se repiten automáticamente ante fallos de red.
   await request('/sanctum/csrf-cookie')
-  return institution(responseData(await request(path, { method, body: JSON.stringify(body) })))
+  return request(path, { method, body: JSON.stringify(body) })
+}
+
+async function writeInstitution(path: string, method: string, body: InstitutionInput | { is_active: boolean }): Promise<Institution> {
+  return institution(responseData(await send(path, method, body)))
 }
 
 function fields(input: InstitutionInput): InstitutionInput {
-  return { name: input.name, cct: input.cct, contact_email: input.contact_email }
+  return {
+    name: input.name, cct: input.cct, contact_name: input.contact_name, contact_position: input.contact_position || null,
+    contact_email: input.contact_email, contact_phone: input.contact_phone || null,
+  }
 }
 
-export function createInstitution(input: InstitutionInput): Promise<Institution> {
-  return writeInstitution('/api/institutions', 'POST', fields(input))
+/**
+ * Registra la institución y la cuenta de su responsable (T-S8-11). Con correo, el enlace nunca vuelve; con la entrega
+ * manual se valida como en «Nueva cuenta institucional» y solo vive en la memoria de quien lo pidió.
+ */
+export async function createInstitution(input: NewInstitutionInput): Promise<CreatedInstitution> {
+  const response = await send('/api/institutions', 'POST', { ...fields(input), delivery_method: input.delivery_method })
+  const delivery = setupDelivery(response, true)!
+  const setupLink = manualSetupLink(response, delivery)
+  return { institution: institution(responseData(response)), setupDelivery: delivery, ...(setupLink ? { setupLink } : {}) }
 }
 
 export function updateInstitution(id: string, input: InstitutionInput): Promise<Institution> {

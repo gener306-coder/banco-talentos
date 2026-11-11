@@ -21,6 +21,8 @@ class PromotionalVideoController extends Controller
     public function index(ListPromotionalVideosRequest $request): JsonResponse
     {
         $institution = $request->validated('institution');
+        $first = $request->validated('first');
+        $seed = $request->validated('order') === 'random' ? (string) $request->validated('seed') : null;
 
         $page = InstitutionVideo::query()
             ->where('status', VideoStatus::READY)
@@ -28,8 +30,12 @@ class PromotionalVideoController extends Controller
             ->whereHas('institution', fn ($query) => $query->where('is_active', true)
                 ->when($institution, fn ($query) => $query->where('public_id', $institution)))
             ->with('institution:id,public_id,name')
-            ->orderByDesc('created_at')
-            ->orderByDesc('id')
+            // T-S9-03: la historia abierta desde el inicio va primero, aunque por su orden quedara en otra página.
+            ->when($first, fn ($query) => $query->orderByRaw('public_id = ?::uuid DESC', [$first]))
+            // Al azar pero estable para la misma semilla: cada página continúa la misma mezcla.
+            ->when($seed !== null,
+                fn ($query) => $query->orderByRaw('md5(public_id::text || ?)', [$seed])->orderBy('id'),
+                fn ($query) => $query->orderByDesc('created_at')->orderByDesc('id'))
             ->paginate(self::PER_PAGE);
 
         return response()->json([

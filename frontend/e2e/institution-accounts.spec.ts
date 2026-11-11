@@ -31,7 +31,8 @@ test('ADMIN crea una cuenta sin contraseña; su titular la establece y pierde ac
   await page.getByRole('link', { name: 'Nueva institución', exact: true }).click()
   await page.getByLabel('Nombre', { exact: true }).fill(institution.name)
   await page.getByLabel('CCT', { exact: true }).fill(institution.cct)
-  await page.getByLabel('Correo de contacto', { exact: true }).fill(institution.email)
+  await page.getByLabel('Nombre de la persona responsable', { exact: true }).fill('Responsable cuentas')
+  await page.getByLabel('Correo de la persona responsable', { exact: true }).fill(institution.email)
   await page.getByRole('button', { name: 'Crear institución', exact: true }).click()
   await expect(page).toHaveURL(/\/institutions\/\d+$/)
   await expect(page.getByText(institution.name, { exact: true })).toBeVisible()
@@ -102,7 +103,7 @@ test('ADMIN crea una cuenta sin contraseña; su titular la establece y pierde ac
     await holder.getByLabel('Contraseña', { exact: true }).fill(account.password)
     await holder.getByRole('button', { name: 'Iniciar sesión', exact: true }).click()
     await expect(holder).toHaveURL(`${baseURL}/`)
-    await expect(holder.getByText(account.email, { exact: true })).toBeVisible()
+    await expect(holder.getByRole('heading', { name: /^Hola, / })).toBeVisible()
     await expect(holder.getByText('Institución', { exact: true })).toBeVisible()
     // Inicio por rol: la cuenta vinculada ve su sección de alumnos.
     await expect(holder.getByRole('link', { name: 'Alumnos', exact: true })).toBeVisible()

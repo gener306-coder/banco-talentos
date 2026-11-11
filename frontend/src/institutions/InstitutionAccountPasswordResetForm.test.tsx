@@ -3,7 +3,7 @@ import { MemoryRouter } from 'react-router'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import App from '../App'
 
-const institution = { id: 7, name: 'Instituto Dual', cct: 'CCT-7', contact_email: 'contacto@example.test', is_active: true, created_at: '2026-09-30', updated_at: '2026-09-30' }
+const institution = { id: 7, name: 'Instituto Dual', cct: 'CCT-7', contact_name: 'María López', contact_position: null, contact_email: 'contacto@example.test', contact_phone: null, is_active: true, created_at: '2026-09-30', updated_at: '2026-09-30' }
 const email = 'titular@example.test'
 const fetchMock = vi.fn<typeof fetch>()
 const resetRequest = vi.fn<typeof fetch>()

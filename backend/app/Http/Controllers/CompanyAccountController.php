@@ -12,6 +12,7 @@ use App\Http\Requests\UpdateAccountStatusRequest;
 use App\Models\Company;
 use App\Models\User;
 use App\Notifications\ResetInstitutionPassword;
+use App\Services\CompanyAccounts;
 use App\Services\InitialPasswordLink;
 use App\Services\InstitutionPasswordResetLink;
 use Illuminate\Database\Eloquent\Builder;
@@ -19,7 +20,6 @@ use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Password;
-use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 use Symfony\Component\HttpKernel\Exception\TooManyRequestsHttpException;
 
@@ -45,34 +45,21 @@ class CompanyAccountController extends Controller
             ->header('Cache-Control', 'no-store, private');
     }
 
-    public function store(StoreSetupAccountRequest $request, string $company, InitialPasswordLink $links): JsonResponse
+    public function store(StoreSetupAccountRequest $request, string $company, InitialPasswordLink $links, CompanyAccounts $accounts): JsonResponse
     {
         $data = $request->validated();
         $method = SetupDeliveryMethod::from($data['delivery_method'] ?? SetupDeliveryMethod::EMAIL->value);
         $companyId = $this->find($company)->id;
 
         try {
-            [$user, $setupUrl] = DB::transaction(function () use ($data, $links, $request, $companyId): array {
+            [$user, $setupUrl] = DB::transaction(function () use ($data, $accounts, $request, $companyId): array {
                 // Revalidar bajo bloqueo cubre una inactivación concurrente (CA-01).
                 $record = Company::query()->lockForUpdate()->find($companyId);
                 if (! $record?->is_active) {
                     throw ValidationException::withMessages(['company' => ['La empresa está inactiva: actívala para crear cuentas.']]);
                 }
 
-                $user = new User([
-                    'name' => $data['name'],
-                    'email' => $data['email'],
-                    'role' => UserRole::COMPANY,
-                    'is_active' => true,
-                    // Cumple NOT NULL sin proporcionar una credencial utilizable a quien crea la cuenta.
-                    'password' => Str::random(64),
-                ]);
-                $user->company_id = $record->id;
-                $user->password_setup_required = true;
-                $user->created_by = $request->user()->id;
-                $user->save();
-
-                return [$user, $links->issue($user)];
+                return $accounts->create($record, $data['name'], $data['email'], $request->user());
             });
         } catch (UniqueConstraintViolationException $exception) {
             if ($exception->index !== 'users_email_unique') {

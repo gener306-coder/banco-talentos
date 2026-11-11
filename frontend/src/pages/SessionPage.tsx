@@ -8,7 +8,7 @@ import { organizationOf } from '../auth/user'
 import { getDashboard, metricKeys, metricLabels } from '../dashboard/api'
 import { useApiRequest } from '../lib/useApiRequest'
 import { DualStoriesSpotlight } from '../videos/DualStoriesSpotlight'
-import { AlertIcon, BriefcaseIcon, BuildingIcon, ChartIcon, ChevronRightIcon, ClipboardIcon, IdCardIcon, PlusIcon, SearchIcon, UsersIcon, VideoIcon } from '../ui/icons'
+import { BriefcaseIcon, BuildingIcon, ChartIcon, ChevronRightIcon, ClipboardIcon, IdCardIcon, PlusIcon, SearchIcon, UsersIcon, VideoIcon } from '../ui/icons'
 
 interface Section {
   to: string
@@ -83,8 +83,7 @@ function homeFor(user: User): Home | null {
         label: 'Empresa',
         sections: [
           { to: '/talent', title: 'Buscar talento', icon: <SearchIcon />, description: 'Explora perfiles anónimos por habilidades, idiomas y distancia.' },
-          // HU-S9-05: en segundo lugar, para que no pase desapercibida.
-          promotion,
+          // T-S9-02: sin tarjeta de Historias del Dual; el módulo del inicio ya lleva a todas.
           { to: '/opportunities', title: 'Oportunidades Duales', icon: <BriefcaseIcon />, description: 'Registra los proyectos, perfiles y lugares de tu empresa para alumnos de Educación Dual.' },
           { to: '/linkage-requests', title: 'Solicitudes de vinculación', icon: <IdCardIcon />, description: 'Da seguimiento a las solicitudes enviadas y consulta el contacto de cada institución.' },
         ],
@@ -118,6 +117,30 @@ function TalentShortcut() {
 const count = new Intl.NumberFormat('es-MX')
 
 /**
+ * Pendiente del inicio (T-S8-10): conteo, motivo y acción juntos. Toda la tarjeta es clicable, pero el enlace conserva
+ * como nombre accesible solo su acción.
+ */
+function HomeTask({ kind, icon, title, description, to, action }: {
+  kind: 'linkage' | 'missing'
+  icon: ReactNode
+  title: string
+  description: string
+  to: string
+  action: string
+}) {
+  return (
+    <li className={`home-task home-task-${kind}`}>
+      <span className="home-task-icon" aria-hidden="true">{icon}</span>
+      <div className="home-task-text">
+        <p className="home-task-title">{title}</p>
+        <p className="home-task-description">{description}</p>
+        <Link className="home-task-action" to={to}>{action}<ChevronRightIcon /></Link>
+      </div>
+    </li>
+  )
+}
+
+/**
  * Indicadores del rol (HU-S5-01 CA-07, HU-S6-03 CA-02). No bloquean el inicio: mientras cargan no se muestra nada y,
  * si fallan, un aviso discreto deja las tarjetas de acceso intactas.
  */
@@ -130,29 +153,25 @@ function HomeIndicators({ role }: { role: Role }) {
   }
   const metrics = data?.metrics
   if (!metrics) return null
-  const pending = metrics.pending_municipality_students ?? 0
+  const missing = metrics.missing_data_students ?? 0
   // HU-S6-03 CA-02: solo la institución responde solicitudes; a la empresa le basta el contador.
   const linkages = role === 'INSTITUTION' ? metrics.pending_linkage_requests ?? 0 : 0
 
   return (
     <section className="home-indicators" aria-label="Indicadores">
-      {linkages > 0 && (
-        <p className="pending-notice home-notice home-linkage-notice">
-          <AlertIcon />
-          <span>
-            {linkages === 1 ? 'Tienes 1 solicitud de vinculación' : `Tienes ${count.format(linkages)} solicitudes de vinculación`} pendiente{linkages === 1 ? '' : 's'} de respuesta.{' '}
-            <Link to="/institution/linkage-requests">Revisar solicitudes</Link>
-          </span>
-        </p>
-      )}
-      {pending > 0 && (
-        <p className="pending-notice home-notice">
-          <AlertIcon />
-          <span>
-            {pending === 1 ? '1 alumno tiene' : `${count.format(pending)} alumnos tienen`} «Municipio por confirmar».{' '}
-            <Link to="/students">Revisar el padrón</Link>
-          </span>
-        </p>
+      {(linkages > 0 || missing > 0) && (
+        <ul className="home-tasks" aria-label="Por atender">
+          {linkages > 0 && (
+            <HomeTask kind="linkage" icon={<IdCardIcon />} to="/institution/linkage-requests?status=PENDIENTE_INSTITUCION" action="Revisar solicitudes"
+              title={linkages === 1 ? '1 solicitud de vinculación pendiente' : `${count.format(linkages)} solicitudes de vinculación pendientes`}
+              description="Las empresas esperan tu respuesta para continuar." />
+          )}
+          {missing > 0 && (
+            <HomeTask kind="missing" icon={<UsersIcon />} to="/students?data=missing&status=active" action="Revisar el padrón"
+              title={missing === 1 ? '1 alumno con datos faltantes' : `${count.format(missing)} alumnos con datos faltantes`}
+              description="Completa su expediente y su seguro para que puedan participar." />
+          )}
+        </ul>
       )}
       <dl className="home-stats">
         {metricKeys[role].map((key) => (
@@ -184,7 +203,6 @@ export function SessionPage() {
         <p className="home-meta">
           <span className="home-role">{roleLabels[user.role]}</span>
           {organization && <span>{organization}</span>}
-          <span>{user.email}</span>
         </p>
       </div>
 

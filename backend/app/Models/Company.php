@@ -21,7 +21,7 @@ class Company extends Model
     /** Datos que captura la Secretaría; el estado, el punto y quien la registró los asigna el servidor. */
     public const DETAIL_ATTRIBUTES = [
         'legal_name', 'trade_name', 'rfc', 'sector_code', 'state_code', 'municipality_code',
-        'contact_name', 'contact_email', 'contact_phone', 'validation_reference',
+        'contact_name', 'contact_position', 'contact_email', 'contact_phone', 'validation_reference',
     ];
 
     protected $fillable = self::DETAIL_ATTRIBUTES;

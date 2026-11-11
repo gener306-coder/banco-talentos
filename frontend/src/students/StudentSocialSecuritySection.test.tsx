@@ -5,9 +5,10 @@ import App from '../App'
 
 const institutionUser = { id: 5, name: 'Coordinación', email: 'coord@example.test', role: 'INSTITUTION', institution: { id: 7, name: 'Instituto Dual' } }
 const emptyProfile = { program: null, period_type: null, period_number: null, dual_available: null, state_code: null, municipality_code: null, municipality: null, pending_municipality: null, can_relocate: null }
-const detail = { data: { id: 3, enrollment_number: 'A-001', given_names: 'María', first_surname: 'López', second_surname: null, is_active: true, created_at: '2026-10-13T12:00:00Z', profile: emptyProfile } }
+const detail = { data: { id: 3, enrollment_number: 'A-001', given_names: 'María', first_surname: 'López', second_surname: null, is_active: true, created_at: '2026-10-13T12:00:00Z', profile: emptyProfile, missing_data: [] } }
 const document = { name: 'Vigencia María.pdf', size: 150 * 1024, uploaded_at: '2026-10-16T18:30:00Z' }
-const security = (nss: string | null = null, doc: typeof document | null = null) => Response.json({ data: { nss, document: doc } })
+const security = (nss: string | null = null, doc: typeof document | null = null) => Response.json({ data: { insurance_type: 'IMSS', nss, insurer_name: null, policy_number: null, document: doc } })
+const otherSecurity = (policy: string | null = null, doc: typeof document | null = null) => Response.json({ data: { insurance_type: 'OTHER', nss: null, insurer_name: 'Seguros del Golfo', policy_number: policy, document: doc } })
 const fetchMock = vi.fn<typeof fetch>()
 const securityMock = vi.fn<typeof fetch>()
 
@@ -30,7 +31,7 @@ afterEach(() => vi.unstubAllGlobals())
 
 async function section() {
   render(<MemoryRouter initialEntries={['/students/3']}><App /></MemoryRouter>)
-  const region = await screen.findByRole('region', { name: 'Seguro Facultativo (IMSS)' })
+  const region = await screen.findByRole('region', { name: 'Seguro del alumno' })
   await within(region).findByLabelText('Número de Seguridad Social (NSS)')
   return region
 }
@@ -68,9 +69,9 @@ describe('seguro facultativo HU-S3-02', () => {
     securityMock.mockResolvedValueOnce(security())
     const region = await section()
     const input = within(region).getByLabelText('Número de Seguridad Social (NSS)')
-    const save = within(region).getByRole('button', { name: 'Guardar NSS' })
+    const save = within(region).getByRole('button', { name: 'Guardar seguro' })
     fireEvent.click(save)
-    expect(input).toHaveAccessibleDescription(/El NSS es obligatorio/)
+    expect(input).toHaveAccessibleDescription(/Captura el NSS o sube el comprobante/)
     expect(input).toHaveAttribute('aria-invalid', 'true')
     fireEvent.change(input, { target: { value: '1234567890' } })
     fireEvent.click(save)
@@ -85,10 +86,26 @@ describe('seguro facultativo HU-S3-02', () => {
     securityMock.mockResolvedValueOnce(security()).mockResolvedValueOnce(security('12345678903'))
     const region = await section()
     fireEvent.change(within(region).getByLabelText('Número de Seguridad Social (NSS)'), { target: { value: '1234 5678 903' } })
-    fireEvent.click(within(region).getByRole('button', { name: 'Guardar NSS' }))
-    expect(await within(region).findByText('NSS guardado correctamente.')).toHaveAttribute('role', 'status')
+    fireEvent.click(within(region).getByRole('button', { name: 'Guardar seguro' }))
+    expect(await within(region).findByText('Seguro guardado correctamente.')).toHaveAttribute('role', 'status')
     expect(calls('PUT')[0][0]).toBe('/api/students/3/social-security')
-    expect(JSON.parse(calls('PUT')[0][1]?.body as string)).toEqual({ nss: '12345678903' })
+    expect(JSON.parse(calls('PUT')[0][1]?.body as string)).toEqual({ insurance_type: 'IMSS', nss: '12345678903' })
+  })
+
+  it('actualiza el aviso de datos faltantes al completar el seguro (T-S8-09)', async () => {
+    const respond = fetchMock.getMockImplementation()!
+    let missing = ['insurance']
+    fetchMock.mockImplementation(async (path, options) => path === '/api/students/3'
+      ? Response.json({ data: { ...detail.data, missing_data: missing } })
+      : respond(path, options))
+    securityMock.mockResolvedValueOnce(security()).mockResolvedValueOnce(security('12345678903'))
+    const region = await section()
+    expect(screen.getByText('Datos faltantes:')).toBeInTheDocument()
+    missing = []
+    fireEvent.change(within(region).getByLabelText('Número de Seguridad Social (NSS)'), { target: { value: '1234 5678 903' } })
+    fireEvent.click(within(region).getByRole('button', { name: 'Guardar seguro' }))
+    await waitFor(() => expect(screen.queryByText('Datos faltantes:')).not.toBeInTheDocument())
+    expect(within(region).getByText('Seguro guardado correctamente.')).toBeInTheDocument()
   })
 
   it('muestra un NSS duplicado junto al campo', async () => {
@@ -97,9 +114,9 @@ describe('seguro facultativo HU-S3-02', () => {
     const region = await section()
     const input = within(region).getByLabelText('Número de Seguridad Social (NSS)')
     fireEvent.change(input, { target: { value: '12345678903' } })
-    fireEvent.click(within(region).getByRole('button', { name: 'Guardar NSS' }))
+    fireEvent.click(within(region).getByRole('button', { name: 'Guardar seguro' }))
     await waitFor(() => expect(input).toHaveAccessibleDescription(/Ya existe un alumno con ese NSS/))
-    expect(within(region).queryByText('NSS guardado correctamente.')).not.toBeInTheDocument()
+    expect(within(region).queryByText('Seguro guardado correctamente.')).not.toBeInTheDocument()
   })
 
   it('carga el NSS guardado en el campo', async () => {
@@ -124,7 +141,7 @@ describe('seguro facultativo HU-S3-02', () => {
   })
 
   it.each([
-    ['sin archivo', null, 'Selecciona el comprobante de vigencia del IMSS.'],
+    ['sin archivo', null, 'Selecciona el comprobante de vigencia del seguro.'],
     ['una imagen', pdf('foto.png', 1024, 'image/png'), 'El comprobante debe ser un archivo PDF.'],
     ['más de 2 MB', pdf('grande.pdf', 2048 * 1024 + 1), 'El comprobante no debe superar 2 MB.'],
   ])('rechaza %s sin subirlo', async (_, file, message) => {
@@ -156,7 +173,7 @@ describe('seguro facultativo HU-S3-02', () => {
     const revokeObjectURL = vi.fn()
     vi.stubGlobal('URL', Object.assign(URL, { createObjectURL, revokeObjectURL }))
     const click = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(function (this: HTMLAnchorElement) {
-      expect(this.download).toBe('comprobante-imss.pdf')
+      expect(this.download).toBe('comprobante-seguro.pdf')
       expect(this.href).toBe('blob:comprobante')
     })
     securityMock.mockResolvedValueOnce(security('12345678903', document))
@@ -171,16 +188,86 @@ describe('seguro facultativo HU-S3-02', () => {
 
   it('avisa si el comprobante ya no está disponible', async () => {
     securityMock.mockResolvedValueOnce(security(null, document))
-      .mockResolvedValueOnce(Response.json({ message: 'El alumno no tiene comprobante del IMSS.' }, { status: 404 }))
+      .mockResolvedValueOnce(Response.json({ message: 'El alumno no tiene comprobante del seguro.' }, { status: 404 }))
     const region = await section()
     fireEvent.click(within(region).getByRole('button', { name: 'Descargar comprobante' }))
     expect(await within(region).findByRole('alert')).toHaveTextContent('No encontramos el comprobante. Vuelve a subirlo.')
   })
 
+  it('explica que se puede registrar otro seguro con el número o un PDF (T-S8-07)', async () => {
+    securityMock.mockResolvedValueOnce(security())
+    const region = await section()
+    expect(within(region).getByText(/Basta con capturar el número o subir el comprobante en PDF/)).toBeInTheDocument()
+    expect(within(region).getByRole('radio', { name: 'IMSS' })).toBeChecked()
+    expect(within(region).getByRole('radio', { name: /Otro seguro/ })).not.toBeChecked()
+  })
+
+  it('guarda otro seguro con aseguradora y número libre, y solo entonces permite subir su PDF', async () => {
+    securityMock.mockResolvedValueOnce(security()).mockResolvedValueOnce(otherSecurity('POL-77/A'))
+    const region = await section()
+    fireEvent.click(within(region).getByRole('radio', { name: /Otro seguro/ }))
+    expect(within(region).queryByLabelText('Número de Seguridad Social (NSS)')).not.toBeInTheDocument()
+    expect(within(region).queryByLabelText('Archivo PDF')).not.toBeInTheDocument()
+    expect(within(region).getByText('Guarda primero los datos del seguro para subir su comprobante.')).toBeInTheDocument()
+
+    const insurer = within(region).getByLabelText('Aseguradora o institución')
+    fireEvent.click(within(region).getByRole('button', { name: 'Guardar seguro' }))
+    expect(insurer).toHaveAccessibleDescription('El nombre de la aseguradora es obligatorio.')
+    expect(calls('PUT')).toHaveLength(0)
+
+    fireEvent.change(insurer, { target: { value: ' Seguros del Golfo ' } })
+    fireEvent.change(within(region).getByLabelText('Número de póliza o afiliación (opcional)'), { target: { value: 'POL-77/A' } })
+    fireEvent.click(within(region).getByRole('button', { name: 'Guardar seguro' }))
+    expect(await within(region).findByText('Seguro guardado correctamente.')).toBeInTheDocument()
+    expect(JSON.parse(calls('PUT')[0][1]?.body as string)).toEqual({ insurance_type: 'OTHER', insurer_name: 'Seguros del Golfo', policy_number: 'POL-77/A' })
+    expect(within(region).getByLabelText('Archivo PDF')).toBeInTheDocument()
+  })
+
+  it('carga un seguro distinto del IMSS y envía null si no tiene número', async () => {
+    securityMock.mockResolvedValueOnce(otherSecurity()).mockResolvedValueOnce(otherSecurity())
+    render(<MemoryRouter initialEntries={['/students/3']}><App /></MemoryRouter>)
+    const region = await screen.findByRole('region', { name: 'Seguro del alumno' })
+    expect(await within(region).findByLabelText('Aseguradora o institución')).toHaveValue('Seguros del Golfo')
+    expect(within(region).getByRole('radio', { name: /Otro seguro/ })).toBeChecked()
+    fireEvent.click(within(region).getByRole('button', { name: 'Guardar seguro' }))
+    await within(region).findByText('Seguro guardado correctamente.')
+    expect(JSON.parse(calls('PUT')[0][1]?.body as string)).toEqual({ insurance_type: 'OTHER', insurer_name: 'Seguros del Golfo', policy_number: null })
+  })
+
+  it('avisa qué se borra al cambiar de tipo y permite volver al IMSS sin NSS', async () => {
+    securityMock.mockResolvedValueOnce(otherSecurity('POL-1')).mockResolvedValueOnce(security())
+    render(<MemoryRouter initialEntries={['/students/3']}><App /></MemoryRouter>)
+    const region = await screen.findByRole('region', { name: 'Seguro del alumno' })
+    fireEvent.click(await within(region).findByRole('radio', { name: 'IMSS' }))
+    expect(within(region).getByText(/se borrarán el número y la aseguradora del seguro anterior/)).toBeInTheDocument()
+    fireEvent.click(within(region).getByRole('button', { name: 'Guardar seguro' }))
+    await within(region).findByText('Seguro guardado correctamente.')
+    expect(JSON.parse(calls('PUT')[0][1]?.body as string)).toEqual({ insurance_type: 'IMSS', nss: null })
+  })
+
+  it('permite dejar el IMSS solo con el comprobante', async () => {
+    securityMock.mockResolvedValueOnce(security(null, document)).mockResolvedValueOnce(security(null, document))
+    const region = await section()
+    fireEvent.click(within(region).getByRole('button', { name: 'Guardar seguro' }))
+    await within(region).findByText('Seguro guardado correctamente.')
+    expect(JSON.parse(calls('PUT')[0][1]?.body as string)).toEqual({ insurance_type: 'IMSS', nss: null })
+  })
+
+  it('muestra junto al campo el error del servidor sobre el número', async () => {
+    securityMock.mockResolvedValueOnce(otherSecurity())
+      .mockResolvedValueOnce(Response.json({ errors: { policy_number: ['El número del seguro solo admite letras, dígitos, espacios, puntos, guiones y diagonales.'] } }, { status: 422 }))
+    render(<MemoryRouter initialEntries={['/students/3']}><App /></MemoryRouter>)
+    const region = await screen.findByRole('region', { name: 'Seguro del alumno' })
+    const policy = await within(region).findByLabelText('Número de póliza o afiliación (opcional)')
+    fireEvent.change(policy, { target: { value: '<1>' } })
+    fireEvent.click(within(region).getByRole('button', { name: 'Guardar seguro' }))
+    await waitFor(() => expect(policy).toHaveAccessibleDescription(/solo admite letras/))
+  })
+
   it('presenta el fallo de carga con reintento sin afectar el resto del detalle', async () => {
     securityMock.mockResolvedValueOnce(new Response(null, { status: 500 })).mockResolvedValueOnce(security())
     render(<MemoryRouter initialEntries={['/students/3']}><App /></MemoryRouter>)
-    const region = await screen.findByRole('region', { name: 'Seguro Facultativo (IMSS)' })
+    const region = await screen.findByRole('region', { name: 'Seguro del alumno' })
     fireEvent.click(await within(region).findByRole('button', { name: 'Reintentar' }))
     expect(await within(region).findByLabelText('Número de Seguridad Social (NSS)')).toBeInTheDocument()
     expect(screen.getByRole('region', { name: 'Expediente público' })).toBeInTheDocument()

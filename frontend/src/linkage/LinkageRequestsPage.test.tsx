@@ -12,7 +12,7 @@ const pending = {
   id: 41, status: 'PENDIENTE_INSTITUCION', created_at: '2026-10-28T10:00:00Z', message: 'Nos interesa su perfil.',
   opportunity: { id: 12, title: 'Tableros de producción' },
   profile: { public_id: publicId, headline: 'Analista de datos', program: 'Ingeniería en Datos', period_type: 'semester', period_number: 6 },
-  institution: { name: 'UT del Golfo', contact_email: 'dual@utgolfo.edu.mx' }, responded_at: null, response_message: null,
+  institution: { name: 'UT del Golfo', contact_name: 'Laura Méndez', contact_position: 'Coordinación Dual', contact_email: 'dual@utgolfo.edu.mx', contact_phone: '+52 833 357 4800' }, responded_at: null, response_message: null,
 }
 const cancelled = { ...pending, id: 40, status: 'CANCELADA', opportunity: { id: 13, title: 'Calidad' } }
 const page = (items: unknown[], meta = {}) => Response.json({ data: items, meta: { current_page: 1, last_page: 1, total: items.length, per_page: 20, ...meta } })
@@ -64,6 +64,10 @@ describe('bandeja de solicitudes HU-S5-05', () => {
     expect(within(row).getByRole('link', { name: 'Tableros de producción' })).toHaveAttribute('href', '/opportunities/12')
     expect(within(row).getByText('UT del Golfo')).toBeInTheDocument()
     expect(within(row).getByRole('link', { name: 'dual@utgolfo.edu.mx' })).toHaveAttribute('href', 'mailto:dual@utgolfo.edu.mx')
+    expect(within(row).getByRole('link', { name: 'dual@utgolfo.edu.mx' })).toHaveAttribute('target', '_blank')
+    // T-S8-11: responsable de la institución con su puesto, y su teléfono opcional listo para llamar.
+    expect(within(row).getByText('Laura Méndez · Coordinación Dual')).toBeInTheDocument()
+    expect(within(row).getByRole('link', { name: '+52 833 357 4800' })).toHaveAttribute('href', 'tel:+528333574800')
     expect(within(row).getByText('Pendiente de la institución')).toBeInTheDocument()
     expect(within(row).getByRole('button', { name: /Cancelar la solicitud/ })).toBeInTheDocument()
 

@@ -3,15 +3,17 @@ import { Link, useLocation, useParams } from 'react-router'
 import { InstitutionRequestError } from '../institutions/InstitutionLayout'
 import { useApiMutation, useApiRequest } from '../lib/useApiRequest'
 import { ConfirmDialog } from '../ui/ConfirmDialog'
-import { ChevronLeftIcon, ChevronRightIcon } from '../ui/icons'
+import { AlertIcon, ChevronLeftIcon, ChevronRightIcon } from '../ui/icons'
 import { Sheet } from '../ui/Sheet'
 import { LoadingState } from '../ui/StateMessage'
-import { fullName, getStudent, setStudentStatus } from './api'
+import { fullName, getStudent, missingDataLabels, setStudentStatus } from './api'
 import { studentMessages } from './messages'
 import { StudentForm } from './StudentForm'
 import { StudentProfileForm } from './StudentProfileForm'
 import { StudentSocialSecuritySection } from './StudentSocialSecuritySection'
 import { StudentStatus } from './StudentStatus'
+
+const missingList = new Intl.ListFormat('es-MX', { style: 'long', type: 'conjunction' })
 
 const isCompleteProfileState = (state: unknown) =>
   typeof state === 'object' && state !== null && 'completeProfile' in state && state.completeProfile === true
@@ -41,6 +43,11 @@ function StudentDetailView({ id }: { id: string }) {
     field?.focus()
   }, [data])
 
+  // T-S8-09: el seguro se guarda en su propia sección; el servidor decide si el aviso de datos faltantes sigue vigente.
+  const refreshMissingData = useCallback(() => {
+    getStudent(id).then(setData).catch(() => undefined)
+  }, [id, setData])
+
   // Inactivar oculta al alumno del Banco de Talentos: se confirma. Reactivar no tiene consecuencias que confirmar.
   function requestStatusChange() {
     if (!data || mutation.pending) return
@@ -69,6 +76,12 @@ function StudentDetailView({ id }: { id: string }) {
         : data && (
           <>
             <h2 id="student-title">{fullName(data)}</h2>
+            {data.missing_data.length > 0 && (
+              <p className="pending-notice home-notice home-action-notice">
+                <AlertIcon />
+                <span><strong>Datos faltantes:</strong> {missingList.format(data.missing_data.map((datum) => missingDataLabels[datum]))}.</span>
+              </p>
+            )}
             <p className="student-cv-link">
               <Link className="pill-link" to={`/students/${data.id}/cv`}>CV profesional<ChevronRightIcon /></Link>
             </p>
@@ -86,7 +99,7 @@ function StudentDetailView({ id }: { id: string }) {
               </div>
             </section>
 
-            <StudentSocialSecuritySection studentId={data.id} />
+            <StudentSocialSecuritySection studentId={data.id} onSaved={refreshMissingData} />
 
             <section className="student-section" aria-labelledby="student-profile-title">
               <h3 id="student-profile-title">Expediente público</h3>

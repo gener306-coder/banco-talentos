@@ -72,7 +72,7 @@ describe('NSS', function () {
         $this->browserRequest('GET', securityUrl($this->student))
             ->assertOk()
             ->assertHeader('Cache-Control', 'no-store, private')
-            ->assertExactJson(['data' => ['nss' => null, 'document' => null]]);
+            ->assertExactJson(['data' => ['insurance_type' => 'IMSS', 'nss' => null, 'insurer_name' => null, 'policy_number' => null, 'document' => null]]);
         $this->assertDatabaseCount('student_social_security', 0);
     });
 
@@ -81,7 +81,7 @@ describe('NSS', function () {
         $this->browserRequest('PUT', securityUrl($this->student), ['nss' => ' 1234-5678-90 3 '])
             ->assertOk()
             ->assertHeader('Cache-Control', 'no-store, private')
-            ->assertExactJson(['data' => ['nss' => '12345678903', 'document' => null]]);
+            ->assertExactJson(['data' => ['insurance_type' => 'IMSS', 'nss' => '12345678903', 'insurer_name' => null, 'policy_number' => null, 'document' => null]]);
 
         $this->browserRequest('GET', securityUrl($this->student))->assertOk()->assertJsonPath('data.nss', '12345678903');
         $record = StudentSocialSecurity::sole();
@@ -129,8 +129,8 @@ describe('NSS', function () {
             ->assertUnprocessable()->assertJsonValidationErrors(['nss' => $message]);
         $this->assertDatabaseCount('student_social_security', 0);
     })->with([
-        'missing' => [null, 'El NSS es obligatorio.'],
-        'blank' => ['  ', 'El NSS es obligatorio.'],
+        'missing' => [null, 'Captura el NSS o sube el comprobante.'],
+        'blank' => ['  ', 'Captura el NSS o sube el comprobante.'],
         'number' => [12345678903, 'El NSS no es válido.'],
         'short' => ['1234567890', 'El NSS debe tener 11 dígitos.'],
         'long' => ['123456789031', 'El NSS debe tener 11 dígitos.'],
@@ -185,6 +185,85 @@ describe('NSS', function () {
             ->assertUnprocessable()
             ->assertJsonValidationErrors(['nss' => 'Ya existe un alumno con ese NSS en tu institución.']);
         expect(StudentSocialSecurity::where('student_id', $this->student->id)->exists())->toBeFalse();
+    });
+});
+
+describe('otro seguro', function () {
+    it('stores the insurer and an encrypted policy number in free format (T-S8-07)', function () {
+        signInSecurityInstitution($this);
+        $this->browserRequest('PUT', securityUrl($this->student), [
+            'insurance_type' => 'OTHER', 'insurer_name' => ' Seguros del Golfo ', 'policy_number' => 'POL-2026/AB 77',
+        ])->assertOk()->assertExactJson(['data' => [
+            'insurance_type' => 'OTHER', 'nss' => null, 'insurer_name' => 'Seguros del Golfo', 'policy_number' => 'POL-2026/AB 77', 'document' => null,
+        ]]);
+
+        $row = DB::table('student_social_security')->sole();
+        expect($row->policy_number)->not->toContain('POL-2026');
+        expect(Crypt::decryptString($row->policy_number))->toBe('POL-2026/AB 77');
+    });
+
+    it('accepts the insurer alone, so the document can stand in for the number', function () {
+        signInSecurityInstitution($this);
+        $this->browserRequest('PUT', securityUrl($this->student), ['insurance_type' => 'OTHER', 'insurer_name' => 'ISSSTE'])
+            ->assertOk()->assertJsonPath('data.policy_number', null);
+        uploadDocument($this, $this->student, pdfUpload())->assertOk()
+            ->assertJsonPath('data.insurance_type', 'OTHER')->assertJsonPath('data.document.name', 'vigencia.pdf');
+    });
+
+    it('lets two students share a policy number', function () {
+        $classmate = Student::factory()->for($this->institution)->withIdentity()->create();
+        signInSecurityInstitution($this);
+        foreach ([$this->student, $classmate] as $student) {
+            $this->browserRequest('PUT', securityUrl($student), ['insurance_type' => 'OTHER', 'insurer_name' => 'ISSSTE', 'policy_number' => 'FAM-1'])->assertOk();
+        }
+    });
+
+    it('validates the insurance data without writing it', function (array $payload, string $field, string $message) {
+        signInSecurityInstitution($this);
+        $this->browserRequest('PUT', securityUrl($this->student), $payload)
+            ->assertUnprocessable()->assertJsonValidationErrors([$field => $message]);
+        $this->assertDatabaseCount('student_social_security', 0);
+    })->with([
+        'unknown type' => [['insurance_type' => 'ISSSTE'], 'insurance_type', 'El tipo de seguro no es válido.'],
+        'no insurer' => [['insurance_type' => 'OTHER', 'policy_number' => 'A1'], 'insurer_name', 'El nombre de la aseguradora es obligatorio.'],
+        'long insurer' => [['insurance_type' => 'OTHER', 'insurer_name' => str_repeat('a', 121)], 'insurer_name', 'El nombre de la aseguradora no debe superar 120 caracteres.'],
+        'long number' => [['insurance_type' => 'OTHER', 'insurer_name' => 'A', 'policy_number' => str_repeat('1', 41)], 'policy_number', 'El número del seguro no debe superar 40 caracteres.'],
+        'markup in number' => [['insurance_type' => 'OTHER', 'insurer_name' => 'A', 'policy_number' => '<b>1</b>'], 'policy_number', 'El número del seguro solo admite letras, dígitos, espacios, puntos, guiones y diagonales.'],
+    ]);
+
+    it('clears the data of the previous type and frees the NSS when the type changes', function () {
+        $classmate = Student::factory()->for($this->institution)->withIdentity()->create();
+        signInSecurityInstitution($this);
+        $this->browserRequest('PUT', securityUrl($this->student), ['nss' => $this->nss])->assertOk();
+        uploadDocument($this, $this->student, pdfUpload())->assertOk();
+
+        $this->browserRequest('PUT', securityUrl($this->student), ['insurance_type' => 'OTHER', 'insurer_name' => 'ISSSTE', 'nss' => $this->nss])
+            ->assertOk()->assertJsonPath('data.nss', null)->assertJsonPath('data.document.name', 'vigencia.pdf');
+        expect(DB::table('student_social_security')->value('nss_hash'))->toBeNull();
+        $this->browserRequest('PUT', securityUrl($classmate), ['nss' => $this->nss])->assertOk();
+
+        // De regreso al IMSS sin NSS: el aviso de la solicitud indica si aún falta algo.
+        $this->browserRequest('PUT', securityUrl($this->student), ['insurance_type' => 'IMSS', 'insurer_name' => 'ISSSTE', 'policy_number' => 'A1'])
+            ->assertOk()->assertJsonPath('data.insurance_type', 'IMSS')->assertJsonPath('data.insurer_name', null)->assertJsonPath('data.policy_number', null);
+    });
+
+    it('lets the IMSS rely on its document alone', function () {
+        signInSecurityInstitution($this);
+        $this->browserRequest('PUT', securityUrl($this->student), ['nss' => $this->nss])->assertOk();
+        uploadDocument($this, $this->student, pdfUpload())->assertOk();
+        $this->browserRequest('PUT', securityUrl($this->student), ['insurance_type' => 'IMSS', 'nss' => null])
+            ->assertOk()->assertJsonPath('data.nss', null);
+    });
+
+    it('rejects inconsistent rows at the database', function () {
+        expect(fn () => DB::table('student_social_security')->insert([
+            'student_id' => $this->student->id, 'institution_id' => $this->institution->id, 'insurance_type' => 'OTHER',
+            'created_at' => now(), 'updated_at' => now(),
+        ]))->toThrow(QueryException::class);
+        expect(fn () => DB::table('student_social_security')->insert([
+            'student_id' => $this->student->id, 'institution_id' => $this->institution->id, 'insurer_name' => 'ISSSTE',
+            'created_at' => now(), 'updated_at' => now(),
+        ]))->toThrow(QueryException::class);
     });
 });
 
@@ -267,7 +346,7 @@ describe('comprobante', function () {
         $this->browserRequest('POST', securityUrl($this->student, '/document'), ['document' => 'texto'])
             ->assertUnprocessable()->assertJsonValidationErrors('document');
         $this->browserRequest('POST', securityUrl($this->student, '/document'))
-            ->assertUnprocessable()->assertJsonValidationErrors(['document' => 'Selecciona el comprobante de vigencia del IMSS.']);
+            ->assertUnprocessable()->assertJsonValidationErrors(['document' => 'Selecciona el comprobante de vigencia del seguro.']);
     });
 
     it('sanitizes the original name, which is only shown, never used as a path', function () {
@@ -284,14 +363,14 @@ describe('comprobante', function () {
             ->assertHeader('Content-Type', 'application/pdf')
             ->assertHeader('X-Content-Type-Options', 'nosniff')
             ->assertHeader('Cache-Control', 'no-store, private')
-            ->assertDownload('comprobante-imss.pdf');
+            ->assertDownload('comprobante-seguro.pdf');
         expect($response->streamedContent())->toBe("%PDF-1.7\n1 0 obj\n<<>>\nendobj\n%%EOF\n");
     });
 
     it('answers 404 when there is no document to download', function () {
         signInSecurityInstitution($this);
         $this->browserRequest('GET', securityUrl($this->student, '/document'))
-            ->assertNotFound()->assertExactJson(['message' => 'El alumno no tiene comprobante del IMSS.']);
+            ->assertNotFound()->assertExactJson(['message' => 'El alumno no tiene comprobante del seguro.']);
 
         $this->browserRequest('PUT', securityUrl($this->student), ['nss' => $this->nss])->assertOk();
         $this->browserRequest('GET', securityUrl($this->student, '/document'))->assertNotFound();
