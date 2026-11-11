@@ -80,7 +80,10 @@ describe('bandeja institucional HU-S6-01', () => {
     expect(apiMock.mock.calls[0][0]).toBe('/api/institution/linkage-requests?page=1')
     const row = within(table).getByRole('row', { name: /ManuGolfo/ })
     expect(within(row).getByRole('rowheader')).toHaveTextContent('García López, Ana Sofía')
-    expect(row).toHaveTextContent('MAT-0001 · Ingeniería en Datos · 6.º semestre')
+    // T-S8-15: la fila solo identifica al alumno; la carrera y el periodo quedan en el detalle.
+    expect(row).toHaveTextContent('MAT-0001')
+    expect(row).not.toHaveTextContent('Ingeniería en Datos')
+    expect(row).not.toHaveTextContent('6.º semestre')
     expect(row).toHaveTextContent('Tableros de producción')
     expect(row).toHaveTextContent('Victoria')
     expect(row).toHaveTextContent('Pendiente de la institución')
