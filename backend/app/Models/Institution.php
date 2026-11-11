@@ -10,7 +10,7 @@ class Institution extends Model
 {
     use HasFactory;
 
-    protected $fillable = ['name', 'cct', 'contact_email'];
+    protected $fillable = ['name', 'cct', 'contact_name', 'contact_position', 'contact_email', 'contact_phone'];
 
     protected $attributes = ['is_active' => true];
 

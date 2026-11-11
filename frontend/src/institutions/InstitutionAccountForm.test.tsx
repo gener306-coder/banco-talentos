@@ -4,7 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import App from '../App'
 
 const admin = { id: 1, name: 'Admin', email: 'admin@example.test', role: 'ADMIN' }
-const institution = { id: 7, name: 'Instituto Dual', cct: 'CCT-7', contact_email: 'contacto@example.test', is_active: true, created_at: '2026-09-30', updated_at: '2026-09-30' }
+const institution = { id: 7, name: 'Instituto Dual', cct: 'CCT-7', contact_name: 'María López', contact_position: null, contact_email: 'contacto@example.test', contact_phone: null, is_active: true, created_at: '2026-09-30', updated_at: '2026-09-30' }
 const input = { name: 'Responsable institucional', email: 'titular@example.test', institution_id: 7 }
 const account = { id: 12, name: input.name, email: input.email, role: 'INSTITUTION', is_active: true, institution: { id: 7, name: institution.name } }
 const successMessage = 'Cuenta creada. La persona titular debe establecer su contraseña desde el enlace de configuración.'

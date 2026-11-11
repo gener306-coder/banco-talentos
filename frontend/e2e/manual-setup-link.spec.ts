@@ -24,7 +24,8 @@ test('HU-S2-01: ADMIN genera el enlace manual sin correo → la persona titular 
   await page.getByRole('link', { name: 'Nueva institución', exact: true }).click()
   await page.getByLabel('Nombre', { exact: true }).fill(`Instituto manual E2E ${suffix}`)
   await page.getByLabel('CCT', { exact: true }).fill(`MANUAL${suffix}`)
-  await page.getByLabel('Correo de contacto', { exact: true }).fill(`contacto-manual-${suffix}@example.test`)
+  await page.getByLabel('Nombre de la persona responsable', { exact: true }).fill('Responsable manual')
+  await page.getByLabel('Correo de la persona responsable', { exact: true }).fill(`vinculacion-${suffix}@example.test`)
   await page.getByRole('button', { name: 'Crear institución', exact: true }).click()
   await expect(page).toHaveURL(/\/institutions\/\d+$/)
 

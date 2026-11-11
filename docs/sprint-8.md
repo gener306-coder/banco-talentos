@@ -252,6 +252,41 @@ Afinaciones pedidas y aprobadas por el responsable el 5 de noviembre de 2026, du
 - **Interacción:** toda la tarjeta es clicable, pero el enlace conserva como nombre accesible solo su acción («Revisar solicitudes», «Revisar el padrón»). El foco del teclado rodea la tarjeta completa.
 - **Color:** cada tarjeta conserva el remarque izquierdo y la superficie de su aviso: acento para solicitudes, tono de pendiente para datos faltantes.
 
+### T-S8-11 — Registrar una institución crea la cuenta de su responsable
+
+**Estado:** Completada (10 de noviembre de 2026)  
+**Rol:** `ADMIN`
+
+- **Problema:** el correo de contacto de la institución solo se guardaba. La cuenta institucional se creaba aparte, desde el detalle.
+- **Responsable:** la institución guarda el nombre (`contact_name`, obligatorio al registrar y al editar, hasta 120 caracteres) y el puesto o departamento opcional (`contact_position`, hasta 120) de su persona responsable, como el contacto de las empresas. Las instituciones anteriores lo completan la primera vez que se editan.
+- **Alta:** `POST /api/institutions`, en la misma transacción, crea la institución y la cuenta `INSTITUTION` del responsable, con su nombre y el correo de contacto.
+- **Entrega del enlace:** `delivery_method` es opcional, con las mismas opciones que **Nueva cuenta institucional** (HU-S2-01):
+  - `email`, por omisión: se envía después del commit y responde `setup_delivery` `sent` o `pending`, sin el enlace. Con `pending`, el aviso pide usar **Reenviar enlace**.
+  - `manual`: responde `setup_delivery: manual` y `setup_url`, y no envía correo. La página de alta se queda abierta con el enlace para copiar y un acceso a la institución. El enlace solo vive en el estado de la página, nunca en el historial del navegador.
+- **Correo:** se normaliza a minúsculas y no puede pertenecer a otra cuenta de ningún rol. Si ya existe, no se registra ni la institución ni la cuenta, también ante dos altas simultáneas.
+- **Edición:** no crea cuentas ni envía enlaces; `delivery_method` está prohibido. Cambiar el correo de contacto, o el nombre del responsable, no modifica la cuenta. **Nueva cuenta institucional** sigue disponible para más cuentas, con la misma lógica (`App\Services\InstitutionAccounts`).
+- **Teléfono:** `institutions.contact_phone`, opcional, con la misma validación que el de las empresas (`App\Rules\PhoneNumber`: 10 a 15 dígitos).
+- **Dónde se ve:** el detalle de la institución muestra responsable, puesto, correo y teléfono. En sus solicitudes de vinculación, la empresa ve «Responsable · Puesto», el correo y el teléfono, con enlaces `mailto:` y `tel:`.
+- **Bitácora:** la cuenta creada registra `created_by`, como cualquier otra.
+
+### T-S8-12 — Registrar una empresa crea la cuenta de su contacto
+
+**Estado:** Completada (10 de noviembre de 2026)  
+**Rol:** `SECRETARY`
+
+- **Problema:** como pasaba con las instituciones antes de T-S8-11, el correo del contacto de la empresa solo se guardaba. La cuenta `COMPANY` se creaba aparte, en «Cuentas de la empresa».
+- **Alta:** `POST /api/companies` (`StoreCompanyRequest`), en la misma transacción, crea la empresa y la cuenta `COMPANY` de su contacto, con el nombre y el correo del contacto. El puesto opcional ya existía (T-S8-06).
+- **Entrega del enlace:** `delivery_method` es opcional, con las mismas opciones que en las cuentas (HU-S2-01):
+  - `email`, por omisión: se envía después del commit y responde `setup_delivery` `sent` o `pending`, sin el enlace.
+  - `manual`: responde `setup_url` y no envía correo. La página de registro se queda abierta con el enlace para copiar y «Ver la empresa». El enlace solo vive en el estado de la página.
+- **Correo:** no puede pertenecer a otra cuenta de ningún rol. Si ya existe, no se registra ni la empresa ni la cuenta, también ante dos altas simultáneas.
+- **Edición:** `CompanyRequest` prohíbe `delivery_method` y no crea cuentas. Cambiar el nombre o el correo del contacto no modifica la cuenta. **Cuentas de la empresa** sigue disponible para más cuentas, con la misma lógica (`App\Services\CompanyAccounts`).
+- **Detalle:** la cuenta del contacto aparece en «Cuentas de la empresa» como PENDIENTE hasta que establece su contraseña.
+
+### Prueba intermitente del CV
+
+`StudentCvTest › validates the certifications without writing them` falló una vez en la suite completa y pasa sola. Sus datasets calculaban fechas relativas («mañana», «el año siguiente») al recolectar las pruebas. Ahora son closures que Pest resuelve al ejecutar cada caso, con el reloj de la aplicación, así que siempre son futuras respecto a la validación. No se reprodujo el fallo, así que la causa exacta queda sin confirmar.
+
 ---
 
 ## Afinaciones pendientes

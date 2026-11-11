@@ -19,7 +19,7 @@ async function registerCompany(page: Page, legalName: string) {
   await page.getByLabel('Nombre del contacto', { exact: true }).fill('Responsable dual')
   await page.getByLabel('Correo del contacto', { exact: true }).fill(`dual-${randomBytes(4).toString('hex')}@example.test`)
   await page.getByRole('button', { name: 'Registrar empresa', exact: true }).click()
-  await expect(page.getByText('Empresa registrada correctamente.', { exact: true })).toBeVisible()
+  await expect(page.getByRole('status').filter({ hasText: /^Empresa registrada\. Enviamos a / })).toBeVisible()
 }
 
 test('HU-S4-03: la Secretaría crea la cuenta de una empresa → la titular entra → inactivar la empresa la deja fuera', async ({ page, browser, baseURL }) => {

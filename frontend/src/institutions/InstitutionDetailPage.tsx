@@ -55,7 +55,10 @@ function InstitutionDetail({ id }: { id: string }) {
             <dl className="institution-details">
               <dt>Nombre</dt><dd>{data.name}</dd>
               <dt>CCT</dt><dd>{data.cct}</dd>
+              <dt>Responsable</dt><dd>{data.contact_name ?? 'Sin registrar'}</dd>
+              <dt>Puesto o departamento</dt><dd>{data.contact_position ?? 'Sin registrar'}</dd>
               <dt>Correo de contacto</dt><dd>{data.contact_email}</dd>
+              <dt>Teléfono</dt><dd>{data.contact_phone ? <a href={`tel:${data.contact_phone.replace(/[^\d+]/g, '')}`}>{data.contact_phone}</a> : 'Sin registrar'}</dd>
               <dt>Estado</dt><dd><InstitutionStatus active={data.is_active} /></dd>
             </dl>
             <div className="actions" aria-busy={mutation.pending}>

@@ -1,6 +1,7 @@
 import { createSetupAccount, resendSetupLink, setupAccount } from '../accounts/api'
 import type { CreatedSetupAccount, SetupAccount, SetupAccountInput } from '../accounts/api'
-import type { DeliveryMethod, SetupResult } from '../institutions/api'
+import { manualSetupLink, setupDelivery } from '../institutions/api'
+import type { DeliveryMethod, SetupDelivery, SetupResult } from '../institutions/api'
 import { ApiError, request } from '../lib/http'
 import type { FailureMessages } from '../lib/useApiRequest'
 import { isStateCode } from '../students/catalogs'
@@ -101,11 +102,12 @@ function detail(response: unknown): Company {
 
 const companyPath = (id: string | number) => `/api/companies/${encodeURIComponent(String(id))}`
 
-const body = (input: CompanyInput) => JSON.stringify({
+const fields = (input: CompanyInput): CompanyInput => ({
   legal_name: input.legal_name, trade_name: input.trade_name, rfc: input.rfc, sector_code: input.sector_code,
   state_code: input.state_code, municipality_code: input.municipality_code, contact_name: input.contact_name,
   contact_position: input.contact_position, contact_email: input.contact_email, contact_phone: input.contact_phone, validation_reference: input.validation_reference,
 })
+const body = (input: CompanyInput) => JSON.stringify(fields(input))
 
 export async function listCompanies(page: number, query: string, signal?: AbortSignal): Promise<CompanyPage> {
   const params = new URLSearchParams({ page: String(page) })
@@ -123,10 +125,24 @@ export async function getCompany(id: string, signal?: AbortSignal): Promise<Comp
   return detail(await request(companyPath(id), { signal }))
 }
 
-export async function createCompany(input: CompanyInput): Promise<Company> {
+export interface CreatedCompany {
+  company: Company
+  setupDelivery: SetupDelivery
+  /** Solo con la entrega manual: enlace de un solo uso que la Secretaría comparte con el contacto. */
+  setupLink?: string
+}
+
+/**
+ * Registra la empresa y la cuenta de su contacto (T-S8-12). Con correo, el enlace nunca vuelve; con la entrega manual
+ * se valida como en «Cuentas de la empresa» y solo vive en la memoria de quien lo pidió.
+ */
+export async function createCompany(input: CompanyInput, deliveryMethod: DeliveryMethod = 'email'): Promise<CreatedCompany> {
   // CSRF antes de cada escritura; el envío no se repite automáticamente ante fallos de red.
   await request('/sanctum/csrf-cookie')
-  return detail(await request('/api/companies', { method: 'POST', body: body(input) }))
+  const response = await request('/api/companies', { method: 'POST', body: JSON.stringify({ ...fields(input), delivery_method: deliveryMethod }) })
+  const delivery = setupDelivery(response, true)!
+  const setupLink = manualSetupLink(response, delivery)
+  return { company: detail(response), setupDelivery: delivery, ...(setupLink ? { setupLink } : {}) }
 }
 
 export async function updateCompany(id: string | number, input: CompanyInput): Promise<Company> {

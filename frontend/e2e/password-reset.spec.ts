@@ -52,7 +52,8 @@ test('ADMIN inicia el restablecimiento → la persona titular establece su nueva
   await page.getByRole('link', { name: 'Nueva institución', exact: true }).click()
   await page.getByLabel('Nombre', { exact: true }).fill(institution.name)
   await page.getByLabel('CCT', { exact: true }).fill(institution.cct)
-  await page.getByLabel('Correo de contacto', { exact: true }).fill(institution.email)
+  await page.getByLabel('Nombre de la persona responsable', { exact: true }).fill('Responsable reset')
+  await page.getByLabel('Correo de la persona responsable', { exact: true }).fill(institution.email)
   await page.getByRole('button', { name: 'Crear institución', exact: true }).click()
   await expect(page).toHaveURL(/\/institutions\/\d+$/)
   // La preparación usa la entrega manual (HU-S2-01) para obtener el enlace sin correo.

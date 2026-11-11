@@ -3,27 +3,25 @@
 namespace App\Http\Controllers;
 
 use App\Enums\SetupDeliveryMethod;
-use App\Enums\UserRole;
 use App\Http\Requests\StoreInstitutionAccountRequest;
 use App\Models\Institution;
-use App\Models\User;
 use App\Services\InitialPasswordLink;
+use App\Services\InstitutionAccounts;
 use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 
 class InstitutionAccountController extends Controller
 {
-    public function store(StoreInstitutionAccountRequest $request, InitialPasswordLink $links): JsonResponse
+    public function store(StoreInstitutionAccountRequest $request, InitialPasswordLink $links, InstitutionAccounts $accounts): JsonResponse
     {
         $data = $request->validated();
         $method = SetupDeliveryMethod::from($data['delivery_method'] ?? SetupDeliveryMethod::EMAIL->value);
         unset($data['delivery_method']);
 
         try {
-            [$user, $setupUrl] = DB::transaction(function () use ($data, $links, $request): array {
+            [$user, $setupUrl] = DB::transaction(function () use ($data, $accounts, $request): array {
                 // Revalidar bajo bloqueo cubre una inactivación posterior al FormRequest.
                 $institution = Institution::query()->lockForUpdate()->find($data['institution_id']);
                 if (! $institution || ! $institution->is_active) {
@@ -32,21 +30,7 @@ class InstitutionAccountController extends Controller
                     ]);
                 }
 
-                $user = new User([
-                    ...$data,
-                    'role' => UserRole::INSTITUTION,
-                    'is_active' => true,
-                    // Cumple NOT NULL sin proporcionar una credencial utilizable al ADMIN.
-                    'password' => Str::random(64),
-                ]);
-                $user->password_setup_required = true;
-                $user->created_by = $request->user()->id;
-                $user->save();
-                $user->setRelation('institution', $institution);
-
-                $setupUrl = $links->issue($user);
-
-                return [$user, $setupUrl];
+                return $accounts->create($institution, $data['name'], $data['email'], $request->user());
             });
         } catch (UniqueConstraintViolationException $exception) {
             if ($exception->index !== 'users_email_unique') {

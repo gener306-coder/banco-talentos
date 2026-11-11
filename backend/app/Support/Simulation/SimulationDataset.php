@@ -124,7 +124,10 @@ final class SimulationDataset
             $id = $this->insertReturning('institutions', [[
                 'name' => "{$label} {$town}",
                 'cct' => sprintf('%s%s%04d%s', $state, $cctType, $i, chr(65 + $i % 26)),
+                'contact_name' => $this->personName(),
+                'contact_position' => $this->chance(0.7) ? $this->pick(['Jefatura de Vinculación', 'Coordinación del Modelo Dual', 'Dirección Académica']) : null,
                 'contact_email' => sprintf('vinculacion@inst%02d.%s', $i, self::DOMAIN),
+                'contact_phone' => $this->chance(0.7) ? sprintf('+52 834 %03d %04d', $this->random->getInt(100, 999), $this->random->getInt(0, 9999)) : null,
                 'is_active' => $active,
                 'created_at' => $created,
                 'updated_at' => $created,
