@@ -9,9 +9,12 @@ use App\Models\StudentCertification;
 use App\Models\StudentLanguage;
 use App\Models\StudentProject;
 use App\Support\CatalogSlug;
+use App\Support\SkillCatalog;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Pagination\LengthAwarePaginator;
+use Illuminate\Support\Facades\DB;
 
 /**
  * Buscador de talento anónimo para las empresas (HU-S4-05), vista exploratoria sin «Contactar».
@@ -27,6 +30,15 @@ class TalentController extends Controller
     /** Habilidades que muestra la tarjeta; el perfil las muestra todas. */
     private const CARD_SKILLS = 6;
 
+    /**
+     * Similitud de palabra mínima del texto libre (HU-S11-03): más de la mitad de los trigramas de la palabra.
+     * Con 0.5 exacto, «mecánica» ya traería «mecatrónica»; con el 0.6 por defecto se pierde «sistmas».
+     */
+    private const TEXT_SIMILARITY = '0.52';
+
+    /** Letras o dígitos mínimos para comparar por trigramas; una palabra más corta solo se busca contenida. */
+    private const TEXT_FUZZY_MIN_CHARACTERS = 3;
+
     public function index(TalentSearchRequest $request): JsonResponse
     {
         $filters = $request->validated();
@@ -37,9 +49,10 @@ class TalentController extends Controller
             return $this->page(collect(), 1, 1, 0);
         }
 
-        // CA-09: más cercanos primero y, a igual distancia, los perfiles actualizados más recientemente.
-        $page = $query->orderBy('distance_m')->orderByDesc('students.updated_at')->orderBy('students.id')
-            ->paginate(self::PER_PAGE);
+        // CA-09: más cercanos primero y, a igual distancia, los perfiles actualizados más recientemente. El texto
+        // libre solo filtra: la similitud no interviene en el orden (HU-S11-03 CA-04).
+        $query->orderBy('distance_m')->orderByDesc('students.updated_at')->orderBy('students.id');
+        $page = filled($filters['q'] ?? null) ? $this->paginateWithTextThreshold($query) : $query->paginate(self::PER_PAGE);
 
         return $this->page(
             $page->getCollection()->map(fn (Student $student): array => $this->card($student)),
@@ -61,6 +74,20 @@ class TalentController extends Controller
         abort_if($student === null, 404, 'El perfil no existe.');
 
         return response()->json(['data' => $this->profile($student)])->header('Cache-Control', 'no-store, private');
+    }
+
+    /**
+     * El operador <% lee su umbral de pg_trgm.word_similarity_threshold. SET LOCAL (set_config con is_local) lo
+     * fija solo dentro de esta transacción, que abarca el conteo y la página: al terminar vuelve al valor de la
+     * conexión y no alcanza a otras peticiones que la reutilicen (HU-S11-03 CA-03).
+     */
+    private function paginateWithTextThreshold(Builder $query): LengthAwarePaginator
+    {
+        return DB::transaction(function () use ($query): LengthAwarePaginator {
+            DB::select("SELECT set_config('pg_trgm.word_similarity_threshold', ?, true)", [self::TEXT_SIMILARITY]);
+
+            return $query->paginate(self::PER_PAGE);
+        });
     }
 
     /**
@@ -99,19 +126,35 @@ class TalentController extends Controller
     /**
      * Un EXISTS por filtro sobre los índices del CV (HU-S3-01). Devuelve false si una habilidad pedida no existe en
      * el catálogo: con habilidades combinadas con AND, ningún alumno puede cumplir el filtro.
+     *
+     * Cada habilidad pedida se resuelve por slug o alias exacto (HU-S11-02): las que nombra un mismo término se
+     * combinan con OR («bd» son dos habilidades) y los términos entre sí con AND.
      */
     private function applyFilters(Builder $query, array $filters, Request $request, string $origin): bool
     {
         $slugs = collect($filters['skills'] ?? [])->map(fn (string $name) => CatalogSlug::from($name))->filter()->unique();
-        if ($slugs->isNotEmpty()) {
-            $ids = Skill::query()->whereIn('slug', $slugs->all())->pluck('id');
-            if ($ids->count() !== $slugs->count()) {
+        foreach (SkillCatalog::resolve($slugs->values()) as $skillIds) {
+            if ($skillIds === []) {
                 return false;
             }
-            foreach ($ids as $skillId) {
-                $query->whereExists(fn ($exists) => $exists->selectRaw('1')->from('student_skills')
-                    ->where('student_skills.skill_id', $skillId)->whereColumn('student_skills.student_id', 'students.id'));
-            }
+            $query->whereExists(fn ($exists) => $exists->selectRaw('1')->from('student_skills')
+                ->whereIn('student_skills.skill_id', $skillIds)->whereColumn('student_skills.student_id', 'students.id'));
+        }
+
+        // Texto libre (HU-S11-03): cada palabra debe estar en el titular o en la carrera, contenida tal cual o
+        // parecida a una de sus palabras (<%). talent_search_text() la normaliza igual que las columnas *_search;
+        // % y _ escritos por la empresa no son comodines.
+        foreach (TalentSearchRequest::words($filters['q'] ?? null) as $word) {
+            $like = '%'.addcslashes($word, '\\%_').'%';
+            $fuzzy = preg_match_all('/[\p{L}\p{N}]/u', $word) >= self::TEXT_FUZZY_MIN_CHARACTERS;
+            $query->where(function (Builder $text) use ($word, $like, $fuzzy): void {
+                foreach (['students.headline_search', 'students.program_search'] as $column) {
+                    $text->orWhereRaw("{$column} LIKE talent_search_text(?)", [$like]);
+                    if ($fuzzy) {
+                        $text->orWhereRaw("talent_search_text(?) <% {$column}", [$word]);
+                    }
+                }
+            });
         }
 
         if (isset($filters['language'])) {

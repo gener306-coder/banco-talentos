@@ -85,6 +85,33 @@ final class SkillCatalog
         )->values();
     }
 
+    /**
+     * Habilidades que nombra cada término de un filtro (HU-S11-02): las de ese slug y las que lo tienen como
+     * alias. Solo coincidencias exactas, sin prefijos ni fases difusas: un filtro no adivina lo que se quiso
+     * escribir; eso lo resuelve el autocompletar al capturarlo.
+     *
+     * @param  Collection<int, string>  $slugs  Términos ya normalizados con CatalogSlug::from().
+     * @return list<list<int>> Ids por término, en el orden recibido; vacío si el término no existe.
+     */
+    public static function resolve(Collection $slugs): array
+    {
+        if ($slugs->isEmpty()) {
+            return [];
+        }
+        $skills = Skill::query()
+            ->whereIn('slug', $slugs->all())
+            ->orWhere(function ($aliases) use ($slugs): void {
+                foreach ($slugs as $slug) {
+                    $aliases->orWhereRaw('aliases @> ?::jsonb', [json_encode([$slug])]);
+                }
+            })
+            ->get(['id', 'slug', 'aliases']);
+
+        return $slugs->map(fn (string $slug): array => $skills
+            ->filter(fn (Skill $skill): bool => $skill->slug === $slug || in_array($slug, $skill->aliases, true))
+            ->pluck('id')->all())->values()->all();
+    }
+
     /** @return array{id: int, name: string, kind: string, match: string} */
     private static function result(Skill $skill, string $match): array
     {

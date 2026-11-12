@@ -31,8 +31,9 @@ class Student extends Model
 
     protected $fillable = self::PROFILE_ATTRIBUTES;
 
-    // Punto aproximado (PostGIS) derivado del municipio en el servidor; no forma parte de ninguna respuesta.
-    protected $hidden = ['location'];
+    // Punto aproximado (PostGIS) derivado del municipio en el servidor y texto normalizado del buscador (HU-S11-03):
+    // columnas internas que no forman parte de ninguna respuesta.
+    protected $hidden = ['location', 'headline_search', 'program_search'];
 
     // Igual que el DEFAULT de la columna, para que un alumno recién creado lo refleje sin recargarse.
     protected $attributes = ['is_active' => true];

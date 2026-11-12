@@ -148,9 +148,10 @@ Con la empresa activa, cada cuenta que ya estableció su contraseña tiene tambi
 ## Buscador de talento
 
 Una cuenta `COMPANY` de una empresa activa abre **Buscar talento** desde el inicio (`/talent`). El panel de filtros combina:
-- habilidades, todas requeridas;
+- texto libre sobre el titular y la carrera, sin acentos y con tolerancia a errores de escritura ([docs/HU-S11-03.md](docs/HU-S11-03.md));
+- habilidades, todas requeridas, elegidas del catálogo con autocompletar que acepta abreviaturas y errores ([docs/HU-S11-01.md](docs/HU-S11-01.md), [docs/HU-S11-02.md](docs/HU-S11-02.md));
 - idioma con nivel mínimo;
-- carrera, periodo mínimo y certificación revisada;
+- periodo mínimo y certificación revisada;
 - disponibilidad dual y para reubicarse;
 - estado y distancia máxima (10, 25, 50, 100 o 200 km), medida desde el municipio de la empresa o desde otro municipio del catálogo.
 

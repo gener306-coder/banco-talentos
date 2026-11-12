@@ -32,7 +32,7 @@ Sprint vigente desde el 12 de noviembre de 2026. Sprint anterior: [sprint-10.md]
 
 ## HU-S11-01 — Autocompletar del catálogo en el filtro de habilidades
 
-**Estado:** Pendiente  
+**Estado:** Completada (12 de noviembre de 2026)  
 **Diseño técnico y verificación:** `docs/HU-S11-01.md`  
 **Story Points:** 3  
 **Rol:** `COMPANY`
@@ -55,7 +55,7 @@ Sprint vigente desde el 12 de noviembre de 2026. Sprint anterior: [sprint-10.md]
 
 ## HU-S11-02 — Resolución de alias exactos en el filtro `skills[]`
 
-**Estado:** Pendiente  
+**Estado:** Completada (12 de noviembre de 2026)  
 **Diseño técnico y verificación:** `docs/HU-S11-02.md`  
 **Story Points:** 2  
 **Rol:** `Backend`
@@ -72,7 +72,7 @@ Sprint vigente desde el 12 de noviembre de 2026. Sprint anterior: [sprint-10.md]
 
 ## HU-S11-03 — Búsqueda por texto en titular y carrera
 
-**Estado:** Pendiente  
+**Estado:** Completada (12 de noviembre de 2026)  
 **Diseño técnico y verificación:** `docs/HU-S11-03.md`  
 **Story Points:** 5  
 **Rol:** `COMPANY`

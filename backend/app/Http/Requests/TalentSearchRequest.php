@@ -4,11 +4,12 @@ namespace App\Http\Requests;
 
 use App\Enums\CvLanguage;
 use App\Enums\MexicanState;
+use Closure;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
 /**
- * Filtros del buscador de talento (HU-S4-05 CA-03, CA-04). Llegan en la query string; ninguno acepta coordenadas:
+ * Filtros del buscador de talento (HU-S4-05 CA-03, CA-04; texto libre de HU-S11-03). Llegan en la query string; ninguno acepta coordenadas:
  * el origen del radio es siempre un municipio del catálogo.
  */
 class TalentSearchRequest extends FormRequest
@@ -16,6 +17,9 @@ class TalentSearchRequest extends FormRequest
     public const RADII_KM = [10, 25, 50, 100, 200];
 
     public const MAX_SKILLS = 10;
+
+    /** Palabras de «q»: cada una agrega una condición sobre el titular y la carrera (HU-S11-03). */
+    public const MAX_QUERY_WORDS = 8;
 
     public function authorize(): bool
     {
@@ -26,6 +30,11 @@ class TalentSearchRequest extends FormRequest
     public function rules(): array
     {
         return [
+            'q' => ['nullable', 'string', 'max:100', function (string $attribute, mixed $value, Closure $fail): void {
+                if (is_string($value) && count(self::words($value)) > self::MAX_QUERY_WORDS) {
+                    $fail('Escribe como máximo '.self::MAX_QUERY_WORDS.' palabras.');
+                }
+            }],
             'skills' => ['sometimes', 'array', 'max:'.self::MAX_SKILLS],
             'skills.*' => ['required', 'string', 'max:80'],
             'language' => ['nullable', 'string', Rule::enum(CvLanguage::class)],
@@ -42,9 +51,21 @@ class TalentSearchRequest extends FormRequest
         ];
     }
 
+    /**
+     * Palabras distintas del texto libre, tal como se escribieron; la base las normaliza.
+     *
+     * @return list<string>
+     */
+    public static function words(?string $text): array
+    {
+        return array_values(array_unique(preg_split('/\s+/u', trim((string) $text), -1, PREG_SPLIT_NO_EMPTY) ?: []));
+    }
+
     public function messages(): array
     {
         return [
+            'q.string' => 'El texto de búsqueda no es válido.',
+            'q.max' => 'El texto de búsqueda no debe superar 100 caracteres.',
             'skills.array' => 'Las habilidades no son válidas.',
             'skills.max' => 'Filtra como máximo por '.self::MAX_SKILLS.' habilidades.',
             'skills.*.required' => 'Las habilidades no pueden estar vacías.',
