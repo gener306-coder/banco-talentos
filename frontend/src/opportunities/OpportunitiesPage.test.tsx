@@ -114,7 +114,7 @@ describe('oportunidades duales HU-S5-02', () => {
   })
 
   it('precarga el municipio de la empresa y registra con habilidades e idioma (CA-03, CA-05)', async () => {
-    skillsMock.mockImplementation(async () => Response.json({ data: [{ id: 4, name: 'PLC', kind: 'technical' }] }))
+    skillsMock.mockImplementation(async () => Response.json({ data: [{ id: 4, name: 'PLC', kind: 'technical', match: 'prefix' }] }))
     apiMock.mockResolvedValueOnce(Response.json({ data: opportunity }, { status: 201 })).mockResolvedValueOnce(Response.json({ data: opportunity }))
     renderApp('/opportunities/new')
     const view = await form()

@@ -2,14 +2,14 @@ import { useEffect, useId, useState } from 'react'
 import type { KeyboardEvent } from 'react'
 import { CloseIcon, PlusIcon } from '../ui/icons'
 import { searchSkills } from './cv'
-import type { CvSkill, SkillInput } from './cv'
+import type { SkillInput, SkillSuggestion } from './cv'
 import { catalogSlug, displayName, hasContactInformation, SKILL_KINDS } from './cvCatalogs'
 import type { SkillKind } from './cvCatalogs'
 import { FieldError } from './CvShared'
 
 const SEARCH_DELAY_MS = 200
 
-type Option = { type: 'catalog'; skill: CvSkill } | { type: 'new'; name: string }
+type Option = { type: 'catalog'; skill: SkillSuggestion } | { type: 'new'; name: string }
 
 interface SkillPickerProps {
   /** Prefijo de los id del marcado; único por página. */
@@ -31,8 +31,9 @@ interface SkillPickerProps {
  */
 export function SkillPicker({ idPrefix, skills, onChange, max, disabled, serverError, contactMessage, placeholder }: SkillPickerProps) {
   const [query, setQuery] = useState('')
-  const [suggestions, setSuggestions] = useState<CvSkill[]>([])
-  const [active, setActive] = useState(-1)
+  const [suggestions, setSuggestions] = useState<SkillSuggestion[]>([])
+  // Opción elegida con las flechas; null mientras el usuario no navega (se calcula abajo).
+  const [selected, setSelected] = useState<number | null>(null)
   const [open, setOpen] = useState(false)
   const [newKind, setNewKind] = useState<SkillKind>('technical')
   const [localError, setLocalError] = useState<string | null>(null)
@@ -45,7 +46,7 @@ export function SkillPicker({ idPrefix, skills, onChange, max, disabled, serverE
     const controller = new AbortController()
     const timer = setTimeout(() => {
       searchSkills(term, controller.signal)
-        .then((results) => { setSuggestions(results); setActive(results.length ? 0 : -1) })
+        .then((results) => { setSuggestions(results); setSelected(null) })
         .catch(() => { if (!controller.signal.aborted) setSuggestions([]) })
     }, SEARCH_DELAY_MS)
     return () => { clearTimeout(timer); controller.abort() }
@@ -56,6 +57,10 @@ export function SkillPicker({ idPrefix, skills, onChange, max, disabled, serverE
   const exact = suggestions.some((skill) => catalogSlug(skill.name) === catalogSlug(term))
   const options: Option[] = term && !exact && !chosen.has(catalogSlug(term)) ? [...catalogOptions, { type: 'new', name: term }] : catalogOptions
   const expanded = open && options.length > 0
+  // HU-S10-02: se preselecciona una sugerencia por prefijo o por alias. Una aproximada (con errores respecto a lo
+  // escrito) hay que elegirla con las flechas o el ratón, para que Enter no registre «Vuex» cuando se escribió «Vue».
+  const first = options[0]
+  const active = selected ?? (first?.type === 'catalog' && first.skill.match !== 'fuzzy' ? 0 : -1)
   const error = localError ?? serverError
 
   function add(skill: SkillInput) {
@@ -71,7 +76,7 @@ export function SkillPicker({ idPrefix, skills, onChange, max, disabled, serverE
     onChange([...skills, { name, kind: skill.kind }])
     setQuery('')
     setSuggestions([])
-    setActive(-1)
+    setSelected(null)
     setOpen(false)
   }
 
@@ -84,7 +89,7 @@ export function SkillPicker({ idPrefix, skills, onChange, max, disabled, serverE
       event.preventDefault()
       if (!options.length) return
       setOpen(true)
-      setActive((current) => (current + (event.key === 'ArrowDown' ? 1 : -1) + options.length) % options.length)
+      setSelected((active + (event.key === 'ArrowDown' ? 1 : -1) + options.length) % options.length)
     } else if (event.key === 'Enter') {
       // Enter agrega la habilidad; no envía el formulario.
       event.preventDefault()
