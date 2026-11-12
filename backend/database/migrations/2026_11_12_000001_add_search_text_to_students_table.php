@@ -21,8 +21,9 @@ return new class extends Migration
     public function up(): void
     {
         DB::statement('CREATE EXTENSION IF NOT EXISTS pg_trgm');
+        // OR REPLACE: migrate:fresh borra las tablas pero no las funciones.
         DB::statement(sprintf(
-            "CREATE FUNCTION talent_search_text(text) RETURNS text LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
+            "CREATE OR REPLACE FUNCTION talent_search_text(text) RETURNS text LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
             AS \$\$ SELECT lower(translate(\$1, '%s', '%s')) \$\$",
             self::ACCENTED, self::PLAIN,
         ));

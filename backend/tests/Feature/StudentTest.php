@@ -225,7 +225,9 @@ it('offers no physical deletion of students', function () {
 });
 
 it('keeps the protected identity outside the public students table (CA-05)', function () {
-    expect(Schema::getColumnListing('students'))->toEqualCanonicalizing(['id', 'institution_id', 'created_at', 'updated_at', 'location', 'is_active', 'headline', 'legacy_municipality', 'public_id', ...Student::PROFILE_ATTRIBUTES]);
+    expect(Schema::getColumnListing('students'))->toEqualCanonicalizing(['id', 'institution_id', 'created_at', 'updated_at', 'location', 'is_active', 'headline', 'legacy_municipality', 'public_id', ...Student::PROFILE_ATTRIBUTES,
+        // HU-S11-03: texto normalizado del titular y la carrera, derivado de campos ya públicos.
+        'headline_search', 'program_search']);
     foreach (StudentIdentity::PROTECTED_ATTRIBUTES as $column) {
         expect(Schema::hasColumn('student_identities', $column))->toBeTrue();
         expect(Schema::hasColumn('students', $column))->toBeFalse();
