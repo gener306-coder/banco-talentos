@@ -22,6 +22,7 @@ Sprint vigente desde el 13 de noviembre de 2026. Sprint anterior: [sprint-11.md]
 2. **T-S12-02** Escala tipográfica y componentes base.
 3. **T-S12-03** Correcciones de layout y responsividad (extensión del 13 de noviembre de 2026).
 4. **T-S12-04** Pulido de navegación, tablas y avisos (rama `chore/ui-polish-navigation-alerts`).
+5. **T-S12-05** Tablas: jerarquía de acciones, hover independiente y filtros en la URL (rama `chore/ui-polish-tables-filters`).
 
 ## Fuera de alcance
 
@@ -128,6 +129,29 @@ Como la columna de estado y la de acciones quedan fuera de la vista sin ninguna 
 
 ---
 
+## T-S12-05 — Tablas: jerarquía de acciones, hover independiente y filtros en la URL
+
+**Estado:** Completada (13 de noviembre de 2026); validación visual pendiente del responsable  
+**Rol:** `Frontend`  
+**Origen:** validación de las tablas de Oportunidades y Solicitudes por el responsable y el Arquitecto.
+
+### Decisiones del responsable y el Arquitecto
+
+- **Acciones contextuales en su celda; acciones de fila en «Acciones».** Una acción que opera sobre un dato (escribir o llamar al contacto de la institución) va junto a ese dato. La columna «Acciones» queda para lo que opera sobre la fila completa (ver el detalle, cancelar).
+- **La fila es el último recurso del clic.** No se usa `stopPropagation` en cada botón: `useRowNavigation` ignora los clics que nacen en un control. El hover de la fila se suspende mientras el cursor está sobre uno de sus controles.
+- **La URL es la única fuente de la vista de un listado.** Búsqueda, filtros y página se leen y se escriben en `useSearchParams` mediante `ui/useListParams.ts`.
+
+### Criterios de aceptación
+
+- **CA-01.** [Acciones contextuales] El patrón `.cell-actions` coloca íconos discretos (1.75 rem, sin relleno, en acento, con su propio hover y foco) junto al texto al que pertenecen. Se aplica al contacto de la institución en la bandeja de la empresa.
+- **CA-02.** [Hover independiente] El fondo de la fila solo cambia mientras el cursor no está sobre un enlace o botón de la fila. Solo la flecha de la acción principal (`.row-link`, el mismo destino que la fila) se adelanta con la fila; las demás pastillas responden solo a su propio cursor.
+- **CA-03.** [Clic] La fila no navega si el clic nace en un control (enlace, botón, campo, etiqueta o `role="button"`), si se usa una tecla modificadora o si hay texto seleccionado.
+- **CA-04.** [Filtros en la URL] Alumnos (`q`, `status`, `data`, `page`), empresas (`q`, `page`), oportunidades (`page`), las dos bandejas de vinculación (`status`, `page`), la bitácora (`type`, `page`) y las cuentas de la Secretaría (`page`) se reconstruyen desde la URL. Cambiar un filtro vuelve a la página 1 y reemplaza la entrada del historial.
+- **CA-05.** [Regreso exacto] Los detalles de empresa, oportunidad, alumno, perfil y solicitud regresan a la URL de origen. `backState` conserva el regreso del origen, así que la cadena bandeja filtrada → solicitud → expediente → solicitud → bandeja recupera cada vista.
+- **CA-06.** [Pruebas] Vitest cubre la reconstrucción desde la URL, el regreso exacto, la cadena de regresos, el clic con modificador y la ubicación de los íconos de contacto. ESLint y el build pasan.
+
+---
+
 ## Verificación (13 de noviembre de 2026)
 
 - `tokens.test.ts`: 114 casos (contraste en claro y oscuro con mezclas y opacidades, capas, hover y escala). La prueba de capas encontró una quinta regla fuera de capa que la auditoría no había listado: `.institution-status.pending` en `institutions.css`, ahora dentro de `@layer legacy`.
@@ -137,3 +161,4 @@ Como la columna de estado y la de acciones quedan fuera de la vista sin ninguna 
 - E2E (`sh scripts/test-e2e.sh`): 44 pasan.
 - T-S12-03, medido con sesiones reales en la simulación: en el buscador a 390 px la primera tarjeta aparece en y≈443 (antes, y≈1720). A 1440×900, el panel queda fijo en y=96 con «Buscar» visible. Las tarjetas de alta miden 778 px y están centradas. El diálogo cabe en 844×390.
 - T-S12-04: Vitest 979 (más las 3 fallas previas de `object.stream`), ESLint, build, Pest 1455 y E2E 44 pasan. En la simulación, el perfil abierto desde la bandeja filtrada regresa a `/linkage-requests?status=PENDIENTE_INSTITUCION` (a 390 y a 1440 px), y el alumno abierto desde el padrón filtrado regresa a `/students?data=missing&status=active`.
+- T-S12-05: Vitest con las mismas 3 fallas previas de `object.stream`; ESLint y el build pasan. En Chromium (simulación, 1440 px), con el cursor en el texto de la fila solo se adelanta la flecha de «Ver perfil». Con el cursor en «Oportunidad» o en el ícono de correo, la fila no se resalta y solo ese control responde. `/linkage-requests?status=PENDIENTE_INSTITUCION&page=2` abre en la página 2, y el regreso desde el perfil vuelve a esa misma URL.

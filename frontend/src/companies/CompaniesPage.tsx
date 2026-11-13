@@ -1,26 +1,30 @@
 import { useCallback, useState } from 'react'
 import type { FormEvent } from 'react'
-import { Link } from 'react-router'
+import { Link, useLocation } from 'react-router'
 import { InstitutionRequestError, InstitutionStatus } from '../institutions/InstitutionLayout'
 import { useApiRequest } from '../lib/useApiRequest'
 import { BuildingIcon, ChevronLeftIcon, ChevronRightIcon, PlusIcon, SearchIcon } from '../ui/icons'
+import { backState } from '../ui/backLink'
 import { LoadingState, StateMessage } from '../ui/StateMessage'
+import { useListParams } from '../ui/useListParams'
 import { useRowNavigation } from '../ui/useRowNavigation'
 import { companyMessages, listCompanies } from './api'
 import { CompanyLayout } from './CompanyLayout'
 
 /** Listado de empresas activas e inactivas con búsqueda por razón social, nombre comercial o RFC (HU-S4-02 CA-08). */
 export function CompaniesPage() {
-  const [page, setPage] = useState(1)
-  const [query, setQuery] = useState('')
-  const [draft, setDraft] = useState('')
+  // T-S12-05: la búsqueda y la página viven en la URL para que el regreso desde el detalle recupere la misma vista.
+  const list = useListParams()
+  const query = list.get('q')
+  const [draft, setDraft] = useState(query)
+  const { page, setPage } = list
+  const location = useLocation()
   const load = useCallback((signal: AbortSignal) => listCompanies(page, query, signal), [page, query])
   const { data, loading, failure, refresh } = useApiRequest(load, companyMessages)
 
   function search(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
-    setPage(1)
-    setQuery(draft.trim())
+    list.update({ q: draft.trim() })
   }
 
   // Toda la fila abre el detalle con el puntero; el enlace «Ver detalle» sigue siendo el control accesible (HU-S8-01).
@@ -59,13 +63,14 @@ export function CompaniesPage() {
                   <tbody>
                     {data.companies.map((company) => {
                       const href = `/companies/${company.id}`
+                      const back = backState('Volver a empresas', location)
                       return (
-                        <tr key={company.id} data-href={href} onClick={(event) => openRow(event, href)}>
+                        <tr key={company.id} data-href={href} onClick={(event) => openRow(event, href, back)}>
                           <th scope="row">{company.legal_name}{company.trade_name && <span className="option-meta"> · {company.trade_name}</span>}</th>
                           <td>{company.rfc}</td>
                           <td>{company.municipality ?? company.municipality_code}</td>
                           <td><InstitutionStatus active={company.is_active} /></td>
-                          <td><Link className="pill-link" to={href} aria-label={`Ver detalle de ${company.legal_name}`}>Ver detalle<ChevronRightIcon /></Link></td>
+                          <td><Link className="pill-link row-link" to={href} state={back} aria-label={`Ver detalle de ${company.legal_name}`}>Ver detalle<ChevronRightIcon /></Link></td>
                         </tr>
                       )
                     })}

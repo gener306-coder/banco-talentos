@@ -74,11 +74,15 @@ input:focus-visible, select:focus-visible, textarea:focus-visible { border-color
   button:not(:disabled):not(.plain):hover, .institutions .institution-button:hover { box-shadow: 0 1px 0 color-mix(in srgb, var(--shadow) 6%, transparent), 0 4px 12px color-mix(in srgb, var(--accent) 14%, transparent); }
   .plain:hover, .institutions a.plain:hover { background: var(--fill); }
   .pill-link:hover { background: var(--tint-hover); }
-  .pill-link:hover .icon, .institution-table tbody tr:hover .pill-link .icon { transform: translateX(2px); }
-  .institution-table tbody tr[data-href] { cursor: pointer; }
-  .institution-table tbody tr[data-href]:hover > * { background: var(--surface-muted); }
-  .data-table tbody tr[data-href]:hover > * { background: var(--surface-muted); }
-  .data-table tbody tr:hover .pill-link .icon { transform: translateX(2px); }
+  .pill-link:hover .icon { transform: translateX(2px); }
+  /*
+   * Filas clicables (HU-S8-01, T-S12-05): la fila responde al cursor solo mientras no está sobre uno de sus controles,
+   * así cada pastilla, botón o ícono tiene su propio hover y su propia presión. La flecha de la acción principal
+   * (.row-link, el mismo destino que la fila) anticipa a dónde lleva el clic; las demás acciones no se mueven.
+   */
+  :is(.institution-table, .data-table) tbody tr[data-href] { cursor: pointer; }
+  :is(.institution-table, .data-table) tbody tr[data-href]:hover:not(:has(:is(a, button):hover)) > * { background: var(--surface-muted); }
+  :is(.institution-table, .data-table) tbody tr[data-href]:hover:not(:has(:is(a, button):hover)) .row-link .icon { transform: translateX(2px); }
   .data-table th a:hover { color: var(--accent); }
   .home-action:hover { background: var(--accent-fill-hover); }
   .account-trigger:hover:not(:disabled) { background: var(--tint-hover); }
@@ -452,6 +456,25 @@ textarea[aria-invalid='true'] { border-color: var(--danger-border); }
 }
 }
 
+/*
+ * Acciones contextuales de un dato (T-S12-05): escribir o llamar a un contacto, abrir un enlace externo. Pertenecen a su
+ * celda, no a la fila: íconos discretos junto al texto, sin relleno, con el acento como única señal de que son
+ * interactivos. La columna «Acciones» queda para las acciones de la fila (Ver detalle, Cancelar).
+ */
+@layer components {
+/* :is(span, div) eleva la especificidad sobre metas de módulo como .linkage-meta, que se cargan después. */
+:is(span, div).cell-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 0.1rem 0.35rem; }
+.cell-actions { display: inline-flex; align-items: center; gap: 0.1rem; vertical-align: middle; }
+.cell-actions :is(a, button) { display: inline-grid; place-items: center; width: var(--icon-button-sm); height: var(--icon-button-sm); margin: 0; padding: 0;
+  border: 0; border-radius: 50%; background: transparent; color: var(--accent); transition: background-color 150ms ease-out, transform 100ms ease-out; }
+.cell-actions .icon { width: 0.9rem; height: 0.9rem; }
+.cell-actions :is(a, button):focus-visible { outline: 3px solid var(--focus-ring); outline-offset: 1px; }
+.cell-actions :is(a, button):active { transform: scale(0.92); }
+@media (hover: hover) { .cell-actions :is(a, button):hover { background: var(--tint-hover); } }
+@media (prefers-reduced-motion: reduce) { .cell-actions :is(a, button):active { transform: none; } }
+@media (prefers-contrast: more) { .cell-actions :is(a, button) { border: 1px solid currentColor; } }
+}
+
 /* Botón «Descargar CSV» (HU-S7-02, ui/CsvDownloadButton.tsx). */
 @layer components {
 .csv-download { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem 1rem; margin: 0 0 1rem; }
@@ -517,7 +540,6 @@ button.account-action.positive { border-color: color-mix(in srgb, var(--success-
   button.account-action.positive:hover:not(:disabled) { border-color: var(--success-border); background: var(--success-surface); }
 }
 @media (prefers-contrast: more) { button.account-action { border-color: currentColor; } }
-.data-table tbody tr[data-href] { cursor: pointer; }
 }
 
 /*

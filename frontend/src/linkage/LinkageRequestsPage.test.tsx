@@ -170,6 +170,24 @@ describe('bandeja de solicitudes sin enlaces subrayados (T-S12-04)', () => {
     expect(JSON.parse(location.dataset.back ?? '')).toEqual({ to: '/linkage-requests?status=ACEPTADA', label: 'Volver a solicitudes' })
   })
 
+  it('con una tecla modificadora la fila no navega: abrir en otra pestaña es de la pastilla', async () => {
+    apiMock.mockResolvedValueOnce(page([pending]))
+    render(<MemoryRouter initialEntries={['/linkage-requests']}><App /><Location /></MemoryRouter>)
+    const table = await screen.findByRole('table', { name: 'Solicitudes de vinculación enviadas' })
+    fireEvent.click(within(table).getByRole('rowheader'), { ctrlKey: true })
+    fireEvent.click(within(table).getByRole('rowheader'), { metaKey: true })
+    expect(screen.getByRole('status', { name: 'Ruta actual' })).toHaveTextContent('/linkage-requests')
+  })
+
+  it('los íconos de contacto viven en la celda de la institución, no en Acciones (T-S12-05)', async () => {
+    apiMock.mockResolvedValueOnce(page([pending]))
+    renderApp()
+    const table = await screen.findByRole('table', { name: 'Solicitudes de vinculación enviadas' })
+    const institution = within(table).getByText('UT del Golfo').closest('td')!
+    expect(within(institution).getByRole('link', { name: 'Escribir a dual@utgolfo.edu.mx' }).closest('.cell-actions')).not.toBeNull()
+    expect(within(institution).getByText('Laura Méndez').closest('.cell-meta')).not.toBeNull()
+  })
+
   it('los botones de la fila no la abren', async () => {
     apiMock.mockResolvedValueOnce(page([pending]))
     render(<MemoryRouter initialEntries={['/linkage-requests']}><App /><Location /></MemoryRouter>)

@@ -1,16 +1,20 @@
-import { useCallback, useState } from 'react'
-import { Link } from 'react-router'
+import { useCallback } from 'react'
+import { Link, useLocation } from 'react-router'
 import { InstitutionRequestError, InstitutionStatus } from '../institutions/InstitutionLayout'
 import { useApiRequest } from '../lib/useApiRequest'
 import { BriefcaseIcon, ChevronLeftIcon, ChevronRightIcon, PlusIcon } from '../ui/icons'
+import { backState } from '../ui/backLink'
 import { LoadingState, StateMessage } from '../ui/StateMessage'
+import { useListParams } from '../ui/useListParams'
 import { useRowNavigation } from '../ui/useRowNavigation'
 import { listOpportunities, opportunityMessages } from './api'
 import { OpportunityLayout, SkillTags } from './OpportunityLayout'
 
 /** Listado de las oportunidades de la empresa, de la más reciente a la más antigua, de 20 en 20 (HU-S5-02 CA-06). */
 export function OpportunitiesPage() {
-  const [page, setPage] = useState(1)
+  // T-S12-05: la página vive en la URL para que el regreso desde el detalle recupere la misma vista.
+  const { page, setPage } = useListParams()
+  const location = useLocation()
   const load = useCallback((signal: AbortSignal) => listOpportunities(page, signal), [page])
   const { data, loading, failure, refresh } = useApiRequest(load, opportunityMessages)
 
@@ -39,14 +43,15 @@ export function OpportunitiesPage() {
                   <tbody>
                     {data.opportunities.map((opportunity) => {
                       const href = `/opportunities/${opportunity.id}`
+                      const back = backState('Volver a oportunidades', location)
                       return (
-                        <tr key={opportunity.id} data-href={href} onClick={(event) => openRow(event, href)}>
+                        <tr key={opportunity.id} data-href={href} onClick={(event) => openRow(event, href, back)}>
                           <th scope="row">{opportunity.title}<span className="option-meta"> · {opportunity.program}</span></th>
                           <td>{opportunity.municipality ?? opportunity.municipality_code}</td>
                           <td>{opportunity.vacancies}</td>
                           <td>{opportunity.skills.length ? <SkillTags skills={opportunity.skills} label={`Habilidades de ${opportunity.title}`} /> : '—'}</td>
                           <td><InstitutionStatus active={opportunity.is_active} /></td>
-                          <td><Link className="pill-link" to={href} aria-label={`Ver detalle de ${opportunity.title}`}>Ver detalle<ChevronRightIcon /></Link></td>
+                          <td><Link className="pill-link row-link" to={href} state={back} aria-label={`Ver detalle de ${opportunity.title}`}>Ver detalle<ChevronRightIcon /></Link></td>
                         </tr>
                       )
                     })}

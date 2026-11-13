@@ -309,3 +309,19 @@ describe('respuesta institucional HU-S6-02', () => {
     expect(screen.queryByRole('button', { name: 'Aceptar solicitud' })).not.toBeInTheDocument()
   })
 })
+
+describe('bandeja de la institución en la URL (T-S12-05)', () => {
+  it('reconstruye filtro y página desde la URL y el detalle regresa a esa misma vista', async () => {
+    apiMock.mockResolvedValueOnce(page([pending], { current_page: 2, last_page: 2, total: 21 }))
+      .mockResolvedValueOnce(Response.json({ data: detail }))
+    renderApp('/institution/linkage-requests?status=PENDIENTE_INSTITUCION&page=2')
+    const table = await screen.findByRole('table', { name: 'Solicitudes de vinculación recibidas' })
+    expect(apiMock.mock.calls[0][0]).toBe('/api/institution/linkage-requests?page=2&status=PENDIENTE_INSTITUCION')
+    expect(screen.getByLabelText('Estado')).toHaveValue('PENDIENTE_INSTITUCION')
+
+    fireEvent.click(within(table).getByRole('rowheader'))
+    expect(await screen.findByRole('link', { name: 'Volver a solicitudes' }))
+      .toHaveAttribute('href', '/institution/linkage-requests?status=PENDIENTE_INSTITUCION&page=2')
+  })
+})
+

@@ -8,7 +8,7 @@ import { fullName } from '../students/api'
 import { periodLabel, stateName } from '../students/catalogs'
 import { languageName, levelLabel } from '../students/cvCatalogs'
 import { StudentStatus } from '../students/StudentStatus'
-import { backState } from '../ui/backLink'
+import { backState, useBackLink } from '../ui/backLink'
 import { Callout } from '../ui/Callout'
 import { ChevronLeftIcon, ChevronRightIcon } from '../ui/icons'
 import { LoadingState } from '../ui/StateMessage'
@@ -115,13 +115,15 @@ function Detail({ data, onDecided, refresh }: {
 function InstitutionLinkageRequestDetail({ id }: { id: string }) {
   const load = useCallback((signal: AbortSignal) => getReceivedLinkage(id, signal), [id])
   const { data, loading, failure, refresh, setData } = useApiRequest(load, institutionLinkageMessages)
+  // T-S12-05: regresa a la bandeja con el filtro y la página de origen.
+  const back = useBackLink({ to: '/institution/linkage-requests', label: 'Volver a solicitudes' })
 
   return (
     <InstitutionLinkageLayout title="Detalle de solicitud">
       {loading ? <LoadingState label="Cargando solicitud…" variant="details" />
         : failure ? <InstitutionRequestError failure={failure} retry={refresh} page notFoundTitle="No encontramos esta solicitud" />
         : data && <Detail data={data} onDecided={setData} refresh={refresh} />}
-      <p className="institution-back"><Link className="plain" to="/institution/linkage-requests"><ChevronLeftIcon />Volver a solicitudes</Link></p>
+      <p className="institution-back"><Link className="plain" to={back.to} state={back.state}><ChevronLeftIcon />{back.label}</Link></p>
     </InstitutionLinkageLayout>
   )
 }

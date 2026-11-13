@@ -1,12 +1,13 @@
 import { useCallback, useState } from 'react'
 import type { FormEvent } from 'react'
-import { Link, useLocation, useNavigate, useSearchParams } from 'react-router'
+import { Link, useLocation, useNavigate } from 'react-router'
 import { InstitutionRequestError } from '../institutions/InstitutionLayout'
 import { useApiRequest } from '../lib/useApiRequest'
 import { ChevronLeftIcon, ChevronRightIcon, PlusIcon, SearchIcon } from '../ui/icons'
 import { Sheet } from '../ui/Sheet'
 import { backState } from '../ui/backLink'
 import { LoadingState, StateMessage } from '../ui/StateMessage'
+import { useListParams } from '../ui/useListParams'
 import { useRowNavigation } from '../ui/useRowNavigation'
 import { listStudents, surnames } from './api'
 import type { StudentStatusFilter } from './api'
@@ -20,18 +21,15 @@ import { StudentStatus } from './StudentStatus'
  */
 export function StudentsPage() {
   // HU-S8-01: la búsqueda se aplica al enviarla; los filtros, al elegirlos. Todos vuelven a la página 1.
-  const [query, setQuery] = useState('')
-  const [draft, setDraft] = useState('')
-  // T-S8-09: los filtros viven en la URL para que el aviso del inicio llegue filtrado y sobrevivan al volver del detalle.
-  const [searchParams, setSearchParams] = useSearchParams()
-  const statusParam = searchParams.get('status')
+  // T-S8-09 y T-S12-05: búsqueda, filtros y página viven en la URL; el aviso del inicio llega filtrado y el regreso
+  // desde el detalle recupera la misma vista.
+  const list = useListParams()
+  const query = list.get('q')
+  const [draft, setDraft] = useState(query)
+  const statusParam = list.get('status')
   const status: StudentStatusFilter | '' = statusParam === 'active' || statusParam === 'inactive' ? statusParam : ''
-  const missingData = searchParams.get('data') === 'missing'
-  // La página pertenece a los filtros con los que se eligió: al cambiarlos vuelve a la 1 sin una consulta intermedia.
-  const filters = `${status}|${missingData}`
-  const [paging, setPaging] = useState({ filters, page: 1 })
-  const page = paging.filters === filters ? paging.page : 1
-  const setPage = (value: number) => setPaging({ filters, page: value })
+  const missingData = list.get('data') === 'missing'
+  const { page, setPage } = list
   const load = useCallback((signal: AbortSignal) => listStudents({ page, q: query, status, missingData }, signal), [page, query, status, missingData])
   const { data, loading, failure, refresh } = useApiRequest(load, studentMessages)
   const navigate = useNavigate()
@@ -39,24 +37,16 @@ export function StudentsPage() {
 
   function search(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
-    setPage(1)
-    setQuery(draft.trim())
+    list.update({ q: draft.trim() })
   }
 
   function clearFilters() {
-    setPage(1)
     setDraft('')
-    setQuery('')
-    setSearchParams({}, { replace: true })
+    list.clear()
   }
 
   function setFilter(name: 'status' | 'data', value: string) {
-    setSearchParams((current) => {
-      const next = new URLSearchParams(current)
-      if (value) next.set(name, value)
-      else next.delete(name)
-      return next
-    }, { replace: true })
+    list.update({ [name]: value })
   }
 
   // Toda la fila abre el detalle con el puntero; el enlace «Ver detalle» sigue siendo el control accesible (HU-S8-01).
@@ -138,7 +128,7 @@ export function StudentsPage() {
                         <td>{student.given_names}</td>
                         <td><StudentStatus active={student.is_active} /></td>
                         <td>
-                          <Link className="pill-link" to={href} state={back} aria-label={`Ver detalle de ${surnames(student)}, ${student.given_names}`}>
+                          <Link className="pill-link row-link" to={href} state={back} aria-label={`Ver detalle de ${surnames(student)}, ${student.given_names}`}>
                             Ver detalle<ChevronRightIcon />
                           </Link>
                         </td>

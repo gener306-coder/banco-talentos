@@ -93,7 +93,7 @@ function OpportunityDetail({ id }: { id: string }) {
         title="¿Inactivar la oportunidad?"
         description="No podrá elegirse para nuevas solicitudes de vinculación. No se borra ningún dato y podrás reactivarla después."
         confirmLabel="Inactivar" onConfirm={() => { void changeStatus() }} onCancel={() => setConfirming(false)} />
-      <p className="institution-back"><Link className="plain" to={back.to}><ChevronLeftIcon />{back.label}</Link></p>
+      <p className="institution-back"><Link className="plain" to={back.to} state={back.state}><ChevronLeftIcon />{back.label}</Link></p>
     </OpportunityLayout>
   )
 }
