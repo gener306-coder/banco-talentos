@@ -1,12 +1,13 @@
 import { useCallback, useRef, useState } from 'react'
 import type { ReactNode } from 'react'
-import { Link, useLocation, useSearchParams } from 'react-router'
+import { Link, useLocation } from 'react-router'
 import { InstitutionRequestError } from '../institutions/InstitutionLayout'
 import { useApiMutation, useApiRequest } from '../lib/useApiRequest'
 import { ConfirmDialog } from '../ui/ConfirmDialog'
 import { ChevronLeftIcon, ChevronRightIcon, MailIcon, PhoneIcon, SearchIcon } from '../ui/icons'
 import { backState } from '../ui/backLink'
 import { LoadingState, StateMessage } from '../ui/StateMessage'
+import { useListParams } from '../ui/useListParams'
 import { useRowNavigation } from '../ui/useRowNavigation'
 import { cancelLinkageRequest, LINKAGE_STATUSES, linkageMessages, listLinkageRequests } from './api'
 import type { LinkageInboxItem, LinkageStatus as Status } from './api'
@@ -21,14 +22,12 @@ const dateFormat = new Intl.DateTimeFormat('es-MX', { dateStyle: 'medium' })
  * la fecha y el mensaje de la respuesta institucional (HU-S6-02 CA-04).
  */
 export function LinkageRequestsPage() {
-  // T-S12-04: el estado vive en la URL, como en la bandeja de la institución, para que el regreso desde el perfil o la
-  // oportunidad conserve el filtro. La página pertenece al filtro con el que se eligió.
-  const [searchParams, setSearchParams] = useSearchParams()
-  const statusParam = searchParams.get('status')
+  // T-S12-04 y T-S12-05: el estado y la página viven en la URL, como en la bandeja de la institución, para que el regreso
+  // desde el perfil o la oportunidad recupere la misma vista. Cambiar el filtro vuelve a la página 1.
+  const list = useListParams()
+  const statusParam = list.get('status')
   const status: Status | '' = LINKAGE_STATUSES.find((item) => item.value === statusParam)?.value ?? ''
-  const [paging, setPaging] = useState({ status, page: 1 })
-  const page = paging.status === status ? paging.page : 1
-  const setPage = (value: number) => setPaging({ status, page: value })
+  const { page, setPage } = list
   const location = useLocation()
   const openRow = useRowNavigation()
   const load = useCallback((signal: AbortSignal) => listLinkageRequests({ page, status }, signal), [page, status])
@@ -65,7 +64,7 @@ export function LinkageRequestsPage() {
           <select id="linkage-status-filter" value={status}
             onChange={(event) => {
               setNotice(null)
-              setSearchParams(event.target.value ? { status: event.target.value } : {}, { replace: true })
+              list.update({ status: event.target.value })
             }}>
             <option value="">Todos los estados</option>
             {LINKAGE_STATUSES.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}
@@ -106,17 +105,20 @@ export function LinkageRequestsPage() {
                           <td><span className="linkage-title" title={item.opportunity.title}>{item.opportunity.title}</span></td>
                           <td>
                             {item.institution.name}
-                            {item.institution.contact_name && (
-                              <span className="linkage-meta" title={item.institution.contact_position ?? undefined}>{item.institution.contact_name}</span>
-                            )}
-                            {/* El contacto sigue a un clic, sin ocupar dos líneas de texto. */}
-                            <span className="linkage-contact">
-                              <a href={`mailto:${item.institution.contact_email}`} target="_blank" rel="noopener noreferrer"
-                                aria-label={`Escribir a ${item.institution.contact_email}`} title={item.institution.contact_email}><MailIcon /></a>
-                              {item.institution.contact_phone && (
-                                <a href={`tel:${item.institution.contact_phone.replace(/[^\d+]/g, '')}`}
-                                  aria-label={`Llamar al ${item.institution.contact_phone}`} title={item.institution.contact_phone}><PhoneIcon /></a>
+                            {/* T-S12-05: el contacto es una acción del dato (la institución), no de la fila: sus íconos van
+                                junto al nombre del responsable, discretos, y la columna Acciones queda para la fila. */}
+                            <span className="linkage-meta cell-meta">
+                              {item.institution.contact_name && (
+                                <span title={item.institution.contact_position ?? undefined}>{item.institution.contact_name}</span>
                               )}
+                              <span className="cell-actions">
+                                <a href={`mailto:${item.institution.contact_email}`} target="_blank" rel="noopener noreferrer"
+                                  aria-label={`Escribir a ${item.institution.contact_email}`} title={item.institution.contact_email}><MailIcon /></a>
+                                {item.institution.contact_phone && (
+                                  <a href={`tel:${item.institution.contact_phone.replace(/[^\d+]/g, '')}`}
+                                    aria-label={`Llamar al ${item.institution.contact_phone}`} title={item.institution.contact_phone}><PhoneIcon /></a>
+                                )}
+                              </span>
                             </span>
                           </td>
                           <td className="nowrap">{dateFormat.format(new Date(item.created_at))}</td>
@@ -128,7 +130,7 @@ export function LinkageRequestsPage() {
                           </td>
                           <td>
                             <div className="actions">
-                              <Link className="pill-link" to={profileHref} state={back} aria-label={`Ver perfil: ${headline}`}>Ver perfil<ChevronRightIcon /></Link>
+                              <Link className="pill-link row-link" to={profileHref} state={back} aria-label={`Ver perfil: ${headline}`}>Ver perfil<ChevronRightIcon /></Link>
                               <Link className="pill-link" to={`/opportunities/${item.opportunity.id}`} state={back}
                                 aria-label={`Ver la oportunidad ${item.opportunity.title}`}>Oportunidad<ChevronRightIcon /></Link>
                               {item.status === 'PENDIENTE_INSTITUCION' && (

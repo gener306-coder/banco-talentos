@@ -1,12 +1,14 @@
-import { useCallback, useState } from 'react'
+import { useCallback } from 'react'
 import type { ReactNode } from 'react'
-import { Link, useLocation, useSearchParams } from 'react-router'
+import { Link, useLocation } from 'react-router'
 import { InstitutionRequestError } from '../institutions/InstitutionLayout'
 import { useApiRequest } from '../lib/useApiRequest'
 import { surnames } from '../students/api'
 import { CsvDownloadButton } from '../ui/CsvDownloadButton'
 import { ChevronLeftIcon, ChevronRightIcon, SearchIcon } from '../ui/icons'
 import { LoadingState, StateMessage } from '../ui/StateMessage'
+import { backState } from '../ui/backLink'
+import { useListParams } from '../ui/useListParams'
 import { useRowNavigation } from '../ui/useRowNavigation'
 import { LINKAGE_STATUSES } from './api'
 import type { LinkageStatus as Status } from './api'
@@ -38,14 +40,13 @@ export function InstitutionLinkageLayout({ title, children }: { title: string; c
  * todas las solicitudes del filtro vigente, no solo la página visible (HU-S7-02 CA-04).
  */
 export function InstitutionLinkageRequestsPage() {
-  // T-S8-08: el estado vive en la URL para que el aviso del inicio llegue filtrado y el filtro sobreviva al volver del detalle.
-  const [searchParams, setSearchParams] = useSearchParams()
-  const statusParam = searchParams.get('status')
+  // T-S8-08 y T-S12-05: el estado y la página viven en la URL para que el aviso del inicio llegue filtrado y el regreso
+  // desde el detalle recupere la misma vista. Cambiar el filtro vuelve a la página 1.
+  const list = useListParams()
+  const statusParam = list.get('status')
   const status: Status | '' = LINKAGE_STATUSES.find((item) => item.value === statusParam)?.value ?? ''
-  // La página pertenece al filtro con el que se eligió: al cambiarlo vuelve a la 1 sin una consulta intermedia.
-  const [paging, setPaging] = useState({ status, page: 1 })
-  const page = paging.status === status ? paging.page : 1
-  const setPage = (value: number) => setPaging({ status, page: value })
+  const { page, setPage } = list
+  const location = useLocation()
   const load = useCallback((signal: AbortSignal) => listReceivedLinkages({ page, status }, signal), [page, status])
   const { data, loading, failure, refresh } = useApiRequest(load, institutionLinkageMessages)
   const downloadCsv = useCallback(() => downloadReceivedLinkagesCsv(status), [status])
@@ -61,7 +62,7 @@ export function InstitutionLinkageRequestsPage() {
           <div className="table-search-filter">
             <label htmlFor="institution-linkage-status-filter">Estado</label>
             <select id="institution-linkage-status-filter" value={status}
-              onChange={(event) => { setSearchParams(event.target.value ? { status: event.target.value } : {}, { replace: true }) }}>
+              onChange={(event) => { list.update({ status: event.target.value }) }}>
               <option value="">Todos los estados</option>
               {LINKAGE_STATUSES.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}
             </select>
@@ -89,9 +90,10 @@ export function InstitutionLinkageRequestsPage() {
                   <tbody>
                     {data.items.map((item) => {
                       const name = `${surnames(item.student)}, ${item.student.given_names}`
+                      const href = `/institution/linkage-requests/${item.id}`
+                      const back = backState('Volver a solicitudes', location)
                       return (
-                        <tr key={item.id} data-href={`/institution/linkage-requests/${item.id}`}
-                          onClick={(event) => openRow(event, `/institution/linkage-requests/${item.id}`)}>
+                        <tr key={item.id} data-href={href} onClick={(event) => openRow(event, href, back)}>
                           {/* T-S8-15: solo lo que identifica; la carrera y el periodo están en el detalle. */}
                           <th scope="row">
                             {name}
@@ -102,7 +104,7 @@ export function InstitutionLinkageRequestsPage() {
                           <td className="nowrap">{dateFormat.format(new Date(item.created_at))}</td>
                           <td><LinkageStatus status={item.status} /></td>
                           <td>
-                            <Link className="pill-link" to={`/institution/linkage-requests/${item.id}`} aria-label={`Ver la solicitud de ${item.company.name} para ${name}`}>Ver detalle<ChevronRightIcon /></Link>
+                            <Link className="pill-link row-link" to={href} state={back} aria-label={`Ver la solicitud de ${item.company.name} para ${name}`}>Ver detalle<ChevronRightIcon /></Link>
                           </td>
                         </tr>
                       )

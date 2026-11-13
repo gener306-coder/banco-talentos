@@ -3,6 +3,7 @@ import { Link, useLocation, useParams } from 'react-router'
 import { InstitutionRequestError, InstitutionStatus } from '../institutions/InstitutionLayout'
 import { useApiMutation, useApiRequest } from '../lib/useApiRequest'
 import { stateName } from '../students/catalogs'
+import { useBackLink } from '../ui/backLink'
 import { ConfirmDialog } from '../ui/ConfirmDialog'
 import { ChevronLeftIcon } from '../ui/icons'
 import { LoadingState } from '../ui/StateMessage'
@@ -18,6 +19,8 @@ function CompanyDetail({ id }: { id: string }) {
   const { data, loading, failure, refresh, setData } = useApiRequest(load, companyMessages)
   const mutation = useApiMutation(companyMessages)
   const location = useLocation()
+  // T-S12-05: regresa al listado con la búsqueda y la página de origen.
+  const back = useBackLink({ to: '/companies', label: 'Volver a empresas' })
   const [notice, setNotice] = useState<string | null>(() => {
     const state: unknown = location.state
     return state && typeof state === 'object' && 'notice' in state && typeof state.notice === 'string' ? state.notice : null
@@ -75,7 +78,7 @@ function CompanyDetail({ id }: { id: string }) {
         title="¿Inactivar la empresa?"
         description="Sus cuentas no podrán iniciar sesión y las sesiones abiertas se cerrarán. No se borra ningún dato y podrás reactivarla después."
         confirmLabel="Inactivar" onConfirm={() => { void changeStatus() }} onCancel={() => setConfirming(false)} />
-      <p className="institution-back"><Link className="plain" to="/companies"><ChevronLeftIcon />Volver a empresas</Link></p>
+      <p className="institution-back"><Link className="plain" to={back.to} state={back.state}><ChevronLeftIcon />{back.label}</Link></p>
     </CompanyLayout>
   )
 }

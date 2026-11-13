@@ -18,13 +18,6 @@
 /* Nombres de alumno y empresa en una línea siempre que quepan; la oportunidad toma el espacio restante. */
 .linkage-inbox tbody th[scope='row'] { min-width: 12.5rem; }
 .linkage-inbox tbody td:nth-of-type(1) { min-width: 12rem; }
-/* Contacto de la institución en la bandeja de la empresa: dos accesos redondos en lugar de dos líneas de texto. */
-.linkage-contact { display: flex; gap: 0.35rem; margin-top: 0.4rem; }
-.linkage-contact a { display: inline-grid; place-items: center; width: var(--icon-button-md); height: var(--icon-button-md); border-radius: 50%; background: var(--tint); color: var(--accent); }
-.linkage-contact a .icon { width: 0.95rem; height: 0.95rem; }
-.linkage-contact a:focus-visible { outline: 3px solid var(--focus-ring); outline-offset: 2px; }
-@media (hover: hover) { .linkage-contact a:hover { background: var(--tint-hover); } }
-@media (prefers-contrast: more) { .linkage-contact a { border: 1px solid var(--accent); } }
 /* Bandeja de la empresa: el perfil y la oportunidad comparten el espacio, y la institución cabe en una o dos líneas. */
 .linkage-sent tbody th[scope='row'] { min-width: 11rem; }
 .linkage-sent tbody td:nth-of-type(1) { min-width: 11rem; }

@@ -73,7 +73,7 @@ function StudentDetailView({ id }: { id: string }) {
   return (
     <section className="card" aria-labelledby="student-title">
       <nav className="page-navigation" aria-label="Navegación de alumnos">
-        <Link className="plain" to={back.to} aria-label={back.label === 'Alumnos' ? 'Volver a alumnos' : undefined}><ChevronLeftIcon />{back.label}</Link>
+        <Link className="plain" to={back.to} state={back.state} aria-label={back.label === 'Alumnos' ? 'Volver a alumnos' : undefined}><ChevronLeftIcon />{back.label}</Link>
       </nav>
       {loading ? <><h2 id="student-title">Alumno</h2><LoadingState label="Cargando alumno…" variant="details" /></>
         : failure ? <><h2 id="student-title">Alumno</h2><InstitutionRequestError failure={failure} retry={refresh} page /></>

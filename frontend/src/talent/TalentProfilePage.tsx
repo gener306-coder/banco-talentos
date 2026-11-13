@@ -38,7 +38,7 @@ function TalentProfile({ publicId }: { publicId: string }) {
   return (
     <section className="card institutions talent-profile" aria-labelledby="talent-profile-title">
       <nav className="institution-navigation" aria-label="Navegación del perfil">
-        <Link className="plain" to={back.to}><ChevronLeftIcon />{back.label}</Link>
+        <Link className="plain" to={back.to} state={back.state}><ChevronLeftIcon />{back.label}</Link>
       </nav>
       {loading ? <LoadingState label="Cargando perfil…" variant="details" />
         : failure ? <InstitutionRequestError failure={failure} retry={refresh} page />

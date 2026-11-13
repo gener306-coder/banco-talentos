@@ -7,6 +7,7 @@ import { useApiRequest } from '../lib/useApiRequest'
 import { ChevronLeftIcon, ChevronRightIcon, MailIcon, PlusIcon } from '../ui/icons'
 import { Sheet } from '../ui/Sheet'
 import { LoadingState } from '../ui/StateMessage'
+import { useListParams } from '../ui/useListParams'
 import { listSecretaryAccounts, SECRETARY_PASSWORD_RESET_PATH, secretaryAccountStatusPath, secretaryMessages } from './api'
 import type { SecretaryAccountStatus } from './api'
 import { SecretaryAccountForm, SecretarySetupLinkForm } from './SecretaryAccountForms'
@@ -21,7 +22,8 @@ const dateFormat = new Intl.DateTimeFormat('es-MX', { dateStyle: 'medium' })
  * SECRETARY.
  */
 export function SecretaryAccountsPage() {
-  const [page, setPage] = useState(1)
+  // T-S12-05: la página vive en la URL; recargar o compartir la vista la conserva.
+  const { page, setPage } = useListParams()
   const load = useCallback((signal: AbortSignal) => listSecretaryAccounts(page, signal), [page])
   const { data, loading, failure, refresh, setData } = useApiRequest(load, secretaryMessages)
   const { user } = useAuth()

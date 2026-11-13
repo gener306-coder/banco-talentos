@@ -1,10 +1,11 @@
-import { useCallback, useState } from 'react'
+import { useCallback } from 'react'
 import { Link } from 'react-router'
 import { roleLabels } from '../auth/api'
 import { InstitutionRequestError } from '../institutions/InstitutionLayout'
 import { useApiRequest } from '../lib/useApiRequest'
 import { ChevronLeftIcon, ChevronRightIcon, SearchIcon } from '../ui/icons'
 import { LoadingState, StateMessage } from '../ui/StateMessage'
+import { useListParams } from '../ui/useListParams'
 import { AUDIT_EVENT_TYPES, auditEventLabel, auditMessages, listAuditEvents } from './api'
 import type { AuditEvent, AuditEventType } from './api'
 import '../institutions/institutions.css'
@@ -33,8 +34,11 @@ function describe(event: AuditEvent): string {
  * solicitudes de vinculación con su respuesta, de la más reciente a la más antigua, con filtro por tipo.
  */
 export function AuditEventsPage() {
-  const [page, setPage] = useState(1)
-  const [type, setType] = useState<AuditEventType | ''>('')
+  // T-S12-05: el tipo y la página viven en la URL; recargar o compartir la vista la conserva.
+  const list = useListParams()
+  const typeParam = list.get('type')
+  const type: AuditEventType | '' = AUDIT_EVENT_TYPES.find((item) => item.value === typeParam)?.value ?? ''
+  const { page, setPage } = list
   const load = useCallback((signal: AbortSignal) => listAuditEvents({ page, type }, signal), [page, type])
   const { data, loading, failure, refresh } = useApiRequest(load, auditMessages)
 
@@ -48,7 +52,7 @@ export function AuditEventsPage() {
       <form className="table-search" role="search" aria-label="Filtrar eventos" onSubmit={(event) => event.preventDefault()}>
         <div className="table-search-filter">
           <label htmlFor="audit-type-filter">Tipo de evento</label>
-          <select id="audit-type-filter" value={type} onChange={(event) => { setPage(1); setType(event.target.value as AuditEventType | '') }}>
+          <select id="audit-type-filter" value={type} onChange={(event) => { list.update({ type: event.target.value }) }}>
             <option value="">Todos los eventos</option>
             {AUDIT_EVENT_TYPES.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}
           </select>

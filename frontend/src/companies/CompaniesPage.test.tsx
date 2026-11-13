@@ -328,3 +328,27 @@ describe('empresas HU-S4-02', () => {
     })
   })
 })
+
+describe('listado de empresas en la URL (T-S12-05)', () => {
+  it('reconstruye búsqueda y página desde la URL y el detalle regresa a esa misma vista', async () => {
+    apiMock.mockResolvedValueOnce(page([summary])).mockResolvedValueOnce(Response.json({ data: company }))
+    renderApp('/companies?q=golfo&page=2')
+    const table = await screen.findByRole('table', { name: 'Empresas registradas' })
+    expect(apiMock.mock.calls[0][0]).toBe('/api/companies?page=2&q=golfo')
+    expect(screen.getByLabelText('Buscar empresa')).toHaveValue('golfo')
+
+    fireEvent.click(within(table).getByRole('rowheader'))
+    expect(await screen.findByRole('link', { name: 'Volver a empresas' })).toHaveAttribute('href', '/companies?q=golfo&page=2')
+  })
+
+  it('una búsqueda nueva vuelve a la página 1', async () => {
+    apiMock.mockResolvedValueOnce(page([summary])).mockResolvedValueOnce(page([]))
+    renderApp('/companies?page=3')
+    await screen.findByRole('table', { name: 'Empresas registradas' })
+    fireEvent.change(screen.getByLabelText('Buscar empresa'), { target: { value: 'zeta' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Buscar' }))
+    await screen.findByText('Ninguna empresa coincide con la búsqueda.')
+    expect(apiMock.mock.calls[1][0]).toBe('/api/companies?page=1&q=zeta')
+  })
+})
+

@@ -39,7 +39,7 @@ export function InstitutionsPage() {
                         <td>{institution.cct}</td>
                         <td>{institution.contact_email}</td>
                         <td><InstitutionStatus active={institution.is_active} /></td>
-                        <td><Link className="pill-link" to={href} aria-label={`Ver detalle de ${institution.name}`}>Ver detalle<ChevronRightIcon /></Link></td>
+                        <td><Link className="pill-link row-link" to={href} aria-label={`Ver detalle de ${institution.name}`}>Ver detalle<ChevronRightIcon /></Link></td>
                       </tr>
                     )
                   })}
