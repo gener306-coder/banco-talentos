@@ -46,7 +46,7 @@ export function isValidRfc(value: string): boolean {
 
 export const normalizeRfc = (value: string): string => value.trim().toUpperCase()
 
-export const INVALID_PHONE = 'El teléfono debe tener entre 10 y 15 dígitos; admite espacios, paréntesis, guiones y un «+» inicial.'
+export const INVALID_PHONE = 'El teléfono debe tener entre 10 y 15 dígitos; admite espacios, paréntesis, guiones y un “+” inicial.'
 
 export function isValidPhone(value: string): boolean {
   const digits = value.replace(/\D/g, '').length

@@ -21,6 +21,7 @@ Sprint vigente desde el 13 de noviembre de 2026. Sprint anterior: [sprint-11.md]
 1. **T-S12-01** Limpieza de tokens y especificidad CSS.
 2. **T-S12-02** Escala tipográfica y componentes base.
 3. **T-S12-03** Correcciones de layout y responsividad (extensión del 13 de noviembre de 2026).
+4. **T-S12-04** Pulido de navegación, tablas y avisos (rama `chore/ui-polish-navigation-alerts`).
 
 ## Fuera de alcance
 
@@ -105,6 +106,28 @@ Como la columna de estado y la de acciones quedan fuera de la vista sin ninguna 
 
 ---
 
+## T-S12-04 — Pulido de navegación, tablas y avisos
+
+**Estado:** Completada (13 de noviembre de 2026); validación visual pendiente del responsable  
+**Rol:** `Frontend` (y textos de validación del backend)  
+**Origen:** revisión del responsable y el Arquitecto tras T-S12-03: enlaces subrayados en tablas, regresos fijos que sacan al usuario de su flujo y comillas angulares en avisos.
+
+### Decisiones del responsable y el Arquitecto
+
+- En la bandeja de la empresa, la fila abre el perfil. La columna «Acciones» lleva las pastillas «Ver perfil» y «Oportunidad», y «Cancelar» en tono de peligro (T-S8-16) si la solicitud está pendiente.
+- Regla de comillas: los nombres, las etiquetas y lo que escribió el usuario van en negritas (`.notice-subject` dentro de avisos). Las citas literales (la respuesta de la institución) y los ejemplos van entre “ ”. Esta regla sustituye a la de T-S8-13, que conservaba « » en las citas.
+
+### Criterios de aceptación
+
+- **CA-01.** [Tablas] Ninguna tabla usa enlaces de texto para abrir un detalle. Las filas con detalle usan `data-href` con el hook compartido `ui/useRowNavigation.ts` (padrón, instituciones, empresas, oportunidades y las dos bandejas de vinculación), y la columna «Acciones» lleva `.pill-link`. Los clics en enlaces y botones de la fila no la abren.
+- **CA-02.** [Regreso contextual] `ui/backLink.ts` lleva en el `state` del router el destino y el texto del regreso. Solo se aceptan rutas internas; `//dominio` y `https:` se ignoran. Orígenes: bandeja de la empresa → perfil y oportunidad («Volver a solicitudes», con su filtro); detalle de la solicitud de la institución → expediente («Volver a la solicitud», también a través del CV); padrón → alumno (con su búsqueda). Sin estado, cada detalle conserva su regreso de siempre.
+- **CA-03.** [Filtro en la URL] El estado de la bandeja de la empresa vive en `?status=`, como en la de la institución (T-S8-08), para que el regreso conserve el filtro.
+- **CA-04.** [Comillas] Ningún texto de la interfaz usa « »; `src/ui/copy.test.ts` lo verifica. Los mensajes de validación del backend usan “ ”.
+- **CA-05.** [Avisos] `ui/Callout.tsx` (tonos `info` y `pending`) comparte la anatomía de los avisos de resultado: remarque izquierdo, ícono, fondo suave y acción en pastilla. Reemplaza los cuatro `.pending-notice`, y se eliminan las clases `.pending-notice`, `.home-notice`, `.home-action-notice` y `.linkage-notice`.
+- **CA-06.** [Pruebas] Vitest cubre la fila clicable, el filtro en la URL, los regresos contextual, por defecto y rechazado, los tonos del aviso y la guarda de comillas. E2E comprueba el regreso a la bandeja filtrada. Vitest, ESLint, el build, Pest y E2E pasan.
+
+---
+
 ## Verificación (13 de noviembre de 2026)
 
 - `tokens.test.ts`: 114 casos (contraste en claro y oscuro con mezclas y opacidades, capas, hover y escala). La prueba de capas encontró una quinta regla fuera de capa que la auditoría no había listado: `.institution-status.pending` en `institutions.css`, ahora dentro de `@layer legacy`.
@@ -113,3 +136,4 @@ Como la columna de estado y la de acciones quedan fuera de la vista sin ninguna 
 - Medición en Chromium (390 y 1440 px, claro y oscuro) sobre la simulación: ninguna de las 22 rutas (cuatro roles y el inicio de sesión) desborda en horizontal.
 - E2E (`sh scripts/test-e2e.sh`): 44 pasan.
 - T-S12-03, medido con sesiones reales en la simulación: en el buscador a 390 px la primera tarjeta aparece en y≈443 (antes, y≈1720). A 1440×900, el panel queda fijo en y=96 con «Buscar» visible. Las tarjetas de alta miden 778 px y están centradas. El diálogo cabe en 844×390.
+- T-S12-04: Vitest 979 (más las 3 fallas previas de `object.stream`), ESLint, build, Pest 1455 y E2E 44 pasan. En la simulación, el perfil abierto desde la bandeja filtrada regresa a `/linkage-requests?status=PENDIENTE_INSTITUCION` (a 390 y a 1440 px), y el alumno abierto desde el padrón filtrado regresa a `/students?data=missing&status=active`.

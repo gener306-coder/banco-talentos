@@ -74,7 +74,7 @@ describe('solicitud de vinculación HU-S5-04', () => {
     fireEvent.change(within(sheet).getByLabelText('Mensaje para la institución (opcional)'), { target: { value: '  Nos interesa su perfil. ' } })
     fireEvent.click(within(sheet).getByRole('button', { name: 'Enviar solicitud' }))
 
-    expect(await within(sheet).findByRole('status')).toHaveTextContent('Solicitud enviada a la institución del alumno para «Automatización de línea». Queda pendiente de su respuesta.')
+    expect(await within(sheet).findByRole('status')).toHaveTextContent('Solicitud enviada a la institución del alumno para Automatización de línea. Queda pendiente de su respuesta.')
     expect(posts()[0][0]).toBe('/api/linkage-requests')
     expect(JSON.parse(posts()[0][1]?.body as string)).toEqual({ student_public_id: publicId, opportunity_id: 12, message: 'Nos interesa su perfil.' })
     expect(select).toHaveValue('')
@@ -138,7 +138,9 @@ describe('solicitud de vinculación HU-S5-04', () => {
     linkageMock.mockResolvedValueOnce(Response.json({ data: created }, { status: 201 }))
     const sheet = await openSheet()
     const notice = screen.getByRole('note', { name: 'Solicitudes enviadas para este perfil' })
-    expect(within(notice).getByText(/«Calidad»/)).toBeInTheDocument()
+    // T-S12-04: el título va en negritas, sin comillas, en un aviso informativo.
+    expect(notice).toHaveClass('callout', 'info')
+    expect(within(notice).getByText('Calidad', { selector: 'strong' })).toBeInTheDocument()
     expect(within(notice).getByText('Cancelada')).toBeInTheDocument()
     expect(within(notice).getByRole('link', { name: 'Ver tus solicitudes' })).toHaveAttribute('href', '/linkage-requests')
     expect(sentMock.mock.calls[0][0]).toBe(`/api/linkage-requests?page=1&public_id=${publicId}`)
@@ -146,7 +148,7 @@ describe('solicitud de vinculación HU-S5-04', () => {
     fireEvent.change(await within(sheet).findByLabelText('Oportunidad'), { target: { value: '12' } })
     fireEvent.click(within(sheet).getByRole('button', { name: 'Enviar solicitud' }))
     await within(sheet).findByRole('status')
-    expect(await screen.findByText(/«Automatización de línea»/, { selector: 'li' })).toBeInTheDocument()
+    expect(await within(notice).findByText('Automatización de línea', { selector: 'li strong' })).toBeInTheDocument()
   })
 
   it('no muestra aviso si la empresa no ha solicitado el perfil', async () => {

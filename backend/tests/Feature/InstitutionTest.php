@@ -585,7 +585,7 @@ describe('cuenta de la persona responsable (T-S8-11)', function () {
         $this->browserRequest('POST', '/api/institutions', institutionPayload(['delivery_method' => 'whatsapp']))
             ->assertUnprocessable()->assertJsonValidationErrors(['delivery_method' => 'El método de entrega debe ser email o manual.']);
         $this->browserRequest('PUT', '/api/institutions/'.$institution->id, institutionPayload(['delivery_method' => 'manual']))
-            ->assertUnprocessable()->assertJsonValidationErrors(['delivery_method' => 'Editar la institución no envía enlaces: usa «Reenviar enlace».']);
+            ->assertUnprocessable()->assertJsonValidationErrors(['delivery_method' => 'Editar la institución no envía enlaces: usa “Reenviar enlace”.']);
         $this->assertDatabaseCount('institutions', 1);
     });
 
@@ -623,7 +623,7 @@ describe('teléfono de la institución (T-S8-11)', function () {
             ->assertUnprocessable()->assertJsonValidationErrors(['contact_phone' => $message]);
         $this->assertDatabaseCount('institutions', 1);
     })->with([
-        'letters' => ['834-ABC-1234', 'El teléfono solo admite dígitos, espacios, paréntesis, guiones y un «+» inicial.'],
+        'letters' => ['834-ABC-1234', 'El teléfono solo admite dígitos, espacios, paréntesis, guiones y un “+” inicial.'],
         'too few digits' => ['834 123', 'El teléfono debe tener entre 10 y 15 dígitos.'],
         'too many digits' => ['1234567890123456', 'El teléfono debe tener entre 10 y 15 dígitos.'],
         'too long' => [str_repeat('1 ', 11), 'El teléfono no debe superar 20 caracteres.'],

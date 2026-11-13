@@ -36,7 +36,7 @@ export function CvHeadlineSection({ studentId, cv, onSaved }: { studentId: numbe
   return (
     <section className="student-section cv-section" aria-labelledby="cv-headline-title">
       <h3 id="cv-headline-title">Titular profesional</h3>
-      <p>Una línea que resuma el perfil, en cualquier disciplina: «Desarrolladora Backend Junior», «Auxiliar Contable» o «Enfermero General».</p>
+      <p>Una línea que resuma el perfil, en cualquier disciplina: “Desarrolladora Backend Junior”, “Auxiliar Contable” o “Enfermero General”.</p>
       <form onSubmit={(event) => { void submit(event) }} aria-busy={mutation.pending} noValidate>
         {mutation.failure && mutation.failure.status !== 422 && <InstitutionRequestError failure={mutation.failure} />}
         <label htmlFor="cv-headline">Titular</label>

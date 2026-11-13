@@ -61,7 +61,7 @@ function ProjectForm({ initial, pending, serverErrors, onSubmit }: {
   return (
     <form onSubmit={submit} aria-busy={pending} noValidate>
       <h2 id="cv-project-form-title">{initial ? 'Editar proyecto' : 'Agregar proyecto'}</h2>
-      <p className="privacy-note">Sin enlaces ni datos de contacto: el repositorio o el sitio del proyecto van en «Enlaces externos», que es protegido.</p>
+      <p className="privacy-note">Sin enlaces ni datos de contacto: el repositorio o el sitio del proyecto van en <strong>Enlaces externos</strong>, que es protegido.</p>
       <fieldset disabled={pending}>
         <legend className="visually-hidden">Datos del proyecto</legend>
         <label htmlFor="cv-project-title">Nombre del proyecto</label>
@@ -170,7 +170,7 @@ export function CvProjectsSection({ studentId, cv, onSaved }: { studentId: numbe
       </Sheet>
       <ConfirmDialog open={removing !== null} origin={removeButton}
         title="¿Eliminar el proyecto?"
-        description={removing ? `«${removing.title}» se eliminará del CV.` : ''}
+        description={removing ? <><strong>{removing.title}</strong> se eliminará del CV.</> : ''}
         confirmLabel="Eliminar"
         onCancel={() => setRemoving(null)}
         onConfirm={() => {

@@ -6,7 +6,9 @@ import { LinkageRequestForm } from '../linkage/LinkageRequestForm'
 import { LinkageStatus } from '../linkage/LinkageStatus'
 import { useApiRequest } from '../lib/useApiRequest'
 import { languageName, levelLabel } from '../students/cvCatalogs'
-import { ChevronLeftIcon } from '../ui/icons'
+import { useBackLink } from '../ui/backLink'
+import { Callout } from '../ui/Callout'
+import { ChevronLeftIcon, ChevronRightIcon } from '../ui/icons'
 import { Sheet } from '../ui/Sheet'
 import { LoadingState } from '../ui/StateMessage'
 import { getTalent, talentMessages } from './api'
@@ -30,11 +32,13 @@ function TalentProfile({ publicId }: { publicId: string }) {
   const [requesting, setRequesting] = useState(false)
   // La hoja carga las oportunidades al abrirse por primera vez y conserva lo escrito al cerrarla.
   const [requested, setRequested] = useState(false)
+  // T-S12-04: desde la bandeja de solicitudes se regresa a ella; desde el buscador (o sin origen), al buscador.
+  const back = useBackLink({ to: '/talent', label: 'Volver al buscador' })
 
   return (
     <section className="card institutions talent-profile" aria-labelledby="talent-profile-title">
       <nav className="institution-navigation" aria-label="Navegación del perfil">
-        <Link className="plain" to="/talent"><ChevronLeftIcon />Volver al buscador</Link>
+        <Link className="plain" to={back.to}><ChevronLeftIcon />{back.label}</Link>
       </nav>
       {loading ? <LoadingState label="Cargando perfil…" variant="details" />
         : failure ? <InstitutionRequestError failure={failure} retry={refresh} page />
@@ -43,15 +47,15 @@ function TalentProfile({ publicId }: { publicId: string }) {
             <h2 id="talent-profile-title">{data.headline ?? 'Perfil sin titular'}</h2>
             <p className="privacy-note">Perfil anónimo: la identidad del alumno y sus datos de contacto los resguarda su institución.</p>
             {sent.data && sent.data.items.length > 0 && (
-              <div className="pending-notice linkage-notice" role="note" aria-label="Solicitudes enviadas para este perfil">
+              <Callout tone="info" label="Solicitudes enviadas para este perfil"
+                action={<Link className="pill-link" to="/linkage-requests">Ver tus solicitudes<ChevronRightIcon /></Link>}>
                 <p>Ya solicitaste la vinculación de este perfil para:</p>
                 <ul>
                   {sent.data.items.map((item) => (
-                    <li key={item.id}>«{item.opportunity.title}» · <LinkageStatus status={item.status} /></li>
+                    <li key={item.id}><strong className="notice-subject">{item.opportunity.title}</strong> · <LinkageStatus status={item.status} /></li>
                   ))}
                 </ul>
-                <Link to="/linkage-requests">Ver tus solicitudes</Link>
-              </div>
+              </Callout>
             )}
             <div className="actions">
               <button type="button" onClick={() => { setRequested(true); setRequesting(true) }}>Solicitar vinculación</button>

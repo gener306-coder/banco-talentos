@@ -14,7 +14,7 @@ class PhoneNumber implements ValidationRule
     public function validate(string $attribute, mixed $value, Closure $fail): void
     {
         if (! is_string($value) || ! preg_match('/^\+?[\d\s().-]+$/', $value)) {
-            $fail('El teléfono solo admite dígitos, espacios, paréntesis, guiones y un «+» inicial.');
+            $fail('El teléfono solo admite dígitos, espacios, paréntesis, guiones y un “+” inicial.');
 
             return;
         }

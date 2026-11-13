@@ -293,7 +293,8 @@ describe('datos faltantes T-S8-09', () => {
     renderApp()
     const label = await screen.findByText('Datos faltantes:')
     expect(label.closest('p')).toHaveTextContent('Datos faltantes: Municipio y Seguro (número o comprobante).')
-    expect(screen.getByRole('heading', { level: 2 }).nextElementSibling).toBe(label.closest('p'))
+    // T-S12-04: aviso de pendiente justo bajo el nombre.
+    expect(screen.getByRole('heading', { level: 2 }).nextElementSibling).toBe(label.closest('.callout.pending'))
   })
 
   it('no muestra el aviso a un alumno completo', async () => {
@@ -383,7 +384,7 @@ describe('municipio del catálogo INEGI HU-S4-04', () => {
     apiMock.mockResolvedValueOnce(Response.json(detail(pendingProfile))).mockResolvedValueOnce(Response.json(detail(savedProfile)))
     renderApp()
     const form = await profileForm()
-    expect(within(form).getByText('Municipio por confirmar: «Cd. Victoria». Elígelo del catálogo y guarda el expediente.')).toBeInTheDocument()
+    expect(within(form).getByText('Cd. Victoria', { selector: 'strong' }).closest('p')).toHaveTextContent('Municipio por confirmar: Cd. Victoria. Elígelo del catálogo y guarda el expediente.')
     expect(within(form).getByRole('combobox', { name: 'Municipio' })).toHaveValue('')
     await chooseMunicipality(form, 'victoria', 'Victoria')
     fireEvent.click(within(form).getByRole('button', { name: 'Guardar expediente' }))

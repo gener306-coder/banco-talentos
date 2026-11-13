@@ -1,5 +1,5 @@
 import { useId, useLayoutEffect, useRef } from 'react'
-import type { RefObject } from 'react'
+import type { ReactNode, RefObject } from 'react'
 import { createPortal } from 'react-dom'
 import { useModal } from './modal'
 
@@ -10,7 +10,7 @@ import { useModal } from './modal'
 export function ConfirmDialog({ open, title, description, confirmLabel, onConfirm, onCancel, origin }: {
   open: boolean
   title: string
-  description: string
+  description: ReactNode
   confirmLabel: string
   onConfirm: () => void
   onCancel: () => void

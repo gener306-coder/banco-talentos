@@ -138,7 +138,7 @@ describe('empresas HU-S4-02', () => {
     const form = (await screen.findByRole('button', { name: 'Registrar empresa' })).closest('form') as HTMLElement
     await fillCompany(form)
     fireEvent.click(within(form).getByRole('button', { name: 'Registrar empresa' }))
-    expect(await screen.findByText('Empresa registrada, pero no pudimos enviar el enlace. Usa «Reenviar enlace».')).toHaveAttribute('role', 'status')
+    expect(await screen.findByText('Empresa registrada, pero no pudimos enviar el enlace. Usa “Reenviar enlace”.')).toHaveAttribute('role', 'status')
   })
 
   it('valida en línea y no envía con errores (CA-03, CA-09)', async () => {

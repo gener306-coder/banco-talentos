@@ -205,7 +205,9 @@ describe('detalle de solicitud HU-S6-01', () => {
     renderApp('/institution/linkage-requests/41')
     const note = await screen.findByRole('note')
     expect(note).toHaveTextContent('Al alumno le falta el número del seguro o el comprobante de vigencia.')
-    expect(within(note).getByRole('link', { name: 'expediente' })).toHaveAttribute('href', '/students/7')
+    // T-S12-04: aviso de pendiente con su acción en pastilla; el expediente regresa a esta solicitud.
+    expect(note).toHaveClass('callout', 'pending')
+    expect(within(note).getByRole('link', { name: 'Completar expediente' })).toHaveAttribute('href', '/students/7')
     expect(screen.getByRole('region', { name: 'Seguro del alumno' })).toHaveTextContent('Tipo de seguroSin capturar')
   })
 

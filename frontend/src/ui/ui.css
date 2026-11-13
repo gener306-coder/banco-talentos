@@ -129,6 +129,31 @@ input:focus-visible, select:focus-visible, textarea:focus-visible { border-color
 .institution-success > :last-child, .notice > :last-child { margin-bottom: 0; }
 @media (prefers-contrast: more) { .institution-success, .notice { border-color: currentColor; } }
 
+/*
+ * Avisos informativos y de pendiente (T-S12-04, ui/Callout.tsx): la anatomía de .notice con el tono de cada aviso.
+ * info: tinte de la marca («Ya solicitaste…»). pending: estado inactivo (datos faltantes o por confirmar).
+ */
+.callout { --callout-color: var(--accent); --callout-surface: var(--tint); position: relative; display: flex; flex-wrap: wrap; align-items: center;
+  gap: 0.5rem 1rem; max-width: var(--content-readable); margin: 0 0 1rem; padding: 0.75rem 1rem 0.75rem 2.7rem;
+  border: 1px solid color-mix(in srgb, var(--callout-color) 28%, transparent); border-left: 4px solid var(--callout-color); border-radius: 12px;
+  background: var(--callout-surface); color: var(--text); font-size: var(--type-sm); line-height: 1.45; overflow-wrap: anywhere;
+  animation: materialize var(--spring-duration) var(--spring) both; }
+.callout::before { content: ''; position: absolute; top: 0.85rem; left: 0.95rem; width: 1.1rem; height: 1.1rem; background: var(--callout-color);
+  -webkit-mask: var(--callout-icon) center / contain no-repeat; mask: var(--callout-icon) center / contain no-repeat;
+  --callout-icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='8' cy='8' r='6.5'/%3E%3Cpath d='M8 7.4v3.4M8 5.1h.01'/%3E%3C/svg%3E"); }
+.callout.pending { --callout-color: var(--status-off-text); --callout-surface: var(--status-off-surface); color: var(--status-off-text); }
+.callout.pending::before {
+  --callout-icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='8' cy='8' r='6.5'/%3E%3Cpath d='M8 4.8V8l2.1 1.4'/%3E%3C/svg%3E"); }
+.callout-body { flex: 1 1 16rem; min-width: 0; }
+.callout-body > :first-child { margin-top: 0; }
+.callout-body > :last-child { margin-bottom: 0; }
+.callout-body p { margin: 0 0 0.3rem; }
+.callout-body ul { margin: 0.3rem 0 0; padding-left: 1.1rem; }
+.callout-body li + li { margin-top: 0.25rem; }
+.callout a:not(.pill-link) { color: inherit; font-weight: 600; }
+.callout .pill-link { background: var(--surface); }
+@media (prefers-contrast: more) { .callout { border-color: var(--callout-color); } }
+
 /* Materializar: los paneles llegan con desenfoque, escala y opacidad. */
 .institution-success, .manual-setup-link, .state-message, .field-error, .notice, .copy-status {
   animation: materialize var(--spring-duration) var(--spring) both; }
@@ -151,7 +176,7 @@ body.modal-open { overflow: hidden; }
 @media (prefers-reduced-motion: reduce) {
   button:active:not(:disabled), .institutions .institution-button:active, .plain:active, .pill-link:active { transform: none; }
   .bone, .spinner { animation: none; }
-  .institution-success, .manual-setup-link, .state-message, .field-error, .notice, .copy-status, .modal-dialog, .combobox-list { animation: fade-in 160ms ease both; }
+  .institution-success, .manual-setup-link, .state-message, .field-error, .notice, .copy-status, .modal-dialog, .combobox-list, .callout { animation: fade-in 160ms ease both; }
   /* T-S11-01: sin escala ni entrada animada; los cambios de color se conservan porque no son movimiento. */
   .chip:has(.chip-remove) { animation: none; }
   button.chip-remove:active:not(:disabled), .combobox-list li:active { transform: none; }
@@ -337,9 +362,6 @@ textarea[aria-invalid='true'] { border-color: var(--danger-border); }
 }
 }
 @layer components {
-/* Municipio capturado como texto libre antes del catálogo INEGI (HU-S4-04): pendiente de confirmar. */
-.pending-notice { margin: 0 0 0.8rem; padding: 0.6rem 0.8rem; border-radius: 10px; font-size: var(--type-sm);
-  background: var(--status-off-surface); color: var(--status-off-text); }
 
 /* Inicio por rol (tarea transversal del Sprint 4): saludo, acción principal y tarjetas de acceso. */
 /* La navegación del inicio es la cuadrícula de tarjetas: no la fila flexible de enlaces de .card > nav. */
@@ -362,13 +384,6 @@ textarea[aria-invalid='true'] { border-color: var(--danger-border); }
 .home-stat { display: flex; flex-direction: column-reverse; gap: 0.2rem; padding: 0.9rem 1.1rem; border: 1px solid var(--border); border-radius: 14px; background: var(--surface); }
 .home-stat dt { font-size: var(--type-sm); line-height: 1.35; color: var(--text); }
 .home-stat dd { margin: 0; font-size: var(--type-2xl); font-weight: 700; line-height: 1.1; color: var(--accent); font-variant-numeric: tabular-nums; }
-.home-notice { display: flex; align-items: flex-start; gap: 0.5rem; }
-.home-notice > .icon { flex-shrink: 0; margin-top: 0.2rem; }
-.home-notice a { color: inherit; font-weight: 600; text-decoration: underline; }
-/* Avisos del inicio con acción (T-S8-08): remarque al inicio y acción sin fondo, con el texto y la flecha resaltados en el color del aviso. */
-.home-action-notice { flex-wrap: wrap; align-items: center; border-left: 3px solid var(--status-off-text); }
-.home-action-notice > .icon { margin-top: 0; }
-.home-action-notice > span { flex: 1 1 14rem; }
 /* Solicitudes de vinculación por responder (HU-S6-03 CA-02): aviso destacado con el acento de la marca. */
 /* Pendientes del inicio (T-S8-10): tarjetas de dos columnas con la acción junto a su motivo; toda la tarjeta es clicable. */
 .home-tasks { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(24rem, 100%), 1fr)); gap: 0.9rem; margin: 0 0 1.25rem; padding: 0; list-style: none; }

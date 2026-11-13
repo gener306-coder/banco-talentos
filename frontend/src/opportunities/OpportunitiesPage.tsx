@@ -1,10 +1,10 @@
 import { useCallback, useState } from 'react'
-import type { MouseEvent } from 'react'
-import { Link, useNavigate } from 'react-router'
+import { Link } from 'react-router'
 import { InstitutionRequestError, InstitutionStatus } from '../institutions/InstitutionLayout'
 import { useApiRequest } from '../lib/useApiRequest'
 import { BriefcaseIcon, ChevronLeftIcon, ChevronRightIcon, PlusIcon } from '../ui/icons'
 import { LoadingState, StateMessage } from '../ui/StateMessage'
+import { useRowNavigation } from '../ui/useRowNavigation'
 import { listOpportunities, opportunityMessages } from './api'
 import { OpportunityLayout, SkillTags } from './OpportunityLayout'
 
@@ -13,14 +13,9 @@ export function OpportunitiesPage() {
   const [page, setPage] = useState(1)
   const load = useCallback((signal: AbortSignal) => listOpportunities(page, signal), [page])
   const { data, loading, failure, refresh } = useApiRequest(load, opportunityMessages)
-  const navigate = useNavigate()
 
-  // Toda la fila abre el detalle con el puntero; el enlace «Ver detalle» sigue siendo el control accesible.
-  function openRow(event: MouseEvent<HTMLTableRowElement>, href: string) {
-    if (event.defaultPrevented || (event.target as HTMLElement).closest('a, button')) return
-    if (window.getSelection()?.toString()) return
-    void navigate(href)
-  }
+  // Toda la fila abre el detalle con el puntero; el enlace «Ver detalle» sigue siendo el control accesible (HU-S8-01).
+  const openRow = useRowNavigation()
 
   return (
     <OpportunityLayout title="Oportunidades Duales">

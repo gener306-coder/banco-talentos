@@ -1,10 +1,11 @@
 import { useCallback, useState } from 'react'
-import type { FormEvent, MouseEvent } from 'react'
-import { Link, useNavigate } from 'react-router'
+import type { FormEvent } from 'react'
+import { Link } from 'react-router'
 import { InstitutionRequestError, InstitutionStatus } from '../institutions/InstitutionLayout'
 import { useApiRequest } from '../lib/useApiRequest'
 import { BuildingIcon, ChevronLeftIcon, ChevronRightIcon, PlusIcon, SearchIcon } from '../ui/icons'
 import { LoadingState, StateMessage } from '../ui/StateMessage'
+import { useRowNavigation } from '../ui/useRowNavigation'
 import { companyMessages, listCompanies } from './api'
 import { CompanyLayout } from './CompanyLayout'
 
@@ -15,7 +16,6 @@ export function CompaniesPage() {
   const [draft, setDraft] = useState('')
   const load = useCallback((signal: AbortSignal) => listCompanies(page, query, signal), [page, query])
   const { data, loading, failure, refresh } = useApiRequest(load, companyMessages)
-  const navigate = useNavigate()
 
   function search(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -23,12 +23,8 @@ export function CompaniesPage() {
     setQuery(draft.trim())
   }
 
-  // Toda la fila abre el detalle con el puntero; el enlace «Ver detalle» sigue siendo el control accesible.
-  function openRow(event: MouseEvent<HTMLTableRowElement>, href: string) {
-    if (event.defaultPrevented || (event.target as HTMLElement).closest('a, button')) return
-    if (window.getSelection()?.toString()) return
-    void navigate(href)
-  }
+  // Toda la fila abre el detalle con el puntero; el enlace «Ver detalle» sigue siendo el control accesible (HU-S8-01).
+  const openRow = useRowNavigation()
 
   return (
     <CompanyLayout title="Empresas">
@@ -49,7 +45,7 @@ export function CompaniesPage() {
         : data && data.companies.length === 0
           ? query
             ? <StateMessage kind="empty" icon={<SearchIcon />} title="Ninguna empresa coincide con la búsqueda."
-              description={`No hay empresas cuya razón social, nombre comercial o RFC contenga «${query}».`} />
+              description={<>No hay empresas cuya razón social, nombre comercial o RFC contenga <strong>{query}</strong>.</>} />
             : <StateMessage kind="empty" icon={<BuildingIcon />} title="No hay empresas registradas."
               description="Registra la primera empresa validada para que pueda participar en el Banco de Talentos."
               action={<Link className="institution-button" to="/companies/new"><PlusIcon />Registrar la primera empresa</Link>} />

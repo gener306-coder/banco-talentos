@@ -69,7 +69,7 @@ describe('bitácora HU-S7-03', () => {
     expect(rows[0]).toHaveTextContent('Coordinación DualInstitución')
     expect(rows[0]).toHaveTextContent('Solicitud #41 de ManuGolfo a Universidad Tecnológica: aceptada')
     expect(rows[1]).toHaveTextContent('Solicitud #41 de ManuGolfo a Universidad Tecnológica')
-    expect(rows[2]).toHaveTextContent('Oportunidad: «Tableros de producción»')
+    expect(rows[2]).toHaveTextContent('Oportunidad: Tableros de producción')
     expect(rows[3]).toHaveTextContent('Empresa: Manufacturas del Golfo, S.A. de C.V.')
     expect(rows[3]).toHaveTextContent('Analista EconómicaSecretaría de Economía')
     expect(rows[4]).toHaveTextContent('Cuenta de Secretaría de Economía: Analista Económica (analista@economia.test)')

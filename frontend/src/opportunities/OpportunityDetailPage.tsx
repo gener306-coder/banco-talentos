@@ -4,6 +4,7 @@ import { InstitutionRequestError, InstitutionStatus } from '../institutions/Inst
 import { useApiMutation, useApiRequest } from '../lib/useApiRequest'
 import { periodLabel, stateName } from '../students/catalogs'
 import { languageName, levelLabel } from '../students/cvCatalogs'
+import { useBackLink } from '../ui/backLink'
 import { ConfirmDialog } from '../ui/ConfirmDialog'
 import { ChevronLeftIcon } from '../ui/icons'
 import { LoadingState } from '../ui/StateMessage'
@@ -22,6 +23,8 @@ function OpportunityDetail({ id }: { id: string }) {
     return state && typeof state === 'object' && 'notice' in state && typeof state.notice === 'string' ? state.notice : null
   })
   const [statusNotice, setStatusNotice] = useState<string | null>(null)
+  // T-S12-04: desde la bandeja de solicitudes se regresa a ella; si no, al listado de oportunidades.
+  const back = useBackLink({ to: '/opportunities', label: 'Volver a oportunidades' })
   const statusButton = useRef<HTMLButtonElement>(null)
   const [confirming, setConfirming] = useState(false)
 
@@ -90,7 +93,7 @@ function OpportunityDetail({ id }: { id: string }) {
         title="¿Inactivar la oportunidad?"
         description="No podrá elegirse para nuevas solicitudes de vinculación. No se borra ningún dato y podrás reactivarla después."
         confirmLabel="Inactivar" onConfirm={() => { void changeStatus() }} onCancel={() => setConfirming(false)} />
-      <p className="institution-back"><Link className="plain" to="/opportunities"><ChevronLeftIcon />Volver a oportunidades</Link></p>
+      <p className="institution-back"><Link className="plain" to={back.to}><ChevronLeftIcon />{back.label}</Link></p>
     </OpportunityLayout>
   )
 }

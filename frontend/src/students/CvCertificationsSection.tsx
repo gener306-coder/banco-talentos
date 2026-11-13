@@ -222,7 +222,7 @@ export function CvCertificationsSection({ studentId, cv, onSaved }: { studentId:
       </Sheet>
       <ConfirmDialog open={removing !== null} origin={removeButton}
         title="¿Eliminar la certificación?"
-        description={removing ? `«${removing.name}» y su credencial se eliminarán del CV.` : ''}
+        description={removing ? <><strong>{removing.name}</strong> y su credencial se eliminarán del CV.</> : ''}
         confirmLabel="Eliminar"
         onCancel={() => setRemoving(null)}
         onConfirm={() => {

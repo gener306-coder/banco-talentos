@@ -117,7 +117,7 @@ describe('habilidades', () => {
     const list = within(region).getByRole('listbox', { name: 'Sugerencias de habilidades' })
     expect(skillsMock.mock.calls.at(-1)?.[0]).toBe('/api/skills?q=li')
     expect(input).toHaveAttribute('aria-expanded', 'true')
-    expect(within(list).getAllByRole('option').map((option) => option.textContent)).toEqual(['LiderazgoBlanda', 'LighthouseTécnica', 'Agregar «li» como nuevaTécnica'])
+    expect(within(list).getAllByRole('option').map((option) => option.textContent)).toEqual(['LiderazgoBlanda', 'LighthouseTécnica', 'Agregar li como nuevaTécnica'])
     expect(within(list).getAllByRole('option')[0]).toHaveAttribute('aria-selected', 'true')
     fireEvent.keyDown(input, { key: 'Enter' })
 
@@ -134,7 +134,7 @@ describe('habilidades', () => {
     const fuzzy = await within(region).findByRole('option', { name: /^Vuex/ })
 
     expect(fuzzy).toHaveAttribute('aria-selected', 'false')
-    expect(within(region).getByRole('option', { name: /Agregar «Vue» como nueva/ })).toHaveAttribute('aria-selected', 'false')
+    expect(within(region).getByRole('option', { name: /Agregar Vue como nueva/ })).toHaveAttribute('aria-selected', 'false')
     expect(input).not.toHaveAttribute('aria-activedescendant')
     fireEvent.keyDown(input, { key: 'Enter' })
 
@@ -210,9 +210,9 @@ describe('habilidades', () => {
     fireEvent.click(within(region).getByLabelText('Blanda'))
     const input = within(region).getByRole('combobox', { name: 'Agregar habilidad' })
     fireEvent.change(input, { target: { value: 'Negociación' } })
-    await within(region).findByRole('option', { name: /Agregar «Negociación» como nueva/ })
+    await within(region).findByRole('option', { name: /Agregar Negociación como nueva/ })
     fireEvent.keyDown(input, { key: 'ArrowDown' })
-    expect(within(region).getByRole('option', { name: /Agregar «Negociación»/ })).toHaveAttribute('aria-selected', 'true')
+    expect(within(region).getByRole('option', { name: /Agregar Negociación/ })).toHaveAttribute('aria-selected', 'true')
     fireEvent.keyDown(input, { key: 'Enter' })
     expect(within(within(region).getByRole('list', { name: 'Blandas' })).getByText('Negociación')).toBeInTheDocument()
   })

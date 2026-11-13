@@ -6,8 +6,6 @@
 .linkage-status.rejected { background: var(--danger-surface); color: var(--danger-text); }
 .linkage-status.cancelled { background: var(--status-off-surface); color: var(--status-off-text); }
 .linkage-profile-meta { display: block; font-size: var(--type-sm); color: var(--text); }
-.linkage-notice { max-width: var(--content-readable); }
-.linkage-notice ul { margin: 0.3rem 0 0; padding-left: 1.2rem; }
 .linkage-decision { max-width: var(--content-readable); }
 .linkage-decision > fieldset { margin: 0; padding: 0; border: 0; min-width: 0; }
 .linkage-decision textarea { width: 100%; resize: vertical; }
@@ -31,4 +29,6 @@
 .linkage-sent tbody th[scope='row'] { min-width: 11rem; }
 .linkage-sent tbody td:nth-of-type(1) { min-width: 11rem; }
 .linkage-sent tbody td:nth-of-type(2) { min-width: 13.5rem; }
+/* T-S12-04: «Ver perfil», «Oportunidad» y «Cancelar» se apilan para que la columna de acciones no desborde la tabla. */
+.table-card .linkage-sent td:last-child > .actions { flex-direction: column; align-items: stretch; gap: 0.4rem; }
 }

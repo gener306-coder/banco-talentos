@@ -29,7 +29,7 @@ class UpdateInstitutionRequest extends StoreInstitutionRequest
     {
         // Antes que los del alta: su mensaje comodín de delivery_method ganaría por orden.
         return [
-            'delivery_method.prohibited' => 'Editar la institución no envía enlaces: usa «Reenviar enlace».',
+            'delivery_method.prohibited' => 'Editar la institución no envía enlaces: usa “Reenviar enlace”.',
             ...parent::messages(),
         ];
     }

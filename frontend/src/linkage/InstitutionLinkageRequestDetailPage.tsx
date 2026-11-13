@@ -1,5 +1,5 @@
 import { useCallback } from 'react'
-import { Link, useParams } from 'react-router'
+import { Link, useLocation, useParams } from 'react-router'
 import { sectorName } from '../companies/catalogs'
 import { InstitutionRequestError, InstitutionStatus } from '../institutions/InstitutionLayout'
 import { useApiRequest } from '../lib/useApiRequest'
@@ -8,7 +8,9 @@ import { fullName } from '../students/api'
 import { periodLabel, stateName } from '../students/catalogs'
 import { languageName, levelLabel } from '../students/cvCatalogs'
 import { StudentStatus } from '../students/StudentStatus'
-import { AlertIcon, ChevronLeftIcon, ChevronRightIcon } from '../ui/icons'
+import { backState } from '../ui/backLink'
+import { Callout } from '../ui/Callout'
+import { ChevronLeftIcon, ChevronRightIcon } from '../ui/icons'
 import { LoadingState } from '../ui/StateMessage'
 import { getReceivedLinkage, institutionLinkageMessages } from './institutionApi'
 import type { ReceivedLinkageDetail } from './institutionApi'
@@ -32,6 +34,8 @@ function Detail({ data, onDecided, refresh }: {
   const { student, opportunity, company } = data
   const { has_number: hasNumber, has_document: hasDocument } = student.social_security
   const studentPath = `/students/${student.id}`
+  // T-S12-04: el expediente regresa a esta solicitud, no al padrón.
+  const toRequest = backState('Volver a la solicitud', useLocation())
 
   return (
     <>
@@ -52,7 +56,7 @@ function Detail({ data, onDecided, refresh }: {
           <dt>Ubicación</dt><dd>{student.state_code ? [student.municipality, stateName(student.state_code)].filter(Boolean).join(', ') : 'Sin capturar'}</dd>
           <dt>Estado en el Banco de Talentos</dt><dd><StudentStatus active={student.is_active} /></dd>
         </dl>
-        <p><Link className="pill-link" to={studentPath}>Ver expediente del alumno<ChevronRightIcon /></Link></p>
+        <p><Link className="pill-link" to={studentPath} state={toRequest}>Ver expediente del alumno<ChevronRightIcon /></Link></p>
       </section>
 
       <section className="student-section" aria-labelledby="linkage-security-title">
@@ -63,10 +67,10 @@ function Detail({ data, onDecided, refresh }: {
           <dt>Comprobante de vigencia</dt><dd>{hasDocument ? 'Cargado' : 'Sin cargar'}</dd>
         </dl>
         {!hasNumber && !hasDocument && (
-          <p className="pending-notice home-notice" role="note">
-            <AlertIcon />
-            <span>Al alumno le falta el número del seguro o el comprobante de vigencia. Complétalo en su <Link to={studentPath}>expediente</Link> antes de coordinar la vinculación.</span>
-          </p>
+          <Callout tone="pending"
+            action={<Link className="pill-link" to={studentPath} state={toRequest}>Completar expediente<ChevronRightIcon /></Link>}>
+            <p>Al alumno le falta el número del seguro o el comprobante de vigencia. Complétalo en su expediente antes de coordinar la vinculación.</p>
+          </Callout>
         )}
       </section>
 

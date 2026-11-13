@@ -38,7 +38,7 @@ export function StateMessage({ kind, icon, title, description, action }: {
   kind: 'empty' | 'error'
   icon: ReactNode
   title: string
-  description?: string
+  description?: ReactNode
   action?: ReactNode
 }) {
   return (

@@ -194,7 +194,7 @@ export function SkillPicker({ idPrefix, skills, onChange, max, disabled, serverE
               onMouseDown={(event) => { event.preventDefault(); choose(option) }}>
               {option.type === 'catalog'
                 ? <><span>{option.skill.name}</span>{note(option.skill.match, term)}<span className="option-meta">{SKILL_KINDS.find((kind) => kind.value === option.skill.kind)?.label}</span></>
-                : <><PlusIcon /><span>Agregar «{option.name}» como nueva</span><span className="option-meta">{SKILL_KINDS.find((kind) => kind.value === newKind)?.label}</span></>}
+                : <><PlusIcon /><span>Agregar <strong>{option.name}</strong> como nueva</span><span className="option-meta">{SKILL_KINDS.find((kind) => kind.value === newKind)?.label}</span></>}
             </li>
           ))}
         </ul>
