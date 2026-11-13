@@ -192,10 +192,12 @@ describe('detalle de solicitud HU-S6-01', () => {
     expect(company).toHaveTextContent('Manufacturas del Golfo, S.A. de C.V.')
     expect(company).toHaveTextContent('Laura Méndez')
     expect(company).toHaveTextContent('Recursos Humanos')
-    const email = within(company).getByRole('link', { name: 'dual@manugolfo.mx' })
-    expect(email).toHaveAttribute('href', 'mailto:dual@manugolfo.mx')
-    expect(email).toHaveAttribute('target', '_blank')
-    expect(email).toHaveAttribute('rel', 'noopener noreferrer')
+    // T-S12-06: el correo se muestra y su ícono abre el menú (copiar, Gmail, Outlook o la app), sin mailto: directo.
+    expect(company).toHaveTextContent('dual@manugolfo.mx')
+    fireEvent.click(within(company).getByRole('button', { name: 'Escribir a dual@manugolfo.mx' }))
+    const menu = await screen.findByRole('menu', { name: 'Correo dual@manugolfo.mx' })
+    expect(within(menu).getByRole('menuitem', { name: 'Abrir en app del sistema' })).toHaveAttribute('href', 'mailto:dual@manugolfo.mx')
+    fireEvent.keyDown(menu, { key: 'Escape' })
     expect(within(company).getByRole('link', { name: '(833) 123-4567' })).toHaveAttribute('href', 'tel:8331234567')
   })
 

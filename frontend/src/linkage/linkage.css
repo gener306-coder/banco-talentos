@@ -9,7 +9,6 @@
 .linkage-decision { max-width: var(--content-readable); }
 .linkage-decision > fieldset { margin: 0; padding: 0; border: 0; min-width: 0; }
 .linkage-decision textarea { width: 100%; resize: vertical; }
-.linkage-meta.linkage-response { display: -webkit-box; max-width: 22rem; overflow: hidden; white-space: pre-line; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2; }
 /* T-S8-15: dato secundario discreto bajo el principal, y títulos largos en dos líneas como máximo. */
 .linkage-meta { display: block; margin-top: 0.15rem; color: var(--text); font-size: var(--type-xs); font-weight: 400; }
 .linkage-meta.mono { font-family: ui-monospace, monospace; font-variant-numeric: tabular-nums; letter-spacing: 0.01em; }
@@ -24,4 +23,9 @@
 .linkage-sent tbody td:nth-of-type(2) { min-width: 13.5rem; }
 /* T-S12-04: «Ver perfil», «Oportunidad» y «Cancelar» se apilan para que la columna de acciones no desborde la tabla. */
 .table-card .linkage-sent td:last-child > .actions { flex-direction: column; align-items: stretch; gap: 0.4rem; }
+/* T-S12-06: mensaje de respuesta completo en una hoja, con saltos de línea y sin truncar. */
+.linkage-message h3 { margin: 0 0 0.6rem; }
+.linkage-message-meta { margin: 0 0 0.35rem; font-size: var(--type-sm); color: var(--text); }
+.linkage-message-text { margin: 1rem 0 0; padding: 0.85rem 1rem; border-left: 4px solid var(--accent); border-radius: 0 12px 12px 0;
+  background: var(--tint); color: var(--text); white-space: pre-line; overflow-wrap: anywhere; }
 }

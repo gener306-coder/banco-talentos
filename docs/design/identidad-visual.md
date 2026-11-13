@@ -286,6 +286,8 @@ Adoptado el 11 de octubre de 2026 como cambio transversal del Sprint 2 (`docs/sp
 - Filas clicables (HU-S8-01, T-S12-04): una tabla nunca usa enlaces de texto subrayados para abrir un detalle. La fila lleva `data-href` (`ui/useRowNavigation.ts`) y la columna «Acciones», una `.pill-link` por destino.
 - Jerarquía de acciones en tablas (T-S12-05): las acciones de la fila (ver el detalle, cancelar) van en «Acciones». Las acciones de un dato (escribir o llamar a un contacto, abrir un enlace externo) van en su celda con `.cell-actions`: íconos de 1.75 rem sin relleno, en acento, junto al texto.
 - Hover de fila (T-S12-05): la fila se resalta solo mientras el cursor no está sobre uno de sus controles. Solo la flecha de la acción principal (`.row-link`) se adelanta con la fila.
+- Correo (T-S12-06): nunca un `mailto:` directo. El ícono de correo (`ui/EmailMenu.tsx`) abre un menú con «Copiar correo», Gmail, Outlook y la app del sistema.
+- Textos largos de una celda (T-S12-06): no se truncan en la tabla. Un ícono `.cell-actions` junto al dato los abre completos en una `Sheet` (por ejemplo, el mensaje de respuesta de la institución).
 - Listados en la URL (T-S12-05): búsqueda, filtros y página se leen y se escriben con `ui/useListParams.ts`; el regreso contextual recupera la vista exacta.
 - Regreso contextual (T-S12-04): un detalle abierto desde otro flujo regresa a él con su texto («Volver a solicitudes») mediante `ui/backLink.ts`; sin origen, conserva su regreso de siempre.
 - Avisos informativos y de pendiente (`ui/Callout.tsx`): tono `info` (tinte de la marca) o `pending` (estado inactivo), con la anatomía de `.notice`; el dato clave va en `.notice-subject` y la acción, en una pastilla.

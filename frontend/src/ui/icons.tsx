@@ -46,3 +46,5 @@ export const PhoneIcon = () => <Icon><path d="M5.6 2.5H3.8a1.3 1.3 0 0 0-1.3 1.4
 export const MailIcon = () => <Icon><rect x="1.5" y="3.5" width="13" height="9" rx="1.5" /><path d="m2 4.5 6 4.5 6-4.5" /></Icon>
 export const EyeIcon = () => <Icon><path d="M1.5 8S4 3.5 8 3.5 14.5 8 14.5 8 12 12.5 8 12.5 1.5 8 1.5 8Z" /><circle cx="8" cy="8" r="2" /></Icon>
 export const EyeOffIcon = () => <Icon><path d="M6.6 3.7A6 6 0 0 1 8 3.5c4 0 6.5 4.5 6.5 4.5a11 11 0 0 1-1.7 2.2M4.2 4.8C2.5 6 1.5 8 1.5 8S4 12.5 8 12.5a6 6 0 0 0 3.2-.9M6.6 6.6a2 2 0 0 0 2.8 2.8M2 2l12 12" /></Icon>
+export const MessageIcon = () => <Icon><path d="M2.5 4A1.5 1.5 0 0 1 4 2.5h8A1.5 1.5 0 0 1 13.5 4v5.5A1.5 1.5 0 0 1 12 11H7l-3 2.5V11a1.5 1.5 0 0 1-1.5-1.5Z" /><path d="M5.5 5.5h5M5.5 8h3" /></Icon>
+export const ExternalIcon = () => <Icon><path d="M9.5 2.5h4v4M13.5 2.5 7.5 8.5M11.5 9.5v3a1 1 0 0 1-1 1h-7a1 1 0 0 1-1-1v-7a1 1 0 0 1 1-1h3" /></Icon>

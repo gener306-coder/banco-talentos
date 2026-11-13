@@ -4,7 +4,9 @@ import { Link, useLocation } from 'react-router'
 import { InstitutionRequestError } from '../institutions/InstitutionLayout'
 import { useApiMutation, useApiRequest } from '../lib/useApiRequest'
 import { ConfirmDialog } from '../ui/ConfirmDialog'
-import { ChevronLeftIcon, ChevronRightIcon, MailIcon, PhoneIcon, SearchIcon } from '../ui/icons'
+import { EmailMenu } from '../ui/EmailMenu'
+import { ChevronLeftIcon, ChevronRightIcon, MessageIcon, PhoneIcon, SearchIcon } from '../ui/icons'
+import { Sheet } from '../ui/Sheet'
 import { backState } from '../ui/backLink'
 import { LoadingState, StateMessage } from '../ui/StateMessage'
 import { useListParams } from '../ui/useListParams'
@@ -35,6 +37,11 @@ export function LinkageRequestsPage() {
   const mutation = useApiMutation(linkageMessages)
   const [cancelling, setCancelling] = useState<LinkageInboxItem | null>(null)
   const [notice, setNotice] = useState<ReactNode>(null)
+  // T-S12-06: solicitud cuyo mensaje de respuesta se lee completo. La hoja vive fuera de la tabla: su contenido no
+  // está dentro de ninguna fila y su clic nunca la abre.
+  const [reading, setReading] = useState<LinkageInboxItem | null>(null)
+  const messageOrigin = useRef<HTMLButtonElement | null>(null)
+  const closeMessage = useCallback(() => { setReading(null); messageOrigin.current?.focus() }, [])
   const origin = useRef<HTMLButtonElement | null>(null)
 
   async function cancel() {
@@ -112,8 +119,8 @@ export function LinkageRequestsPage() {
                                 <span title={item.institution.contact_position ?? undefined}>{item.institution.contact_name}</span>
                               )}
                               <span className="cell-actions">
-                                <a href={`mailto:${item.institution.contact_email}`} target="_blank" rel="noopener noreferrer"
-                                  aria-label={`Escribir a ${item.institution.contact_email}`} title={item.institution.contact_email}><MailIcon /></a>
+                                {/* T-S12-06: mailto: falla sin cliente de correo; el ícono ofrece copiar, webmail o la app. */}
+                                <EmailMenu email={item.institution.contact_email} />
                                 {item.institution.contact_phone && (
                                   <a href={`tel:${item.institution.contact_phone.replace(/[^\d+]/g, '')}`}
                                     aria-label={`Llamar al ${item.institution.contact_phone}`} title={item.institution.contact_phone}><PhoneIcon /></a>
@@ -123,10 +130,20 @@ export function LinkageRequestsPage() {
                           </td>
                           <td className="nowrap">{dateFormat.format(new Date(item.created_at))}</td>
                           <td>
-                            <LinkageStatus status={item.status} />
-                            {/* Respuesta de la institución (HU-S6-02 CA-04). */}
+                            {/* Respuesta de la institución (HU-S6-02 CA-04). T-S12-06: el mensaje no se trunca en la celda;
+                                un ícono junto al estado lo abre completo en una hoja. */}
+                            <span className="cell-meta">
+                              <LinkageStatus status={item.status} />
+                              {item.response_message && (
+                                <span className="cell-actions">
+                                  <button type="button" aria-haspopup="dialog" aria-label={`Leer el mensaje de ${item.institution.name}`}
+                                    title="Mensaje de la institución" onClick={(event) => { messageOrigin.current = event.currentTarget; setReading(item) }}>
+                                    <MessageIcon />
+                                  </button>
+                                </span>
+                              )}
+                            </span>
                             {item.responded_at && <span className="linkage-meta">Respondida el {dateFormat.format(new Date(item.responded_at))}</span>}
-                            {item.response_message && <span className="linkage-meta linkage-response" title={item.response_message}>“{item.response_message}”</span>}
                           </td>
                           <td>
                             <div className="actions">
@@ -162,6 +179,19 @@ export function LinkageRequestsPage() {
         title="¿Cancelar la solicitud?"
         description="La institución ya no podrá responderla. Podrás enviar una nueva solicitud para el mismo perfil y oportunidad más adelante."
         confirmLabel="Cancelar solicitud" onConfirm={() => { void cancel() }} onCancel={() => setCancelling(null)} />
+      <Sheet open={reading !== null} onClose={closeMessage} labelledBy="linkage-message-title">
+        {reading && (
+          <div className="linkage-message">
+            <h3 id="linkage-message-title">Mensaje de la institución</h3>
+            <p className="linkage-message-meta">
+              <strong>{reading.institution.name}</strong> · <LinkageStatus status={reading.status} />
+              {reading.responded_at && <> · Respondida el {dateFormat.format(new Date(reading.responded_at))}</>}
+            </p>
+            <p className="linkage-message-meta">Solicitud para <strong>{reading.opportunity.title}</strong></p>
+            <blockquote className="linkage-message-text">{reading.response_message}</blockquote>
+          </div>
+        )}
+      </Sheet>
     </section>
   )
 }
