@@ -280,6 +280,9 @@ it('validates the filters', function (array $query, string $field) {
     'origin as coordinates' => [['origin_municipality_code' => '23.7,-99.1'], 'origin_municipality_code'],
     'too many skills' => [['skills' => array_map(fn ($n) => 'Habilidad '.$n, range(1, 11))], 'skills'],
     'non boolean flag' => [['dual_available' => 'quizá'], 'dual_available'],
+    'text too long' => [['q' => str_repeat('a', 101)], 'q'],
+    'too many words' => [['q' => 'uno dos tres cuatro cinco seis siete ocho nueve'], 'q'],
+    'text as a list' => [['q' => ['python']], 'q'],
 ]);
 
 it('shows the full public profile by its public identifier, without actions (CA-06)', function () {
@@ -331,4 +334,116 @@ it('gives every student a unique random UUID', function () {
     expect($first->public_id)->not->toBe($second->public_id);
     expect(fn () => DB::table('students')->where('id', $second->id)->update(['public_id' => $first->public_id]))
         ->toThrow(QueryException::class);
+});
+
+// HU-S11-02: el filtro de habilidades resuelve alias exactos.
+
+/** Fija los alias de una habilidad ya registrada, como los deja skills:seed. */
+function aliasSkill(string $name, string ...$aliases): void
+{
+    DB::table('skills')->where('slug', CatalogSlug::from($name))->update(['aliases' => json_encode($aliases)]);
+}
+
+it('resolves exact aliases in the skills filter, with OR inside a term and AND between terms (HU-S11-02 CA-01, CA-02)', function () {
+    talent($this->institution, ['headline' => 'JavaScript y modelado'], ['skills' => [['JavaScript', 'technical'], ['Modelado de bases de datos', 'technical']]]);
+    talent($this->institution, ['headline' => 'Normalización'], ['skills' => [['Normalización de bases de datos', 'technical']]]);
+    talent($this->institution, ['headline' => 'Solo JavaScript'], ['skills' => [['JavaScript', 'technical']]]);
+    // Una cuenta registró «JS» como habilidad propia: el término la nombra igual que al alias.
+    talent($this->institution, ['headline' => 'Habilidad JS'], ['skills' => [['JS', 'technical']]]);
+    talent($this->institution, ['headline' => 'Python'], ['skills' => [['Python', 'technical']]]);
+    aliasSkill('JavaScript', 'js');
+    aliasSkill('Modelado de bases de datos', 'bd');
+    aliasSkill('Normalización de bases de datos', 'bd');
+    $this->loginWithCookies($this->companyUser)->assertOk();
+
+    expect(headlines(searchTalent($this, ['skills' => ['js']])))->toEqualCanonicalizing(['JavaScript y modelado', 'Solo JavaScript', 'Habilidad JS']);
+    expect(headlines(searchTalent($this, ['skills' => ['JS']])))->toEqualCanonicalizing(['JavaScript y modelado', 'Solo JavaScript', 'Habilidad JS']);
+    expect(headlines(searchTalent($this, ['skills' => ['bd']])))->toEqualCanonicalizing(['JavaScript y modelado', 'Normalización']);
+    expect(headlines(searchTalent($this, ['skills' => ['bd', 'js']])))->toBe(['JavaScript y modelado']);
+    expect(headlines(searchTalent($this, ['skills' => ['bd', 'Python']])))->toBe([]);
+    expect(headlines(searchTalent($this, ['skills' => ['js', 'Cobol']])))->toBe([]);
+});
+
+it('neither corrects typos nor widens prefixes in the skills filter (HU-S11-02 CA-03)', function () {
+    talent($this->institution, ['headline' => 'Java'], ['skills' => [['Java', 'technical']]]);
+    talent($this->institution, ['headline' => 'JavaScript'], ['skills' => [['JavaScript', 'technical']]]);
+    talent($this->institution, ['headline' => 'Python'], ['skills' => [['Python', 'technical']]]);
+    aliasSkill('JavaScript', 'js');
+    $this->loginWithCookies($this->companyUser)->assertOk();
+
+    expect(headlines(searchTalent($this, ['skills' => ['java']])))->toBe(['Java']);
+    expect(headlines(searchTalent($this, ['skills' => ['javasc']])))->toBe([]);
+    expect(headlines(searchTalent($this, ['skills' => ['pyhton']])))->toBe([]);
+    // El alias es exacto: «j» no es «js».
+    expect(headlines(searchTalent($this, ['skills' => ['j']])))->toBe([]);
+});
+
+// HU-S11-03: texto libre sobre el titular y la carrera.
+
+it('keeps normalized search columns in the database, with GIN trigram indexes (HU-S11-03 CA-01)', function () {
+    $student = talent($this->institution, ['headline' => 'Diseñador ÁGIL de Software', 'program' => 'Ingeniería Mecatrónica']);
+    $row = fn () => DB::table('students')->where('id', $student->id)->first(['headline_search', 'program_search']);
+
+    expect($row()->headline_search)->toBe('disenador agil de software')
+        ->and($row()->program_search)->toBe('ingenieria mecatronica');
+
+    // La base las mantiene: cambian con el titular y nadie puede escribirlas.
+    DB::table('students')->where('id', $student->id)->update(['headline' => 'Técnica en Logística']);
+    expect($row()->headline_search)->toBe('tecnica en logistica');
+    expect(fn () => DB::transaction(fn () => DB::table('students')->where('id', $student->id)->update(['headline_search' => 'x'])))
+        ->toThrow(QueryException::class);
+
+    $indexes = DB::table('pg_indexes')->where('tablename', 'students')
+        ->whereIn('indexname', ['students_headline_search_trgm', 'students_program_search_trgm'])->pluck('indexdef');
+    expect($indexes)->toHaveCount(2)->each->toContain('USING gin', 'gin_trgm_ops');
+    expect(array_keys($student->fresh()->toArray()))->not->toContain('headline_search', 'program_search');
+});
+
+it('searches free text in the headline and the program, tolerating accents and typos (HU-S11-03 CA-02, CA-03)', function () {
+    talent($this->institution, ['headline' => 'Desarrollador Python', 'program' => 'Ingeniería en Sistemas Computacionales']);
+    talent($this->institution, ['headline' => 'Técnico en automatización', 'program' => 'Ingeniería Mecatrónica', 'period_number' => 3]);
+    talent($this->institution, ['headline' => 'Analista de datos', 'program' => 'Contaduría 100% en línea']);
+    $this->loginWithCookies($this->companyUser)->assertOk();
+    $search = fn (string $q, array $filters = []) => headlines(searchTalent($this, ['q' => $q, ...$filters]));
+
+    // Sin acentos, con mayúsculas y como parte de la palabra.
+    expect($search('mecatronica'))->toBe(['Técnico en automatización']);
+    expect($search('MECATRÓNICA'))->toBe(['Técnico en automatización']);
+    expect($search('automatiza'))->toBe(['Técnico en automatización']);
+    // Errores de escritura. «sistmas» queda bajo el umbral por defecto de pg_trgm (0.6): prueba el SET LOCAL.
+    expect($search('desarollador'))->toBe(['Desarrollador Python']);
+    expect($search('sistmas'))->toBe(['Desarrollador Python']);
+    expect($search('analsta'))->toBe(['Analista de datos']);
+    // Cada palabra en el titular o en la carrera; todas requeridas.
+    expect($search('python sistemas'))->toBe(['Desarrollador Python']);
+    expect($search('  Sistemas   PYTHON '))->toBe(['Desarrollador Python']);
+    expect($search('python mecatronica'))->toBe([]);
+    expect($search('ingenieria'))->toEqualCanonicalizing(['Desarrollador Python', 'Técnico en automatización']);
+    // Parecidas pero distintas: no se confunden.
+    expect($search('mecanica'))->toBe([]);
+    expect($search('soldador'))->toBe([]);
+    // Una palabra de 1–2 letras solo se busca contenida.
+    expect($search('de'))->toEqualCanonicalizing(['Desarrollador Python', 'Analista de datos']);
+    // % y _ son literales.
+    expect($search('100%'))->toBe(['Analista de datos']);
+    expect($search('%'))->toBe(['Analista de datos']);
+    expect($search('_'))->toBe([]);
+    // Se combina con los demás filtros.
+    expect($search('ingenieria', ['min_period' => 5]))->toBe(['Desarrollador Python']);
+    expect($search('ingenieria', ['program' => 'mecatr']))->toBe(['Técnico en automatización']);
+});
+
+it('keeps the distance order and the public fields when searching free text (HU-S11-03 CA-04, CA-05)', function () {
+    talent($this->institution, ['headline' => 'Soldador', 'municipality_code' => '28041']);
+    talent($this->institution, ['headline' => 'Soldadora industrial', 'municipality_code' => '28022']);
+    talent($this->institution, ['headline' => 'Ayudante de soldadro', 'municipality_code' => '28032']);
+    talent($this->institution, ['headline' => 'Contadora', 'municipality_code' => '28032']);
+    $this->loginWithCookies($this->companyUser)->assertOk();
+
+    // La coincidencia exacta es la más lejana y la que tiene un error, la más cercana: manda la distancia.
+    $response = searchTalent($this, ['q' => 'soldador']);
+    expect(headlines($response))->toBe(['Ayudante de soldadro', 'Soldadora industrial', 'Soldador']);
+    expect($response->json('meta.total'))->toBe(3);
+    expect($response->getContent())->not->toContain('headline_search', 'program_search');
+    expect(headlines(searchTalent($this, ['q' => 'soldador', 'radius_km' => 100])))->toBe(['Ayudante de soldadro', 'Soldadora industrial']);
 });

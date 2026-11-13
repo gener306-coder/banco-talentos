@@ -15,6 +15,12 @@ const card = {
   skills: [{ name: 'Python', kind: 'technical' }, { name: 'Trabajo en equipo', kind: 'soft' }], languages: [{ language_code: 'en', level: 4 }],
   verified_certifications: 2, dual_available: true, can_relocate: false,
 }
+/** Respuestas del catálogo por texto escrito, con la bandera match de T-S10-01. */
+const catalog: Record<string, unknown[]> = {
+  js: [{ id: 1, name: 'JavaScript', kind: 'technical', match: 'alias' }],
+  react: [{ id: 2, name: 'React', kind: 'technical', match: 'prefix' }],
+  pyhton: [{ id: 3, name: 'Python', kind: 'technical', match: 'fuzzy' }],
+}
 const page = (cards: unknown[], extra: Record<string, number> = {}) =>
   Response.json({ data: cards, meta: { current_page: 1, last_page: 1, total: cards.length, per_page: 20, ...extra } })
 
@@ -40,6 +46,10 @@ beforeEach(() => {
     }
     if (typeof path === 'string' && path.startsWith('/api/catalogs/')) {
       return Response.json({ data: [{ code: '28032', name: 'Reynosa' }, { code: '28041', name: 'Victoria' }] })
+    }
+    // Autocompletar del catálogo (HU-S11-01).
+    if (typeof path === 'string' && path.startsWith('/api/skills?')) {
+      return Response.json({ data: catalog[new URLSearchParams(path.split('?')[1]).get('q')?.toLowerCase() ?? ''] ?? [] })
     }
     return talentMock(path, options)
   })
@@ -81,20 +91,19 @@ describe('buscador de talento HU-S4-05', () => {
     expect(talentMock.mock.calls[0][0]).toBe('/api/talent?page=1')
   })
 
-  it('aplica los filtros al buscar y agrega habilidades con Enter (CA-03)', async () => {
+  it('aplica los filtros al buscar, con el texto libre y una habilidad del catálogo (CA-03, HU-S11-03 CA-06)', async () => {
     talentMock.mockResolvedValueOnce(page([card])).mockResolvedValueOnce(page([]))
     renderApp()
     await screen.findByRole('article', { name: 'Analista de datos' })
     const form = screen.getByRole('search', { name: 'Filtros de búsqueda' })
-    const skill = within(form).getByLabelText('Agregar habilidad (todas requeridas)')
+    const skill = within(form).getByRole('combobox', { name: 'Agregar habilidad (todas requeridas)' })
     fireEvent.change(skill, { target: { value: ' React ' } })
+    await within(form).findByRole('option', { name: /React/ })
     fireEvent.keyDown(skill, { key: 'Enter' })
-    fireEvent.change(skill, { target: { value: 'react' } })
-    fireEvent.keyDown(skill, { key: 'Enter' })
-    expect(within(form).getByText('Esta habilidad ya está en los filtros.')).toBeInTheDocument()
+    fireEvent.change(within(form).getByLabelText('Titular o carrera'), { target: { value: ' analista mecatronica ' } })
+    expect(within(form).queryByLabelText('Carrera')).not.toBeInTheDocument()
     fireEvent.change(within(form).getByLabelText('Idioma'), { target: { value: 'en' } })
     fireEvent.change(within(form).getByLabelText('Nivel mínimo'), { target: { value: '4' } })
-    fireEvent.change(within(form).getByLabelText('Carrera'), { target: { value: 'Mecatrónica' } })
     fireEvent.change(within(form).getByLabelText('Periodo mínimo'), { target: { value: '5' } })
     fireEvent.click(within(form).getByLabelText('Disponible para el programa dual'))
     fireEvent.click(within(form).getByLabelText('Con al menos una certificación revisada'))
@@ -105,9 +114,61 @@ describe('buscador de talento HU-S4-05', () => {
 
     expect(await screen.findByText('Ningún perfil coincide con los filtros.')).toBeInTheDocument()
     expect(Object.fromEntries(lastQuery())).toEqual({
-      'skills[]': 'React', language: 'en', min_level: '4', program: 'Mecatrónica', min_period: '5', dual_available: '1',
+      q: 'analista mecatronica', 'skills[]': 'React', language: 'en', min_level: '4', min_period: '5', dual_available: '1',
       verified_certification: '1', state_code: '28', radius_km: '50', page: '1',
     })
+  })
+
+  it('agrega con Enter la habilidad sugerida por alias y no la repite (HU-S11-01 CA-01, CA-03)', async () => {
+    talentMock.mockResolvedValue(page([card]))
+    renderApp()
+    await screen.findByRole('article', { name: 'Analista de datos' })
+    const form = screen.getByRole('search', { name: 'Filtros de búsqueda' })
+    const skill = within(form).getByRole('combobox', { name: 'Agregar habilidad (todas requeridas)' })
+    fireEvent.change(skill, { target: { value: 'js' } })
+    expect(await within(form).findByRole('option', { name: /JavaScript/ })).toHaveAttribute('aria-selected', 'true')
+    fireEvent.keyDown(skill, { key: 'Enter' })
+    const chips = within(form).getByRole('list', { name: 'Habilidades requeridas' })
+    expect(within(chips).getByText('JavaScript')).toBeInTheDocument()
+    // Enter agrega la habilidad sin lanzar la búsqueda.
+    expect(talentMock).toHaveBeenCalledTimes(1)
+
+    // Ya elegida: no se vuelve a sugerir ni se agrega dos veces.
+    fireEvent.change(skill, { target: { value: 'javascript' } })
+    fireEvent.keyDown(skill, { key: 'Enter' })
+    expect(within(form).getByText('Esta habilidad ya está en la lista.')).toBeInTheDocument()
+    expect(within(chips).getAllByRole('listitem')).toHaveLength(1)
+
+    fireEvent.click(within(form).getByRole('button', { name: 'Quitar JavaScript' }))
+    expect(within(form).queryByRole('list', { name: 'Habilidades requeridas' })).not.toBeInTheDocument()
+  })
+
+  it('exige elegir la sugerencia aproximada y no admite habilidades fuera del catálogo (HU-S11-01 CA-01, CA-02)', async () => {
+    talentMock.mockResolvedValue(page([card]))
+    renderApp()
+    await screen.findByRole('article', { name: 'Analista de datos' })
+    const form = screen.getByRole('search', { name: 'Filtros de búsqueda' })
+    const skill = within(form).getByRole('combobox', { name: 'Agregar habilidad (todas requeridas)' })
+    // Solo catálogo: sin tipo para habilidades nuevas ni la opción de agregarlas.
+    expect(within(form).queryByRole('group', { name: 'Tipo para una habilidad nueva' })).not.toBeInTheDocument()
+
+    fireEvent.change(skill, { target: { value: 'pyhton' } })
+    const option = await within(form).findByRole('option', { name: /Python/ })
+    expect(option).toHaveAttribute('aria-selected', 'false')
+    expect(within(form).queryByRole('option', { name: /como nueva/ })).not.toBeInTheDocument()
+    fireEvent.keyDown(skill, { key: 'Enter' })
+    expect(within(form).getByText(/Elige una habilidad de las sugerencias/)).toBeInTheDocument()
+    expect(within(form).queryByRole('list', { name: 'Habilidades requeridas' })).not.toBeInTheDocument()
+
+    fireEvent.keyDown(skill, { key: 'ArrowDown' })
+    fireEvent.keyDown(skill, { key: 'Enter' })
+    expect(within(within(form).getByRole('list', { name: 'Habilidades requeridas' })).getByText('Python')).toBeInTheDocument()
+
+    // Sin sugerencias: lo escrito no se agrega.
+    fireEvent.change(skill, { target: { value: 'Destreza inexistente' } })
+    fireEvent.keyDown(skill, { key: 'Enter' })
+    expect(within(form).getByText(/Elige una habilidad de las sugerencias/)).toBeInTheDocument()
+    expect(within(within(form).getByRole('list', { name: 'Habilidades requeridas' })).getAllByRole('listitem')).toHaveLength(1)
   })
 
   it('mide la distancia desde otro municipio elegido del catálogo (CA-04)', async () => {

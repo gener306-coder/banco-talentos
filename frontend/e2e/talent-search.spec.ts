@@ -62,8 +62,10 @@ test('HU-S4-05, HU-S5-04, HU-S5-05, HU-S6-01, HU-S6-02 y HU-S6-03: una empresa e
     // CA-01, CA-10: el buscador desde el inicio.
     await company.getByRole('link', { name: 'Buscar talento', exact: true }).click()
     const filters = company.getByRole('search', { name: 'Filtros de búsqueda' })
-    await filters.getByLabel('Agregar habilidad (todas requeridas)').fill(student.skill.toLowerCase())
-    await filters.getByLabel('Agregar habilidad (todas requeridas)').press('Enter')
+    // HU-S11-01: la habilidad se elige de las sugerencias del catálogo.
+    await filters.getByRole('combobox', { name: 'Agregar habilidad (todas requeridas)' }).fill(student.skill.toLowerCase())
+    await filters.getByRole('option', { name: student.skill }).click()
+    await expect(filters.getByRole('list', { name: 'Habilidades requeridas' }).getByText(student.skill)).toBeVisible()
     await filters.getByLabel('Distancia máxima').selectOption('100')
     const searched = company.waitForResponse((response) => response.url().includes('/api/talent?') && response.url().includes('radius_km=100'))
     await filters.getByRole('button', { name: 'Buscar', exact: true }).click()

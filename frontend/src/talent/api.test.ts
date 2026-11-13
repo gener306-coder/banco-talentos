@@ -20,11 +20,11 @@ describe('buscador de talento HU-S4-05', () => {
   it('envía solo los filtros con valor y nunca coordenadas (CA-03, CA-04)', () => {
     expect(searchParams(emptyFilters, 1).toString()).toBe('page=1')
     const params = searchParams({
-      ...emptyFilters, skills: ['React', 'SQL'], language: 'en', minLevel: '4', program: '  Mecatrónica ', minPeriod: '5',
+      ...emptyFilters, skills: ['React', 'SQL'], language: 'en', minLevel: '4', q: '  desarrollador mecatrónica ', minPeriod: '5',
       dualAvailable: true, canRelocate: true, verifiedCertification: true, stateCode: '28', radiusKm: '50', originMunicipalityCode: '28041',
     }, 2)
     expect([...params.entries()]).toEqual([
-      ['skills[]', 'React'], ['skills[]', 'SQL'], ['language', 'en'], ['min_level', '4'], ['program', 'Mecatrónica'], ['min_period', '5'],
+      ['q', 'desarrollador mecatrónica'], ['skills[]', 'React'], ['skills[]', 'SQL'], ['language', 'en'], ['min_level', '4'], ['min_period', '5'],
       ['dual_available', '1'], ['can_relocate', '1'], ['verified_certification', '1'], ['state_code', '28'], ['radius_km', '50'],
       ['origin_municipality_code', '28041'], ['page', '2'],
     ])

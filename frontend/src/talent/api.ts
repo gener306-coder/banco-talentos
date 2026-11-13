@@ -16,12 +16,15 @@ export const RADII_KM = [10, 25, 50, 100, 200] as const
 
 export const MAX_SKILL_FILTERS = 10
 
+export const MAX_QUERY_LENGTH = 100
+
 /** Filtros del buscador. Ninguno lleva coordenadas: el origen es siempre un municipio (CA-04). */
 export interface TalentFilters {
+  /** Texto libre sobre el titular y la carrera (HU-S11-03). */
+  q: string
   skills: string[]
   language: string
   minLevel: string
-  program: string
   minPeriod: string
   dualAvailable: boolean
   canRelocate: boolean
@@ -33,7 +36,7 @@ export interface TalentFilters {
 }
 
 export const emptyFilters: TalentFilters = {
-  skills: [], language: '', minLevel: '', program: '', minPeriod: '', dualAvailable: false, canRelocate: false,
+  q: '', skills: [], language: '', minLevel: '', minPeriod: '', dualAvailable: false, canRelocate: false,
   verifiedCertification: false, stateCode: '', radiusKm: '', originMunicipalityCode: '',
 }
 
@@ -117,12 +120,12 @@ function profile(data: unknown): TalentProfile {
 /** Parámetros de la búsqueda: solo los filtros con valor. */
 export function searchParams(filters: TalentFilters, page: number): URLSearchParams {
   const params = new URLSearchParams()
+  if (filters.q.trim()) params.set('q', filters.q.trim())
   filters.skills.forEach((skill) => params.append('skills[]', skill))
   if (filters.language && filters.minLevel) {
     params.set('language', filters.language)
     params.set('min_level', filters.minLevel)
   }
-  if (filters.program.trim()) params.set('program', filters.program.trim())
   if (filters.minPeriod) params.set('min_period', filters.minPeriod)
   if (filters.dualAvailable) params.set('dual_available', '1')
   if (filters.canRelocate) params.set('can_relocate', '1')

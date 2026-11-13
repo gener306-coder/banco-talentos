@@ -1,14 +1,15 @@
 import { useCallback, useState } from 'react'
-import type { FormEvent, KeyboardEvent } from 'react'
+import type { FormEvent } from 'react'
 import { Link, useLocation } from 'react-router'
 import { InstitutionRequestError } from '../institutions/InstitutionLayout'
 import { useApiRequest } from '../lib/useApiRequest'
 import { MAX_PERIOD, MEXICAN_STATES } from '../students/catalogs'
 import { CV_LANGUAGES, displayName, LANGUAGE_LEVELS } from '../students/cvCatalogs'
 import { MunicipalityCombobox } from '../students/MunicipalityCombobox'
-import { ChevronLeftIcon, ChevronRightIcon, CloseIcon, PlusIcon, SearchIcon } from '../ui/icons'
+import { SkillPicker } from '../students/SkillPicker'
+import { ChevronLeftIcon, ChevronRightIcon, SearchIcon } from '../ui/icons'
 import { LoadingState, StateMessage } from '../ui/StateMessage'
-import { emptyFilters, MAX_SKILL_FILTERS, RADII_KM, searchTalent, talentMessages } from './api'
+import { emptyFilters, MAX_QUERY_LENGTH, MAX_SKILL_FILTERS, RADII_KM, searchTalent, talentMessages } from './api'
 import type { TalentFilters } from './api'
 import { TalentCardView } from './TalentCardView'
 import '../institutions/institutions.css'
@@ -31,8 +32,7 @@ export function TalentSearchPage() {
   const [draft, setDraft] = useState<TalentFilters>(initial)
   const [applied, setApplied] = useState<TalentFilters>(initial)
   const [page, setPage] = useState(1)
-  const [skillText, setSkillText] = useState('')
-  const [skillError, setSkillError] = useState<string | null>(null)
+  const [pickerKey, setPickerKey] = useState(0)
   const [originMode, setOriginMode] = useState<'company' | 'other'>('company')
   const [originState, setOriginState] = useState('')
   const [originError, setOriginError] = useState<string | null>(null)
@@ -41,27 +41,6 @@ export function TalentSearchPage() {
 
   function set<K extends keyof TalentFilters>(field: K, value: TalentFilters[K]) {
     setDraft((current) => ({ ...current, [field]: value }))
-  }
-
-  function addSkill() {
-    const name = displayName(skillText)
-    if (!name) return
-    const message = draft.skills.some((skill) => skill.toLowerCase() === name.toLowerCase()) ? 'Esta habilidad ya está en los filtros.'
-      : draft.skills.length >= MAX_SKILL_FILTERS ? `Filtra como máximo por ${MAX_SKILL_FILTERS} habilidades.`
-      : name.length > 80 ? 'Cada habilidad debe tener como máximo 80 caracteres.'
-      : null
-    setSkillError(message)
-    if (message) return
-    set('skills', [...draft.skills, name])
-    setSkillText('')
-  }
-
-  function onSkillKey(event: KeyboardEvent<HTMLInputElement>) {
-    // Enter agrega la habilidad; no lanza la búsqueda.
-    if (event.key === 'Enter') {
-      event.preventDefault()
-      addSkill()
-    }
   }
 
   function submit(event: FormEvent<HTMLFormElement>) {
@@ -81,9 +60,9 @@ export function TalentSearchPage() {
     setApplied(emptyFilters)
     setOriginMode('company')
     setOriginState('')
-    setSkillText('')
-    setSkillError(null)
     setOriginError(null)
+    // El campo de habilidades guarda lo que se está escribiendo: se reinicia con el panel.
+    setPickerKey((current) => current + 1)
     setPage(1)
   }
 
@@ -97,25 +76,19 @@ export function TalentSearchPage() {
       <div className="talent-layout">
         <form className="talent-filters" role="search" aria-label="Filtros de búsqueda" onSubmit={submit} noValidate>
           <fieldset>
+            <legend>Texto</legend>
+            <label htmlFor="talent-q">Titular o carrera</label>
+            <input id="talent-q" type="text" maxLength={MAX_QUERY_LENGTH} value={draft.q} aria-describedby="talent-q-hint"
+              onChange={(event) => set('q', event.target.value)} />
+            <p className="field-hint" id="talent-q-hint">Tolera acentos omitidos y errores de escritura.</p>
+          </fieldset>
+
+          <fieldset>
             <legend>Habilidades</legend>
-            <label htmlFor="talent-skill">Agregar habilidad (todas requeridas)</label>
-            <div className="talent-skill-input">
-              <input id="talent-skill" type="text" maxLength={80} value={skillText} autoComplete="off"
-                aria-invalid={Boolean(skillError)} aria-describedby={skillError ? 'talent-skill-error' : undefined}
-                onChange={(event) => { setSkillText(event.target.value); setSkillError(null) }} onKeyDown={onSkillKey} />
-              <button type="button" className="secondary" aria-label="Agregar habilidad" onClick={addSkill}><PlusIcon /></button>
-            </div>
-            {skillError && <p className="field-error" id="talent-skill-error">{skillError}</p>}
-            {draft.skills.length > 0 && (
-              <ul className="chips" aria-label="Habilidades requeridas">
-                {draft.skills.map((skill) => (
-                  <li key={skill} className="chip"><span>{skill}</span>
-                    <button type="button" className="chip-remove" aria-label={`Quitar ${skill}`}
-                      onClick={() => set('skills', draft.skills.filter((item) => item !== skill))}><CloseIcon /></button>
-                  </li>
-                ))}
-              </ul>
-            )}
+            {/* HU-S11-01: solo habilidades del catálogo; el tipo no se muestra en un filtro. */}
+            <SkillPicker key={pickerKey} idPrefix="talent" catalogOnly label="Agregar habilidad (todas requeridas)"
+              skills={draft.skills.map((name) => ({ name, kind: 'technical' }))} max={MAX_SKILL_FILTERS} disabled={false} serverError={null}
+              onChange={(skills) => set('skills', skills.map((skill) => skill.name))} />
           </fieldset>
 
           <fieldset>
@@ -134,8 +107,6 @@ export function TalentSearchPage() {
 
           <fieldset>
             <legend>Formación</legend>
-            <label htmlFor="talent-program">Carrera</label>
-            <input id="talent-program" type="text" maxLength={150} value={draft.program} onChange={(event) => set('program', event.target.value)} />
             <label htmlFor="talent-period">Periodo mínimo</label>
             <select id="talent-period" value={draft.minPeriod} onChange={(event) => set('minPeriod', event.target.value)}>
               <option value="">Cualquiera</option>

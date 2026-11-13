@@ -21,15 +21,23 @@ interface SkillPickerProps {
   /** Errores del servidor sobre la lista; los locales tienen prioridad. */
   serverError: string | null
   /** Mensaje cuando el nombre lleva datos de contacto (CA-02 de HU-S3-01, CA-04 de HU-S5-02). */
-  contactMessage: string
-  placeholder: string
+  contactMessage?: string
+  placeholder?: string
+  /** Etiqueta del campo; por defecto «Agregar habilidad». */
+  label?: string
+  /**
+   * Solo catálogo (HU-S11-01): filtro del buscador de talento. No ofrece «Agregar como nueva» ni el tipo, y las
+   * etiquetas van en una sola lista, porque un filtro no registra habilidades.
+   */
+  catalogOnly?: boolean
 }
 
 /**
  * Habilidades como etiquetas removibles con autocompletado del catálogo compartido (HU-S3-01 CA-01), reutilizado
- * por las oportunidades duales (HU-S5-02). Una habilidad del catálogo conserva su tipo; una nueva toma el elegido.
+ * por las oportunidades duales (HU-S5-02) y, en modo solo catálogo, por el buscador de talento (HU-S11-01). Una
+ * habilidad del catálogo conserva su tipo; una nueva toma el elegido.
  */
-export function SkillPicker({ idPrefix, skills, onChange, max, disabled, serverError, contactMessage, placeholder }: SkillPickerProps) {
+export function SkillPicker({ idPrefix, skills, onChange, max, disabled, serverError, contactMessage, placeholder, label = 'Agregar habilidad', catalogOnly = false }: SkillPickerProps) {
   const [query, setQuery] = useState('')
   const [suggestions, setSuggestions] = useState<SkillSuggestion[]>([])
   // Opción elegida con las flechas; null mientras el usuario no navega (se calcula abajo).
@@ -55,7 +63,7 @@ export function SkillPicker({ idPrefix, skills, onChange, max, disabled, serverE
   const chosen = new Set(skills.map((skill) => catalogSlug(skill.name)))
   const catalogOptions: Option[] = term ? suggestions.filter((skill) => !chosen.has(catalogSlug(skill.name))).map((skill) => ({ type: 'catalog', skill })) : []
   const exact = suggestions.some((skill) => catalogSlug(skill.name) === catalogSlug(term))
-  const options: Option[] = term && !exact && !chosen.has(catalogSlug(term)) ? [...catalogOptions, { type: 'new', name: term }] : catalogOptions
+  const options: Option[] = !catalogOnly && term && !exact && !chosen.has(catalogSlug(term)) ? [...catalogOptions, { type: 'new', name: term }] : catalogOptions
   const expanded = open && options.length > 0
   // HU-S10-02: se preselecciona una sugerencia por prefijo o por alias. Una aproximada (con errores respecto a lo
   // escrito) hay que elegirla con las flechas o el ratón, para que Enter no registre «Vuex» cuando se escribió «Vue».
@@ -69,7 +77,7 @@ export function SkillPicker({ idPrefix, skills, onChange, max, disabled, serverE
       : chosen.has(catalogSlug(name)) ? 'Esta habilidad ya está en la lista.'
       : skills.length >= max ? `Registra como máximo ${max} habilidades.`
       : name.length > 80 ? 'El nombre de la habilidad no debe superar 80 caracteres.'
-      : hasContactInformation(name) ? contactMessage
+      : !catalogOnly && contactMessage && hasContactInformation(name) ? contactMessage
       : null
     setLocalError(message)
     if (message || !name) return
@@ -95,7 +103,10 @@ export function SkillPicker({ idPrefix, skills, onChange, max, disabled, serverE
       event.preventDefault()
       const option = expanded && active >= 0 ? options[active] : null
       if (option) choose(option)
-      else if (term) add({ name: term, kind: newKind })
+      else if (!term) return
+      else if (!catalogOnly) add({ name: term, kind: newKind })
+      // Solo catálogo: lo escrito no se agrega; hay que elegir una sugerencia (HU-S11-01 CA-02).
+      else setLocalError(chosen.has(catalogSlug(term)) ? 'Esta habilidad ya está en la lista.' : 'Elige una habilidad de las sugerencias: solo se filtra por habilidades del catálogo.')
     } else if (event.key === 'Escape' && expanded) {
       event.preventDefault()
       setOpen(false)
@@ -104,31 +115,45 @@ export function SkillPicker({ idPrefix, skills, onChange, max, disabled, serverE
 
   return (
     <>
-      {SKILL_KINDS.map((kind) => {
-        const group = skills.map((skill, index) => ({ skill, index })).filter(({ skill }) => skill.kind === kind.value)
-        return (
-          <div key={kind.value} className="chip-group">
-            <h4 id={`${idPrefix}-skills-${kind.value}`}>{kind.plural}</h4>
-            {group.length
-              ? (
-                <ul className="chips" aria-labelledby={`${idPrefix}-skills-${kind.value}`}>
-                  {group.map(({ skill, index }) => (
-                    <li key={catalogSlug(skill.name)} className={`chip ${skill.kind}`}>
-                      <span>{skill.name}</span>
-                      <button type="button" className="chip-remove" aria-label={`Quitar ${skill.name}`} disabled={disabled}
-                        onClick={() => { onChange(skills.filter((_, position) => position !== index)); setLocalError(null) }}>
-                        <CloseIcon />
-                      </button>
-                    </li>
-                  ))}
-                </ul>
-              )
-              : <p className="notice-muted">Sin habilidades {kind.plural.toLowerCase()}.</p>}
-          </div>
+      {catalogOnly
+        ? skills.length > 0 && (
+          <ul className="chips" aria-label="Habilidades requeridas">
+            {skills.map((skill, index) => (
+              <li key={catalogSlug(skill.name)} className="chip">
+                <span>{skill.name}</span>
+                <button type="button" className="chip-remove" aria-label={`Quitar ${skill.name}`} disabled={disabled}
+                  onClick={() => { onChange(skills.filter((_, position) => position !== index)); setLocalError(null) }}>
+                  <CloseIcon />
+                </button>
+              </li>
+            ))}
+          </ul>
         )
-      })}
+        : SKILL_KINDS.map((kind) => {
+            const group = skills.map((skill, index) => ({ skill, index })).filter(({ skill }) => skill.kind === kind.value)
+            return (
+              <div key={kind.value} className="chip-group">
+                <h4 id={`${idPrefix}-skills-${kind.value}`}>{kind.plural}</h4>
+                {group.length
+                  ? (
+                    <ul className="chips" aria-labelledby={`${idPrefix}-skills-${kind.value}`}>
+                      {group.map(({ skill, index }) => (
+                        <li key={catalogSlug(skill.name)} className={`chip ${skill.kind}`}>
+                          <span>{skill.name}</span>
+                          <button type="button" className="chip-remove" aria-label={`Quitar ${skill.name}`} disabled={disabled}
+                            onClick={() => { onChange(skills.filter((_, position) => position !== index)); setLocalError(null) }}>
+                            <CloseIcon />
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
+                  )
+                  : <p className="notice-muted">Sin habilidades {kind.plural.toLowerCase()}.</p>}
+              </div>
+            )
+        })}
 
-      <label htmlFor={`${idPrefix}-skill-search`}>Agregar habilidad</label>
+      <label htmlFor={`${idPrefix}-skill-search`}>{label}</label>
       <div className="combobox">
         <input id={`${idPrefix}-skill-search`} type="text" autoComplete="off" role="combobox" disabled={disabled}
           aria-autocomplete="list" aria-expanded={expanded} aria-controls={listId}
@@ -151,7 +176,8 @@ export function SkillPicker({ idPrefix, skills, onChange, max, disabled, serverE
           ))}
         </ul>
       </div>
-      <p className="field-hint" id={`${idPrefix}-skills-hint`}>{skills.length} de {max} habilidades · Enter para agregar</p>
+      <p className="field-hint" id={`${idPrefix}-skills-hint`}>{skills.length} de {max} habilidades · {catalogOnly ? 'Elige una sugerencia del catálogo' : 'Enter para agregar'}</p>
+      {!catalogOnly && (
       <fieldset className="choice-group inline" disabled={disabled}>
         <legend>Tipo para una habilidad nueva</legend>
         {SKILL_KINDS.map((kind) => (
@@ -162,6 +188,7 @@ export function SkillPicker({ idPrefix, skills, onChange, max, disabled, serverE
           </div>
         ))}
       </fieldset>
+      )}
       <FieldError id={`${idPrefix}-skills-error`} messages={error} />
     </>
   )
