@@ -146,7 +146,8 @@ test('HU-S4-05, HU-S5-04, HU-S5-05, HU-S6-01, HU-S6-02 y HU-S6-03: una empresa e
       // Sin NSS ni comprobante: aviso con enlace al expediente.
       const missing = institution.getByRole('region', { name: 'Seguro del alumno' }).getByRole('note')
       await expect(missing).toContainText('Al alumno le falta el número del seguro o el comprobante de vigencia.')
-      await expect(institution.getByRole('region', { name: 'Empresa y contacto del programa dual' }).getByRole('link', { name: /@/ })).toHaveAttribute('href', /^mailto:/)
+      // T-S12-06: el correo abre un menú con opciones en lugar de un mailto: directo.
+      await expect(institution.getByRole('region', { name: 'Empresa y contacto del programa dual' }).getByRole('button', { name: /^Escribir a / })).toHaveAttribute('aria-haspopup', 'menu')
       await missing.getByRole('link', { name: 'expediente' }).click()
       await expect(institution.getByRole('heading', { level: 2, name: `Valeria Secreta ${student.surname}` })).toBeVisible()
     } finally {
@@ -158,7 +159,11 @@ test('HU-S4-05, HU-S5-04, HU-S5-05, HU-S6-01, HU-S6-02 y HU-S6-03: una empresa e
     await expect(company.getByRole('heading', { level: 2, name: 'Solicitudes de vinculación' })).toBeVisible()
     const row = company.getByRole('table', { name: 'Solicitudes de vinculación enviadas' }).getByRole('row', { name: new RegExp(opportunityTitle) })
     await expect(row.getByRole('link', { name: student.headline })).toHaveAttribute('href', /\/talent\/[0-9a-f-]{36}$/)
-    await expect(row.getByRole('link', { name: /@/ })).toHaveAttribute('href', /^mailto:/)
+    const emailButton = row.getByRole('button', { name: /^Escribir a / })
+    await emailButton.click()
+    await expect(company.getByRole('menu').getByRole('menuitem', { name: 'Abrir en app del sistema' })).toHaveAttribute('href', /^mailto:/)
+    await company.keyboard.press('Escape')
+    await expect(company.getByRole('menu')).toBeHidden()
     expect(await row.textContent()).not.toContain(student.surname)
     const cancel = row.getByRole('button', { name: /Cancelar la solicitud/ })
     await cancel.click()
@@ -225,7 +230,13 @@ test('HU-S4-05, HU-S5-04, HU-S5-05, HU-S6-01, HU-S6-02 y HU-S6-03: una empresa e
     await company.getByLabel('Estado').selectOption('ACEPTADA')
     await filtered
     const acceptedRow = company.getByRole('table', { name: 'Solicitudes de vinculación enviadas' }).getByRole('row', { name: new RegExp(opportunityTitle) })
-    await expect(acceptedRow).toContainText('“Coordinemos la entrevista con el área dual.”')
+    // T-S12-06: el mensaje se lee completo en una hoja desde el ícono junto al estado.
+    await expect(acceptedRow).not.toContainText('Coordinemos la entrevista')
+    await acceptedRow.getByRole('button', { name: /^Leer el mensaje de / }).click()
+    const message = company.getByRole('dialog', { name: 'Mensaje de la institución' })
+    await expect(message).toContainText('Coordinemos la entrevista con el área dual.')
+    await message.getByRole('button', { name: 'Cerrar', exact: true }).click()
+    await expect(message).toBeHidden()
     await expect(acceptedRow).toContainText('Respondida el')
     await expect(acceptedRow.getByRole('button', { name: /Cancelar/ })).toHaveCount(0)
 

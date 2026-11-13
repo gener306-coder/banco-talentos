@@ -475,6 +475,37 @@ textarea[aria-invalid='true'] { border-color: var(--danger-border); }
 @media (prefers-contrast: more) { .cell-actions :is(a, button) { border: 1px solid currentColor; } }
 }
 
+/*
+ * Menú del correo de una celda (T-S12-06, ui/EmailMenu.tsx): el panel del menú de cuenta en pequeño. Vive en un portal
+ * con posición fija (el desplazamiento de la tabla no lo recorta) y se muestra cuando ya está colocado (data-placed).
+ */
+@layer components {
+.email-menu { position: fixed; z-index: 30; display: grid; gap: 0.1rem; min-width: 14rem; max-width: calc(100vw - 1rem); padding: 0.35rem;
+  background: var(--surface); border: 1px solid var(--border); border-radius: 12px;
+  box-shadow: 0 12px 28px color-mix(in srgb, var(--shadow) 14%, transparent); animation: materialize var(--spring-duration) var(--spring) both; }
+.email-menu:not([data-placed]) { visibility: hidden; }
+.email-menu-address { margin: 0 0 0.25rem; padding: 0.4rem 0.6rem 0.55rem; border-bottom: 1px solid var(--border); color: var(--text);
+  font-size: var(--type-xs); overflow-wrap: anywhere; user-select: all; }
+.email-menu [role='menuitem'] { display: flex; align-items: center; justify-content: flex-start; gap: 0.55rem; width: 100%; margin: 0;
+  padding: 0.55rem 0.6rem; border: 0; border-radius: 8px; background: transparent; color: var(--text); font: inherit; font-size: var(--type-sm);
+  font-weight: 500; text-align: left; text-decoration: none; cursor: pointer; transition: background-color 150ms ease-out; }
+.email-menu [role='menuitem'] .icon { color: var(--accent); }
+.email-menu [role='menuitem']:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: -2px; background: var(--tint); }
+.email-menu button[role='menuitem']:active:not(:disabled) { transform: none; }
+@media (hover: hover) {
+  .email-menu [role='menuitem']:hover { background: var(--fill); }
+  .email-menu button[role='menuitem']:not(:disabled):hover { box-shadow: none; }
+}
+/* Aviso breve junto al ícono tras copiar; superficie invertida, como los tooltips. */
+.cell-toast { position: fixed; z-index: 30; display: inline-flex; align-items: center; gap: 0.35rem; max-width: min(20rem, calc(100vw - 1rem));
+  margin: 0; padding: 0.35rem 0.7rem; border-radius: 999px; background: var(--inverse-surface); color: var(--on-inverse);
+  font-size: var(--type-xs); font-weight: 600; box-shadow: 0 6px 18px color-mix(in srgb, var(--shadow) 14%, transparent);
+  animation: materialize var(--spring-duration) var(--spring) both; pointer-events: none; }
+.cell-toast.failed { border-radius: 10px; }
+@media (prefers-reduced-motion: reduce) { .email-menu, .cell-toast { animation: fade-in 160ms ease both; } }
+@media (prefers-contrast: more) { .email-menu { border-color: var(--border-strong); } }
+}
+
 /* Botón «Descargar CSV» (HU-S7-02, ui/CsvDownloadButton.tsx). */
 @layer components {
 .csv-download { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem 1rem; margin: 0 0 1rem; }

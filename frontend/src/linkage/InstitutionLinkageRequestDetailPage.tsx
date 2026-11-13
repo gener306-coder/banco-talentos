@@ -10,6 +10,7 @@ import { languageName, levelLabel } from '../students/cvCatalogs'
 import { StudentStatus } from '../students/StudentStatus'
 import { backState, useBackLink } from '../ui/backLink'
 import { Callout } from '../ui/Callout'
+import { EmailMenu } from '../ui/EmailMenu'
 import { ChevronLeftIcon, ChevronRightIcon } from '../ui/icons'
 import { LoadingState } from '../ui/StateMessage'
 import { getReceivedLinkage, institutionLinkageMessages } from './institutionApi'
@@ -102,7 +103,8 @@ function Detail({ data, onDecided, refresh }: {
           <dt>Ubicación</dt><dd>{[company.municipality, stateName(company.state_code)].filter(Boolean).join(', ')}</dd>
           <dt>Contacto</dt><dd>{company.contact_name}</dd>
           {company.contact_position && <><dt>Puesto o departamento</dt><dd>{company.contact_position}</dd></>}
-          <dt>Correo</dt><dd><a href={`mailto:${company.contact_email}`} target="_blank" rel="noopener noreferrer">{company.contact_email}</a></dd>
+          {/* T-S12-06: el correo queda visible y seleccionable; su ícono ofrece copiarlo, webmail o la app del sistema. */}
+          <dt>Correo</dt><dd><span className="cell-meta">{company.contact_email}<span className="cell-actions"><EmailMenu email={company.contact_email} /></span></span></dd>
           <dt>Teléfono</dt><dd>{company.contact_phone ? <a href={`tel:${company.contact_phone.replace(/[^\d+]/g, '')}`}>{company.contact_phone}</a> : 'Sin teléfono'}</dd>
         </dl>
       </section>

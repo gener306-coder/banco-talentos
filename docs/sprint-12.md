@@ -23,6 +23,7 @@ Sprint vigente desde el 13 de noviembre de 2026. Sprint anterior: [sprint-11.md]
 3. **T-S12-03** Correcciones de layout y responsividad (extensión del 13 de noviembre de 2026).
 4. **T-S12-04** Pulido de navegación, tablas y avisos (rama `chore/ui-polish-navigation-alerts`).
 5. **T-S12-05** Tablas: jerarquía de acciones, hover independiente y filtros en la URL (rama `chore/ui-polish-tables-filters`).
+6. **T-S12-06** Mensaje de respuesta en una hoja y menú del correo (rama `chore/ui-polish-messages-email`).
 
 ## Fuera de alcance
 
@@ -152,6 +153,28 @@ Como la columna de estado y la de acciones quedan fuera de la vista sin ninguna 
 
 ---
 
+## T-S12-06 — Mensaje de respuesta en una hoja y menú del correo
+
+**Estado:** Completada (13 de noviembre de 2026); validación visual pendiente del responsable  
+**Rol:** `Frontend`  
+**Origen:** validación de la bandeja de solicitudes por el responsable y el Arquitecto. El mensaje de respuesta aparecía truncado bajo el estado, y `mailto:` falla sin un cliente de correo configurado.
+
+### Decisiones del responsable y el Arquitecto
+
+- **El mensaje se lee completo en una `Sheet`.** Es el componente existente para contenido secundario; `ConfirmDialog` es para confirmar acciones. La hoja vive fuera de la tabla.
+- **El correo abre un menú propio, sin dependencias.** Sigue la mecánica del menú de cuenta: Esc, clic fuera y devolver el foco. Usa `createPortal` con posición fija y la API del portapapeles.
+
+### Criterios de aceptación
+
+- **CA-01.** [Mensaje] La celda de estado ya no muestra el mensaje. Si la institución dejó uno, un ícono `.cell-actions` junto al estado («Leer el mensaje de …») abre la hoja «Mensaje de la institución». La hoja muestra la institución, el estado, la fecha de respuesta, la oportunidad y el texto completo, con sus saltos de línea.
+- **CA-02.** [Menú del correo] El ícono de correo (`ui/EmailMenu.tsx`) abre un menú ARIA con «Copiar correo», «Abrir en Gmail», «Abrir en Outlook» (en una pestaña nueva) y «Abrir en app del sistema» (`mailto:`). El menú muestra la dirección. Se recorre con las flechas, Inicio y Fin; se cierra con Esc, con Tab, con un clic fuera, al elegir o al desplazarse; y devuelve el foco al ícono.
+- **CA-03.** [Copiar] «Copiar correo» usa `navigator.clipboard.writeText` y muestra junto al ícono el aviso «Correo copiado» (`role="status"`). Sin permiso de portapapeles, deja la dirección seleccionada en el menú y lo avisa.
+- **CA-04.** [Fila] Ni el ícono, ni el menú, ni la hoja abren la fila. `useRowNavigation` ignora los clics que React propaga desde un portal, porque no están dentro de la fila en el DOM.
+- **CA-05.** [Alcance] Aplica a la bandeja de la empresa y al correo de la empresa en el detalle de la solicitud de la institución, el único otro `mailto:` directo.
+- **CA-06.** [Pruebas] Vitest cubre las opciones y sus enlaces, la copia con y sin portapapeles, el teclado, que la fila no navega y la hoja del mensaje. E2E abre la hoja y el menú. ESLint y el build pasan.
+
+---
+
 ## Verificación (13 de noviembre de 2026)
 
 - `tokens.test.ts`: 114 casos (contraste en claro y oscuro con mezclas y opacidades, capas, hover y escala). La prueba de capas encontró una quinta regla fuera de capa que la auditoría no había listado: `.institution-status.pending` en `institutions.css`, ahora dentro de `@layer legacy`.
@@ -162,3 +185,4 @@ Como la columna de estado y la de acciones quedan fuera de la vista sin ninguna 
 - T-S12-03, medido con sesiones reales en la simulación: en el buscador a 390 px la primera tarjeta aparece en y≈443 (antes, y≈1720). A 1440×900, el panel queda fijo en y=96 con «Buscar» visible. Las tarjetas de alta miden 778 px y están centradas. El diálogo cabe en 844×390.
 - T-S12-04: Vitest 979 (más las 3 fallas previas de `object.stream`), ESLint, build, Pest 1455 y E2E 44 pasan. En la simulación, el perfil abierto desde la bandeja filtrada regresa a `/linkage-requests?status=PENDIENTE_INSTITUCION` (a 390 y a 1440 px), y el alumno abierto desde el padrón filtrado regresa a `/students?data=missing&status=active`.
 - T-S12-05: Vitest con las mismas 3 fallas previas de `object.stream`; ESLint y el build pasan. En Chromium (simulación, 1440 px), con el cursor en el texto de la fila solo se adelanta la flecha de «Ver perfil». Con el cursor en «Oportunidad» o en el ícono de correo, la fila no se resalta y solo ese control responde. `/linkage-requests?status=PENDIENTE_INSTITUCION&page=2` abre en la página 2, y el regreso desde el perfil vuelve a esa misma URL.
+- T-S12-06: Vitest con las mismas 3 fallas previas de `object.stream`; ESLint, el build y E2E (44) pasan. En la simulación, a 1440 y 390 px (tabla desplazada), el menú del correo aparece completo bajo el ícono, y abrir el menú o la hoja no cambia la URL.

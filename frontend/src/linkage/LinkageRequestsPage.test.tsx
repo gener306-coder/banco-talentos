@@ -71,8 +71,9 @@ describe('bandeja de solicitudes HU-S5-05', () => {
     expect(within(row).queryByRole('link', { name: 'Tableros de producción' })).not.toBeInTheDocument()
     expect(within(row).getByRole('link', { name: 'Ver la oportunidad Tableros de producción' })).toHaveAttribute('href', '/opportunities/12')
     expect(within(row).getByText('UT del Golfo')).toBeInTheDocument()
-    expect(within(row).getByRole('link', { name: 'Escribir a dual@utgolfo.edu.mx' })).toHaveAttribute('href', 'mailto:dual@utgolfo.edu.mx')
-    expect(within(row).getByRole('link', { name: 'Escribir a dual@utgolfo.edu.mx' })).toHaveAttribute('target', '_blank')
+    // T-S12-06: el correo abre un menú (copiar, Gmail, Outlook o la app), no un mailto: directo.
+    expect(within(row).getByRole('button', { name: 'Escribir a dual@utgolfo.edu.mx' })).toHaveAttribute('aria-haspopup', 'menu')
+    expect(within(row).queryByRole('link', { name: /dual@utgolfo/ })).not.toBeInTheDocument()
     // T-S8-11: responsable de la institución con su puesto, y su teléfono opcional listo para llamar.
     expect(within(row).getByText('Laura Méndez')).toHaveAttribute('title', 'Coordinación Dual')
     expect(within(row).getByRole('link', { name: 'Llamar al +52 833 357 4800' })).toHaveAttribute('href', 'tel:+528333574800')
@@ -81,7 +82,8 @@ describe('bandeja de solicitudes HU-S5-05', () => {
 
     const cancelledRow = within(table).getByRole('row', { name: /Calidad/ })
     expect(within(cancelledRow).getByText('Cancelada', { selector: '.linkage-status' })).toBeInTheDocument()
-    expect(within(cancelledRow).queryByRole('button')).not.toBeInTheDocument()
+    // Solo el menú del correo (acción del dato); una solicitud cancelada ya no se puede cancelar.
+    expect(within(cancelledRow).getAllByRole('button').map((button) => button.getAttribute('aria-label'))).toEqual(['Escribir a dual@utgolfo.edu.mx'])
   })
 
   it('filtra por estado y pagina (CA-01, CA-05)', async () => {
@@ -143,8 +145,23 @@ describe('bandeja de solicitudes HU-S5-05', () => {
     const row = within(await screen.findByRole('table', { name: 'Solicitudes de vinculación enviadas' })).getByRole('row', { name: /Mantenimiento/ })
     expect(row).toHaveTextContent('Aceptada')
     expect(row).toHaveTextContent('Respondida el 29 oct 2026')
-    expect(row).toHaveTextContent('“Coordinemos la entrevista.”')
     expect(within(row).queryByRole('button', { name: /Cancelar/ })).not.toBeInTheDocument()
+
+    // T-S12-06: el mensaje no se trunca en la celda; un ícono junto al estado lo abre completo en una hoja.
+    expect(row).not.toHaveTextContent('Coordinemos la entrevista.')
+    fireEvent.click(within(row).getByRole('button', { name: 'Leer el mensaje de UT del Golfo' }))
+    const sheet = await screen.findByRole('dialog', { name: 'Mensaje de la institución' })
+    expect(within(sheet).getByText('Coordinemos la entrevista.')).toBeInTheDocument()
+    expect(sheet).toHaveTextContent('UT del Golfo · Aceptada · Respondida el 29 oct 2026')
+    expect(sheet).toHaveTextContent('Solicitud para Mantenimiento')
+    expect(screen.getByRole('table', { name: 'Solicitudes de vinculación enviadas' })).toBeInTheDocument()
+  })
+
+  it('no ofrece el ícono del mensaje si la institución respondió sin mensaje', async () => {
+    apiMock.mockResolvedValueOnce(page([{ ...pending, status: 'RECHAZADA', responded_at: '2026-10-29T16:00:00Z', response_message: null }]))
+    renderApp()
+    const table = await screen.findByRole('table', { name: 'Solicitudes de vinculación enviadas' })
+    expect(within(table).queryByRole('button', { name: /Leer el mensaje/ })).not.toBeInTheDocument()
   })
 })
 
@@ -184,7 +201,7 @@ describe('bandeja de solicitudes sin enlaces subrayados (T-S12-04)', () => {
     renderApp()
     const table = await screen.findByRole('table', { name: 'Solicitudes de vinculación enviadas' })
     const institution = within(table).getByText('UT del Golfo').closest('td')!
-    expect(within(institution).getByRole('link', { name: 'Escribir a dual@utgolfo.edu.mx' }).closest('.cell-actions')).not.toBeNull()
+    expect(within(institution).getByRole('button', { name: 'Escribir a dual@utgolfo.edu.mx' }).closest('.cell-actions')).not.toBeNull()
     expect(within(institution).getByText('Laura Méndez').closest('.cell-meta')).not.toBeNull()
   })
 
@@ -198,3 +215,71 @@ describe('bandeja de solicitudes sin enlaces subrayados (T-S12-04)', () => {
   })
 })
 
+describe('menú del correo de la institución (T-S12-06)', () => {
+  function Location() {
+    const location = useLocation()
+    return <output aria-label="Ruta actual">{location.pathname + location.search}</output>
+  }
+  async function openMenu() {
+    apiMock.mockResolvedValueOnce(page([pending]))
+    render(<MemoryRouter initialEntries={['/linkage-requests']}><App /><Location /></MemoryRouter>)
+    const table = await screen.findByRole('table', { name: 'Solicitudes de vinculación enviadas' })
+    const trigger = within(table).getByRole('button', { name: 'Escribir a dual@utgolfo.edu.mx' })
+    fireEvent.click(trigger)
+    return { trigger, menu: await screen.findByRole('menu', { name: 'Correo dual@utgolfo.edu.mx' }) }
+  }
+
+  it('ofrece copiar, Gmail, Outlook y la app del sistema, sin abrir la fila', async () => {
+    const { trigger, menu } = await openMenu()
+    expect(trigger).toHaveAttribute('aria-expanded', 'true')
+    expect(within(menu).getAllByRole('menuitem').map((item) => item.textContent))
+      .toEqual(['Copiar correo', 'Abrir en Gmail', 'Abrir en Outlook', 'Abrir en app del sistema'])
+    expect(within(menu).getByRole('menuitem', { name: 'Abrir en Gmail' }))
+      .toHaveAttribute('href', 'https://mail.google.com/mail/?view=cm&fs=1&to=dual%40utgolfo.edu.mx')
+    expect(within(menu).getByRole('menuitem', { name: 'Abrir en Gmail' })).toHaveAttribute('target', '_blank')
+    expect(within(menu).getByRole('menuitem', { name: 'Abrir en Outlook' }))
+      .toHaveAttribute('href', 'https://outlook.live.com/mail/0/deeplink/compose?to=dual%40utgolfo.edu.mx')
+    expect(within(menu).getByRole('menuitem', { name: 'Abrir en app del sistema' })).toHaveAttribute('href', 'mailto:dual@utgolfo.edu.mx')
+    // El menú vive en un portal: React propaga su clic hasta la fila, que debe ignorarlo.
+    fireEvent.click(menu)
+    fireEvent.click(within(menu).getByRole('menuitem', { name: 'Abrir en Outlook' }))
+    expect(screen.getByRole('status', { name: 'Ruta actual' })).toHaveTextContent('/linkage-requests')
+    expect(screen.queryByRole('menu')).not.toBeInTheDocument()
+  })
+
+  it('copia el correo, lo avisa y devuelve el foco al ícono', async () => {
+    const writeText = vi.fn(async () => undefined)
+    vi.stubGlobal('navigator', { ...navigator, clipboard: { writeText } })
+    const { trigger, menu } = await openMenu()
+    fireEvent.click(within(menu).getByRole('menuitem', { name: 'Copiar correo' }))
+    expect(await screen.findByText('Correo copiado')).toBeInTheDocument()
+    expect(writeText).toHaveBeenCalledWith('dual@utgolfo.edu.mx')
+    expect(screen.queryByRole('menu')).not.toBeInTheDocument()
+    expect(trigger).toHaveFocus()
+    expect(screen.getByRole('status', { name: 'Ruta actual' })).toHaveTextContent('/linkage-requests')
+  })
+
+  it('sin portapapeles deja el correo seleccionado en el menú y lo avisa', async () => {
+    vi.stubGlobal('navigator', { ...navigator, clipboard: undefined })
+    const { menu } = await openMenu()
+    fireEvent.click(within(menu).getByRole('menuitem', { name: 'Copiar correo' }))
+    expect(await screen.findByText('No se pudo copiar: el correo quedó seleccionado.')).toBeInTheDocument()
+    expect(screen.getByRole('menu')).toBeInTheDocument()
+    expect(window.getSelection()?.toString()).toBe('dual@utgolfo.edu.mx')
+  })
+
+  it('se recorre con las flechas y se cierra con Esc devolviendo el foco', async () => {
+    const { trigger, menu } = await openMenu()
+    const items = within(menu).getAllByRole('menuitem')
+    expect(items[0]).toHaveFocus()
+    fireEvent.keyDown(menu, { key: 'ArrowDown' })
+    expect(items[1]).toHaveFocus()
+    fireEvent.keyDown(menu, { key: 'ArrowUp' })
+    fireEvent.keyDown(menu, { key: 'ArrowUp' })
+    expect(items[3]).toHaveFocus()
+    fireEvent.keyDown(menu, { key: 'Escape' })
+    expect(screen.queryByRole('menu')).not.toBeInTheDocument()
+    expect(trigger).toHaveFocus()
+    expect(trigger).toHaveAttribute('aria-expanded', 'false')
+  })
+})
