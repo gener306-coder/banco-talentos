@@ -1,6 +1,8 @@
 /* Empresas (HU-S4-02): formulario agrupado y búsqueda del listado, con los tokens semánticos. */
+@layer components {
 .company-form { max-width: var(--content-readable); }
 .company-form fieldset { margin: 0 0 1.25rem; padding: 0; border: 0; }
-.company-form legend { margin-bottom: 0.6rem; font-size: 1.05rem; font-weight: 700; color: var(--accent); }
+.company-form legend { margin-bottom: 0.6rem; font-size: var(--type-base); font-weight: 600; color: var(--accent); }
 .company-form select { width: 100%; margin-bottom: 0.6rem; }
 .company-details { max-width: var(--content-readable); }
+}

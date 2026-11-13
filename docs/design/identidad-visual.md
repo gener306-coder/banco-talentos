@@ -91,9 +91,18 @@ Las hojas de estilo no usan los colores de la marca ni valores HEX directamente:
 | `--danger-text` / `--danger-surface` / `--danger-border` | `#7c2921` / `#fff3ef` / `#b74738` | Errores |
 | `--success-text` / `--success-surface` / `--success-border` | `#155b36` / `#e4f3e9` / `#327a4a` | Éxito, estado ACTIVO y certificación revisada |
 | `--status-off-text` / `--status-off-surface` | `#5d4b36` / `#f2ebdf` | Estado INACTIVO y «Sin revisar» |
-| `--shadow` | `#000` | Base de sombras y de `--ink`, en mezclas `color-mix(… N%, transparent)` |
+| `--shadow` | `#000` | Base de sombras, en mezclas `color-mix(… N%, transparent)` |
 
-Los derivados de apple-design en `ui/ui.css` (`--tint`, `--tint-hover`, `--fill`, `--glass`, `--ink`) se calculan sobre estos tokens.
+Los derivados de apple-design en `ui/ui.css` (`--tint`, `--tint-hover`, `--fill`, `--glass`) se calculan sobre estos tokens.
+
+Tokens añadidos con la estabilización del sistema de diseño (T-S12-01). Cada uno tiene una sola función; no se reutiliza un token de texto como fondo ni uno de fondo como texto:
+
+| Token | Valor claro / oscuro | Función |
+|---|---|---|
+| `--ink` | `--text` 70 % con negro / `--text` 50 % con blanco | Títulos `h3` y de diálogos: siempre con más contraste que el cuerpo |
+| `--scrim` | `rgb(0 0 0 / 0.4)` / `rgb(0 0 0 / 0.6)` | Velo de modales y hojas |
+| `--on-danger` | `#fff` / `#211f24` | Ícono o texto sobre el relleno de peligro (`--danger-border`) |
+| `--inverse-surface` / `--on-inverse` | grafito / `#fff` · `#e6e4e8` / `#211f24` | Tooltips |
 
 Tokens añadidos con el modo oscuro. En el tema claro son alias de los anteriores, así que no cambian nada visible:
 
@@ -113,7 +122,8 @@ Tokens añadidos con el reproductor de video (HU-S9-04). Tienen el mismo valor e
 **Regla:** en una hoja de estilos nueva, usar solo tokens semánticos. `src/ui/tokens.test.ts` falla si:
 - alguna hoja, fuera de `@theme` y de los bloques de tokens claro y oscuro, escribe un HEX, `rgb()`, `hsl()`, `black`/`white` o un `var(--color-…)` directamente;
 - un `.tsx` usa utilidades de color de Tailwind (`text-|bg-|border-brand-*`, `neutral`, `white`, `black`), que fijarían el tema claro;
-- el bloque oscuro no define exactamente los mismos tokens que el claro, o algún par de texto queda por debajo del umbral de contraste.
+- el bloque oscuro no define exactamente los mismos tokens que el claro, o algún par de texto queda por debajo del umbral de contraste, en claro o en oscuro, incluidas las mezclas de tinte y las opacidades de `ui.css`;
+- alguna regla queda fuera de una capa `@layer`, algún `:hover` está fuera de `@media (hover: hover)` o algún `font-size` no usa la escala `--type-*` (salvo los `clamp()` de títulos de página).
 
 ## Modo oscuro
 
@@ -199,6 +209,21 @@ Enfoque híbrido:
 - Vistas nuevas: preferir clases de Tailwind; los estilos globales ya aplican la marca a botones, enlaces y campos.
 - Tailwind sólo emite en el CSS final las variables de tema que se usan en utilidades o en CSS procesado por Tailwind (`index.css`). Si `institutions.css` u otra hoja sin `@import "tailwindcss"` necesita una variable no usada en `index.css`, comprobar que aparezca en `dist/assets/*.css` tras `npm run build`.
 
+## Escala tipográfica (T-S12-02)
+
+Tokens en `index.css`, bloque «Dimensiones». El prefijo es `--type-*` porque `--text-*` ya nombra colores y Tailwind lo usa para sus tamaños.
+
+| Token | Valor | Uso |
+|---|---|---|
+| `--type-xs` | 0.75 rem (12 px, mínimo legible) | Insignias de estado, eyebrow, encabezados de tabla, tooltips, duraciones |
+| `--type-sm` | 0.875 rem | Texto secundario y meta, ayudas de campo, avisos, pastillas, etiquetas |
+| `--type-base` | 1 rem | Cuerpo, tablas, `h4` y subtítulos de sección (`legend`), peso 600 |
+| `--type-lg` | 1.15 rem | `h3`, títulos de diálogo y de tarjeta destacada |
+| `--type-xl` | 1.4 rem | `h2` y título del encabezado |
+| `--type-2xl` | 1.75 rem | Cifras de indicadores |
+
+Los títulos de página (`h1`, saludo del inicio, encabezado de historias) usan `clamp()`. Los títulos de tarjeta van en 600; las insignias de estado, en `--type-xs` y 700.
+
 ## Tamaños y retícula
 
 Adoptado el 24 de octubre de 2026 como tarea transversal del Sprint 4 (`docs/sprint-4.md`). Antes, el ancho de la página dependía de una lista de rutas en `App.tsx`, y las vistas nuevas (empresas, cuentas de la Secretaría y buscador) quedaban comprimidas en el ancho del login.
@@ -220,6 +245,13 @@ Adoptado el 24 de octubre de 2026 como tarea transversal del Sprint 4 (`docs/spr
 | 601 a 959 px | Una columna; en el buscador, los filtros arriba y los resultados debajo, con dos tarjetas por fila si caben. |
 | Desde 960 px | Contenido hasta 70 rem. El buscador en dos columnas: filtros de 18 a 20 rem y resultados en tarjetas de al menos 20 rem (`auto-fill`), de igual altura por fila. |
 | 480 px | Solo cambia el tamaño de los logotipos del encabezado. |
+
+Ajustes de T-S12-03:
+
+- **Buscador:** desde 960 px el panel de filtros es `sticky`, con su propio desplazamiento y las acciones fijas al pie. Por debajo de 960 px los filtros se abren en una `Sheet` desde el botón «Filtros (n)».
+- **Alta y edición:** la tarjeta de los formularios de instituciones, empresas y oportunidades se limita a `--content-readable` y se centra.
+- **Tablas:** se desplazan dentro de su tarjeta, nunca la página, con una sombra en el borde mientras quedan columnas por ver.
+- **Diálogos:** como máximo `min(90vh, 100dvh − 2rem)`, con desplazamiento interno.
 
 ## Inicio por rol
 
@@ -248,6 +280,9 @@ Adoptado el 11 de octubre de 2026 como cambio transversal del Sprint 2 (`docs/sp
 | Plano | Navegación y regreso (`.plain`) | Sin fondo; `--fill` (grafito al 8 %) en hover |
 | Píldora | Acción por fila de tabla (`.pill-link`, «Ver detalle ›») | Tintado redondeado con chevron |
 
+- Botones-ícono en tres tamaños: `--icon-button-sm` (1.75 rem, dentro de una etiqueta), `--icon-button-md` (2.5 rem, general) y `--icon-button-lg` (2.75 rem, táctil y multimedia).
+- `.pill-link` y `button.account-action` comparten alto, letra (`--type-sm`) y borde de 1 px. `.home-action` (enlace con aspecto de botón principal) usa el radio, el padding y el borde de `button`.
+- Hover solo con puntero: todo `:hover` va dentro de `@media (hover: hover)`.
 - Radio de 10 px en botones y 8 px en campos. Los iconos (`ui/icons.tsx`) son SVG de trazo, `aria-hidden`; el texto del control lo nombra.
 - Respuesta inmediata: escala 0.97 al presionar (100 ms).
 - Navegación: «‹ Inicio» conserva el nombre accesible «Volver al inicio»; el enlace de la sección actual lleva `aria-current="page"`.

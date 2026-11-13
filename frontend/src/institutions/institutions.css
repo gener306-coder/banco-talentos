@@ -3,23 +3,21 @@
 .institution-navigation { display: flex; gap: 1.25rem; margin-bottom: 1.75rem; }
 .institution-toolbar { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1rem; margin-bottom: 1.5rem; }
 .institution-toolbar p { margin: 0; }
-.institutions .institution-button { display: inline-flex; align-items: center; justify-content: center; padding: 0.8rem 1rem; border: 1px solid var(--accent); border-radius: 0.35rem; color: var(--on-accent); background: var(--accent-fill); font-weight: 600; text-decoration: none; }
-.institutions .institution-button:hover { background: var(--accent-fill-hover); }
-.institutions .institution-button.secondary { background: var(--surface); color: var(--accent); }
-.institutions .institution-button.secondary:hover { background: var(--surface-muted); }
+.institutions .institution-button { display: inline-flex; align-items: center; justify-content: center; padding: 0.8rem 1rem; border: 1px solid var(--accent); color: var(--on-accent); background: var(--accent-fill); font-weight: 600; text-decoration: none; }
+@media (hover: hover) { .institutions .institution-button:hover { background: var(--accent-fill-hover); } }
 .institution-table-wrapper { overflow-x: auto; }
-.institution-table { width: 100%; border-collapse: collapse; text-align: left; font-size: 0.95rem; }
+.institution-table { width: 100%; border-collapse: collapse; text-align: left; font-size: var(--type-base); }
 .institution-table th, .institution-table td { padding: 1rem 0.8rem; border-bottom: 1px solid var(--border); vertical-align: top; overflow-wrap: break-word; }
 .institution-table th[scope='row'] { min-width: 10rem; }
 .institution-table thead { background: var(--surface-muted); }
 .institution-table td:last-child { min-width: 7rem; }
-.institution-status { display: inline-block; white-space: nowrap; border-radius: 1rem; padding: 0.2rem 0.7rem; font-size: 0.8rem; font-weight: 700; }
+.institution-status { display: inline-block; white-space: nowrap; border-radius: 1rem; padding: 0.2rem 0.7rem; font-size: var(--type-xs); font-weight: 700; }
 .institution-status.active { color: var(--success-text); background: var(--success-surface); }
 .institution-status.inactive { color: var(--status-off-text); background: var(--status-off-surface); }
 .institution-details { max-width: var(--content-readable); }
 .institutions form { max-width: var(--content-readable); }
-.institutions .field-help { margin: -0.2rem 0 0; color: var(--text); font-size: 0.9rem; }
-.institutions .field-error { margin: -0.65rem 0 0.7rem; color: var(--danger-text); font-size: 0.9rem; }
+.institutions .field-help { margin: -0.2rem 0 0; color: var(--text); font-size: var(--type-sm); }
+.institutions .field-error { margin: -0.65rem 0 0.7rem; color: var(--danger-text); font-size: var(--type-sm); }
 .institutions input[aria-invalid='true'] { border-color: var(--danger-border); }
 .institution-success { padding: 0.75rem 1rem 0.75rem 2.7rem; border: 1px solid color-mix(in srgb, var(--success-border) 28%, transparent);
   border-left: 4px solid var(--success-border); border-radius: 12px; background: var(--success-surface); color: var(--success-text); }
@@ -40,7 +38,7 @@
 .delivery-method input[type='radio'] { width: auto; margin: 0; accent-color: var(--accent); }
 .delivery-method label { font-weight: 400; }
 .manual-setup-link { margin: 1rem 0; padding: 0.9rem; border: 1px solid var(--border); border-radius: 0.35rem; background: var(--surface-muted); }
-.manual-setup-link input { font-family: ui-monospace, monospace; font-size: 0.85rem; background: var(--surface); }
-}
+.manual-setup-link input { font-family: ui-monospace, monospace; font-size: var(--type-sm); background: var(--surface); }
 /* Cuenta pendiente de su primera contraseña (HU-S4-01). */
 .institution-status.pending { color: var(--accent); background: var(--tint); }
+}

@@ -270,3 +270,33 @@ describe('buscador de talento HU-S4-05', () => {
     expect(await screen.findByText('El perfil no existe.')).toBeInTheDocument()
   })
 })
+
+describe('buscador de talento en pantallas estrechas (T-S12-03)', () => {
+  // Pantalla de teléfono: se cumplen el corte del buscador (959 px) y el de la hoja compacta (640 px). Con reducir
+  // movimiento la hoja se cierra sin la animación de resorte, que bajo carga tardaría más que el waitFor.
+  const narrowMatchMedia = (query: string) => ({
+    matches: /max-width|prefers-reduced-motion/.test(query), media: query, onchange: null,
+    addEventListener: () => {}, removeEventListener: () => {}, addListener: () => {}, removeListener: () => {}, dispatchEvent: () => false,
+  })
+
+  it('abre los filtros en una hoja, cuenta los aplicados y la cierra al buscar', async () => {
+    vi.stubGlobal('matchMedia', narrowMatchMedia)
+    talentMock.mockResolvedValueOnce(page([card])).mockResolvedValueOnce(page([]))
+    renderApp()
+    await screen.findByRole('article', { name: 'Analista de datos' })
+    // El panel no ocupa la página: los resultados quedan a la vista.
+    expect(screen.queryByRole('search', { name: 'Filtros de búsqueda' })).not.toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Filtros' }))
+    const dialog = await screen.findByRole('dialog', { name: 'Filtros de búsqueda' })
+    const form = within(dialog).getByRole('search', { name: 'Filtros de búsqueda' })
+    fireEvent.change(within(form).getByLabelText('Titular o carrera'), { target: { value: 'analista' } })
+    fireEvent.click(within(form).getByLabelText('Puede reubicarse'))
+    fireEvent.click(within(form).getByRole('button', { name: 'Aplicar filtros' }))
+
+    expect(await screen.findByText('Ningún perfil coincide con los filtros.')).toBeInTheDocument()
+    expect(Object.fromEntries(lastQuery())).toEqual({ q: 'analista', can_relocate: '1', page: '1' })
+    await waitFor(() => expect(screen.queryByRole('dialog', { name: 'Filtros de búsqueda' })).not.toBeInTheDocument())
+    expect(screen.getByRole('button', { name: 'Filtros (2)' })).toBeInTheDocument()
+  })
+})

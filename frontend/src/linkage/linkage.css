@@ -1,10 +1,11 @@
 /* Solicitudes de vinculación (HU-S5-04, HU-S5-05, HU-S6-02): estados, bandejas y respuesta, solo con tokens semánticos. */
-.linkage-status { display: inline-block; padding: 0.15rem 0.6rem; border-radius: 999px; font-size: 0.8rem; font-weight: 700; white-space: nowrap; }
+@layer components {
+.linkage-status { display: inline-block; padding: 0.15rem 0.6rem; border-radius: 999px; font-size: var(--type-xs); font-weight: 700; white-space: nowrap; }
 .linkage-status.pending { background: var(--tint); color: var(--accent); }
 .linkage-status.accepted { background: var(--success-surface); color: var(--success-text); }
 .linkage-status.rejected { background: var(--danger-surface); color: var(--danger-text); }
 .linkage-status.cancelled { background: var(--status-off-surface); color: var(--status-off-text); }
-.linkage-profile-meta { display: block; font-size: 0.85rem; color: var(--text); }
+.linkage-profile-meta { display: block; font-size: var(--type-sm); color: var(--text); }
 .linkage-notice { max-width: var(--content-readable); }
 .linkage-notice ul { margin: 0.3rem 0 0; padding-left: 1.2rem; }
 .linkage-decision { max-width: var(--content-readable); }
@@ -12,7 +13,7 @@
 .linkage-decision textarea { width: 100%; resize: vertical; }
 .linkage-meta.linkage-response { display: -webkit-box; max-width: 22rem; overflow: hidden; white-space: pre-line; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2; }
 /* T-S8-15: dato secundario discreto bajo el principal, y títulos largos en dos líneas como máximo. */
-.linkage-meta { display: block; margin-top: 0.15rem; color: var(--text); font-size: 0.8rem; font-weight: 400; }
+.linkage-meta { display: block; margin-top: 0.15rem; color: var(--text); font-size: var(--type-xs); font-weight: 400; }
 .linkage-meta.mono { font-family: ui-monospace, monospace; font-variant-numeric: tabular-nums; letter-spacing: 0.01em; }
 .linkage-title { display: -webkit-box; overflow: hidden; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2; }
 .institution-table td.nowrap { white-space: nowrap; }
@@ -21,7 +22,7 @@
 .linkage-inbox tbody td:nth-of-type(1) { min-width: 12rem; }
 /* Contacto de la institución en la bandeja de la empresa: dos accesos redondos en lugar de dos líneas de texto. */
 .linkage-contact { display: flex; gap: 0.35rem; margin-top: 0.4rem; }
-.linkage-contact a { display: inline-grid; place-items: center; width: 2rem; height: 2rem; border-radius: 50%; background: var(--tint); color: var(--accent); }
+.linkage-contact a { display: inline-grid; place-items: center; width: var(--icon-button-md); height: var(--icon-button-md); border-radius: 50%; background: var(--tint); color: var(--accent); }
 .linkage-contact a .icon { width: 0.95rem; height: 0.95rem; }
 .linkage-contact a:focus-visible { outline: 3px solid var(--focus-ring); outline-offset: 2px; }
 @media (hover: hover) { .linkage-contact a:hover { background: var(--tint-hover); } }
@@ -30,3 +31,4 @@
 .linkage-sent tbody th[scope='row'] { min-width: 11rem; }
 .linkage-sent tbody td:nth-of-type(1) { min-width: 11rem; }
 .linkage-sent tbody td:nth-of-type(2) { min-width: 13.5rem; }
+}

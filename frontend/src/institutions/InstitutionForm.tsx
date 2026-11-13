@@ -67,7 +67,7 @@ export function InstitutionForm({ initialValue, submitLabel, cancelTo, pending, 
       <p>Todos los campos son obligatorios, salvo el puesto y el teléfono.</p>
       {failure && <InstitutionRequestError failure={failure} />}
       {Object.values(localErrors).some((messages) => messages[0] !== INVALID_EMAIL) && <p className="notice" role="alert">Revisa los campos indicados.</p>}
-      <form onSubmit={(event) => { void submit(event) }} aria-busy={pending}>
+      <form className="institution-form" onSubmit={(event) => { void submit(event) }} aria-busy={pending}>
         <label htmlFor="institution-name">Nombre</label>
         <input id="institution-name" name="name" type="text" autoComplete="organization"
           required maxLength={255} value={values.name} disabled={pending}

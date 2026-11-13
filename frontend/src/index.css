@@ -41,6 +41,15 @@
   --status-off-text: #5d4b36;
   --status-off-surface: #f2ebdf;
   --shadow: #000;
+  /* Títulos de tercer nivel y de diálogos (T-S12-01): un paso más de contraste que el texto. */
+  --ink: color-mix(in srgb, var(--text) 70%, var(--shadow));
+  /* Velo de modales y hojas: negro semitransparente, independiente del texto. */
+  --scrim: rgb(0 0 0 / 0.4);
+  /* Ícono o texto sobre el relleno de peligro (--danger-border). */
+  --on-danger: #fff;
+  /* Superficie invertida (tooltips) y su texto. */
+  --inverse-surface: var(--color-brand-neutral);
+  --on-inverse: #fff;
   /* Sobre un video: siempre es oscuro, sin importar el tema (HU-S9-04). */
   --on-media: #fff;
   --media-backdrop: #000;
@@ -77,6 +86,12 @@
   --status-off-text: #e0cdb0;
   --status-off-surface: #362e24;
   --shadow: #000;
+  /* En oscuro el título se aclara hacia el blanco: nunca más tenue que el cuerpo. */
+  --ink: color-mix(in srgb, var(--text) 50%, var(--text-strong));
+  --scrim: rgb(0 0 0 / 0.6);
+  --on-danger: #211f24;
+  --inverse-surface: #e6e4e8;
+  --on-inverse: #211f24;
   --on-media: #fff;
   --media-backdrop: #000;
 }
@@ -91,6 +106,20 @@
   --page-wide: 70rem;
   --page-gutter: 2rem;
   --content-readable: 45rem;
+  /*
+   * Escala tipográfica (T-S12-02). Prefijo --type-*: --text-* ya nombra colores y Tailwind lo usa para sus tamaños.
+   * --type-xs es el mínimo legible (12 px).
+   */
+  --type-xs: 0.75rem;
+  --type-sm: 0.875rem;
+  --type-base: 1rem;
+  --type-lg: 1.15rem;
+  --type-xl: 1.4rem;
+  --type-2xl: 1.75rem;
+  /* Botones-ícono: dentro de una etiqueta, general y táctil o multimedia. */
+  --icon-button-sm: 1.75rem;
+  --icon-button-md: 2.5rem;
+  --icon-button-lg: 2.75rem;
 }
 
 :root {
@@ -107,20 +136,22 @@ body { margin: 0; min-width: 320px; }
 main { width: min(100% - var(--page-gutter), var(--page-narrow)); margin: 8vh auto; }
 main.page-wide { width: min(100% - var(--page-gutter), var(--page-wide)); }
 header { margin-bottom: 2rem; }
-h1 { margin: 0.5rem 0 1rem; font-size: clamp(2rem, 6vw, 3rem); line-height: 1.15; }
-h2 { margin-top: 0; font-size: 1.4rem; color: var(--accent); }
+h1 { margin: 0.5rem 0 1rem; font-size: clamp(2rem, 6vw, 3rem); }
+h2 { margin-top: 0; font-size: var(--type-xl); color: var(--accent); }
+h3 { font-size: var(--type-lg); }
+h4 { font-size: var(--type-base); }
 p { line-height: 1.6; }
 .eyebrow { font-weight: 600; }
 .card { background: var(--surface); border: 1px solid var(--border); border-radius: 0.75rem; padding: 1.75rem; }
+/* T-S12-03: en pantallas estrechas la tarjeta cede espacio al contenido (identidad-visual.md, «Tamaños y retícula»). */
+@media (max-width: 600px) { .card { padding: 1.25rem; } }
 form { display: flex; flex-direction: column; gap: 0.65rem; }
 label, dt { font-weight: 600; }
-input, button { font: inherit; border-radius: 0.35rem; }
+input, button { font: inherit; }
 input { width: 100%; padding: 0.7rem; border: 1px solid var(--border-strong); margin-bottom: 0.6rem; background: var(--surface); }
 button { padding: 0.8rem 1rem; background: var(--accent-fill); color: var(--on-accent); border: 1px solid var(--accent); cursor: pointer; font-weight: 600; }
-button:hover:not(:disabled) { background: var(--accent-fill-hover); }
-button.secondary { background: var(--surface); color: var(--accent); }
-button.secondary:hover:not(:disabled) { background: var(--surface-muted); }
-button:disabled, input:disabled { opacity: 0.65; cursor: not-allowed; }
+@media (hover: hover) { button:hover:not(:disabled) { background: var(--accent-fill-hover); } }
+button:disabled, input:disabled { cursor: not-allowed; }
 :focus-visible { outline: 3px solid var(--focus-ring); outline-offset: 3px; }
 .notice { padding: 0.75rem 1rem 0.75rem 2.7rem; border: 1px solid color-mix(in srgb, var(--danger-border) 28%, transparent);
   border-left: 4px solid var(--danger-border); border-radius: 12px; background: var(--danger-surface); color: var(--danger-text); }
@@ -131,6 +162,6 @@ dd { margin: 0.3rem 0 0; overflow-wrap: anywhere; }
 .card > nav { display: flex; flex-wrap: wrap; gap: 0.5rem 1.25rem; margin: 1rem 0; }
 a { color: var(--accent); text-underline-offset: 0.2em; }
 
-.password-setup .field-error { margin: -0.65rem 0 0.7rem; color: var(--danger-text); font-size: 0.9rem; }
+.password-setup .field-error { margin: -0.65rem 0 0.7rem; color: var(--danger-text); font-size: var(--type-sm); }
 .password-setup input[aria-invalid='true'] { border-color: var(--danger-border); }
 }
