@@ -1,8 +1,10 @@
 """Genera y valida el catálogo semilla de habilidades (backend/database/data/skills/top_skills.csv).
 
 Las listas de abajo son la fuente editable: un bloque por perfil de Educación Dual y uno de habilidades
-blandas. Antes de escribir valida longitud (≤ 80), espacios, conteo (500–1,000) y slugs únicos tal como
-los calcula App\\Support\\CatalogSlug::from; si algo falla no escribe nada.
+blandas. ALIASES agrega las abreviaturas con las que también se busca una habilidad (tercera columna,
+separadas por «|»); un mismo alias puede apuntar a varias habilidades. Antes de escribir valida longitud
+(≤ 80), espacios, conteo (500–1,000), slugs únicos tal como los calcula App\\Support\\CatalogSlug::from
+y los alias; si algo falla no escribe nada.
 
 Uso: python3 -I scripts/skills/build-top-skills.py backend/database/data/skills/top_skills.csv
 """
@@ -131,6 +133,24 @@ Orientación a resultados|Orientación al cliente|Aprendizaje continuo|Aprendiza
 """
 
 
+# Abreviaturas y nombres alternos con los que también se busca una habilidad (HU-S10-01). Se escriben ya
+# normalizados (minúsculas, sin acentos). Un alias puede repetirse en varias habilidades.
+ALIASES = {
+    "JavaScript": ["js"],
+    "TypeScript": ["ts"],
+    "C#": ["c sharp", "csharp"],
+    "C++": ["cpp"],
+    "Go": ["golang"],
+    "Kubernetes": ["k8s"],
+    "Aprendizaje automático": ["ml", "machine learning"],
+    "Aprendizaje profundo": ["dl", "deep learning"],
+    "Procesamiento de lenguaje natural": ["nlp", "pln"],
+    "Inteligencia de negocios": ["bi", "business intelligence"],
+    "Modelado de bases de datos": ["bd"],
+    "Normalización de bases de datos": ["bd"],
+}
+
+
 def split(text):
     return [item.strip() for line in text.strip().splitlines() for item in line.split("|") if item.strip()]
 
@@ -157,17 +177,30 @@ for name, kind in rows:
     seen[key] = name
 if not 500 <= len(rows) <= 1000:
     errors.append(f"conteo fuera de rango: {len(rows)}")
+
+names = {name for name, _ in rows}
+for name, aliases in ALIASES.items():
+    if name not in names:
+        errors.append(f"alias de una habilidad que no existe: {name!r}")
+    if len(set(aliases)) != len(aliases):
+        errors.append(f"alias repetido en {name!r}")
+    for alias in aliases:
+        if alias != slug(alias) or not alias or "|" in alias or len(alias) > 80:
+            errors.append(f"alias sin normalizar o inválido en {name!r}: {alias!r}")
+        # Un alias igual al slug de una habilidad no aporta: esa búsqueda ya la resuelve el prefijo.
+        if alias in seen:
+            errors.append(f"el alias {alias!r} de {name!r} es el nombre de la habilidad {seen[alias]!r}")
 if errors:
     print("\n".join(errors))
     sys.exit(1)
 
 with open(sys.argv[1], "w", encoding="utf-8", newline="") as fh:
     writer = csv.writer(fh, lineterminator="\n")
-    writer.writerow(["name", "kind"])
-    writer.writerows(rows)
+    writer.writerow(["name", "kind", "aliases"])
+    writer.writerows((name, kind, "|".join(ALIASES.get(name, []))) for name, kind in rows)
 
 counts = {}
 for block, text in BLOCKS.items():
     counts[block] = len(split(text))
 counts["soft"] = len(split(SOFT))
-print(len(rows), counts)
+print(len(rows), counts, "con alias:", len(ALIASES))

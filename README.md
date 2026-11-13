@@ -56,8 +56,11 @@ En Linux, configura `LOCAL_UID` y `LOCAL_GID` en `.env` con los resultados de `i
 ```bash
 docker compose up --build -d
 docker compose exec backend php artisan migrate
+docker compose exec backend php artisan skills:seed
 docker compose exec backend php artisan auth:create-user
 ```
+
+`skills:seed` carga el catálogo semilla de habilidades (820 habilidades para Educación Dual) para que el autocompletar no arranque vacío. Se puede repetir sin duplicar: para las habilidades que ya existen solo actualiza el tipo y los alias, nunca el nombre ([docs/HU-S10-01.md](docs/HU-S10-01.md)).
 
 `auth:create-user` sólo funciona de forma interactiva en el entorno local. Solicita un rol explícito (`ADMIN`, `INSTITUTION` o `SECRETARY`; las cuentas `COMPANY` se crean desde su empresa), estado activo y contraseña oculta con confirmación; no hay cuentas o contraseñas predeterminadas. Los usuarios de las pruebas se crean exclusivamente en bases de pruebas. No utilices factories para aprovisionar cuentas reales.
 
@@ -220,7 +223,7 @@ El padrón y el detalle muestran el estado de cada alumno (`ACTIVO`/`INACTIVO`).
 
 En el detalle, la sección **Seguro Facultativo (IMSS)** (HU-S3-02) registra el NSS del alumno (11 dígitos con verificador) y sube su comprobante del IMSS en PDF de hasta 2 MB, que se descarga solo con la sesión de la institución. El NSS se guarda cifrado con `APP_KEY` y con un índice ciego HMAC que impide repetirlo en la institución; el PDF queda en el disco privado `storage/app/private`. Nada de esto viaja con el padrón ni con los datos del expediente que se compartirán con empresas. Contrato y decisiones en [docs/HU-S3-02.md](docs/HU-S3-02.md).
 
-Desde el detalle, **CV profesional** (`/students/:id/cv`, HU-S3-01) construye un CV con el mismo formato para cualquier disciplina: titular, habilidades técnicas y blandas (etiquetas con autocompletado de un catálogo compartido), idiomas con nivel MCER o Nativo, certificaciones que la institución puede marcar como revisadas, y proyectos. Los enlaces externos y las credenciales de las certificaciones son protegidos: revelan la identidad y no se mostrarán en la búsqueda de empresas. Los textos públicos rechazan enlaces, correos y teléfonos. Contrato y decisiones en [docs/HU-S3-01.md](docs/HU-S3-01.md).
+Desde el detalle, **CV profesional** (`/students/:id/cv`, HU-S3-01) construye un CV con el mismo formato para cualquier disciplina: titular, habilidades técnicas y blandas (etiquetas con autocompletado de un catálogo compartido), idiomas con nivel MCER o Nativo, certificaciones que la institución puede marcar como revisadas, y proyectos. Los enlaces externos y las credenciales de las certificaciones son protegidos: revelan la identidad y no se mostrarán en la búsqueda de empresas. Los textos públicos rechazan enlaces, correos y teléfonos. Contrato y decisiones en [docs/HU-S3-01.md](docs/HU-S3-01.md). El autocompletar de habilidades reconoce abreviaturas («js») y tolera errores ortográficos («javscript» y «pyhton» sugieren JavaScript y Python), pero no preselecciona las sugerencias aproximadas ([docs/T-S10-01.md](docs/T-S10-01.md), [docs/HU-S10-02.md](docs/HU-S10-02.md)).
 
 ## Pruebas
 

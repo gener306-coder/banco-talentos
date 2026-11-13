@@ -1,821 +1,821 @@
-name,kind
-Python,technical
-JavaScript,technical
-TypeScript,technical
-Java,technical
-C#,technical
-C++,technical
-C,technical
-PHP,technical
-Go,technical
-Kotlin,technical
-Swift,technical
-Dart,technical
-Rust,technical
-Ruby,technical
-SQL,technical
-Bash,technical
-PowerShell,technical
-HTML,technical
-CSS,technical
-Sass,technical
-Tailwind CSS,technical
-Bootstrap,technical
-React,technical
-Angular,technical
-Vue.js,technical
-Next.js,technical
-Nuxt,technical
-Svelte,technical
-Redux,technical
-jQuery,technical
-Node.js,technical
-Express,technical
-NestJS,technical
-Django,technical
-Flask,technical
-FastAPI,technical
-Spring Boot,technical
-.NET,technical
-ASP.NET Core,technical
-Entity Framework,technical
-Laravel,technical
-Symfony,technical
-Ruby on Rails,technical
-Flutter,technical
-React Native,technical
-Android,technical
-iOS,technical
-Jetpack Compose,technical
-SwiftUI,technical
-.NET MAUI,technical
-Ionic,technical
-Electron,technical
-PostgreSQL,technical
-MySQL,technical
-MariaDB,technical
-SQL Server,technical
-Oracle Database,technical
-SQLite,technical
-MongoDB,technical
-Redis,technical
-Firebase,technical
-Supabase,technical
-Elasticsearch,technical
-DynamoDB,technical
-PostGIS,technical
-Modelado de bases de datos,technical
-Normalización de bases de datos,technical
-PL/SQL,technical
-T-SQL,technical
-Procedimientos almacenados,technical
-ORM,technical
-REST API,technical
-GraphQL,technical
-gRPC,technical
-WebSockets,technical
-OpenAPI,technical
-Postman,technical
-Microservicios,technical
-Arquitectura de software,technical
-Patrones de diseño,technical
-Programación orientada a objetos,technical
-Programación funcional,technical
-Estructuras de datos,technical
-Algoritmos,technical
-Principios SOLID,technical
-Clean Code,technical
-Domain-Driven Design,technical
-Git,technical
-GitHub,technical
-GitLab,technical
-Bitbucket,technical
-Control de versiones,technical
-Code review,technical
-Docker,technical
-Docker Compose,technical
-Kubernetes,technical
-Linux,technical
-Nginx,technical
-Apache HTTP Server,technical
-CI/CD,technical
-GitHub Actions,technical
-GitLab CI,technical
-Jenkins,technical
-Terraform,technical
-Ansible,technical
-AWS,technical
-Microsoft Azure,technical
-Google Cloud Platform,technical
-AWS Lambda,technical
-Amazon S3,technical
-Amazon EC2,technical
-Serverless,technical
-Pruebas unitarias,technical
-Pruebas de integración,technical
-Pruebas end-to-end,technical
-TDD,technical
-Jest,technical
-Vitest,technical
-Cypress,technical
-Playwright,technical
-Selenium,technical
-JUnit,technical
-PHPUnit,technical
-Pest,technical
-pytest,technical
-Testing Library,technical
-Pruebas manuales de software,technical
-Aseguramiento de calidad de software,technical
-Accesibilidad web,technical
-Diseño responsivo,technical
-Diseño UX/UI,technical
-Figma,technical
-Prototipado de interfaces,technical
-Seguridad de aplicaciones web,technical
-OWASP Top 10,technical
-OAuth 2.0,technical
-JWT,technical
-Autenticación y autorización,technical
-Ciberseguridad,technical
-Redes de computadoras,technical
-TCP/IP,technical
-Cisco CCNA,technical
-Administración de servidores,technical
-Virtualización,technical
-VMware,technical
-Windows Server,technical
-Active Directory,technical
-Soporte técnico,technical
-Mesa de ayuda,technical
-ITIL,technical
-Scrum,technical
-Metodologías ágiles,technical
-Jira,technical
-Confluence,technical
-Trello,technical
-Análisis de requerimientos,technical
-UML,technical
-Documentación técnica,technical
-WordPress,technical
-Shopify,technical
-Salesforce,technical
-SAP ABAP,technical
-Power Apps,technical
-Power Automate,technical
-Low-code,technical
-Webpack,technical
-Vite,technical
-npm,technical
-Composer,technical
-Maven,technical
-Gradle,technical
-Visual Studio Code,technical
-Unity,technical
-Desarrollo web,technical
-Desarrollo de aplicaciones móviles,technical
-Desarrollo backend,technical
-Desarrollo frontend,technical
-Consumo de APIs,technical
-Expresiones regulares,technical
-Programación concurrente,technical
-R,technical
-Pandas,technical
-NumPy,technical
-SciPy,technical
-Matplotlib,technical
-Seaborn,technical
-Plotly,technical
-Scikit-learn,technical
-TensorFlow,technical
-Keras,technical
-PyTorch,technical
-Jupyter,technical
-Google Colab,technical
-Estadística descriptiva,technical
-Estadística inferencial,technical
-Probabilidad,technical
-Análisis de regresión,technical
-Series de tiempo,technical
-Análisis predictivo,technical
-Aprendizaje automático,technical
-Aprendizaje profundo,technical
-Redes neuronales,technical
-Árboles de decisión,technical
-Clustering,technical
-Procesamiento de lenguaje natural,technical
-Visión por computadora,technical
-OpenCV,technical
-IA generativa,technical
-Ingeniería de prompts,technical
-Modelos de lenguaje (LLM),technical
-Hugging Face,technical
-MLOps,technical
-MLflow,technical
-Análisis de datos,technical
-Análisis exploratorio de datos,technical
-Limpieza de datos,technical
-Visualización de datos,technical
-Minería de datos,technical
-Big Data,technical
-Apache Spark,technical
-Hadoop,technical
-Apache Kafka,technical
-Apache Airflow,technical
-ETL,technical
-Almacenes de datos,technical
-Modelado dimensional,technical
-Databricks,technical
-Snowflake,technical
-BigQuery,technical
-Amazon Redshift,technical
-dbt,technical
-Power BI,technical
-Tableau,technical
-Looker Studio,technical
-Qlik Sense,technical
-DAX,technical
-Power Query,technical
-Tablas dinámicas,technical
-Inteligencia de negocios,technical
-Tableros de control (KPI),technical
-Pruebas A/B,technical
-Web scraping,technical
-Beautiful Soup,technical
-Gobierno de datos,technical
-Calidad de datos,technical
-Optimización matemática,technical
-Investigación de operaciones,technical
-SPSS,technical
-SAS,technical
-KNIME,technical
-Alteryx,technical
-Análisis geoespacial,technical
-QGIS,technical
-ArcGIS,technical
-Storytelling con datos,technical
-PLC,technical
-Programación de PLC,technical
-Allen-Bradley,technical
-Siemens TIA Portal,technical
-Siemens S7-1200,technical
-Siemens S7-1500,technical
-Studio 5000,technical
-RSLogix 500,technical
-CODESYS,technical
-Diagrama de escalera (Ladder),technical
-Texto estructurado (IEC 61131-3),technical
-GRAFCET,technical
-HMI,technical
-SCADA,technical
-FactoryTalk View,technical
-WinCC,technical
-Ignition SCADA,technical
-Variadores de frecuencia,technical
-Servomotores,technical
-Motores a pasos,technical
-Control de motores eléctricos,technical
-Neumática,technical
-Electroneumática,technical
-Hidráulica,technical
-Electrohidráulica,technical
-FluidSIM,technical
-Sensores industriales,technical
-Actuadores,technical
-Instrumentación industrial,technical
-Control de procesos,technical
-Control PID,technical
-Sistemas de control,technical
-Teoría de control,technical
-Robótica industrial,technical
-Programación de robots industriales,technical
-Robots FANUC,technical
-Robots ABB,technical
-RobotStudio,technical
-Robots KUKA,technical
-Robots Yaskawa Motoman,technical
-Robots colaborativos,technical
-Universal Robots,technical
-Visión artificial industrial,technical
-Cognex In-Sight,technical
-Keyence,technical
-Redes industriales,technical
-PROFINET,technical
-PROFIBUS,technical
-EtherNet/IP,technical
-Modbus,technical
-IO-Link,technical
-OPC UA,technical
-Industria 4.0,technical
-Internet industrial de las cosas (IIoT),technical
-Gemelo digital,technical
-Automatización industrial,technical
-Integración de sistemas automatizados,technical
-Celdas de manufactura,technical
-Mantenimiento industrial,technical
-Mantenimiento preventivo,technical
-Mantenimiento correctivo,technical
-Mantenimiento predictivo,technical
-Análisis de vibraciones,technical
-Termografía industrial,technical
-Lubricación industrial,technical
-Diseño mecánico,technical
-Diseño de máquinas,technical
-Mecanismos,technical
-Resistencia de materiales,technical
-Transmisión de potencia,technical
-Diseño de herramentales,technical
-Diseño de dispositivos de sujeción (fixtures),technical
-MATLAB,technical
-Simulink,technical
-LabVIEW,technical
-ROS,technical
-Arduino,technical
-Raspberry Pi,technical
-Diagramas eléctricos de control,technical
-Tableros de control eléctrico,technical
-Seguridad de máquinas (ISO 13849),technical
-Impresión 3D,technical
-Manufactura aditiva,technical
-Bandas transportadoras,technical
-Sistemas de manejo de materiales,technical
-Ingeniería de confiabilidad,technical
-Cinemática de robots,technical
-Lean Manufacturing,technical
-5S,technical
-Kaizen,technical
-Kanban,technical
-Mapeo de flujo de valor (VSM),technical
-SMED,technical
-TPM,technical
-OEE,technical
-Poka-Yoke,technical
-Jidoka,technical
-Just in Time,technical
-Heijunka,technical
-Trabajo estandarizado,technical
-Gemba,technical
-Andon,technical
-Hoshin Kanri,technical
-Six Sigma,technical
-Lean Six Sigma,technical
-Six Sigma Yellow Belt,technical
-Six Sigma Green Belt,technical
-DMAIC,technical
-Control estadístico de procesos,technical
-Gráficas de control,technical
-Capacidad de procesos (Cp y Cpk),technical
-AMEF,technical
-PFMEA,technical
-DFMEA,technical
-Plan de control,technical
-APQP,technical
-PPAP,technical
-MSA,technical
-Gage R&R,technical
-8D,technical
-Análisis de causa raíz,technical
-Diagrama de Ishikawa,technical
-5 porqués,technical
-Reporte A3,technical
-Ciclo PDCA,technical
-Core Tools AIAG,technical
-IATF 16949,technical
-ISO 9001,technical
-ISO 14001,technical
-ISO 45001,technical
-ISO 13485,technical
-AS9100,technical
-Auditorías de calidad,technical
-Auditoría por capas (LPA),technical
-Sistemas de gestión de calidad,technical
-Inspección de calidad,technical
-Control de calidad,technical
-Aseguramiento de calidad,technical
-Ingeniería de calidad,technical
-Atención a quejas de cliente,technical
-Mejora continua,technical
-Gestión de la calidad total,technical
-Metrología,technical
-Metrología dimensional,technical
-Calibración de instrumentos,technical
-Máquina de medición por coordenadas (CMM),technical
-Calibrador vernier,technical
-Micrómetro,technical
-GD&T,technical
-Interpretación de planos,technical
-Dibujo técnico,technical
-CAD,technical
-CAM,technical
-AutoCAD,technical
-SolidWorks,technical
-CATIA,technical
-Siemens NX,technical
-Autodesk Inventor,technical
-Fusion 360,technical
-Creo Parametric,technical
-Mastercam,technical
-CNC,technical
-Programación CNC,technical
-Código G,technical
-Torno CNC,technical
-Centro de maquinado CNC,technical
-Fresadora,technical
-Torno convencional,technical
-Maquinado,technical
-Herramientas de corte,technical
-Controles FANUC CNC,technical
-Haas CNC,technical
-Soldadura,technical
-Soldadura MIG,technical
-Soldadura TIG,technical
-Soldadura por arco (SMAW),technical
-Soldadura por puntos,technical
-Inyección de plástico,technical
-Moldes de inyección,technical
-Troquelado,technical
-Estampado de metales,technical
-Tratamientos térmicos,technical
-Pintura industrial,technical
-Ensamble,technical
-Selección de materiales,technical
-Ciencia de materiales,technical
-Ensayos no destructivos,technical
-Ensayos de materiales,technical
-Ingeniería de procesos,technical
-Ingeniería industrial,technical
-Ingeniería de manufactura,technical
-Industrialización de productos (NPI),technical
-Estudio de tiempos y movimientos,technical
-Balanceo de líneas,technical
-Distribución de planta,technical
-Ergonomía,technical
-Simulación de procesos,technical
-FlexSim,technical
-Planeación de la producción,technical
-Programación de la producción,technical
-MRP,technical
-Teoría de restricciones,technical
-Documentación de procesos,technical
-Instrucciones de trabajo,technical
-Diseño de experimentos (DOE),technical
-Minitab,technical
-Costos de manufactura,technical
-Productividad industrial,technical
-Electrónica analógica,technical
-Electrónica digital,technical
-Electrónica de potencia,technical
-Circuitos eléctricos,technical
-Análisis de circuitos,technical
-Diseño de circuitos,technical
-Simulación de circuitos,technical
-Diseño de PCB,technical
-Altium Designer,technical
-KiCad,technical
-Autodesk Eagle,technical
-OrCAD,technical
-Proteus,technical
-Multisim,technical
-LTspice,technical
-Lectura de diagramas electrónicos,technical
-Componentes electrónicos,technical
-Soldadura electrónica,technical
-Soldadura SMD,technical
-Retrabajo de tarjetas electrónicas,technical
-IPC-A-610,technical
-IPC J-STD-001,technical
-IPC/WHMA-A-620,technical
-Tecnología de montaje superficial (SMT),technical
-Control de descargas electrostáticas (ESD),technical
-Microcontroladores,technical
-Microcontroladores PIC,technical
-STM32,technical
-ESP32,technical
-Sistemas embebidos,technical
-Programación de sistemas embebidos,technical
-FPGA,technical
-VHDL,technical
-Verilog,technical
-FreeRTOS,technical
-I2C,technical
-SPI,technical
-UART,technical
-CAN bus,technical
-Internet de las cosas (IoT),technical
-MQTT,technical
-LoRaWAN,technical
-Bluetooth Low Energy,technical
-Osciloscopio,technical
-Multímetro,technical
-Generador de funciones,technical
-Instrumentación electrónica,technical
-Fuentes de alimentación,technical
-Acondicionamiento de señales,technical
-Procesamiento digital de señales,technical
-Telecomunicaciones,technical
-Radiofrecuencia,technical
-Antenas,technical
-Fibra óptica,technical
-Cableado estructurado,technical
-Instalaciones eléctricas,technical
-Instalaciones eléctricas residenciales,technical
-Instalaciones eléctricas industriales,technical
-NOM-001-SEDE,technical
-Subestaciones eléctricas,technical
-Transformadores,technical
-Máquinas eléctricas,technical
-Sistemas fotovoltaicos,technical
-Energías renovables,technical
-Eficiencia energética,technical
-Calidad de la energía,technical
-Baterías y almacenamiento de energía,technical
-Electromovilidad,technical
-Electrónica automotriz,technical
-Diagnóstico automotriz,technical
-Pruebas eléctricas,technical
-Pruebas en circuito (ICT),technical
-Pruebas funcionales de tarjetas,technical
-Arneses eléctricos,technical
-Domótica,technical
-Sistemas de videovigilancia (CCTV),technical
-Mantenimiento electrónico,technical
-Control electrónico,technical
-Electricidad industrial,technical
-Logística,technical
-Cadena de suministro,technical
-Gestión de inventarios,technical
-Control de inventarios,technical
-Análisis ABC de inventarios,technical
-Conteo cíclico,technical
-Valuación de inventarios,technical
-Lote económico (EOQ),technical
-Gestión de almacenes,technical
-WMS,technical
-TMS,technical
-Picking y empaque,technical
-Cross-docking,technical
-FIFO y FEFO,technical
-Recepción y embarque de mercancías,technical
-Operación de montacargas,technical
-Seguridad en almacenes,technical
-Distribución,technical
-Transporte de carga,technical
-Planeación de rutas,technical
-Logística de última milla,technical
-Logística inversa,technical
-Logística internacional,technical
-Gestión de flotillas,technical
-Fletes y tarifas,technical
-Compras,technical
-Abastecimiento estratégico,technical
-Gestión de proveedores,technical
-Desarrollo de proveedores,technical
-Planeación de materiales,technical
-Planeación de la demanda,technical
-Pronóstico de la demanda,technical
-S&OP,technical
-Comercio exterior,technical
-Incoterms 2020,technical
-Aduanas,technical
-Clasificación arancelaria,technical
-Pedimentos aduanales,technical
-Programa IMMEX,technical
-Anexo 24,technical
-Anexo 30,technical
-T-MEC,technical
-Reglas de origen,technical
-Certificación OEA,technical
-Importación y exportación,technical
-Tráfico de mercancías,technical
-Complemento Carta Porte,technical
-Embalaje industrial,technical
-Mercancías peligrosas,technical
-Trazabilidad,technical
-Código de barras,technical
-RFID,technical
-SAP MM,technical
-SAP SD,technical
-SAP EWM,technical
-ERP,technical
-Microsoft Dynamics 365,technical
-Odoo,technical
-Indicadores logísticos,technical
-Costos logísticos,technical
-Gestión de pedidos,technical
-Planeación de la capacidad,technical
-Control de materiales en piso,technical
-Contabilidad general,technical
-Contabilidad financiera,technical
-Contabilidad de costos,technical
-Contabilidad gerencial,technical
-NIF,technical
-NIIF (IFRS),technical
-US GAAP,technical
-Estados financieros,technical
-Análisis financiero,technical
-Razones financieras,technical
-Conciliaciones bancarias,technical
-Cuentas por pagar,technical
-Cuentas por cobrar,technical
-Tesorería,technical
-Flujo de efectivo,technical
-Presupuestos,technical
-Control presupuestal,technical
-Planeación financiera,technical
-Modelado financiero,technical
-Evaluación de proyectos de inversión,technical
-VPN y TIR,technical
-Finanzas corporativas,technical
-Costeo ABC,technical
-Costos estándar,technical
-Cierre contable,technical
-Pólizas contables,technical
-Activos fijos,technical
-Depreciación,technical
-Auditoría financiera,technical
-Auditoría interna,technical
-Control interno,technical
-Contabilidad fiscal,technical
-ISR,technical
-IVA,technical
-Declaraciones fiscales,technical
-CFDI 4.0,technical
-Facturación electrónica,technical
-Complemento de pagos,technical
-Portal del SAT,technical
-Contabilidad electrónica,technical
-Nómina,technical
-Cuotas obrero-patronales IMSS,technical
-INFONAVIT,technical
-SUA e IDSE,technical
-Ley Federal del Trabajo,technical
-CONTPAQi,technical
-Aspel COI,technical
-Aspel NOI,technical
-Aspel SAE,technical
-SAP FI,technical
-SAP CO,technical
-QuickBooks,technical
-Excel financiero,technical
-Matemáticas financieras,technical
-Crédito y cobranza,technical
-Análisis de crédito,technical
-Gestión de riesgos financieros,technical
-Mercados financieros,technical
-Instrumentos financieros,technical
-Prevención de lavado de dinero (PLD),technical
-Cumplimiento normativo,technical
-Reportes financieros,technical
-Consolidación financiera,technical
-Costos de producción,technical
-Análisis de costos,technical
-Punto de equilibrio,technical
-Marketing digital,technical
-Mercadotecnia estratégica,technical
-Investigación de mercados,technical
-Segmentación de mercados,technical
-Comportamiento del consumidor,technical
-Branding,technical
-Posicionamiento de marca,technical
-Plan de marketing,technical
-SEO,technical
-SEM,technical
-Google Ads,technical
-Meta Ads,technical
-TikTok Ads,technical
-LinkedIn Ads,technical
-Google Analytics 4,technical
-Google Tag Manager,technical
-Google Search Console,technical
-Analítica web,technical
-Métricas de marketing,technical
-ROI y ROAS,technical
-Marketing de contenidos,technical
-Copywriting,technical
-Gestión de redes sociales,technical
-Community management,technical
-Email marketing,technical
-Mailchimp,technical
-HubSpot,technical
-Inbound marketing,technical
-Automatización de marketing,technical
-Growth marketing,technical
-CRM,technical
-Zoho CRM,technical
-Embudos de venta,technical
-Ventas consultivas,technical
-Ventas B2B,technical
-Prospección de clientes,technical
-Gestión de cuentas clave,technical
-Pronóstico de ventas,technical
-Estrategia de precios,technical
-Comercio electrónico,technical
-Gestión de marketplaces,technical
-Trade marketing,technical
-Merchandising,technical
-Publicidad,technical
-Relaciones públicas,technical
-Marketing de influencers,technical
-Marketing B2B,technical
-Mercadotecnia internacional,technical
-Benchmarking,technical
-Diseño gráfico,technical
-Adobe Photoshop,technical
-Adobe Illustrator,technical
-Canva,technical
-Adobe Premiere Pro,technical
-Edición de video,technical
-Fotografía de producto,technical
-Experiencia del cliente (CX),technical
-Net Promoter Score (NPS),technical
-Servicio al cliente,technical
-Microsoft Excel,technical
-Excel avanzado,technical
-Macros en Excel (VBA),technical
-Microsoft Word,technical
-Microsoft PowerPoint,technical
-Microsoft Outlook,technical
-Microsoft Teams,technical
-Microsoft 365,technical
-Google Workspace,technical
-Google Sheets,technical
-Gestión de proyectos,technical
-PMBOK,technical
-Microsoft Project,technical
-Elaboración de reportes técnicos,technical
-Lectura e interpretación de normas,technical
-Matemáticas aplicadas,technical
-Seguridad industrial,technical
-Higiene industrial,technical
-Normas Oficiales Mexicanas de la STPS,technical
-Bloqueo y etiquetado (LOTO),technical
-Uso de equipo de protección personal,technical
-Trabajos en altura,technical
-Espacios confinados,technical
-Primeros auxilios,technical
-Protección civil,technical
-Manejo de residuos peligrosos,technical
-Gestión ambiental,technical
-Comunicación efectiva,soft
-Comunicación oral,soft
-Comunicación escrita,soft
-Hablar en público,soft
-Escucha activa,soft
-Asertividad,soft
-Persuasión,soft
-Retroalimentación efectiva,soft
-Trabajo en equipo,soft
-Colaboración,soft
-Trabajo multidisciplinario,soft
-Trabajo remoto,soft
-Relaciones interpersonales,soft
-Respeto a la diversidad,soft
-Liderazgo,soft
-Delegación,soft
-Mentoría,soft
-Toma de decisiones,soft
-Gestión del cambio,soft
-Negociación,soft
-Manejo de conflictos,soft
-Resolución de problemas,soft
-Pensamiento crítico,soft
-Pensamiento analítico,soft
-Pensamiento lógico,soft
-Pensamiento sistémico,soft
-Pensamiento estratégico,soft
-Creatividad,soft
-Innovación,soft
-Adaptabilidad,soft
-Flexibilidad,soft
-Tolerancia a la ambigüedad,soft
-Trabajo bajo presión,soft
-Tolerancia a la frustración,soft
-Resiliencia,soft
-Inteligencia emocional,soft
-Empatía,soft
-Gestión del tiempo,soft
-Organización,soft
-Planificación,soft
-Atención al detalle,soft
-Sentido de urgencia,soft
-Seguimiento de instrucciones,soft
-Autogestión,soft
-Autonomía,soft
-Responsabilidad,soft
-Puntualidad,soft
-Proactividad,soft
-Iniciativa,soft
-Compromiso,soft
-Disciplina,soft
-Ética profesional,soft
-Integridad,soft
-Motivación,soft
-Actitud de servicio,soft
-Orientación a resultados,soft
-Orientación al cliente,soft
-Aprendizaje continuo,soft
-Aprendizaje autónomo,soft
-Curiosidad,soft
-Mentalidad de crecimiento,soft
-Emprendimiento,soft
-Visión de negocio,soft
+name,kind,aliases
+Python,technical,
+JavaScript,technical,js
+TypeScript,technical,ts
+Java,technical,
+C#,technical,c sharp|csharp
+C++,technical,cpp
+C,technical,
+PHP,technical,
+Go,technical,golang
+Kotlin,technical,
+Swift,technical,
+Dart,technical,
+Rust,technical,
+Ruby,technical,
+SQL,technical,
+Bash,technical,
+PowerShell,technical,
+HTML,technical,
+CSS,technical,
+Sass,technical,
+Tailwind CSS,technical,
+Bootstrap,technical,
+React,technical,
+Angular,technical,
+Vue.js,technical,
+Next.js,technical,
+Nuxt,technical,
+Svelte,technical,
+Redux,technical,
+jQuery,technical,
+Node.js,technical,
+Express,technical,
+NestJS,technical,
+Django,technical,
+Flask,technical,
+FastAPI,technical,
+Spring Boot,technical,
+.NET,technical,
+ASP.NET Core,technical,
+Entity Framework,technical,
+Laravel,technical,
+Symfony,technical,
+Ruby on Rails,technical,
+Flutter,technical,
+React Native,technical,
+Android,technical,
+iOS,technical,
+Jetpack Compose,technical,
+SwiftUI,technical,
+.NET MAUI,technical,
+Ionic,technical,
+Electron,technical,
+PostgreSQL,technical,
+MySQL,technical,
+MariaDB,technical,
+SQL Server,technical,
+Oracle Database,technical,
+SQLite,technical,
+MongoDB,technical,
+Redis,technical,
+Firebase,technical,
+Supabase,technical,
+Elasticsearch,technical,
+DynamoDB,technical,
+PostGIS,technical,
+Modelado de bases de datos,technical,bd
+Normalización de bases de datos,technical,bd
+PL/SQL,technical,
+T-SQL,technical,
+Procedimientos almacenados,technical,
+ORM,technical,
+REST API,technical,
+GraphQL,technical,
+gRPC,technical,
+WebSockets,technical,
+OpenAPI,technical,
+Postman,technical,
+Microservicios,technical,
+Arquitectura de software,technical,
+Patrones de diseño,technical,
+Programación orientada a objetos,technical,
+Programación funcional,technical,
+Estructuras de datos,technical,
+Algoritmos,technical,
+Principios SOLID,technical,
+Clean Code,technical,
+Domain-Driven Design,technical,
+Git,technical,
+GitHub,technical,
+GitLab,technical,
+Bitbucket,technical,
+Control de versiones,technical,
+Code review,technical,
+Docker,technical,
+Docker Compose,technical,
+Kubernetes,technical,k8s
+Linux,technical,
+Nginx,technical,
+Apache HTTP Server,technical,
+CI/CD,technical,
+GitHub Actions,technical,
+GitLab CI,technical,
+Jenkins,technical,
+Terraform,technical,
+Ansible,technical,
+AWS,technical,
+Microsoft Azure,technical,
+Google Cloud Platform,technical,
+AWS Lambda,technical,
+Amazon S3,technical,
+Amazon EC2,technical,
+Serverless,technical,
+Pruebas unitarias,technical,
+Pruebas de integración,technical,
+Pruebas end-to-end,technical,
+TDD,technical,
+Jest,technical,
+Vitest,technical,
+Cypress,technical,
+Playwright,technical,
+Selenium,technical,
+JUnit,technical,
+PHPUnit,technical,
+Pest,technical,
+pytest,technical,
+Testing Library,technical,
+Pruebas manuales de software,technical,
+Aseguramiento de calidad de software,technical,
+Accesibilidad web,technical,
+Diseño responsivo,technical,
+Diseño UX/UI,technical,
+Figma,technical,
+Prototipado de interfaces,technical,
+Seguridad de aplicaciones web,technical,
+OWASP Top 10,technical,
+OAuth 2.0,technical,
+JWT,technical,
+Autenticación y autorización,technical,
+Ciberseguridad,technical,
+Redes de computadoras,technical,
+TCP/IP,technical,
+Cisco CCNA,technical,
+Administración de servidores,technical,
+Virtualización,technical,
+VMware,technical,
+Windows Server,technical,
+Active Directory,technical,
+Soporte técnico,technical,
+Mesa de ayuda,technical,
+ITIL,technical,
+Scrum,technical,
+Metodologías ágiles,technical,
+Jira,technical,
+Confluence,technical,
+Trello,technical,
+Análisis de requerimientos,technical,
+UML,technical,
+Documentación técnica,technical,
+WordPress,technical,
+Shopify,technical,
+Salesforce,technical,
+SAP ABAP,technical,
+Power Apps,technical,
+Power Automate,technical,
+Low-code,technical,
+Webpack,technical,
+Vite,technical,
+npm,technical,
+Composer,technical,
+Maven,technical,
+Gradle,technical,
+Visual Studio Code,technical,
+Unity,technical,
+Desarrollo web,technical,
+Desarrollo de aplicaciones móviles,technical,
+Desarrollo backend,technical,
+Desarrollo frontend,technical,
+Consumo de APIs,technical,
+Expresiones regulares,technical,
+Programación concurrente,technical,
+R,technical,
+Pandas,technical,
+NumPy,technical,
+SciPy,technical,
+Matplotlib,technical,
+Seaborn,technical,
+Plotly,technical,
+Scikit-learn,technical,
+TensorFlow,technical,
+Keras,technical,
+PyTorch,technical,
+Jupyter,technical,
+Google Colab,technical,
+Estadística descriptiva,technical,
+Estadística inferencial,technical,
+Probabilidad,technical,
+Análisis de regresión,technical,
+Series de tiempo,technical,
+Análisis predictivo,technical,
+Aprendizaje automático,technical,ml|machine learning
+Aprendizaje profundo,technical,dl|deep learning
+Redes neuronales,technical,
+Árboles de decisión,technical,
+Clustering,technical,
+Procesamiento de lenguaje natural,technical,nlp|pln
+Visión por computadora,technical,
+OpenCV,technical,
+IA generativa,technical,
+Ingeniería de prompts,technical,
+Modelos de lenguaje (LLM),technical,
+Hugging Face,technical,
+MLOps,technical,
+MLflow,technical,
+Análisis de datos,technical,
+Análisis exploratorio de datos,technical,
+Limpieza de datos,technical,
+Visualización de datos,technical,
+Minería de datos,technical,
+Big Data,technical,
+Apache Spark,technical,
+Hadoop,technical,
+Apache Kafka,technical,
+Apache Airflow,technical,
+ETL,technical,
+Almacenes de datos,technical,
+Modelado dimensional,technical,
+Databricks,technical,
+Snowflake,technical,
+BigQuery,technical,
+Amazon Redshift,technical,
+dbt,technical,
+Power BI,technical,
+Tableau,technical,
+Looker Studio,technical,
+Qlik Sense,technical,
+DAX,technical,
+Power Query,technical,
+Tablas dinámicas,technical,
+Inteligencia de negocios,technical,bi|business intelligence
+Tableros de control (KPI),technical,
+Pruebas A/B,technical,
+Web scraping,technical,
+Beautiful Soup,technical,
+Gobierno de datos,technical,
+Calidad de datos,technical,
+Optimización matemática,technical,
+Investigación de operaciones,technical,
+SPSS,technical,
+SAS,technical,
+KNIME,technical,
+Alteryx,technical,
+Análisis geoespacial,technical,
+QGIS,technical,
+ArcGIS,technical,
+Storytelling con datos,technical,
+PLC,technical,
+Programación de PLC,technical,
+Allen-Bradley,technical,
+Siemens TIA Portal,technical,
+Siemens S7-1200,technical,
+Siemens S7-1500,technical,
+Studio 5000,technical,
+RSLogix 500,technical,
+CODESYS,technical,
+Diagrama de escalera (Ladder),technical,
+Texto estructurado (IEC 61131-3),technical,
+GRAFCET,technical,
+HMI,technical,
+SCADA,technical,
+FactoryTalk View,technical,
+WinCC,technical,
+Ignition SCADA,technical,
+Variadores de frecuencia,technical,
+Servomotores,technical,
+Motores a pasos,technical,
+Control de motores eléctricos,technical,
+Neumática,technical,
+Electroneumática,technical,
+Hidráulica,technical,
+Electrohidráulica,technical,
+FluidSIM,technical,
+Sensores industriales,technical,
+Actuadores,technical,
+Instrumentación industrial,technical,
+Control de procesos,technical,
+Control PID,technical,
+Sistemas de control,technical,
+Teoría de control,technical,
+Robótica industrial,technical,
+Programación de robots industriales,technical,
+Robots FANUC,technical,
+Robots ABB,technical,
+RobotStudio,technical,
+Robots KUKA,technical,
+Robots Yaskawa Motoman,technical,
+Robots colaborativos,technical,
+Universal Robots,technical,
+Visión artificial industrial,technical,
+Cognex In-Sight,technical,
+Keyence,technical,
+Redes industriales,technical,
+PROFINET,technical,
+PROFIBUS,technical,
+EtherNet/IP,technical,
+Modbus,technical,
+IO-Link,technical,
+OPC UA,technical,
+Industria 4.0,technical,
+Internet industrial de las cosas (IIoT),technical,
+Gemelo digital,technical,
+Automatización industrial,technical,
+Integración de sistemas automatizados,technical,
+Celdas de manufactura,technical,
+Mantenimiento industrial,technical,
+Mantenimiento preventivo,technical,
+Mantenimiento correctivo,technical,
+Mantenimiento predictivo,technical,
+Análisis de vibraciones,technical,
+Termografía industrial,technical,
+Lubricación industrial,technical,
+Diseño mecánico,technical,
+Diseño de máquinas,technical,
+Mecanismos,technical,
+Resistencia de materiales,technical,
+Transmisión de potencia,technical,
+Diseño de herramentales,technical,
+Diseño de dispositivos de sujeción (fixtures),technical,
+MATLAB,technical,
+Simulink,technical,
+LabVIEW,technical,
+ROS,technical,
+Arduino,technical,
+Raspberry Pi,technical,
+Diagramas eléctricos de control,technical,
+Tableros de control eléctrico,technical,
+Seguridad de máquinas (ISO 13849),technical,
+Impresión 3D,technical,
+Manufactura aditiva,technical,
+Bandas transportadoras,technical,
+Sistemas de manejo de materiales,technical,
+Ingeniería de confiabilidad,technical,
+Cinemática de robots,technical,
+Lean Manufacturing,technical,
+5S,technical,
+Kaizen,technical,
+Kanban,technical,
+Mapeo de flujo de valor (VSM),technical,
+SMED,technical,
+TPM,technical,
+OEE,technical,
+Poka-Yoke,technical,
+Jidoka,technical,
+Just in Time,technical,
+Heijunka,technical,
+Trabajo estandarizado,technical,
+Gemba,technical,
+Andon,technical,
+Hoshin Kanri,technical,
+Six Sigma,technical,
+Lean Six Sigma,technical,
+Six Sigma Yellow Belt,technical,
+Six Sigma Green Belt,technical,
+DMAIC,technical,
+Control estadístico de procesos,technical,
+Gráficas de control,technical,
+Capacidad de procesos (Cp y Cpk),technical,
+AMEF,technical,
+PFMEA,technical,
+DFMEA,technical,
+Plan de control,technical,
+APQP,technical,
+PPAP,technical,
+MSA,technical,
+Gage R&R,technical,
+8D,technical,
+Análisis de causa raíz,technical,
+Diagrama de Ishikawa,technical,
+5 porqués,technical,
+Reporte A3,technical,
+Ciclo PDCA,technical,
+Core Tools AIAG,technical,
+IATF 16949,technical,
+ISO 9001,technical,
+ISO 14001,technical,
+ISO 45001,technical,
+ISO 13485,technical,
+AS9100,technical,
+Auditorías de calidad,technical,
+Auditoría por capas (LPA),technical,
+Sistemas de gestión de calidad,technical,
+Inspección de calidad,technical,
+Control de calidad,technical,
+Aseguramiento de calidad,technical,
+Ingeniería de calidad,technical,
+Atención a quejas de cliente,technical,
+Mejora continua,technical,
+Gestión de la calidad total,technical,
+Metrología,technical,
+Metrología dimensional,technical,
+Calibración de instrumentos,technical,
+Máquina de medición por coordenadas (CMM),technical,
+Calibrador vernier,technical,
+Micrómetro,technical,
+GD&T,technical,
+Interpretación de planos,technical,
+Dibujo técnico,technical,
+CAD,technical,
+CAM,technical,
+AutoCAD,technical,
+SolidWorks,technical,
+CATIA,technical,
+Siemens NX,technical,
+Autodesk Inventor,technical,
+Fusion 360,technical,
+Creo Parametric,technical,
+Mastercam,technical,
+CNC,technical,
+Programación CNC,technical,
+Código G,technical,
+Torno CNC,technical,
+Centro de maquinado CNC,technical,
+Fresadora,technical,
+Torno convencional,technical,
+Maquinado,technical,
+Herramientas de corte,technical,
+Controles FANUC CNC,technical,
+Haas CNC,technical,
+Soldadura,technical,
+Soldadura MIG,technical,
+Soldadura TIG,technical,
+Soldadura por arco (SMAW),technical,
+Soldadura por puntos,technical,
+Inyección de plástico,technical,
+Moldes de inyección,technical,
+Troquelado,technical,
+Estampado de metales,technical,
+Tratamientos térmicos,technical,
+Pintura industrial,technical,
+Ensamble,technical,
+Selección de materiales,technical,
+Ciencia de materiales,technical,
+Ensayos no destructivos,technical,
+Ensayos de materiales,technical,
+Ingeniería de procesos,technical,
+Ingeniería industrial,technical,
+Ingeniería de manufactura,technical,
+Industrialización de productos (NPI),technical,
+Estudio de tiempos y movimientos,technical,
+Balanceo de líneas,technical,
+Distribución de planta,technical,
+Ergonomía,technical,
+Simulación de procesos,technical,
+FlexSim,technical,
+Planeación de la producción,technical,
+Programación de la producción,technical,
+MRP,technical,
+Teoría de restricciones,technical,
+Documentación de procesos,technical,
+Instrucciones de trabajo,technical,
+Diseño de experimentos (DOE),technical,
+Minitab,technical,
+Costos de manufactura,technical,
+Productividad industrial,technical,
+Electrónica analógica,technical,
+Electrónica digital,technical,
+Electrónica de potencia,technical,
+Circuitos eléctricos,technical,
+Análisis de circuitos,technical,
+Diseño de circuitos,technical,
+Simulación de circuitos,technical,
+Diseño de PCB,technical,
+Altium Designer,technical,
+KiCad,technical,
+Autodesk Eagle,technical,
+OrCAD,technical,
+Proteus,technical,
+Multisim,technical,
+LTspice,technical,
+Lectura de diagramas electrónicos,technical,
+Componentes electrónicos,technical,
+Soldadura electrónica,technical,
+Soldadura SMD,technical,
+Retrabajo de tarjetas electrónicas,technical,
+IPC-A-610,technical,
+IPC J-STD-001,technical,
+IPC/WHMA-A-620,technical,
+Tecnología de montaje superficial (SMT),technical,
+Control de descargas electrostáticas (ESD),technical,
+Microcontroladores,technical,
+Microcontroladores PIC,technical,
+STM32,technical,
+ESP32,technical,
+Sistemas embebidos,technical,
+Programación de sistemas embebidos,technical,
+FPGA,technical,
+VHDL,technical,
+Verilog,technical,
+FreeRTOS,technical,
+I2C,technical,
+SPI,technical,
+UART,technical,
+CAN bus,technical,
+Internet de las cosas (IoT),technical,
+MQTT,technical,
+LoRaWAN,technical,
+Bluetooth Low Energy,technical,
+Osciloscopio,technical,
+Multímetro,technical,
+Generador de funciones,technical,
+Instrumentación electrónica,technical,
+Fuentes de alimentación,technical,
+Acondicionamiento de señales,technical,
+Procesamiento digital de señales,technical,
+Telecomunicaciones,technical,
+Radiofrecuencia,technical,
+Antenas,technical,
+Fibra óptica,technical,
+Cableado estructurado,technical,
+Instalaciones eléctricas,technical,
+Instalaciones eléctricas residenciales,technical,
+Instalaciones eléctricas industriales,technical,
+NOM-001-SEDE,technical,
+Subestaciones eléctricas,technical,
+Transformadores,technical,
+Máquinas eléctricas,technical,
+Sistemas fotovoltaicos,technical,
+Energías renovables,technical,
+Eficiencia energética,technical,
+Calidad de la energía,technical,
+Baterías y almacenamiento de energía,technical,
+Electromovilidad,technical,
+Electrónica automotriz,technical,
+Diagnóstico automotriz,technical,
+Pruebas eléctricas,technical,
+Pruebas en circuito (ICT),technical,
+Pruebas funcionales de tarjetas,technical,
+Arneses eléctricos,technical,
+Domótica,technical,
+Sistemas de videovigilancia (CCTV),technical,
+Mantenimiento electrónico,technical,
+Control electrónico,technical,
+Electricidad industrial,technical,
+Logística,technical,
+Cadena de suministro,technical,
+Gestión de inventarios,technical,
+Control de inventarios,technical,
+Análisis ABC de inventarios,technical,
+Conteo cíclico,technical,
+Valuación de inventarios,technical,
+Lote económico (EOQ),technical,
+Gestión de almacenes,technical,
+WMS,technical,
+TMS,technical,
+Picking y empaque,technical,
+Cross-docking,technical,
+FIFO y FEFO,technical,
+Recepción y embarque de mercancías,technical,
+Operación de montacargas,technical,
+Seguridad en almacenes,technical,
+Distribución,technical,
+Transporte de carga,technical,
+Planeación de rutas,technical,
+Logística de última milla,technical,
+Logística inversa,technical,
+Logística internacional,technical,
+Gestión de flotillas,technical,
+Fletes y tarifas,technical,
+Compras,technical,
+Abastecimiento estratégico,technical,
+Gestión de proveedores,technical,
+Desarrollo de proveedores,technical,
+Planeación de materiales,technical,
+Planeación de la demanda,technical,
+Pronóstico de la demanda,technical,
+S&OP,technical,
+Comercio exterior,technical,
+Incoterms 2020,technical,
+Aduanas,technical,
+Clasificación arancelaria,technical,
+Pedimentos aduanales,technical,
+Programa IMMEX,technical,
+Anexo 24,technical,
+Anexo 30,technical,
+T-MEC,technical,
+Reglas de origen,technical,
+Certificación OEA,technical,
+Importación y exportación,technical,
+Tráfico de mercancías,technical,
+Complemento Carta Porte,technical,
+Embalaje industrial,technical,
+Mercancías peligrosas,technical,
+Trazabilidad,technical,
+Código de barras,technical,
+RFID,technical,
+SAP MM,technical,
+SAP SD,technical,
+SAP EWM,technical,
+ERP,technical,
+Microsoft Dynamics 365,technical,
+Odoo,technical,
+Indicadores logísticos,technical,
+Costos logísticos,technical,
+Gestión de pedidos,technical,
+Planeación de la capacidad,technical,
+Control de materiales en piso,technical,
+Contabilidad general,technical,
+Contabilidad financiera,technical,
+Contabilidad de costos,technical,
+Contabilidad gerencial,technical,
+NIF,technical,
+NIIF (IFRS),technical,
+US GAAP,technical,
+Estados financieros,technical,
+Análisis financiero,technical,
+Razones financieras,technical,
+Conciliaciones bancarias,technical,
+Cuentas por pagar,technical,
+Cuentas por cobrar,technical,
+Tesorería,technical,
+Flujo de efectivo,technical,
+Presupuestos,technical,
+Control presupuestal,technical,
+Planeación financiera,technical,
+Modelado financiero,technical,
+Evaluación de proyectos de inversión,technical,
+VPN y TIR,technical,
+Finanzas corporativas,technical,
+Costeo ABC,technical,
+Costos estándar,technical,
+Cierre contable,technical,
+Pólizas contables,technical,
+Activos fijos,technical,
+Depreciación,technical,
+Auditoría financiera,technical,
+Auditoría interna,technical,
+Control interno,technical,
+Contabilidad fiscal,technical,
+ISR,technical,
+IVA,technical,
+Declaraciones fiscales,technical,
+CFDI 4.0,technical,
+Facturación electrónica,technical,
+Complemento de pagos,technical,
+Portal del SAT,technical,
+Contabilidad electrónica,technical,
+Nómina,technical,
+Cuotas obrero-patronales IMSS,technical,
+INFONAVIT,technical,
+SUA e IDSE,technical,
+Ley Federal del Trabajo,technical,
+CONTPAQi,technical,
+Aspel COI,technical,
+Aspel NOI,technical,
+Aspel SAE,technical,
+SAP FI,technical,
+SAP CO,technical,
+QuickBooks,technical,
+Excel financiero,technical,
+Matemáticas financieras,technical,
+Crédito y cobranza,technical,
+Análisis de crédito,technical,
+Gestión de riesgos financieros,technical,
+Mercados financieros,technical,
+Instrumentos financieros,technical,
+Prevención de lavado de dinero (PLD),technical,
+Cumplimiento normativo,technical,
+Reportes financieros,technical,
+Consolidación financiera,technical,
+Costos de producción,technical,
+Análisis de costos,technical,
+Punto de equilibrio,technical,
+Marketing digital,technical,
+Mercadotecnia estratégica,technical,
+Investigación de mercados,technical,
+Segmentación de mercados,technical,
+Comportamiento del consumidor,technical,
+Branding,technical,
+Posicionamiento de marca,technical,
+Plan de marketing,technical,
+SEO,technical,
+SEM,technical,
+Google Ads,technical,
+Meta Ads,technical,
+TikTok Ads,technical,
+LinkedIn Ads,technical,
+Google Analytics 4,technical,
+Google Tag Manager,technical,
+Google Search Console,technical,
+Analítica web,technical,
+Métricas de marketing,technical,
+ROI y ROAS,technical,
+Marketing de contenidos,technical,
+Copywriting,technical,
+Gestión de redes sociales,technical,
+Community management,technical,
+Email marketing,technical,
+Mailchimp,technical,
+HubSpot,technical,
+Inbound marketing,technical,
+Automatización de marketing,technical,
+Growth marketing,technical,
+CRM,technical,
+Zoho CRM,technical,
+Embudos de venta,technical,
+Ventas consultivas,technical,
+Ventas B2B,technical,
+Prospección de clientes,technical,
+Gestión de cuentas clave,technical,
+Pronóstico de ventas,technical,
+Estrategia de precios,technical,
+Comercio electrónico,technical,
+Gestión de marketplaces,technical,
+Trade marketing,technical,
+Merchandising,technical,
+Publicidad,technical,
+Relaciones públicas,technical,
+Marketing de influencers,technical,
+Marketing B2B,technical,
+Mercadotecnia internacional,technical,
+Benchmarking,technical,
+Diseño gráfico,technical,
+Adobe Photoshop,technical,
+Adobe Illustrator,technical,
+Canva,technical,
+Adobe Premiere Pro,technical,
+Edición de video,technical,
+Fotografía de producto,technical,
+Experiencia del cliente (CX),technical,
+Net Promoter Score (NPS),technical,
+Servicio al cliente,technical,
+Microsoft Excel,technical,
+Excel avanzado,technical,
+Macros en Excel (VBA),technical,
+Microsoft Word,technical,
+Microsoft PowerPoint,technical,
+Microsoft Outlook,technical,
+Microsoft Teams,technical,
+Microsoft 365,technical,
+Google Workspace,technical,
+Google Sheets,technical,
+Gestión de proyectos,technical,
+PMBOK,technical,
+Microsoft Project,technical,
+Elaboración de reportes técnicos,technical,
+Lectura e interpretación de normas,technical,
+Matemáticas aplicadas,technical,
+Seguridad industrial,technical,
+Higiene industrial,technical,
+Normas Oficiales Mexicanas de la STPS,technical,
+Bloqueo y etiquetado (LOTO),technical,
+Uso de equipo de protección personal,technical,
+Trabajos en altura,technical,
+Espacios confinados,technical,
+Primeros auxilios,technical,
+Protección civil,technical,
+Manejo de residuos peligrosos,technical,
+Gestión ambiental,technical,
+Comunicación efectiva,soft,
+Comunicación oral,soft,
+Comunicación escrita,soft,
+Hablar en público,soft,
+Escucha activa,soft,
+Asertividad,soft,
+Persuasión,soft,
+Retroalimentación efectiva,soft,
+Trabajo en equipo,soft,
+Colaboración,soft,
+Trabajo multidisciplinario,soft,
+Trabajo remoto,soft,
+Relaciones interpersonales,soft,
+Respeto a la diversidad,soft,
+Liderazgo,soft,
+Delegación,soft,
+Mentoría,soft,
+Toma de decisiones,soft,
+Gestión del cambio,soft,
+Negociación,soft,
+Manejo de conflictos,soft,
+Resolución de problemas,soft,
+Pensamiento crítico,soft,
+Pensamiento analítico,soft,
+Pensamiento lógico,soft,
+Pensamiento sistémico,soft,
+Pensamiento estratégico,soft,
+Creatividad,soft,
+Innovación,soft,
+Adaptabilidad,soft,
+Flexibilidad,soft,
+Tolerancia a la ambigüedad,soft,
+Trabajo bajo presión,soft,
+Tolerancia a la frustración,soft,
+Resiliencia,soft,
+Inteligencia emocional,soft,
+Empatía,soft,
+Gestión del tiempo,soft,
+Organización,soft,
+Planificación,soft,
+Atención al detalle,soft,
+Sentido de urgencia,soft,
+Seguimiento de instrucciones,soft,
+Autogestión,soft,
+Autonomía,soft,
+Responsabilidad,soft,
+Puntualidad,soft,
+Proactividad,soft,
+Iniciativa,soft,
+Compromiso,soft,
+Disciplina,soft,
+Ética profesional,soft,
+Integridad,soft,
+Motivación,soft,
+Actitud de servicio,soft,
+Orientación a resultados,soft,
+Orientación al cliente,soft,
+Aprendizaje continuo,soft,
+Aprendizaje autónomo,soft,
+Curiosidad,soft,
+Mentalidad de crecimiento,soft,
+Emprendimiento,soft,
+Visión de negocio,soft,

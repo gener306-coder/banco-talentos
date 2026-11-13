@@ -17,6 +17,9 @@ export interface StudentCv {
 }
 
 export interface SkillInput { name: string; kind: SkillKind }
+/** Cómo coincidió una sugerencia del catálogo (T-S10-01): por prefijo literal, por alias exacto o por similitud ortográfica. */
+export type SkillMatch = 'prefix' | 'alias' | 'fuzzy'
+export interface SkillSuggestion extends CvSkill { match: SkillMatch }
 export interface CertificationInput {
   id?: number
   name: string
@@ -47,6 +50,10 @@ function list<T>(value: unknown, parse: (item: Shape) => T | null): T[] {
 // Cada parser conserva solo los campos del contrato.
 const skill = (item: Shape): CvSkill | null =>
   isId(item.id) && isText(item.name) && isSkillKind(item.kind) ? { id: item.id, name: item.name, kind: item.kind } : null
+const skillSuggestion = (item: Shape): SkillSuggestion | null => {
+  const base = skill(item)
+  return base && (item.match === 'prefix' || item.match === 'alias' || item.match === 'fuzzy') ? { ...base, match: item.match } : null
+}
 const language = (item: Shape): CvLanguage | null =>
   isCvLanguage(item.language_code) && isLanguageLevel(item.level) ? { language_code: item.language_code, level: item.level } : null
 const certification = (item: Shape): CvCertification | null =>
@@ -116,11 +123,11 @@ export async function setCertificationReview(id: number, certificationId: number
   }))
 }
 
-/** Autocompletar del catálogo compartido de habilidades. */
-export async function searchSkills(query: string, signal?: AbortSignal): Promise<CvSkill[]> {
+/** Autocompletar del catálogo compartido de habilidades: primero por prefijo o alias y luego por similitud (T-S10-01). */
+export async function searchSkills(query: string, signal?: AbortSignal): Promise<SkillSuggestion[]> {
   const response = await request(`/api/skills?q=${encodeURIComponent(query)}`, { signal })
   if (!isObject(response)) throw new ApiError(502)
-  return list(response.data, skill)
+  return list(response.data, skillSuggestion)
 }
 
 /** Lo que hay que enviar para conservar una certificación tal como está (con su credencial). */

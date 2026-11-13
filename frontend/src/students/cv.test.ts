@@ -73,9 +73,21 @@ describe('cliente del CV HU-S3-01', () => {
     expect(fetchMock.mock.calls[1][1]?.method).toBe('PATCH')
     expect(sent()).toEqual({ verified: true })
 
-    fetchMock.mockResolvedValueOnce(Response.json({ data: [{ id: 1, name: 'C#', kind: 'technical' }] }))
-    await expect(searchSkills('c# ')).resolves.toEqual([{ id: 1, name: 'C#', kind: 'technical' }])
+    const found = [
+      { id: 1, name: 'C#', kind: 'technical', match: 'prefix' },
+      { id: 3, name: 'C++', kind: 'technical', match: 'alias' },
+      { id: 2, name: 'JavaScript', kind: 'technical', match: 'fuzzy' },
+    ]
+    fetchMock.mockResolvedValueOnce(Response.json({ data: found }))
+    await expect(searchSkills('c# ')).resolves.toEqual(found)
     expect(fetchMock.mock.calls[2][0]).toBe('/api/skills?q=c%23%20')
+  })
+
+  it('rechaza sugerencias sin una coincidencia válida (T-S10-01 CA-03)', async () => {
+    for (const match of [undefined, 'exact']) {
+      fetchMock.mockResolvedValueOnce(Response.json({ data: [{ id: 1, name: 'C#', kind: 'technical', match }] }))
+      await expect(searchSkills('c#')).rejects.toMatchObject({ status: 502 })
+    }
   })
 })
 

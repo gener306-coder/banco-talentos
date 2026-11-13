@@ -109,7 +109,7 @@ describe('titular', () => {
 
 describe('habilidades', () => {
   it('sugiere del catálogo y agrega la habilidad con el tipo del catálogo', async () => {
-    skillsMock.mockResolvedValue(Response.json({ data: [{ id: 8, name: 'Liderazgo', kind: 'soft' }, { id: 9, name: 'Lighthouse', kind: 'technical' }] }))
+    skillsMock.mockResolvedValue(Response.json({ data: [{ id: 8, name: 'Liderazgo', kind: 'soft', match: 'prefix' }, { id: 9, name: 'Lighthouse', kind: 'technical', match: 'prefix' }] }))
     const region = await section('Habilidades')
     const input = within(region).getByRole('combobox', { name: 'Agregar habilidad' })
     fireEvent.change(input, { target: { value: 'li' } })
@@ -126,8 +126,86 @@ describe('habilidades', () => {
     expect(input).toHaveValue('')
   })
 
+  it('no preselecciona una sugerencia aproximada: Enter agrega lo escrito (HU-S10-02 CA-01)', async () => {
+    skillsMock.mockResolvedValue(Response.json({ data: [{ id: 7, name: 'Vuex', kind: 'technical', match: 'fuzzy' }] }))
+    const region = await section('Habilidades')
+    const input = within(region).getByRole('combobox', { name: 'Agregar habilidad' })
+    fireEvent.change(input, { target: { value: 'Vue' } })
+    const fuzzy = await within(region).findByRole('option', { name: /^Vuex/ })
+
+    expect(fuzzy).toHaveAttribute('aria-selected', 'false')
+    expect(within(region).getByRole('option', { name: /Agregar «Vue» como nueva/ })).toHaveAttribute('aria-selected', 'false')
+    expect(input).not.toHaveAttribute('aria-activedescendant')
+    fireEvent.keyDown(input, { key: 'Enter' })
+
+    const technical = within(region).getByRole('list', { name: 'Técnicas' })
+    expect(within(technical).getByText('Vue')).toBeInTheDocument()
+    expect(within(technical).queryByText('Vuex')).not.toBeInTheDocument()
+  })
+
+  it('una sugerencia aproximada se elige con las flechas (HU-S10-02 CA-01)', async () => {
+    skillsMock.mockResolvedValue(Response.json({ data: [{ id: 5, name: 'JavaScript', kind: 'technical', match: 'fuzzy' }] }))
+    const region = await section('Habilidades')
+    const input = within(region).getByRole('combobox', { name: 'Agregar habilidad' })
+    fireEvent.change(input, { target: { value: 'javscript' } })
+    const fuzzy = await within(region).findByRole('option', { name: /^JavaScript/ })
+    expect(fuzzy).toHaveAttribute('aria-selected', 'false')
+
+    fireEvent.keyDown(input, { key: 'ArrowDown' })
+    expect(fuzzy).toHaveAttribute('aria-selected', 'true')
+    fireEvent.keyDown(input, { key: 'Enter' })
+
+    const technical = within(region).getByRole('list', { name: 'Técnicas' })
+    expect(within(technical).getByText('JavaScript')).toBeInTheDocument()
+    expect(within(technical).queryByText('javscript')).not.toBeInTheDocument()
+  })
+
+  it('preselecciona la primera sugerencia por prefijo aunque le sigan aproximadas (HU-S10-02 CA-02)', async () => {
+    skillsMock.mockResolvedValue(Response.json({ data: [
+      { id: 1, name: 'React', kind: 'technical', match: 'prefix' },
+      { id: 2, name: 'Preact', kind: 'technical', match: 'fuzzy' },
+    ] }))
+    const region = await section('Habilidades')
+    const input = within(region).getByRole('combobox', { name: 'Agregar habilidad' })
+    fireEvent.change(input, { target: { value: 'react' } })
+    const options = within(within(region).getByRole('listbox', { name: 'Sugerencias de habilidades' }))
+
+    await waitFor(() => expect(options.getAllByRole('option').map((option) => option.getAttribute('aria-selected'))).toEqual(['true', 'false']))
+    fireEvent.keyDown(input, { key: 'Enter' })
+    expect(within(within(region).getByRole('list', { name: 'Técnicas' })).getByText('React')).toBeInTheDocument()
+  })
+
+  it('preselecciona una sugerencia por alias y Enter la agrega (HU-S10-02 CA-02)', async () => {
+    skillsMock.mockResolvedValue(Response.json({ data: [
+      { id: 5, name: 'JavaScript', kind: 'technical', match: 'alias' },
+      { id: 6, name: 'JSON Schema', kind: 'technical', match: 'prefix' },
+    ] }))
+    const region = await section('Habilidades')
+    const input = within(region).getByRole('combobox', { name: 'Agregar habilidad' })
+    fireEvent.change(input, { target: { value: 'js' } })
+
+    expect(await within(region).findByRole('option', { name: /^JavaScript/ })).toHaveAttribute('aria-selected', 'true')
+    fireEvent.keyDown(input, { key: 'Enter' })
+    const technical = within(region).getByRole('list', { name: 'Técnicas' })
+    expect(within(technical).getByText('JavaScript')).toBeInTheDocument()
+    expect(within(technical).queryByText('js')).not.toBeInTheDocument()
+  })
+
+  it('si la sugerencia por prefijo ya está en la lista, no preselecciona la aproximada que queda primero (HU-S10-02)', async () => {
+    cv.public.skills = [{ id: 1, name: 'React', kind: 'technical' }]
+    skillsMock.mockResolvedValue(Response.json({ data: [
+      { id: 1, name: 'React', kind: 'technical', match: 'prefix' },
+      { id: 2, name: 'Preact', kind: 'technical', match: 'fuzzy' },
+    ] }))
+    const region = await section('Habilidades')
+    const input = within(region).getByRole('combobox', { name: 'Agregar habilidad' })
+    fireEvent.change(input, { target: { value: 'react' } })
+
+    expect(await within(region).findByRole('option', { name: /^Preact/ })).toHaveAttribute('aria-selected', 'false')
+  })
+
   it('agrega una habilidad nueva con el tipo elegido y navega con las flechas', async () => {
-    skillsMock.mockResolvedValue(Response.json({ data: [{ id: 9, name: 'Contabilidad', kind: 'technical' }] }))
+    skillsMock.mockResolvedValue(Response.json({ data: [{ id: 9, name: 'Contabilidad', kind: 'technical', match: 'prefix' }] }))
     const region = await section('Habilidades')
     fireEvent.click(within(region).getByLabelText('Blanda'))
     const input = within(region).getByRole('combobox', { name: 'Agregar habilidad' })
@@ -160,7 +238,7 @@ describe('habilidades', () => {
   })
 
   it('cierra la lista con Escape', async () => {
-    skillsMock.mockResolvedValue(Response.json({ data: [{ id: 9, name: 'Excel', kind: 'technical' }] }))
+    skillsMock.mockResolvedValue(Response.json({ data: [{ id: 9, name: 'Excel', kind: 'technical', match: 'prefix' }] }))
     const region = await section('Habilidades')
     const input = within(region).getByRole('combobox', { name: 'Agregar habilidad' })
     fireEvent.change(input, { target: { value: 'ex' } })

@@ -10,6 +10,7 @@ class Skill extends Model
 {
     protected function casts(): array
     {
-        return ['kind' => SkillKind::class];
+        // aliases: abreviaturas normalizadas con las que también se busca la habilidad (T-S10-01).
+        return ['kind' => SkillKind::class, 'aliases' => 'array'];
     }
 }

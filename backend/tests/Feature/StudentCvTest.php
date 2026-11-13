@@ -207,8 +207,8 @@ describe('habilidades y catálogo', function () {
 
         $this->browserRequest('GET', '/api/skills?q=REAC')->assertOk()
             ->assertExactJson(['data' => [
-                ['id' => Skill::where('slug', 'react')->value('id'), 'name' => 'React', 'kind' => 'technical'],
-                ['id' => Skill::where('slug', 'react native')->value('id'), 'name' => 'React Native', 'kind' => 'technical'],
+                ['id' => Skill::where('slug', 'react')->value('id'), 'name' => 'React', 'kind' => 'technical', 'match' => 'prefix'],
+                ['id' => Skill::where('slug', 'react native')->value('id'), 'name' => 'React Native', 'kind' => 'technical', 'match' => 'prefix'],
             ]]);
         $this->browserRequest('GET', '/api/skills?q=excel')->assertOk()->assertJsonCount(10, 'data');
         $this->browserRequest('GET', '/api/skills?q='.urlencode('%'))->assertOk()->assertJsonCount(0, 'data');
