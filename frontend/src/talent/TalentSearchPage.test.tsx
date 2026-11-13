@@ -110,7 +110,9 @@ describe('buscador de talento HU-S4-05', () => {
     fireEvent.change(within(form).getByLabelText('Estado del alumno'), { target: { value: '28' } })
     fireEvent.change(within(form).getByLabelText('Distancia máxima'), { target: { value: '50' } })
     expect(talentMock).toHaveBeenCalledTimes(1)
-    fireEvent.click(within(form).getByRole('button', { name: 'Buscar' }))
+    // T-S11-01 CA-05: con filtros editados sin aplicar, el botón lo indica; al aplicarlos vuelve a «Buscar».
+    fireEvent.click(within(form).getByRole('button', { name: 'Aplicar filtros' }))
+    expect(within(form).getByRole('button', { name: 'Buscar' })).not.toHaveClass('talent-pending')
 
     expect(await screen.findByText('Ningún perfil coincide con los filtros.')).toBeInTheDocument()
     expect(Object.fromEntries(lastQuery())).toEqual({
@@ -169,6 +171,43 @@ describe('buscador de talento HU-S4-05', () => {
     fireEvent.keyDown(skill, { key: 'Enter' })
     expect(within(form).getByText(/Elige una habilidad de las sugerencias/)).toBeInTheDocument()
     expect(within(within(form).getByRole('list', { name: 'Habilidades requeridas' })).getAllByRole('listitem')).toHaveLength(1)
+    // T-S11-01 CA-03: cuando el catálogo responde sin resultados, el campo lo dice.
+    expect(await within(form).findByText('Sin coincidencias en el catálogo')).toBeInTheDocument()
+  })
+
+  it('explica las sugerencias, quita con Retroceso y devuelve el foco al campo (T-S11-01 CA-03, CA-04, CA-05)', async () => {
+    talentMock.mockResolvedValue(page([card]))
+    renderApp()
+    await screen.findByRole('article', { name: 'Analista de datos' })
+    const form = screen.getByRole('search', { name: 'Filtros de búsqueda' })
+    const skill = within(form).getByRole('combobox', { name: 'Agregar habilidad (todas requeridas)' })
+    expect(within(form).getByRole('button', { name: 'Buscar' })).toBeInTheDocument()
+
+    // Una sugerencia por alias muestra el alias escrito; una aproximada, «¿Quisiste decir?».
+    fireEvent.change(skill, { target: { value: 'JS' } })
+    expect(within(await within(form).findByRole('option', { name: /JavaScript/ })).getByText('js')).toBeInTheDocument()
+    fireEvent.keyDown(skill, { key: 'Enter' })
+    fireEvent.change(skill, { target: { value: 'pyhton' } })
+    expect(within(await within(form).findByRole('option', { name: /Python/ })).getByText('¿Quisiste decir?')).toBeInTheDocument()
+    fireEvent.keyDown(skill, { key: 'ArrowDown' })
+    fireEvent.keyDown(skill, { key: 'Enter' })
+    const chips = within(form).getByRole('list', { name: 'Habilidades requeridas' })
+    expect(within(chips).getAllByRole('listitem')).toHaveLength(2)
+    // Hay filtros sin aplicar.
+    expect(within(form).getByRole('button', { name: 'Aplicar filtros' })).toHaveClass('talent-pending')
+
+    // Quitar con el botón devuelve el foco al campo.
+    fireEvent.click(within(form).getByRole('button', { name: 'Quitar JavaScript' }))
+    expect(skill).toHaveFocus()
+    // Retroceso con texto solo borra el texto; con el campo vacío quita la última habilidad.
+    fireEvent.change(skill, { target: { value: 'r' } })
+    fireEvent.keyDown(skill, { key: 'Backspace' })
+    expect(within(chips).getAllByRole('listitem')).toHaveLength(1)
+    fireEvent.change(skill, { target: { value: '' } })
+    fireEvent.keyDown(skill, { key: 'Backspace' })
+    expect(within(form).queryByRole('list', { name: 'Habilidades requeridas' })).not.toBeInTheDocument()
+    // Sin diferencias con lo aplicado, el botón vuelve a «Buscar».
+    expect(within(form).getByRole('button', { name: 'Buscar' })).not.toHaveClass('talent-pending')
   })
 
   it('mide la distancia desde otro municipio elegido del catálogo (CA-04)', async () => {
@@ -186,11 +225,11 @@ describe('buscador de talento HU-S4-05', () => {
     fireEvent.focus(municipality)
     fireEvent.change(municipality, { target: { value: 'vict' } })
     fireEvent.mouseDown(await within(form).findByRole('option', { name: 'Victoria' }))
-    fireEvent.click(within(form).getByRole('button', { name: 'Buscar' }))
+    fireEvent.click(within(form).getByRole('button', { name: 'Aplicar filtros' }))
     await waitFor(() => expect(lastQuery().get('origin_municipality_code')).toBe('28041'))
 
     fireEvent.click(within(form).getByLabelText('El municipio de mi empresa'))
-    fireEvent.click(within(form).getByRole('button', { name: 'Buscar' }))
+    fireEvent.click(within(form).getByRole('button', { name: 'Aplicar filtros' }))
     await waitFor(() => expect(lastQuery().has('origin_municipality_code')).toBe(false))
   })
 

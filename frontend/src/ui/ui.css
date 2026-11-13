@@ -66,6 +66,9 @@ button.plain:hover:not(:disabled) { background: var(--fill); }
 button:active:not(:disabled), .institutions .institution-button:active, .plain:active, .pill-link:active { transform: scale(0.97); }
 button:disabled, input:disabled { opacity: 0.5; }
 input { border-radius: 8px; }
+/* Campos (T-S11-01): el borde responde al cursor y al foco sin saltos; el anillo de foco global se conserva. */
+input, select, textarea { transition: border-color 150ms ease-out; }
+input:focus-visible, select:focus-visible, textarea:focus-visible { border-color: var(--accent); }
 
 /* Estados hover: solo con puntero, para que en táctil no queden fijos. */
 @media (hover: hover) {
@@ -75,7 +78,7 @@ input { border-radius: 8px; }
   .pill-link:hover .icon, .institution-table tbody tr:hover .pill-link .icon { transform: translateX(2px); }
   .institution-table tbody tr[data-href] { cursor: pointer; }
   .institution-table tbody tr[data-href]:hover > * { background: var(--surface-muted); }
-  input:hover:not(:focus):not(:disabled) { border-color: var(--text); }
+  input:hover:not(:focus):not(:disabled), select:hover:not(:focus):not(:disabled), textarea:hover:not(:focus):not(:disabled) { border-color: var(--text); }
 }
 
 /* Navegación de instituciones con botones planos. */
@@ -142,7 +145,10 @@ body.modal-open { overflow: hidden; }
 @media (prefers-reduced-motion: reduce) {
   button:active:not(:disabled), .institutions .institution-button:active, .plain:active, .pill-link:active { transform: none; }
   .bone, .spinner { animation: none; }
-  .institution-success, .manual-setup-link, .state-message, .field-error, .notice, .copy-status, .modal-dialog { animation: fade-in 160ms ease both; }
+  .institution-success, .manual-setup-link, .state-message, .field-error, .notice, .copy-status, .modal-dialog, .combobox-list { animation: fade-in 160ms ease both; }
+  /* T-S11-01: sin escala ni entrada animada; los cambios de color se conservan porque no son movimiento. */
+  .chip:has(.chip-remove) { animation: none; }
+  button.chip-remove:active:not(:disabled), .combobox-list li:active { transform: none; }
 }
 @media (prefers-reduced-transparency: reduce) { .app-bar { background: var(--surface); -webkit-backdrop-filter: none; backdrop-filter: none; } }
 @media (prefers-contrast: more) {
@@ -232,20 +238,41 @@ select[aria-invalid='true'], .student-section input[aria-invalid='true'], .sheet
 .cv-section h4 { margin: 1rem 0 0.4rem; font-size: 0.95rem; color: var(--accent); }
 .chips { display: flex; flex-wrap: wrap; gap: 0.4rem; margin: 0 0 0.6rem; padding: 0; list-style: none; }
 .chip { display: inline-flex; align-items: center; gap: 0.15rem; padding: 0.2rem 0.2rem 0.2rem 0.75rem; border-radius: 999px;
-  background: var(--tint); color: var(--accent); font-size: 0.9rem; font-weight: 500; }
+  background: var(--tint); color: var(--accent); font-size: 0.9rem; font-weight: 500; transition: background-color 150ms ease-out; }
+/* Una etiqueta removible entra con una animación breve; las de solo lectura (tarjetas) no se animan. */
+.chip:has(.chip-remove) { animation: chip-in 180ms var(--spring) both; }
+@keyframes chip-in { from { opacity: 0; transform: scale(0.9); } }
 .chip.soft { background: color-mix(in srgb, var(--accent-secondary) 18%, transparent); color: var(--accent-secondary-text); }
 .chip-remove { width: 1.7rem; height: 1.7rem; padding: 0; border: 0; border-radius: 50%; background: transparent; color: inherit; }
-.chip-remove .icon { width: 0.75em; height: 0.75em; }
-@media (hover: hover) { .chip-remove:hover:not(:disabled) { background: var(--tint-hover); } }
+/* La «X» está siempre visible, atenuada, y se intensifica con el cursor o el foco: en táctil no hay hover. */
+.chip-remove .icon { width: 0.75em; height: 0.75em; opacity: 0.7; transition: opacity 150ms ease-out; }
+.chip-remove:focus-visible { outline-offset: 1px; }
+.chip-remove:focus-visible .icon { opacity: 1; }
+/* Es un botón: se anulan la sombra y la escala de los botones de acción, pensadas para superficies grandes. */
+button.chip-remove:active:not(:disabled) { transform: scale(0.92); }
+@media (hover: hover) {
+  .chip:has(.chip-remove:not(:disabled)):hover { background: var(--tint-hover); }
+  .chip.soft:has(.chip-remove:not(:disabled)):hover { background: color-mix(in srgb, var(--accent-secondary) 26%, transparent); }
+  button.chip-remove:not(:disabled):hover { background: var(--fill); box-shadow: none; }
+  .chip-remove:hover:not(:disabled) .icon { opacity: 1; }
+}
 .combobox { position: relative; }
 .combobox input { margin-bottom: 0.2rem; }
 .combobox-list { position: absolute; z-index: 5; left: 0; right: 0; top: calc(100% - 0.1rem); margin: 0; padding: 0.3rem; list-style: none;
   background: var(--surface); border: 1px solid var(--border); border-radius: 12px; box-shadow: 0 12px 28px color-mix(in srgb, var(--shadow) 12%, transparent);
   max-height: 16rem; overflow: auto; animation: materialize var(--spring-duration) var(--spring) both; }
 .combobox-list[hidden] { display: none; }
-.combobox-list li { display: flex; align-items: center; gap: 0.5rem; padding: 0.55rem 0.7rem; border-radius: 8px; cursor: pointer; }
+.combobox-list li { display: flex; align-items: center; gap: 0.5rem; padding: 0.55rem 0.7rem; border-radius: 8px; cursor: pointer;
+  transition: background-color 150ms ease-out, color 150ms ease-out, transform 100ms ease-out; }
+/* T-S11-01: el cursor (--fill, neutro) y la opción activa del teclado (--tint) son estados distintos; Enter solo
+   toma la activa (HU-S10-02). */
+@media (hover: hover) { .combobox-list li:hover:not(.active) { background: var(--fill); } }
 .combobox-list li.active { background: var(--tint); color: var(--accent); }
-.option-meta { margin-left: auto; font-size: 0.78rem; color: var(--text); }
+.combobox-list li:active { background: var(--tint-hover); transform: scale(0.99); }
+/* Texto secundario de una opción: más pequeño y tenue, sin un token de color propio. */
+.option-meta { margin-left: auto; font-size: 0.78rem; font-weight: 400; color: var(--text); opacity: 0.9; white-space: nowrap; }
+.option-note { padding: 0.05rem 0.45rem; border-radius: 999px; background: var(--fill); font-size: 0.75rem; font-weight: 500; white-space: nowrap; }
+.combobox-empty { padding: 0.85rem 1rem; font-size: 0.9rem; color: var(--text); }
 .choice-group.inline div { display: inline-flex; margin-right: 1rem; }
 .cv-rows { margin-bottom: 0.6rem; }
 .cv-row { display: grid; grid-template-columns: 1fr 1fr auto; gap: 0 0.8rem; align-items: start; padding: 0.6rem 0; border-bottom: 1px solid var(--border); }

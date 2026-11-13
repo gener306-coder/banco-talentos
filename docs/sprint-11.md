@@ -92,3 +92,28 @@ Sprint vigente desde el 12 de noviembre de 2026. Sprint anterior: [sprint-10.md]
 - **CA-05.** [Privacidad] Las columnas nuevas no aparecen en ninguna respuesta. `q` solo lee el titular y la carrera, que ya son públicos en la tarjeta. `%` y `_` son literales.
 - **CA-06.** [Interfaz] El panel de filtros ofrece un campo de texto «Titular o carrera» que envía `q` y sustituye al campo «Carrera». El parámetro `program` de la API (HU-S4-05) se conserva sin cambios.
 - **CA-07.** [Pruebas] Pest cubre: sin acentos, con un error de escritura, palabras repartidas entre titular y carrera, palabra ausente, combinación con otros filtros, orden por distancia intacto, literales y validación de `q`. Vitest cubre el envío de `q`.
+
+---
+
+## T-S11-01 — Refinamiento UI/UX de filtros y autocompletado
+
+**Estado:** Completada (13 de noviembre de 2026); validación visual de CA-01 y CA-02 pendiente del responsable  
+**Diseño técnico y verificación:** `docs/T-S11-01.md`  
+**Rol:** `Frontend`  
+**Origen:** auditoría de UI/UX tras la validación visual del Sprint 11 (13 de noviembre de 2026). La interacción con las sugerencias y las etiquetas de habilidades se sentía estática.
+
+### Decisiones del responsable y el Arquitecto
+
+- El cursor (`:hover`, fondo `--fill`) y la opción activa del teclado (`.active`, fondo `--tint`) son estados separados. El ratón no mueve la opción activa y la lógica de Enter de HU-S10-02 no cambia.
+- La jerarquía del texto secundario se resuelve con tamaño, peso y opacidad. No se crea el token `--text-muted`.
+- Los estilos de `.chip` y `.combobox-list` se mejoran para toda la aplicación: CV, oportunidades y buscador.
+
+### Criterios de aceptación
+
+- **CA-01.** [Estados] Las opciones de la lista de sugerencias responden al cursor y a la presión. Las etiquetas y su botón de quitar responden al cursor, al foco y a la presión, sin heredar la sombra de los botones. Los campos de texto y las listas desplegables cambian de borde al pasar el cursor y al enfocarse. Las tarjetas de resultados se elevan al pasar el cursor.
+- **CA-02.** [Transiciones] Los cambios de color y borde tienen transición. Una etiqueta nueva entra con una animación breve. Con `prefers-reduced-motion: reduce` no hay transformaciones ni desenfoque, y la lista de sugerencias aparece con `fade-in`.
+- **CA-03.** [Claridad] En el `SkillPicker`: una sugerencia aproximada muestra «¿Quisiste decir?»; una sugerencia por alias muestra el alias escrito; una búsqueda del catálogo sin resultados muestra «Sin coincidencias en el catálogo».
+- **CA-04.** [Teclado] Retroceso con el campo vacío quita la última habilidad. Al quitar una habilidad, el foco vuelve al campo.
+- **CA-05.** [Filtros sin aplicar] En el buscador de talento, cuando los filtros editados difieren de los aplicados, el botón de búsqueda dice «Aplicar filtros» y muestra un indicador; al aplicarlos vuelve a «Buscar».
+- **CA-06.** [Identidad] Solo tokens semánticos existentes, en claro y en oscuro; `src/ui/tokens.test.ts` sigue pasando.
+- **CA-07.** [Pruebas] Vitest cubre CA-03, CA-04 y CA-05. Vitest, ESLint y E2E pasan.
