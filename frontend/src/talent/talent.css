@@ -12,7 +12,19 @@
 .talent-filters .check input { width: auto; margin: 0; }
 .talent-results-summary { margin: 0 0 0.8rem; font-weight: 600; }
 .talent-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(20rem, 100%), 1fr)); gap: 0.9rem; margin: 0; padding: 0; list-style: none; }
-.talent-card { height: 100%; padding: 1rem 1.1rem; border: 1px solid var(--border); border-radius: 12px; background: var(--surface); }
+.talent-card { height: 100%; padding: 1rem 1.1rem; border: 1px solid var(--border); border-radius: 12px; background: var(--surface);
+  transition: transform 200ms ease-out, box-shadow 200ms ease-out, border-color 200ms ease-out; }
+/* T-S11-01: la tarjeta se eleva con el cursor; la acción sigue siendo el enlace «Ver perfil». */
+@media (hover: hover) {
+  .talent-card:hover { transform: translateY(-1px); border-color: color-mix(in srgb, var(--accent) 35%, var(--border));
+    box-shadow: 0 6px 18px color-mix(in srgb, var(--shadow) 8%, transparent); }
+}
+/* Filtros editados sin aplicar: un punto junto al texto del botón. */
+.talent-pending::after { content: ''; width: 0.5rem; height: 0.5rem; border-radius: 50%; background: currentColor; animation: fade-in 160ms ease both; }
+@media (prefers-reduced-motion: reduce) {
+  .talent-card { transition: border-color 200ms ease-out; }
+  .talent-card:hover { transform: none; }
+}
 .talent-card h3 { margin: 0 0 0.5rem; font-size: 1.1rem; }
 .talent-facts { margin: 0 0 0.6rem; }
 .talent-facts div { margin-bottom: 0.25rem; }

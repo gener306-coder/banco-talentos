@@ -9,7 +9,7 @@ import { MunicipalityCombobox } from '../students/MunicipalityCombobox'
 import { SkillPicker } from '../students/SkillPicker'
 import { ChevronLeftIcon, ChevronRightIcon, SearchIcon } from '../ui/icons'
 import { LoadingState, StateMessage } from '../ui/StateMessage'
-import { emptyFilters, MAX_QUERY_LENGTH, MAX_SKILL_FILTERS, RADII_KM, searchTalent, talentMessages } from './api'
+import { emptyFilters, MAX_QUERY_LENGTH, MAX_SKILL_FILTERS, RADII_KM, searchParams, searchTalent, talentMessages } from './api'
 import type { TalentFilters } from './api'
 import { TalentCardView } from './TalentCardView'
 import '../institutions/institutions.css'
@@ -43,6 +43,11 @@ export function TalentSearchPage() {
     setDraft((current) => ({ ...current, [field]: value }))
   }
 
+  // Filtros tal como se enviarían: un idioma sin nivel se busca desde A1 y el origen depende del modo elegido.
+  const effective: TalentFilters = { ...draft, minLevel: draft.language ? draft.minLevel || '1' : '', originMunicipalityCode: originMode === 'other' ? draft.originMunicipalityCode : '' }
+  // T-S11-01 CA-05: hay cambios en el panel que la lista de resultados todavía no refleja.
+  const pending = searchParams(effective, 1).toString() !== searchParams(applied, 1).toString()
+
   function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     if (originMode === 'other' && !draft.originMunicipalityCode) {
@@ -50,8 +55,7 @@ export function TalentSearchPage() {
       return
     }
     setOriginError(null)
-    // Un idioma sin nivel se busca desde A1.
-    setApplied({ ...draft, minLevel: draft.language ? draft.minLevel || '1' : '', originMunicipalityCode: originMode === 'other' ? draft.originMunicipalityCode : '' })
+    setApplied(effective)
     setPage(1)
   }
 
@@ -172,7 +176,7 @@ export function TalentSearchPage() {
           </fieldset>
 
           <div className="actions">
-            <button type="submit"><SearchIcon />Buscar</button>
+            <button type="submit" className={pending ? 'talent-pending' : undefined}><SearchIcon />{pending ? 'Aplicar filtros' : 'Buscar'}</button>
             <button type="button" className="secondary" onClick={clear}>Limpiar filtros</button>
           </div>
         </form>

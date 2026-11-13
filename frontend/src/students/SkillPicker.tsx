@@ -1,4 +1,4 @@
-import { useEffect, useId, useState } from 'react'
+import { useEffect, useId, useRef, useState } from 'react'
 import type { KeyboardEvent } from 'react'
 import { CloseIcon, PlusIcon } from '../ui/icons'
 import { searchSkills } from './cv'
@@ -8,6 +8,13 @@ import type { SkillKind } from './cvCatalogs'
 import { FieldError } from './CvShared'
 
 const SEARCH_DELAY_MS = 200
+
+/** Por qué se sugiere una habilidad cuyo nombre no empieza con lo escrito (T-S11-01 CA-03). */
+function note(match: SkillSuggestion['match'], term: string) {
+  if (match === 'fuzzy') return <span className="option-note">¿Quisiste decir?</span>
+  if (match === 'alias') return <span className="option-note">{term.toLowerCase()}</span>
+  return null
+}
 
 type Option = { type: 'catalog'; skill: SkillSuggestion } | { type: 'new'; name: string }
 
@@ -40,6 +47,9 @@ interface SkillPickerProps {
 export function SkillPicker({ idPrefix, skills, onChange, max, disabled, serverError, contactMessage, placeholder, label = 'Agregar habilidad', catalogOnly = false }: SkillPickerProps) {
   const [query, setQuery] = useState('')
   const [suggestions, setSuggestions] = useState<SkillSuggestion[]>([])
+  // Texto al que corresponden las sugerencias: distingue «sin coincidencias» de «aún no llegan» (T-S11-01).
+  const [answered, setAnswered] = useState('')
+  const inputRef = useRef<HTMLInputElement>(null)
   // Opción elegida con las flechas; null mientras el usuario no navega (se calcula abajo).
   const [selected, setSelected] = useState<number | null>(null)
   const [open, setOpen] = useState(false)
@@ -54,8 +64,8 @@ export function SkillPicker({ idPrefix, skills, onChange, max, disabled, serverE
     const controller = new AbortController()
     const timer = setTimeout(() => {
       searchSkills(term, controller.signal)
-        .then((results) => { setSuggestions(results); setSelected(null) })
-        .catch(() => { if (!controller.signal.aborted) setSuggestions([]) })
+        .then((results) => { setSuggestions(results); setSelected(null); setAnswered(term) })
+        .catch(() => { if (!controller.signal.aborted) { setSuggestions([]); setAnswered('') } })
     }, SEARCH_DELAY_MS)
     return () => { clearTimeout(timer); controller.abort() }
   }, [term])
@@ -65,6 +75,8 @@ export function SkillPicker({ idPrefix, skills, onChange, max, disabled, serverE
   const exact = suggestions.some((skill) => catalogSlug(skill.name) === catalogSlug(term))
   const options: Option[] = !catalogOnly && term && !exact && !chosen.has(catalogSlug(term)) ? [...catalogOptions, { type: 'new', name: term }] : catalogOptions
   const expanded = open && options.length > 0
+  // Sin opciones que ofrecer para lo escrito; una habilidad ya elegida tiene su propio mensaje al presionar Enter.
+  const empty = open && Boolean(term) && options.length === 0 && answered === term && !chosen.has(catalogSlug(term))
   // HU-S10-02: se preselecciona una sugerencia por prefijo o por alias. Una aproximada (con errores respecto a lo
   // escrito) hay que elegirla con las flechas o el ratón, para que Enter no registre «Vuex» cuando se escribió «Vue».
   const first = options[0]
@@ -88,6 +100,13 @@ export function SkillPicker({ idPrefix, skills, onChange, max, disabled, serverE
     setOpen(false)
   }
 
+  /** Quita una habilidad y devuelve el foco al campo: el botón que lo tenía deja de existir (T-S11-01 CA-04). */
+  function remove(index: number) {
+    onChange(skills.filter((_, position) => position !== index))
+    setLocalError(null)
+    inputRef.current?.focus()
+  }
+
   function choose(option: Option) {
     add(option.type === 'catalog' ? option.skill : { name: option.name, kind: newKind })
   }
@@ -107,6 +126,10 @@ export function SkillPicker({ idPrefix, skills, onChange, max, disabled, serverE
       else if (!catalogOnly) add({ name: term, kind: newKind })
       // Solo catálogo: lo escrito no se agrega; hay que elegir una sugerencia (HU-S11-01 CA-02).
       else setLocalError(chosen.has(catalogSlug(term)) ? 'Esta habilidad ya está en la lista.' : 'Elige una habilidad de las sugerencias: solo se filtra por habilidades del catálogo.')
+    } else if (event.key === 'Backspace' && !query && skills.length) {
+      // Retroceso con el campo vacío quita la última habilidad (T-S11-01 CA-04).
+      event.preventDefault()
+      remove(skills.length - 1)
     } else if (event.key === 'Escape' && expanded) {
       event.preventDefault()
       setOpen(false)
@@ -122,7 +145,7 @@ export function SkillPicker({ idPrefix, skills, onChange, max, disabled, serverE
               <li key={catalogSlug(skill.name)} className="chip">
                 <span>{skill.name}</span>
                 <button type="button" className="chip-remove" aria-label={`Quitar ${skill.name}`} disabled={disabled}
-                  onClick={() => { onChange(skills.filter((_, position) => position !== index)); setLocalError(null) }}>
+                  onClick={() => remove(index)}>
                   <CloseIcon />
                 </button>
               </li>
@@ -141,7 +164,7 @@ export function SkillPicker({ idPrefix, skills, onChange, max, disabled, serverE
                         <li key={catalogSlug(skill.name)} className={`chip ${skill.kind}`}>
                           <span>{skill.name}</span>
                           <button type="button" className="chip-remove" aria-label={`Quitar ${skill.name}`} disabled={disabled}
-                            onClick={() => { onChange(skills.filter((_, position) => position !== index)); setLocalError(null) }}>
+                            onClick={() => remove(index)}>
                             <CloseIcon />
                           </button>
                         </li>
@@ -155,7 +178,7 @@ export function SkillPicker({ idPrefix, skills, onChange, max, disabled, serverE
 
       <label htmlFor={`${idPrefix}-skill-search`}>{label}</label>
       <div className="combobox">
-        <input id={`${idPrefix}-skill-search`} type="text" autoComplete="off" role="combobox" disabled={disabled}
+        <input ref={inputRef} id={`${idPrefix}-skill-search`} type="text" autoComplete="off" role="combobox" disabled={disabled}
           aria-autocomplete="list" aria-expanded={expanded} aria-controls={listId}
           aria-activedescendant={expanded && active >= 0 ? `${listId}-${active}` : undefined}
           aria-invalid={Boolean(error)}
@@ -170,11 +193,12 @@ export function SkillPicker({ idPrefix, skills, onChange, max, disabled, serverE
               // mousedown evita que el blur del campo cierre la lista antes del clic.
               onMouseDown={(event) => { event.preventDefault(); choose(option) }}>
               {option.type === 'catalog'
-                ? <><span>{option.skill.name}</span><span className="option-meta">{SKILL_KINDS.find((kind) => kind.value === option.skill.kind)?.label}</span></>
+                ? <><span>{option.skill.name}</span>{note(option.skill.match, term)}<span className="option-meta">{SKILL_KINDS.find((kind) => kind.value === option.skill.kind)?.label}</span></>
                 : <><PlusIcon /><span>Agregar «{option.name}» como nueva</span><span className="option-meta">{SKILL_KINDS.find((kind) => kind.value === newKind)?.label}</span></>}
             </li>
           ))}
         </ul>
+        {empty && <p className="combobox-list combobox-empty" role="status">Sin coincidencias en el catálogo</p>}
       </div>
       <p className="field-hint" id={`${idPrefix}-skills-hint`}>{skills.length} de {max} habilidades · {catalogOnly ? 'Elige una sugerencia del catálogo' : 'Enter para agregar'}</p>
       {!catalogOnly && (

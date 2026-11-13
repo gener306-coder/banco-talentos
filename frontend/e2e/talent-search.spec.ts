@@ -68,7 +68,7 @@ test('HU-S4-05, HU-S5-04, HU-S5-05, HU-S6-01, HU-S6-02 y HU-S6-03: una empresa e
     await expect(filters.getByRole('list', { name: 'Habilidades requeridas' }).getByText(student.skill)).toBeVisible()
     await filters.getByLabel('Distancia máxima').selectOption('100')
     const searched = company.waitForResponse((response) => response.url().includes('/api/talent?') && response.url().includes('radius_km=100'))
-    await filters.getByRole('button', { name: 'Buscar', exact: true }).click()
+    await filters.getByRole('button', { name: 'Aplicar filtros', exact: true }).click()
     expect((await searched).status()).toBe(200)
 
     // CA-04, CA-05: tarjeta anónima a unos 80 km (Reynosa–Matamoros).
@@ -79,10 +79,10 @@ test('HU-S4-05, HU-S5-04, HU-S5-05, HU-S6-01, HU-S6-02 y HU-S6-03: una empresa e
 
     // Fuera del radio de 25 km no aparece.
     await filters.getByLabel('Distancia máxima').selectOption('25')
-    await filters.getByRole('button', { name: 'Buscar', exact: true }).click()
+    await filters.getByRole('button', { name: 'Aplicar filtros', exact: true }).click()
     await expect(company.getByText('Ningún perfil coincide con los filtros.')).toBeVisible()
     await filters.getByLabel('Distancia máxima').selectOption('100')
-    await filters.getByRole('button', { name: 'Buscar', exact: true }).click()
+    await filters.getByRole('button', { name: 'Aplicar filtros', exact: true }).click()
 
     // CA-06, CA-07: perfil público sin identidad ni contacto.
     await company.getByRole('link', { name: `Ver perfil: ${student.headline}` }).click()
