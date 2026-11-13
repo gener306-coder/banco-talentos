@@ -283,6 +283,10 @@ Adoptado el 11 de octubre de 2026 como cambio transversal del Sprint 2 (`docs/sp
 - Botones-ícono en tres tamaños: `--icon-button-sm` (1.75 rem, dentro de una etiqueta), `--icon-button-md` (2.5 rem, general) y `--icon-button-lg` (2.75 rem, táctil y multimedia).
 - `.pill-link` y `button.account-action` comparten alto, letra (`--type-sm`) y borde de 1 px. `.home-action` (enlace con aspecto de botón principal) usa el radio, el padding y el borde de `button`.
 - Hover solo con puntero: todo `:hover` va dentro de `@media (hover: hover)`.
+- Filas clicables (HU-S8-01, T-S12-04): una tabla nunca usa enlaces de texto subrayados para abrir un detalle. La fila lleva `data-href` (`ui/useRowNavigation.ts`) y la columna «Acciones», una `.pill-link` por destino.
+- Regreso contextual (T-S12-04): un detalle abierto desde otro flujo regresa a él con su texto («Volver a solicitudes») mediante `ui/backLink.ts`; sin origen, conserva su regreso de siempre.
+- Avisos informativos y de pendiente (`ui/Callout.tsx`): tono `info` (tinte de la marca) o `pending` (estado inactivo), con la anatomía de `.notice`; el dato clave va en `.notice-subject` y la acción, en una pastilla.
+- Comillas: los nombres, las etiquetas y lo que escribió el usuario van en negritas (`.notice-subject` en avisos); las citas literales y los ejemplos, entre “ ”. No se usan « » en la interfaz (`src/ui/copy.test.ts`).
 - Radio de 10 px en botones y 8 px en campos. Los iconos (`ui/icons.tsx`) son SVG de trazo, `aria-hidden`; el texto del control lo nombra.
 - Respuesta inmediata: escala 0.97 al presionar (100 ms).
 - Navegación: «‹ Inicio» conserva el nombre accesible «Volver al inicio»; el enlace de la sección actual lleva `aria-current="page"`.

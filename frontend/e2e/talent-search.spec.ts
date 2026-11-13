@@ -110,7 +110,7 @@ test('HU-S4-05, HU-S5-04, HU-S5-05, HU-S6-01, HU-S6-02 y HU-S6-03: una empresa e
     const body = await response.text()
     // CA-05: la respuesta solo identifica al alumno por su public_id.
     expect(body.includes(student.surname) || body.includes(student.enrollment) || body.includes('student_id')).toBe(false)
-    await expect(sheet.getByRole('status')).toContainText(`Solicitud enviada a la institución del alumno para «${opportunityTitle}»`)
+    await expect(sheet.getByRole('status')).toContainText(`Solicitud enviada a la institución del alumno para ${opportunityTitle}`)
 
     // CA-03: una segunda solicitud para el mismo perfil y oportunidad se rechaza.
     await sheet.getByLabel('Oportunidad').selectOption({ label: `${opportunityTitle} · Reynosa` })
@@ -122,7 +122,7 @@ test('HU-S4-05, HU-S5-04, HU-S5-05, HU-S6-01, HU-S6-02 y HU-S6-03: una empresa e
     await expect(sheet).toBeHidden()
     await company.reload()
     const notice = company.getByRole('note', { name: 'Solicitudes enviadas para este perfil' })
-    await expect(notice).toContainText(`«${opportunityTitle}»`)
+    await expect(notice).toContainText(opportunityTitle)
     await expect(notice).toContainText('Pendiente de la institución')
 
     // HU-S6-01: la institución recibe la solicitud con la identidad interna del alumno y el contacto de la empresa.
@@ -180,7 +180,7 @@ test('HU-S4-05, HU-S5-04, HU-S5-05, HU-S6-01, HU-S6-02 y HU-S6-03: una empresa e
     const again = company.getByRole('dialog', { name: 'Solicitar vinculación' })
     await again.getByLabel('Oportunidad').selectOption({ label: `${opportunityTitle} · Reynosa` })
     await again.getByRole('button', { name: 'Enviar solicitud' }).click()
-    await expect(again.getByRole('status')).toContainText(`«${opportunityTitle}»`)
+    await expect(again.getByRole('status')).toContainText(opportunityTitle)
 
     const answering = await browser.newContext({ baseURL, storageState: INSTITUTION_STATE })
     try {
@@ -225,9 +225,15 @@ test('HU-S4-05, HU-S5-04, HU-S5-05, HU-S6-01, HU-S6-02 y HU-S6-03: una empresa e
     await company.getByLabel('Estado').selectOption('ACEPTADA')
     await filtered
     const acceptedRow = company.getByRole('table', { name: 'Solicitudes de vinculación enviadas' }).getByRole('row', { name: new RegExp(opportunityTitle) })
-    await expect(acceptedRow).toContainText('«Coordinemos la entrevista con el área dual.»')
+    await expect(acceptedRow).toContainText('“Coordinemos la entrevista con el área dual.”')
     await expect(acceptedRow).toContainText('Respondida el')
     await expect(acceptedRow.getByRole('button', { name: /Cancelar/ })).toHaveCount(0)
+
+    // T-S12-04: el perfil abierto desde la bandeja regresa a ella con el mismo filtro.
+    await acceptedRow.getByRole('link', { name: /^Ver perfil/ }).click()
+    await company.getByRole('link', { name: 'Volver a solicitudes' }).click()
+    await expect(company).toHaveURL(/\/linkage-requests\?status=ACEPTADA$/)
+    await expect(company.getByLabel('Estado')).toHaveValue('ACEPTADA')
   } finally {
     await context.close()
   }

@@ -20,7 +20,7 @@ function describe(event: AuditEvent): string {
     case 'company_registered':
       return `Empresa: ${event.resource.legal_name}`
     case 'opportunity_created':
-      return `Oportunidad: «${event.resource.title}»`
+      return `Oportunidad: ${event.resource.title}`
     case 'linkage_requested':
       return `Solicitud #${event.resource.id} de ${event.resource.company} a ${event.resource.institution}`
     case 'linkage_responded':

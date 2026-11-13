@@ -387,7 +387,7 @@ describe('cuenta del contacto (T-S8-12)', function () {
         $id = $this->browserRequest('POST', '/api/companies', companyPayload())->assertCreated()->json('data.id');
 
         $this->browserRequest('PUT', '/api/companies/'.$id, companyPayload(['delivery_method' => 'manual']))
-            ->assertUnprocessable()->assertJsonValidationErrors(['delivery_method' => 'Editar la empresa no envía enlaces: usa «Reenviar enlace».']);
+            ->assertUnprocessable()->assertJsonValidationErrors(['delivery_method' => 'Editar la empresa no envía enlaces: usa “Reenviar enlace”.']);
         $this->browserRequest('PUT', '/api/companies/'.$id, companyPayload(['contact_name' => 'Otra persona', 'contact_email' => 'nuevo@manugolfo.test']))
             ->assertOk()->assertJsonMissingPath('setup_delivery');
 

@@ -2,8 +2,10 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link, useLocation, useParams } from 'react-router'
 import { InstitutionRequestError } from '../institutions/InstitutionLayout'
 import { useApiMutation, useApiRequest } from '../lib/useApiRequest'
+import { useBackLink } from '../ui/backLink'
+import { Callout } from '../ui/Callout'
 import { ConfirmDialog } from '../ui/ConfirmDialog'
-import { AlertIcon, ChevronLeftIcon, ChevronRightIcon } from '../ui/icons'
+import { ChevronLeftIcon, ChevronRightIcon } from '../ui/icons'
 import { Sheet } from '../ui/Sheet'
 import { LoadingState } from '../ui/StateMessage'
 import { fullName, getStudent, missingDataLabels, setStudentStatus } from './api'
@@ -35,6 +37,8 @@ function StudentDetailView({ id }: { id: string }) {
   // HU-S8-02 CA-02: al llegar desde el alta, el foco va al primer campo del expediente público una sola vez.
   const location = useLocation()
   const completeProfile = useRef(isCompleteProfileState(location.state))
+  // T-S12-04: regresa a la vista de origen (el padrón con su búsqueda o una solicitud de vinculación); si no hay, al padrón.
+  const back = useBackLink({ to: '/students', label: 'Alumnos' })
   useEffect(() => {
     if (!data || !completeProfile.current) return
     completeProfile.current = false
@@ -69,7 +73,7 @@ function StudentDetailView({ id }: { id: string }) {
   return (
     <section className="card" aria-labelledby="student-title">
       <nav className="page-navigation" aria-label="Navegación de alumnos">
-        <Link className="plain" to="/students" aria-label="Volver a alumnos"><ChevronLeftIcon />Alumnos</Link>
+        <Link className="plain" to={back.to} aria-label={back.label === 'Alumnos' ? 'Volver a alumnos' : undefined}><ChevronLeftIcon />{back.label}</Link>
       </nav>
       {loading ? <><h2 id="student-title">Alumno</h2><LoadingState label="Cargando alumno…" variant="details" /></>
         : failure ? <><h2 id="student-title">Alumno</h2><InstitutionRequestError failure={failure} retry={refresh} page /></>
@@ -77,13 +81,13 @@ function StudentDetailView({ id }: { id: string }) {
           <>
             <h2 id="student-title">{fullName(data)}</h2>
             {data.missing_data.length > 0 && (
-              <p className="pending-notice home-notice home-action-notice">
-                <AlertIcon />
-                <span><strong>Datos faltantes:</strong> {missingList.format(data.missing_data.map((datum) => missingDataLabels[datum]))}.</span>
-              </p>
+              <Callout tone="pending">
+                <p><strong>Datos faltantes:</strong> {missingList.format(data.missing_data.map((datum) => missingDataLabels[datum]))}.</p>
+              </Callout>
             )}
             <p className="student-cv-link">
-              <Link className="pill-link" to={`/students/${data.id}/cv`}>CV profesional<ChevronRightIcon /></Link>
+              {/* El CV devuelve el mismo regreso al volver al alumno, para no perder el origen. */}
+              <Link className="pill-link" to={`/students/${data.id}/cv`} state={{ back }}>CV profesional<ChevronRightIcon /></Link>
             </p>
             {notice && <p className="institution-success" role="status">{notice}</p>}
 

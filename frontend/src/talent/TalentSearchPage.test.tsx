@@ -300,3 +300,26 @@ describe('buscador de talento en pantallas estrechas (T-S12-03)', () => {
     expect(screen.getByRole('button', { name: 'Filtros (2)' })).toBeInTheDocument()
   })
 })
+
+describe('regreso contextual del perfil público (T-S12-04)', () => {
+  const renderProfile = (state: unknown) => render(
+    <MemoryRouter initialEntries={[{ pathname: `/talent/${publicId}`, state }]}><App /></MemoryRouter>)
+
+  it('regresa a la bandeja de solicitudes, con su filtro, si se abrió desde ella', async () => {
+    talentMock.mockResolvedValueOnce(Response.json({ data: card }))
+    renderProfile({ back: { to: '/linkage-requests?status=ACEPTADA', label: 'Volver a solicitudes' } })
+    expect(await screen.findByRole('link', { name: 'Volver a solicitudes' })).toHaveAttribute('href', '/linkage-requests?status=ACEPTADA')
+    expect(screen.queryByRole('link', { name: 'Volver al buscador' })).not.toBeInTheDocument()
+  })
+
+  it.each([
+    ['otro sitio', { back: { to: '//sitio-ajeno.test/robo', label: 'Volver a solicitudes' } }],
+    ['una URL absoluta', { back: { to: 'https://sitio-ajeno.test', label: 'Volver a solicitudes' } }],
+    ['un estado incompleto', { back: { to: '/linkage-requests' } }],
+  ])('ignora un regreso hacia %s y usa el del buscador', async (_case, state) => {
+    talentMock.mockResolvedValueOnce(Response.json({ data: card }))
+    renderProfile(state)
+    expect(await screen.findByRole('link', { name: 'Volver al buscador' })).toHaveAttribute('href', '/talent')
+  })
+})
+

@@ -2,6 +2,7 @@ import { useState } from 'react'
 import type { FormEvent } from 'react'
 import { InstitutionRequestError } from '../institutions/InstitutionLayout'
 import { useApiMutation } from '../lib/useApiRequest'
+import { Callout } from '../ui/Callout'
 import { PendingLabel } from '../ui/forms'
 import { updateStudentProfile } from './api'
 import type { StudentDetail, StudentProfileInput } from './api'
@@ -146,9 +147,9 @@ export function StudentProfileForm({ student, onSaved }: { student: StudentDetai
         <h4>Ubicación aproximada</h4>
         <p className="privacy-note">Solo estado y municipio; no registres direcciones.</p>
         {pendingMunicipality && (
-          <p className="pending-notice" id="student-profile-pending-municipality">
-            Municipio por confirmar: «{pendingMunicipality}». Elígelo del catálogo y guarda el expediente.
-          </p>
+          <Callout tone="pending" id="student-profile-pending-municipality">
+            <p>Municipio por confirmar: <strong className="notice-subject">{pendingMunicipality}</strong>. Elígelo del catálogo y guarda el expediente.</p>
+          </Callout>
         )}
         <div className="field-row">
           <div>

@@ -296,7 +296,7 @@ test('HU-S3-01: la institución construye el CV normalizado con datos protegidos
   const skills = page.getByRole('region', { name: 'Habilidades' })
   const search = skills.getByRole('combobox', { name: 'Agregar habilidad' })
   await search.fill(skill)
-  await expect(skills.getByRole('option', { name: new RegExp(`Agregar «${skill}» como nueva`) })).toBeVisible()
+  await expect(skills.getByRole('option', { name: new RegExp(`Agregar ${skill} como nueva`) })).toBeVisible()
   await search.press('Enter')
   await skills.getByLabel('Blanda').check()
   await search.fill('Trabajo en equipo')

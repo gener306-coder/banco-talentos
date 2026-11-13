@@ -40,7 +40,7 @@ export function CompanyCreatePage() {
           // T-S8-12: la cuenta del contacto ya existe; el aviso dice si su enlace salió o hay que reenviarlo.
           const notice = setupDelivery === 'sent'
             ? `Empresa registrada. Enviamos a ${company.contact_email} el enlace para establecer su contraseña.`
-            : 'Empresa registrada, pero no pudimos enviar el enlace. Usa «Reenviar enlace».'
+            : 'Empresa registrada, pero no pudimos enviar el enlace. Usa “Reenviar enlace”.'
           void navigate(`/companies/${company.id}`, { replace: true, state: { notice } })
         })} />
     </CompanyLayout>

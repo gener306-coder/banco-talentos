@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import type { ReactNode } from 'react'
 import type { FormEvent } from 'react'
 import { Link } from 'react-router'
 import { InstitutionRequestError } from '../institutions/InstitutionLayout'
@@ -23,7 +24,7 @@ export function LinkageRequestForm({ publicId, onSent }: { publicId: string; onS
   const [opportunityId, setOpportunityId] = useState('')
   const [message, setMessage] = useState('')
   const [localErrors, setLocalErrors] = useState<Partial<Record<Field, string>>>({})
-  const [sent, setSent] = useState<string | null>(null)
+  const [sent, setSent] = useState<ReactNode>(null)
   const errors: Partial<Record<Field, string>> = {
     opportunity_id: localErrors.opportunity_id ?? mutation.failure?.errors.opportunity_id?.join(' '),
     message: localErrors.message ?? mutation.failure?.errors.message?.join(' '),
@@ -43,7 +44,7 @@ export function LinkageRequestForm({ publicId, onSent }: { publicId: string; onS
     await mutation.submit(
       () => createLinkageRequest({ student_public_id: publicId, opportunity_id: Number(opportunityId), message: text || null }),
       (linkage) => {
-        setSent(`Solicitud enviada a la institución del alumno para «${linkage.opportunity.title}». Queda pendiente de su respuesta.`)
+        setSent(<>Solicitud enviada a la institución del alumno para <strong className="notice-subject">{linkage.opportunity.title}</strong>. Queda pendiente de su respuesta.</>)
         setOpportunityId('')
         setMessage('')
         onSent?.()

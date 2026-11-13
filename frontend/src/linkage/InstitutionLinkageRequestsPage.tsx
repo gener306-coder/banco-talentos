@@ -7,6 +7,7 @@ import { surnames } from '../students/api'
 import { CsvDownloadButton } from '../ui/CsvDownloadButton'
 import { ChevronLeftIcon, ChevronRightIcon, SearchIcon } from '../ui/icons'
 import { LoadingState, StateMessage } from '../ui/StateMessage'
+import { useRowNavigation } from '../ui/useRowNavigation'
 import { LINKAGE_STATUSES } from './api'
 import type { LinkageStatus as Status } from './api'
 import { downloadReceivedLinkagesCsv, institutionLinkageMessages, listReceivedLinkages } from './institutionApi'
@@ -48,6 +49,8 @@ export function InstitutionLinkageRequestsPage() {
   const load = useCallback((signal: AbortSignal) => listReceivedLinkages({ page, status }, signal), [page, status])
   const { data, loading, failure, refresh } = useApiRequest(load, institutionLinkageMessages)
   const downloadCsv = useCallback(() => downloadReceivedLinkagesCsv(status), [status])
+  // T-S12-04: toda la fila abre la solicitud, como en el padrón (HU-S8-01).
+  const openRow = useRowNavigation()
 
   return (
     <InstitutionLinkageLayout title="Solicitudes de vinculación">
@@ -87,7 +90,8 @@ export function InstitutionLinkageRequestsPage() {
                     {data.items.map((item) => {
                       const name = `${surnames(item.student)}, ${item.student.given_names}`
                       return (
-                        <tr key={item.id}>
+                        <tr key={item.id} data-href={`/institution/linkage-requests/${item.id}`}
+                          onClick={(event) => openRow(event, `/institution/linkage-requests/${item.id}`)}>
                           {/* T-S8-15: solo lo que identifica; la carrera y el periodo están en el detalle. */}
                           <th scope="row">
                             {name}

@@ -1,11 +1,13 @@
 import { useCallback, useRef, useState } from 'react'
 import type { ReactNode } from 'react'
-import { Link } from 'react-router'
+import { Link, useLocation, useSearchParams } from 'react-router'
 import { InstitutionRequestError } from '../institutions/InstitutionLayout'
 import { useApiMutation, useApiRequest } from '../lib/useApiRequest'
 import { ConfirmDialog } from '../ui/ConfirmDialog'
 import { ChevronLeftIcon, ChevronRightIcon, MailIcon, PhoneIcon, SearchIcon } from '../ui/icons'
+import { backState } from '../ui/backLink'
 import { LoadingState, StateMessage } from '../ui/StateMessage'
+import { useRowNavigation } from '../ui/useRowNavigation'
 import { cancelLinkageRequest, LINKAGE_STATUSES, linkageMessages, listLinkageRequests } from './api'
 import type { LinkageInboxItem, LinkageStatus as Status } from './api'
 import { LinkageStatus } from './LinkageStatus'
@@ -14,13 +16,21 @@ import '../institutions/institutions.css'
 const dateFormat = new Intl.DateTimeFormat('es-MX', { dateStyle: 'medium' })
 
 /**
- * Bandeja de solicitudes de vinculación enviadas por la empresa (HU-S5-05 CA-05): filtro por estado, enlaces al perfil
- * anónimo y a la oportunidad, correo de contacto de la institución y cancelación confirmada de las pendientes. Muestra
+ * Bandeja de solicitudes de vinculación enviadas por la empresa (HU-S5-05 CA-05): filtro por estado, fila clicable al perfil
+ * anónimo y pastillas al perfil y a la oportunidad (T-S12-04), correo de contacto de la institución y cancelación confirmada de las pendientes. Muestra
  * la fecha y el mensaje de la respuesta institucional (HU-S6-02 CA-04).
  */
 export function LinkageRequestsPage() {
-  const [page, setPage] = useState(1)
-  const [status, setStatus] = useState<Status | ''>('')
+  // T-S12-04: el estado vive en la URL, como en la bandeja de la institución, para que el regreso desde el perfil o la
+  // oportunidad conserve el filtro. La página pertenece al filtro con el que se eligió.
+  const [searchParams, setSearchParams] = useSearchParams()
+  const statusParam = searchParams.get('status')
+  const status: Status | '' = LINKAGE_STATUSES.find((item) => item.value === statusParam)?.value ?? ''
+  const [paging, setPaging] = useState({ status, page: 1 })
+  const page = paging.status === status ? paging.page : 1
+  const setPage = (value: number) => setPaging({ status, page: value })
+  const location = useLocation()
+  const openRow = useRowNavigation()
   const load = useCallback((signal: AbortSignal) => listLinkageRequests({ page, status }, signal), [page, status])
   const { data, loading, failure, refresh, setData } = useApiRequest(load, linkageMessages)
   const mutation = useApiMutation(linkageMessages)
@@ -53,7 +63,10 @@ export function LinkageRequestsPage() {
         <div className="table-search-filter">
           <label htmlFor="linkage-status-filter">Estado</label>
           <select id="linkage-status-filter" value={status}
-            onChange={(event) => { setPage(1); setNotice(null); setStatus(event.target.value as Status | '') }}>
+            onChange={(event) => {
+              setNotice(null)
+              setSearchParams(event.target.value ? { status: event.target.value } : {}, { replace: true })
+            }}>
             <option value="">Todos los estados</option>
             {LINKAGE_STATUSES.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}
           </select>
@@ -80,14 +93,17 @@ export function LinkageRequestsPage() {
                   <tbody>
                     {data.items.map((item) => {
                       const headline = item.profile.headline ?? 'Perfil sin titular'
+                      const profileHref = `/talent/${item.profile.public_id}`
+                      // T-S12-04: el perfil y la oportunidad regresan a esta bandeja con su filtro.
+                      const back = backState('Volver a solicitudes', location)
                       return (
-                        <tr key={item.id}>
+                        <tr key={item.id} data-href={profileHref} onClick={(event) => openRow(event, profileHref, back)}>
                           {/* T-S8-15: lo esencial de cada columna; el periodo y el puesto quedan a un paso (perfil y cursor). */}
                           <th scope="row">
-                            <Link to={`/talent/${item.profile.public_id}`}>{headline}</Link>
+                            {headline}
                             {item.profile.program && <span className="linkage-meta">{item.profile.program}</span>}
                           </th>
-                          <td><Link className="linkage-title" to={`/opportunities/${item.opportunity.id}`} title={item.opportunity.title}>{item.opportunity.title}</Link></td>
+                          <td><span className="linkage-title" title={item.opportunity.title}>{item.opportunity.title}</span></td>
                           <td>
                             {item.institution.name}
                             {item.institution.contact_name && (
@@ -108,16 +124,19 @@ export function LinkageRequestsPage() {
                             <LinkageStatus status={item.status} />
                             {/* Respuesta de la institución (HU-S6-02 CA-04). */}
                             {item.responded_at && <span className="linkage-meta">Respondida el {dateFormat.format(new Date(item.responded_at))}</span>}
-                            {item.response_message && <span className="linkage-meta linkage-response" title={item.response_message}>«{item.response_message}»</span>}
+                            {item.response_message && <span className="linkage-meta linkage-response" title={item.response_message}>“{item.response_message}”</span>}
                           </td>
                           <td>
-                            {item.status === 'PENDIENTE_INSTITUCION'
-                              ? (
-                                <button type="button" className="secondary" disabled={mutation.pending}
+                            <div className="actions">
+                              <Link className="pill-link" to={profileHref} state={back} aria-label={`Ver perfil: ${headline}`}>Ver perfil<ChevronRightIcon /></Link>
+                              <Link className="pill-link" to={`/opportunities/${item.opportunity.id}`} state={back}
+                                aria-label={`Ver la oportunidad ${item.opportunity.title}`}>Oportunidad<ChevronRightIcon /></Link>
+                              {item.status === 'PENDIENTE_INSTITUCION' && (
+                                <button type="button" className="account-action danger" disabled={mutation.pending}
                                   aria-label={`Cancelar la solicitud de ${headline} para ${item.opportunity.title}`}
                                   onClick={(event) => { origin.current = event.currentTarget; setCancelling(item) }}>Cancelar</button>
-                              )
-                              : '—'}
+                              )}
+                            </div>
                           </td>
                         </tr>
                       )

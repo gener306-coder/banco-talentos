@@ -1,5 +1,5 @@
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
-import { MemoryRouter } from 'react-router'
+import { MemoryRouter, useLocation } from 'react-router'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import App from '../App'
 
@@ -61,11 +61,15 @@ describe('bandeja de solicitudes HU-S5-05', () => {
     const table = await screen.findByRole('table', { name: 'Solicitudes de vinculación enviadas' })
     expect(apiMock.mock.calls[0][0]).toBe('/api/linkage-requests?page=1')
     const row = within(table).getByRole('row', { name: /Tableros de producción/ })
-    expect(within(row).getByRole('link', { name: 'Analista de datos' })).toHaveAttribute('href', `/talent/${publicId}`)
+    // T-S12-04: sin enlaces subrayados; la fila abre el perfil y las acciones van en pastillas.
+    expect(row).toHaveAttribute('data-href', `/talent/${publicId}`)
+    expect(within(row).getByRole('rowheader')).toHaveTextContent('Analista de datos')
+    expect(within(row).getByRole('link', { name: 'Ver perfil: Analista de datos' })).toHaveAttribute('href', `/talent/${publicId}`)
     // T-S8-15: solo la carrera; el periodo está en el perfil.
     expect(within(row).getByText('Ingeniería en Datos')).toBeInTheDocument()
     expect(row).not.toHaveTextContent('6.º semestre')
-    expect(within(row).getByRole('link', { name: 'Tableros de producción' })).toHaveAttribute('href', '/opportunities/12')
+    expect(within(row).queryByRole('link', { name: 'Tableros de producción' })).not.toBeInTheDocument()
+    expect(within(row).getByRole('link', { name: 'Ver la oportunidad Tableros de producción' })).toHaveAttribute('href', '/opportunities/12')
     expect(within(row).getByText('UT del Golfo')).toBeInTheDocument()
     expect(within(row).getByRole('link', { name: 'Escribir a dual@utgolfo.edu.mx' })).toHaveAttribute('href', 'mailto:dual@utgolfo.edu.mx')
     expect(within(row).getByRole('link', { name: 'Escribir a dual@utgolfo.edu.mx' })).toHaveAttribute('target', '_blank')
@@ -139,7 +143,40 @@ describe('bandeja de solicitudes HU-S5-05', () => {
     const row = within(await screen.findByRole('table', { name: 'Solicitudes de vinculación enviadas' })).getByRole('row', { name: /Mantenimiento/ })
     expect(row).toHaveTextContent('Aceptada')
     expect(row).toHaveTextContent('Respondida el 29 oct 2026')
-    expect(row).toHaveTextContent('«Coordinemos la entrevista.»')
+    expect(row).toHaveTextContent('“Coordinemos la entrevista.”')
     expect(within(row).queryByRole('button', { name: /Cancelar/ })).not.toBeInTheDocument()
   })
 })
+
+describe('bandeja de solicitudes sin enlaces subrayados (T-S12-04)', () => {
+  function Location() {
+    const location = useLocation()
+    const state: unknown = location.state
+    const back = typeof state === 'object' && state !== null && 'back' in state ? JSON.stringify(state.back) : ''
+    return <output aria-label="Ruta actual" data-back={back}>{location.pathname + location.search}</output>
+  }
+
+  it('toda la fila abre el perfil y su regreso conserva el filtro de la URL', async () => {
+    apiMock.mockResolvedValueOnce(page([{ ...pending, status: 'ACEPTADA' }]))
+      .mockImplementation(() => new Promise<Response>(() => undefined))
+    render(<MemoryRouter initialEntries={['/linkage-requests?status=ACEPTADA']}><App /><Location /></MemoryRouter>)
+    const table = await screen.findByRole('table', { name: 'Solicitudes de vinculación enviadas' })
+    expect(apiMock.mock.calls[0][0]).toBe('/api/linkage-requests?page=1&status=ACEPTADA')
+    expect(screen.getByLabelText('Estado')).toHaveValue('ACEPTADA')
+
+    fireEvent.click(within(table).getByRole('rowheader'))
+    const location = screen.getByRole('status', { name: 'Ruta actual' })
+    await waitFor(() => expect(location).toHaveTextContent(`/talent/${publicId}`))
+    expect(JSON.parse(location.dataset.back ?? '')).toEqual({ to: '/linkage-requests?status=ACEPTADA', label: 'Volver a solicitudes' })
+  })
+
+  it('los botones de la fila no la abren', async () => {
+    apiMock.mockResolvedValueOnce(page([pending]))
+    render(<MemoryRouter initialEntries={['/linkage-requests']}><App /><Location /></MemoryRouter>)
+    const table = await screen.findByRole('table', { name: 'Solicitudes de vinculación enviadas' })
+    fireEvent.click(within(table).getByRole('button', { name: /^Cancelar la solicitud/ }))
+    expect(await screen.findByRole('alertdialog')).toBeInTheDocument()
+    expect(screen.getByRole('status', { name: 'Ruta actual' })).toHaveTextContent('/linkage-requests')
+  })
+})
+

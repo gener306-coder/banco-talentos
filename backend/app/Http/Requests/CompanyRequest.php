@@ -88,7 +88,7 @@ class CompanyRequest extends FormRequest
             'contact_phone.max' => 'El teléfono no debe superar 20 caracteres.',
             'validation_reference.string' => 'El folio de validación no es válido.',
             'validation_reference.max' => 'El folio de validación no debe superar 60 caracteres.',
-            'delivery_method.prohibited' => 'Editar la empresa no envía enlaces: usa «Reenviar enlace».',
+            'delivery_method.prohibited' => 'Editar la empresa no envía enlaces: usa “Reenviar enlace”.',
         ];
     }
 }

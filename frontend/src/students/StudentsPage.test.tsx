@@ -285,7 +285,7 @@ describe('búsqueda y filtro del padrón HU-S8-01', () => {
     fireEvent.click(within(search).getByRole('button', { name: 'Buscar' }))
 
     expect(await screen.findByRole('heading', { name: 'Ningún alumno coincide con la búsqueda.' })).toBeInTheDocument()
-    expect(screen.getByText(/contenga «nadie»/)).toBeInTheDocument()
+    expect(screen.getByText('nadie', { selector: 'strong' }).closest('p')).toHaveTextContent('No hay alumnos cuya matrícula o nombre contenga nadie con el estado elegido.')
     expect(screen.queryByRole('button', { name: 'Registrar el primer alumno' })).not.toBeInTheDocument()
 
     fireEvent.click(screen.getByRole('button', { name: 'Limpiar filtros' }))

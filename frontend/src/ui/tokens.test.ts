@@ -174,6 +174,7 @@ describe.each(themes)('contraste en el tema %s', (_name, theme) => {
     ['pastilla con el cursor sobre el fondo de la página', '--accent', ['--surface-muted', '--tint-hover'], 1, 4.5],
     ['etiqueta suave (.chip.soft)', '--accent-secondary-text', ['--surface', 'color-mix(in srgb, var(--accent-secondary) 18%, transparent)'], 1, 4.5],
     ['etiqueta suave con el cursor', '--accent-secondary-text', ['--surface', 'color-mix(in srgb, var(--accent-secondary) 26%, transparent)'], 1, 4.5],
+    ['texto de un aviso informativo (.callout.info, T-S12-04)', '--text', ['--surface', '--tint'], 1, 4.5],
     ['texto secundario de la opción activa (.option-meta)', '--text', ['--surface', '--tint'], 0.9, 4.5],
     ['texto secundario de la opción con el cursor', '--text', ['--surface', '--fill'], 0.9, 4.5],
     ['ícono del campo (.input-with-icon)', '--text', ['--surface'], 0.7, 3],

@@ -1,5 +1,5 @@
 import { useCallback } from 'react'
-import { Link, useParams } from 'react-router'
+import { Link, useLocation, useParams } from 'react-router'
 import { InstitutionRequestError } from '../institutions/InstitutionLayout'
 import { useApiRequest } from '../lib/useApiRequest'
 import { ChevronLeftIcon, LockIcon } from '../ui/icons'
@@ -20,6 +20,9 @@ import { studentMessages } from './messages'
  * Cada sección se guarda por separado; los enlaces y las credenciales son protegidos (CA-02).
  */
 function StudentCvView({ id }: { id: string }) {
+  // T-S12-04: el regreso contextual del alumno viaja al CV y vuelve con él; el alumno lo valida (ui/backLink.ts).
+  const state: unknown = useLocation().state
+  const returnState = typeof state === 'object' && state !== null && 'back' in state ? { back: state.back } : undefined
   const load = useCallback(async (signal: AbortSignal) => {
     const [student, cv] = await Promise.all([getStudent(id, signal), getCv(id, signal)])
     return { student, cv }
@@ -30,7 +33,7 @@ function StudentCvView({ id }: { id: string }) {
   return (
     <section className="card" aria-labelledby="student-cv-title">
       <nav className="page-navigation" aria-label="Navegación del CV">
-        <Link className="plain" to={`/students/${encodeURIComponent(id)}`} aria-label="Volver al alumno"><ChevronLeftIcon />Alumno</Link>
+        <Link className="plain" to={`/students/${encodeURIComponent(id)}`} state={returnState} aria-label="Volver al alumno"><ChevronLeftIcon />Alumno</Link>
       </nav>
       {loading ? <><h2 id="student-cv-title">CV profesional</h2><LoadingState label="Cargando CV…" variant="details" /></>
         : failure ? <><h2 id="student-cv-title">CV profesional</h2><InstitutionRequestError failure={failure} retry={refresh} page /></>

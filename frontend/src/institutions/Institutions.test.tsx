@@ -259,7 +259,7 @@ describe('registro y edición de instituciones', () => {
     await screen.findByRole('button', { name: 'Crear institución' })
     fillForm()
     fireEvent.click(screen.getByRole('button', { name: 'Crear institución' }))
-    expect(await screen.findByText('Institución registrada, pero no pudimos enviar el enlace. Usa «Reenviar enlace».')).toHaveAttribute('role', 'status')
+    expect(await screen.findByText('Institución registrada, pero no pudimos enviar el enlace. Usa “Reenviar enlace”.')).toHaveAttribute('role', 'status')
   })
 
   it('con la entrega manual muestra el enlace para copiar en la misma página, sin guardarlo en el historial (T-S8-11)', async () => {

@@ -1,11 +1,13 @@
 import { useCallback, useState } from 'react'
-import type { FormEvent, MouseEvent } from 'react'
+import type { FormEvent } from 'react'
 import { Link, useLocation, useNavigate, useSearchParams } from 'react-router'
 import { InstitutionRequestError } from '../institutions/InstitutionLayout'
 import { useApiRequest } from '../lib/useApiRequest'
 import { ChevronLeftIcon, ChevronRightIcon, PlusIcon, SearchIcon } from '../ui/icons'
 import { Sheet } from '../ui/Sheet'
+import { backState } from '../ui/backLink'
 import { LoadingState, StateMessage } from '../ui/StateMessage'
+import { useRowNavigation } from '../ui/useRowNavigation'
 import { listStudents, surnames } from './api'
 import type { StudentStatusFilter } from './api'
 import { studentMessages } from './messages'
@@ -57,12 +59,8 @@ export function StudentsPage() {
     }, { replace: true })
   }
 
-  // Toda la fila abre el detalle con el puntero; el enlace «Ver detalle» sigue siendo el control accesible (CA-04).
-  function openRow(event: MouseEvent<HTMLTableRowElement>, href: string) {
-    if (event.defaultPrevented || (event.target as HTMLElement).closest('a, button')) return
-    if (window.getSelection()?.toString()) return
-    void navigate(href)
-  }
+  // Toda la fila abre el detalle con el puntero; el enlace «Ver detalle» sigue siendo el control accesible (HU-S8-01).
+  const openRow = useRowNavigation()
   // «Registrar alumno» del inicio abre directamente la hoja de alta.
   const location = useLocation()
   const [registering, setRegistering] = useState(() => {
@@ -116,7 +114,7 @@ export function StudentsPage() {
           ? filtered
             ? <StateMessage kind="empty" icon={<SearchIcon />} title="Ningún alumno coincide con la búsqueda."
               description={missingData ? 'No hay alumnos con datos faltantes que coincidan con los filtros.'
-                : query ? `No hay alumnos cuya matrícula o nombre contenga «${query}» con el estado elegido.` : 'No hay alumnos con el estado elegido.'}
+                : query ? <>No hay alumnos cuya matrícula o nombre contenga <strong>{query}</strong> con el estado elegido.</> : 'No hay alumnos con el estado elegido.'}
               action={<button type="button" className="secondary" onClick={clearFilters}>Limpiar filtros</button>} />
             : <StateMessage kind="empty" icon={<SearchIcon />} title="Aún no hay alumnos registrados."
               description="Registra a tus alumnos con su matrícula y nombre. Estos datos son de uso exclusivo de tu institución."
@@ -131,14 +129,16 @@ export function StudentsPage() {
                 <tbody>
                   {data.students.map((student) => {
                     const href = `/students/${student.id}`
+                    // T-S12-04: el detalle regresa al padrón con la misma búsqueda y filtros.
+                    const back = backState('Alumnos', location)
                     return (
-                      <tr key={student.id} data-href={href} onClick={(event) => openRow(event, href)}>
+                      <tr key={student.id} data-href={href} onClick={(event) => openRow(event, href, back)}>
                         <td className="mono">{student.enrollment_number}</td>
                         <th scope="row">{surnames(student)}</th>
                         <td>{student.given_names}</td>
                         <td><StudentStatus active={student.is_active} /></td>
                         <td>
-                          <Link className="pill-link" to={href} aria-label={`Ver detalle de ${surnames(student)}, ${student.given_names}`}>
+                          <Link className="pill-link" to={href} state={back} aria-label={`Ver detalle de ${surnames(student)}, ${student.given_names}`}>
                             Ver detalle<ChevronRightIcon />
                           </Link>
                         </td>

@@ -40,7 +40,7 @@ export function InstitutionCreatePage() {
           // T-S8-11: la cuenta del responsable ya existe; el aviso dice si su enlace salió o hay que reenviarlo.
           const notice = setupDelivery === 'sent'
             ? `Institución registrada. Enviamos a ${institution.contact_email} el enlace para establecer su contraseña.`
-            : 'Institución registrada, pero no pudimos enviar el enlace. Usa «Reenviar enlace».'
+            : 'Institución registrada, pero no pudimos enviar el enlace. Usa “Reenviar enlace”.'
           void navigate(`/institutions/${institution.id}`, { replace: true, state: { notice } })
         })} />
     </InstitutionLayout>

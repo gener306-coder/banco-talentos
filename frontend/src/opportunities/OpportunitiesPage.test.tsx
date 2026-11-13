@@ -277,3 +277,17 @@ describe('oportunidades duales HU-S5-02', () => {
     })
   })
 })
+
+describe('regreso contextual del detalle (T-S12-04)', () => {
+  it('regresa a la bandeja de solicitudes si se abrió desde ella; si no, a oportunidades', async () => {
+    apiMock.mockResolvedValueOnce(Response.json({ data: opportunity }))
+    const back = { to: '/linkage-requests?status=ACEPTADA', label: 'Volver a solicitudes' }
+    const view = render(<MemoryRouter initialEntries={[{ pathname: '/opportunities/12', state: { back } }]}><App /></MemoryRouter>)
+    expect(await screen.findByRole('link', { name: 'Volver a solicitudes' })).toHaveAttribute('href', '/linkage-requests?status=ACEPTADA')
+    view.unmount()
+
+    apiMock.mockResolvedValueOnce(Response.json({ data: opportunity }))
+    renderApp('/opportunities/12')
+    expect(await screen.findByRole('link', { name: 'Volver a oportunidades' })).toHaveAttribute('href', '/opportunities')
+  })
+})
