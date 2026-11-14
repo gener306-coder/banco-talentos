@@ -3,23 +3,43 @@ import type { ReactNode } from 'react'
 import type { FormEvent } from 'react'
 import { Link } from 'react-router'
 import { InstitutionRequestError } from '../institutions/InstitutionLayout'
-import { useApiMutation, useApiRequest } from '../lib/useApiRequest'
-import { listOpportunityOptions, opportunityMessages } from '../opportunities/api'
+import { useApiMutation } from '../lib/useApiRequest'
+import type { ApiFailure } from '../lib/useApiRequest'
+import type { OpportunityOption } from '../opportunities/api'
 import { OPPORTUNITY_CONTACT_MESSAGE } from '../opportunities/OpportunityForm'
 import { hasContactInformation } from '../students/cvCatalogs'
 import { PendingLabel } from '../ui/forms'
 import { PlusIcon } from '../ui/icons'
 import { LoadingState } from '../ui/StateMessage'
 import { createLinkageRequest, LINKAGE_MESSAGE_LIMIT, linkageMessages } from './api'
+import { blockingLabels } from './availability'
+import type { OpportunityAvailability } from './availability'
 
 type Field = 'opportunity_id' | 'message'
+
+/** Oportunidades activas de la empresa tal como las carga el perfil (useApiRequest). */
+export interface OpportunityOptions {
+  data: OpportunityOption[] | null
+  loading: boolean
+  failure: ApiFailure | null
+  refresh: () => Promise<void>
+}
 
 /**
  * Solicitud de vinculación desde el perfil anónimo (HU-S5-04 CA-06): una de las oportunidades activas de la empresa
  * y un mensaje opcional. Va directo a la institución del alumno; nunca revela su identidad a la empresa.
+ * T-S12-07: las oportunidades con una solicitud pendiente, aceptada o rechazada para este perfil aparecen deshabilitadas
+ * con su motivo; el perfil carga las opciones y calcula la disponibilidad (linkage/availability.ts).
  */
-export function LinkageRequestForm({ publicId, onSent }: { publicId: string; onSent?: () => void }) {
-  const options = useApiRequest(listOpportunityOptions, opportunityMessages)
+export function LinkageRequestForm({ publicId, options, availability, onSent }: {
+  publicId: string
+  options: OpportunityOptions
+  /** null mientras no se conocen las solicitudes previas: todas las opciones se ofrecen y decide el backend. */
+  availability: readonly OpportunityAvailability[] | null
+  onSent?: () => void
+}) {
+  const items: readonly OpportunityAvailability[] = availability ?? (options.data ?? []).map((option) => ({ option, blockedBy: null }))
+  const allBlocked = items.length > 0 && items.every((item) => item.blockedBy !== null)
   const mutation = useApiMutation(linkageMessages)
   const [opportunityId, setOpportunityId] = useState('')
   const [message, setMessage] = useState('')
@@ -67,6 +87,13 @@ export function LinkageRequestForm({ publicId, onSent }: { publicId: string; onS
               <Link className="institution-button" to="/opportunities/new"><PlusIcon />Registrar una oportunidad</Link>
             </div>
           )
+        : options.data && allBlocked
+          ? (
+            <>
+              {sent && <p className="institution-success" role="status">{sent}</p>}
+              <p className="notice-muted">Ya solicitaste este perfil para todas tus oportunidades activas. Registra otra oportunidad para enviar una nueva solicitud.</p>
+            </>
+          )
         : options.data && (
           <form onSubmit={(event) => { void submit(event) }} aria-busy={mutation.pending} noValidate>
             {sent && <p className="institution-success" role="status">{sent}</p>}
@@ -78,8 +105,10 @@ export function LinkageRequestForm({ publicId, onSent }: { publicId: string; onS
                 aria-invalid={Boolean(errors.opportunity_id)} aria-describedby={describedBy('opportunity_id')}
                 onChange={(event) => { setOpportunityId(event.target.value); setLocalErrors((current) => ({ ...current, opportunity_id: undefined })) }}>
                 <option value="">Selecciona…</option>
-                {options.data.map((option) => (
-                  <option key={option.id} value={option.id}>{option.title}{option.municipality && ` · ${option.municipality}`}</option>
+                {items.map(({ option, blockedBy }) => (
+                  <option key={option.id} value={option.id} disabled={blockedBy !== null}>
+                    {option.title}{option.municipality && ` · ${option.municipality}`}{blockedBy && ` · ${blockingLabels[blockedBy]}`}
+                  </option>
                 ))}
               </select>
               {errors.opportunity_id && <p className="field-error" id="linkage-opportunity_id-error">{errors.opportunity_id}</p>}

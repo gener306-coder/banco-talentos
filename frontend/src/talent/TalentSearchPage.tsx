@@ -1,6 +1,6 @@
-import { useCallback, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import type { FormEvent } from 'react'
-import { Link, useLocation } from 'react-router'
+import { Link, useLocation, useSearchParams } from 'react-router'
 import { InstitutionRequestError } from '../institutions/InstitutionLayout'
 import { useApiRequest } from '../lib/useApiRequest'
 import { MAX_PERIOD, MEXICAN_STATES } from '../students/catalogs'
@@ -11,7 +11,7 @@ import { ChevronLeftIcon, ChevronRightIcon, SearchIcon } from '../ui/icons'
 import { Sheet } from '../ui/Sheet'
 import { useMediaQuery } from '../ui/useMediaQuery'
 import { LoadingState, StateMessage } from '../ui/StateMessage'
-import { emptyFilters, MAX_QUERY_LENGTH, MAX_SKILL_FILTERS, RADII_KM, searchParams, searchTalent, talentMessages } from './api'
+import { emptyFilters, filtersFromParams, MAX_QUERY_LENGTH, MAX_SKILL_FILTERS, RADII_KM, searchParams, searchTalent, talentMessages, talentViewParams } from './api'
 import type { TalentFilters } from './api'
 import { TalentCardView } from './TalentCardView'
 import '../institutions/institutions.css'
@@ -32,20 +32,33 @@ function activeFilters(filters: TalentFilters): number {
  * enviar el panel; los resultados son exploratorios y no ofrecen ninguna acción de contacto.
  */
 export function TalentSearchPage() {
-  // Atajo del inicio de la empresa: la habilidad llega ya como filtro aplicado.
+  // T-S12-07: los filtros aplicados y la página viven en la URL (mismo formato que la API). El regreso desde un perfil,
+  // una recarga o el atajo del inicio (/talent?skills[]=…) reconstruyen la búsqueda; el panel edita un borrador local.
+  const [params, setParams] = useSearchParams()
+  const query = params.toString()
+  const { filters: applied, page } = useMemo(() => filtersFromParams(new URLSearchParams(query)), [query])
   const location = useLocation()
-  const [initial] = useState<TalentFilters>(() => {
-    const state: unknown = location.state
-    const skill = typeof state === 'object' && state !== null && 'skill' in state && typeof state.skill === 'string' ? displayName(state.skill).slice(0, 80) : ''
-    return skill ? { ...emptyFilters, skills: [skill] } : emptyFilters
-  })
-  const [draft, setDraft] = useState<TalentFilters>(initial)
-  const [applied, setApplied] = useState<TalentFilters>(initial)
-  const [page, setPage] = useState(1)
+  // Transición: el atajo anterior del inicio llevaba una habilidad en el estado de navegación; se pasa a la URL.
+  const legacy: unknown = location.state
+  const legacySkill = typeof legacy === 'object' && legacy !== null && 'skill' in legacy && typeof legacy.skill === 'string' ? displayName(legacy.skill).slice(0, 80) : ''
+  useEffect(() => {
+    if (legacySkill && !params.has('skills[]')) setParams(talentViewParams({ ...emptyFilters, skills: [legacySkill] }, 1), { replace: true })
+  }, [legacySkill, params, setParams])
+  const [draft, setDraft] = useState<TalentFilters>(applied)
   const [pickerKey, setPickerKey] = useState(0)
-  const [originMode, setOriginMode] = useState<'company' | 'other'>('company')
-  const [originState, setOriginState] = useState('')
+  const [originMode, setOriginMode] = useState<'company' | 'other'>(applied.originMunicipalityCode ? 'other' : 'company')
+  const [originState, setOriginState] = useState(applied.originMunicipalityCode.slice(0, 2))
   const [originError, setOriginError] = useState<string | null>(null)
+  // Si la URL cambia desde fuera del panel (el atajo anterior, Atrás del navegador), el borrador la sigue.
+  const [syncedQuery, setSyncedQuery] = useState(query)
+  if (syncedQuery !== query) {
+    setSyncedQuery(query)
+    setDraft(applied)
+    setOriginMode(applied.originMunicipalityCode ? 'other' : 'company')
+    setOriginState(applied.originMunicipalityCode.slice(0, 2))
+  }
+  const show = (filters: TalentFilters, nextPage: number) => setParams(talentViewParams(filters, nextPage), { replace: true })
+  const setPage = (nextPage: number) => show(applied, nextPage)
   const load = useCallback((signal: AbortSignal) => searchTalent(applied, page, signal), [applied, page])
   const { data, loading, failure, refresh } = useApiRequest(load, talentMessages)
   const narrow = useMediaQuery(NARROW_QUERY)
@@ -68,20 +81,18 @@ export function TalentSearchPage() {
       return
     }
     setOriginError(null)
-    setApplied(effective)
-    setPage(1)
+    show(effective, 1)
     setFiltersOpen(false)
   }
 
   function clear() {
     setDraft(emptyFilters)
-    setApplied(emptyFilters)
+    show(emptyFilters, 1)
     setOriginMode('company')
     setOriginState('')
     setOriginError(null)
     // El campo de habilidades guarda lo que se está escribiendo: se reinicia con el panel.
     setPickerKey((current) => current + 1)
-    setPage(1)
   }
 
   // Un solo panel: en pantallas anchas es la columna izquierda; en estrechas, el contenido de la hoja.

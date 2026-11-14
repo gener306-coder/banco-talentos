@@ -24,6 +24,7 @@ Sprint vigente desde el 13 de noviembre de 2026. Sprint anterior: [sprint-11.md]
 4. **T-S12-04** Pulido de navegación, tablas y avisos (rama `chore/ui-polish-navigation-alerts`).
 5. **T-S12-05** Tablas: jerarquía de acciones, hover independiente y filtros en la URL (rama `chore/ui-polish-tables-filters`).
 6. **T-S12-06** Mensaje de respuesta en una hoja y menú del correo (rama `chore/ui-polish-messages-email`).
+7. **T-S12-07** «Solicitar vinculación» según la disponibilidad y buscador del inicio con el catálogo (rama `chore/s12-07-linkage-availability-home-search`).
 
 ## Fuera de alcance
 
@@ -175,6 +176,41 @@ Como la columna de estado y la de acciones quedan fuera de la vista sin ninguna 
 
 ---
 
+## T-S12-07 — «Solicitar vinculación» según la disponibilidad y buscador del inicio con el catálogo
+
+**Estado:** Completada (13 de noviembre de 2026); validación visual pendiente del responsable  
+**Rol:** `COMPANY` (frontend y una regla del backend)  
+**Origen:** cabos sueltos detectados por el responsable y el Arquitecto antes de cerrar el frontend.
+
+### Diagnóstico
+
+- El backend bloquea por **(empresa, alumno, oportunidad)**, no por alumno (índice parcial `linkage_requests_active_unique`). Ocultar la acción ante cualquier solicitud previa bloquearía solicitudes legítimas para otras oportunidades.
+- El atajo del inicio enviaba texto libre a `skills[]` («pyhton» daba cero resultados) y se saltaba el catálogo del Sprint 11.
+
+### Decisiones del responsable y el Arquitecto
+
+| Estado previo para la misma oportunidad | ¿Se puede volver a solicitar? |
+|---|---|
+| Pendiente de la institución | No (regla existente) |
+| Aceptada | No para esa oportunidad; sí para otras |
+| Rechazada | **No para esa oportunidad** (regla nueva en el backend); sí para otras |
+| Cancelada | Sí: la empresa la retiró por decisión propia |
+
+- El atajo del inicio usa el `SkillPicker` en modo catálogo, con el botón «Buscar». No se cambia de vista al elegir una opción (WCAG 3.2.2).
+- Los filtros de `/talent` pasan a la URL, con el mismo formato que la API. Esto cierra el hueco que dejó T-S12-05.
+
+### Criterios de aceptación
+
+- **CA-01.** [Backend] Si existe una solicitud RECHAZADA de la empresa para el mismo perfil y oportunidad, el alta responde 422 en `opportunity_id`: «La institución ya rechazó una solicitud de este perfil para esa oportunidad. Elige otra oportunidad.». Una solicitud cancelada no bloquea, y el rechazo de otra empresa tampoco.
+- **CA-02.** [Disponibilidad] `linkage/availability.ts` cruza las oportunidades activas con las solicitudes ya enviadas para el perfil. Pendiente, aceptada y rechazada bloquean solo su oportunidad.
+- **CA-03.** [Acción principal] «Solicitar vinculación» aparece mientras quede al menos una oportunidad disponible. Si no queda ninguna, desaparece y el `Callout` dice «Ya solicitaste este perfil para todas tus oportunidades activas:», con «Ver tus solicitudes». Sin oportunidades activas, el flujo no cambia. Si los datos no cargan, la acción se ofrece y decide el backend.
+- **CA-04.** [Formulario] Las oportunidades bloqueadas aparecen deshabilitadas con su motivo («Calidad · Pendiente»). Al enviar la última oportunidad disponible, la acción se retira y la hoja lo explica.
+- **CA-05.** [Inicio] El atajo usa el catálogo: Enter solo agrega, el texto sin elegir no se descarta («Elige una sugerencia del catálogo o borra el texto.») y «Buscar» abre `/talent?skills[]=…`.
+- **CA-06.** [`/talent` en la URL] Los filtros aplicados y la página se leen de la URL (`filtersFromParams`, que valida cada valor y descarta lo que no reconoce) y se escriben al aplicar, limpiar o paginar. El origen «otro municipio» se reconstruye desde su clave INEGI. Las tarjetas abren el perfil con el regreso a la búsqueda exacta. Se sigue aceptando el atajo anterior (`state.skill`).
+- **CA-07.** [Pruebas] Pest cubre las reglas de estado; Vitest, la disponibilidad, la acción, el formulario, el atajo y la URL del buscador; E2E, la oportunidad deshabilitada. ESLint y el build pasan.
+
+---
+
 ## Verificación (13 de noviembre de 2026)
 
 - `tokens.test.ts`: 114 casos (contraste en claro y oscuro con mezclas y opacidades, capas, hover y escala). La prueba de capas encontró una quinta regla fuera de capa que la auditoría no había listado: `.institution-status.pending` en `institutions.css`, ahora dentro de `@layer legacy`.
@@ -186,3 +222,4 @@ Como la columna de estado y la de acciones quedan fuera de la vista sin ninguna 
 - T-S12-04: Vitest 979 (más las 3 fallas previas de `object.stream`), ESLint, build, Pest 1455 y E2E 44 pasan. En la simulación, el perfil abierto desde la bandeja filtrada regresa a `/linkage-requests?status=PENDIENTE_INSTITUCION` (a 390 y a 1440 px), y el alumno abierto desde el padrón filtrado regresa a `/students?data=missing&status=active`.
 - T-S12-05: Vitest con las mismas 3 fallas previas de `object.stream`; ESLint y el build pasan. En Chromium (simulación, 1440 px), con el cursor en el texto de la fila solo se adelanta la flecha de «Ver perfil». Con el cursor en «Oportunidad» o en el ícono de correo, la fila no se resalta y solo ese control responde. `/linkage-requests?status=PENDIENTE_INSTITUCION&page=2` abre en la página 2, y el regreso desde el perfil vuelve a esa misma URL.
 - T-S12-06: Vitest con las mismas 3 fallas previas de `object.stream`; ESLint, el build y E2E (44) pasan. En la simulación, a 1440 y 390 px (tabla desplazada), el menú del correo aparece completo bajo el ícono, y abrir el menú o la hoja no cambia la URL.
+- T-S12-07: Pest (1459), Vitest (1012, con las mismas 3 fallas previas de `object.stream`), ESLint, el build y E2E (44) pasan. E2E detectó un defecto que se corrigió: el perfil cargaba las oportunidades al abrirse, así que una oportunidad registrada en otra pestaña no aparecía en la hoja; ahora la hoja vuelve a consultar oportunidades y solicitudes al abrirse. En la simulación, «pyhton» exige elegir Python y «Buscar» abre `/talent?skills[]=Python` (699 perfiles); la oportunidad ya solicitada aparece deshabilitada como «Pendiente».

@@ -7,6 +7,9 @@ import { useAuth } from '../auth/useAuth'
 import { organizationOf } from '../auth/user'
 import { getDashboard, metricKeys, metricLabels } from '../dashboard/api'
 import { useApiRequest } from '../lib/useApiRequest'
+import { displayName } from '../students/cvCatalogs'
+import { SkillPicker } from '../students/SkillPicker'
+import { emptyFilters, MAX_SKILL_FILTERS, talentViewParams } from '../talent/api'
 import { DualStoriesSpotlight } from '../videos/DualStoriesSpotlight'
 import { BriefcaseIcon, BuildingIcon, ChartIcon, ChevronRightIcon, ClipboardIcon, IdCardIcon, PlusIcon, SearchIcon, UsersIcon, VideoIcon } from '../ui/icons'
 
@@ -91,23 +94,36 @@ function homeFor(user: User): Home | null {
   }
 }
 
-/** Atajo de la empresa: abre el buscador con la habilidad ya filtrada. */
+/**
+ * Atajo de la empresa (T-S12-07): el mismo selector del catálogo que el buscador (HU-S11-01), así «pyhton» se corrige
+ * eligiendo la sugerencia antes de buscar. Enter solo agrega la habilidad elegida; «Buscar» abre /talent con las
+ * habilidades en la URL (no se cambia de vista al elegir una opción: WCAG 3.2.2). Lo escrito sin elegir no se
+ * descarta en silencio.
+ */
 function TalentShortcut() {
   const navigate = useNavigate()
-  const [skill, setSkill] = useState('')
+  const [skills, setSkills] = useState<string[]>([])
+  const [pendingText, setPendingText] = useState('')
+  const [error, setError] = useState<string | null>(null)
 
   function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
-    const value = skill.trim().replace(/\s+/g, ' ').slice(0, 80)
-    void navigate('/talent', { state: value ? { skill: value } : undefined })
+    if (displayName(pendingText)) {
+      setError('Elige una sugerencia del catálogo o borra el texto.')
+      return
+    }
+    const params = talentViewParams({ ...emptyFilters, skills }, 1).toString()
+    void navigate(params ? `/talent?${params}` : '/talent')
   }
 
   return (
-    <form className="home-search" role="search" aria-label="Buscar talento" onSubmit={submit}>
-      <label htmlFor="home-skill">Buscar talento por habilidad</label>
-      <div>
-        <input id="home-skill" type="text" maxLength={80} autoComplete="off" placeholder="Ej. React, Contabilidad, Soldadura"
-          value={skill} onChange={(event) => setSkill(event.target.value)} />
+    <form className="home-search" role="search" aria-label="Buscar talento" onSubmit={submit} noValidate>
+      <SkillPicker idPrefix="home" catalogOnly label="Buscar talento por habilidad" placeholder="Ej. React, Contabilidad, Soldadura"
+        skills={skills.map((name) => ({ name, kind: 'technical' }))} max={MAX_SKILL_FILTERS} disabled={false} serverError={null}
+        onChange={(next) => { setSkills(next.map((skill) => skill.name)); setError(null) }}
+        onQueryChange={(text) => { setPendingText(text); setError(null) }} />
+      {error && <p className="field-error" role="alert">{error}</p>}
+      <div className="actions">
         <button type="submit"><SearchIcon />Buscar</button>
       </div>
     </form>

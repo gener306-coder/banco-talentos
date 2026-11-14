@@ -1,6 +1,7 @@
-import { Link } from 'react-router'
+import { Link, useLocation } from 'react-router'
 import { periodLabel, stateName } from '../students/catalogs'
 import { languageName, levelLabel } from '../students/cvCatalogs'
+import { backState } from '../ui/backLink'
 import { ChevronRightIcon } from '../ui/icons'
 import { distanceLabel } from './api'
 import type { TalentCard } from './api'
@@ -34,6 +35,7 @@ export function SkillChips({ skills, label }: { skills: TalentCard['skills']; la
 export function TalentCardView({ card }: { card: TalentCard }) {
   const title = card.headline ?? 'Perfil sin titular'
   const titleId = `talent-${card.publicId}`
+  const location = useLocation()
   return (
     <article className="talent-card" aria-labelledby={titleId}>
       <h3 id={titleId}>{title}</h3>
@@ -46,7 +48,8 @@ export function TalentCardView({ card }: { card: TalentCard }) {
         {' · '}
         {card.verifiedCertifications === 1 ? '1 certificación revisada' : `${card.verifiedCertifications} certificaciones revisadas`}
       </p>
-      <Link className="pill-link" to={`/talent/${card.publicId}`} aria-label={`Ver perfil: ${title}`}>Ver perfil<ChevronRightIcon /></Link>
+      {/* T-S12-07: el perfil regresa a esta búsqueda exacta (filtros y página en la URL). */}
+      <Link className="pill-link" to={`/talent/${card.publicId}`} state={backState('Volver al buscador', location)} aria-label={`Ver perfil: ${title}`}>Ver perfil<ChevronRightIcon /></Link>
     </article>
   )
 }

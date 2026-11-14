@@ -37,6 +37,8 @@ interface SkillPickerProps {
    * etiquetas van en una sola lista, porque un filtro no registra habilidades.
    */
   catalogOnly?: boolean
+  /** Texto escrito y aún no agregado (T-S12-07): el buscador del inicio no lo descarta en silencio al buscar. */
+  onQueryChange?: (query: string) => void
 }
 
 /**
@@ -44,7 +46,7 @@ interface SkillPickerProps {
  * por las oportunidades duales (HU-S5-02) y, en modo solo catálogo, por el buscador de talento (HU-S11-01). Una
  * habilidad del catálogo conserva su tipo; una nueva toma el elegido.
  */
-export function SkillPicker({ idPrefix, skills, onChange, max, disabled, serverError, contactMessage, placeholder, label = 'Agregar habilidad', catalogOnly = false }: SkillPickerProps) {
+export function SkillPicker({ idPrefix, skills, onChange, max, disabled, serverError, contactMessage, placeholder, label = 'Agregar habilidad', catalogOnly = false, onQueryChange }: SkillPickerProps) {
   const [query, setQuery] = useState('')
   const [suggestions, setSuggestions] = useState<SkillSuggestion[]>([])
   // Texto al que corresponden las sugerencias: distingue «sin coincidencias» de «aún no llegan» (T-S11-01).
@@ -95,6 +97,7 @@ export function SkillPicker({ idPrefix, skills, onChange, max, disabled, serverE
     if (message || !name) return
     onChange([...skills, { name, kind: skill.kind }])
     setQuery('')
+    onQueryChange?.('')
     setSuggestions([])
     setSelected(null)
     setOpen(false)
@@ -184,7 +187,7 @@ export function SkillPicker({ idPrefix, skills, onChange, max, disabled, serverE
           aria-invalid={Boolean(error)}
           aria-describedby={error ? `${idPrefix}-skills-hint ${idPrefix}-skills-error` : `${idPrefix}-skills-hint`}
           value={query} placeholder={placeholder}
-          onChange={(event) => { setQuery(event.target.value); setOpen(true); setLocalError(null); if (!displayName(event.target.value)) setSuggestions([]) }}
+          onChange={(event) => { setQuery(event.target.value); onQueryChange?.(event.target.value); setOpen(true); setLocalError(null); if (!displayName(event.target.value)) setSuggestions([]) }}
           onKeyDown={onKeyDown} onBlur={() => setOpen(false)} onFocus={() => setOpen(true)} />
         <ul id={listId} role="listbox" aria-label="Sugerencias de habilidades" className="combobox-list" hidden={!expanded}>
           {options.map((option, index) => (

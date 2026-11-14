@@ -379,9 +379,7 @@ textarea[aria-invalid='true'] { border-color: var(--danger-border); }
   color: var(--on-accent); font-weight: 600; text-decoration: none; transition: transform 150ms ease-out, background-color 150ms ease-out; }
 .home-action:active { transform: scale(0.97); }
 .home-search { max-width: var(--content-readable); margin: 0 0 1.75rem; gap: 0.4rem; }
-.home-search > div { display: flex; gap: 0.5rem; }
-.home-search input { margin: 0; }
-.home-search button { display: inline-flex; align-items: center; gap: 0.4rem; white-space: nowrap; }
+.home-search .actions { margin-top: 0.1rem; }
 /* Indicadores del inicio (HU-S5-01): cifra grande sobre su etiqueta. */
 .home-indicators { margin: 0 0 1.75rem; }
 .home-stats { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(11rem, 100%), 1fr)); gap: 0.9rem; margin: 0; }
@@ -451,7 +449,6 @@ textarea[aria-invalid='true'] { border-color: var(--danger-border); }
   .home-task { border-color: var(--task-color); }
 }
 @media (max-width: 600px) {
-  .home-search > div { flex-direction: column; }
   .home-action { width: 100%; justify-content: center; }
 }
 }

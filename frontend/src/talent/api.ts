@@ -1,9 +1,9 @@
 import { isPositiveInt } from '../accounts/api'
 import { ApiError, request } from '../lib/http'
 import type { FailureMessages } from '../lib/useApiRequest'
-import { isPeriodType, isStateCode } from '../students/catalogs'
+import { isPeriodType, isStateCode, MAX_PERIOD } from '../students/catalogs'
 import type { PeriodType } from '../students/catalogs'
-import { isCvLanguage, isLanguageLevel, isSkillKind } from '../students/cvCatalogs'
+import { displayName, isCvLanguage, isLanguageLevel, isSkillKind } from '../students/cvCatalogs'
 import type { SkillKind } from '../students/cvCatalogs'
 
 export const talentMessages: FailureMessages = {
@@ -134,6 +134,56 @@ export function searchParams(filters: TalentFilters, page: number): URLSearchPar
   if (filters.radiusKm) params.set('radius_km', filters.radiusKm)
   if (filters.originMunicipalityCode) params.set('origin_municipality_code', filters.originMunicipalityCode)
   params.set('page', String(page))
+  return params
+}
+
+/** Habilidad de un filtro: nombre del catálogo, hasta 80 caracteres (el mismo límite que el campo). */
+const MAX_SKILL_LENGTH = 80
+
+/**
+ * Inversa de `searchParams` para la URL de /talent (T-S12-07): la URL usa el mismo formato que la API, así que el regreso
+ * desde un perfil, una recarga o un enlace compartido reconstruyen la búsqueda. Cada valor se valida contra su catálogo y
+ * lo que no se reconoce se descarta (una URL editada a mano nunca llega como filtro inválido).
+ */
+export function filtersFromParams(params: URLSearchParams): { filters: TalentFilters; page: number } {
+  const text = (name: string) => params.get(name) ?? ''
+  const number = (name: string) => Number(text(name))
+  const seen = new Set<string>()
+  const skills = params.getAll('skills[]').map(displayName).filter((skill) => {
+    const key = skill.toLocaleLowerCase('es')
+    if (!skill || skill.length > MAX_SKILL_LENGTH || seen.has(key)) return false
+    seen.add(key)
+    return true
+  }).slice(0, MAX_SKILL_FILTERS)
+  const language = isCvLanguage(text('language')) ? text('language') : ''
+  const level = number('min_level')
+  const period = number('min_period')
+  const radius = number('radius_km')
+  const origin = text('origin_municipality_code')
+  const page = number('page')
+  return {
+    filters: {
+      q: displayName(text('q')).slice(0, MAX_QUERY_LENGTH),
+      skills,
+      language,
+      minLevel: language && isLanguageLevel(level) ? String(level) : '',
+      minPeriod: Number.isInteger(period) && period >= 1 && period <= MAX_PERIOD ? String(period) : '',
+      dualAvailable: text('dual_available') === '1',
+      canRelocate: text('can_relocate') === '1',
+      verifiedCertification: text('verified_certification') === '1',
+      stateCode: isStateCode(text('state_code')) ? text('state_code') : '',
+      radiusKm: (RADII_KM as readonly number[]).includes(radius) ? String(radius) : '',
+      // Clave INEGI de 5 dígitos: los dos primeros son el estado.
+      originMunicipalityCode: /^\d{5}$/.test(origin) && isStateCode(origin.slice(0, 2)) ? origin : '',
+    },
+    page: Number.isSafeInteger(page) && page > 1 ? page : 1,
+  }
+}
+
+/** URL de la vista: los filtros como en la API y la página solo si no es la primera. */
+export function talentViewParams(filters: TalentFilters, page: number): URLSearchParams {
+  const params = searchParams(filters, page)
+  if (page <= 1) params.delete('page')
   return params
 }
 

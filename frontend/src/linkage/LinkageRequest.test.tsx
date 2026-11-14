@@ -58,10 +58,10 @@ async function openSheet() {
 }
 
 describe('solicitud de vinculación HU-S5-04', () => {
-  it('no consulta las oportunidades hasta abrir la hoja', async () => {
+  it('consulta las oportunidades con el perfil para decidir si ofrece la acción (T-S12-07)', async () => {
     render(<MemoryRouter initialEntries={[`/talent/${publicId}`]}><App /></MemoryRouter>)
     await screen.findByRole('button', { name: 'Solicitar vinculación' })
-    expect(fetchMock.mock.calls.some(([path]) => path === '/api/opportunities/options')).toBe(false)
+    expect(fetchMock.mock.calls.some(([path]) => path === '/api/opportunities/options')).toBe(true)
   })
 
   it('elige una oportunidad activa, envía la solicitud directa y confirma (CA-02, CA-04, CA-06)', async () => {
@@ -133,8 +133,10 @@ describe('solicitud de vinculación HU-S5-04', () => {
       profile: { public_id: publicId, headline: 'Analista de datos', program: 'Ingeniería', period_type: 'semester', period_number: 6 },
       institution: { name: 'UT del Golfo', contact_name: 'Laura Méndez', contact_position: 'Coordinación Dual', contact_email: 'dual@utgolfo.edu.mx', contact_phone: '+52 833 357 4800' }, responded_at: null, response_message: null,
     })
-    sentMock.mockImplementationOnce(async () => sentPage([sentItem(13, 'Calidad', 'CANCELADA')]))
-      .mockImplementationOnce(async () => sentPage([sentItem(12, 'Automatización de línea', 'PENDIENTE_INSTITUCION'), sentItem(13, 'Calidad', 'CANCELADA')]))
+    // Las solicitudes previas cambian solo después de enviar (el perfil también las vuelve a consultar al abrir la hoja).
+    sentMock.mockImplementation(async () => sentPage(posts().length
+      ? [sentItem(12, 'Automatización de línea', 'PENDIENTE_INSTITUCION'), sentItem(13, 'Calidad', 'CANCELADA')]
+      : [sentItem(13, 'Calidad', 'CANCELADA')]))
     linkageMock.mockResolvedValueOnce(Response.json({ data: created }, { status: 201 }))
     const sheet = await openSheet()
     const notice = screen.getByRole('note', { name: 'Solicitudes enviadas para este perfil' })
@@ -157,3 +159,66 @@ describe('solicitud de vinculación HU-S5-04', () => {
     expect(screen.queryByRole('note', { name: 'Solicitudes enviadas para este perfil' })).not.toBeInTheDocument()
   })
 })
+
+describe('solicitar vinculación según las solicitudes previas (T-S12-07)', () => {
+  const sentTo = (opportunityId: number, title: string, status: string) => ({
+    id: 100 + opportunityId, status, created_at: '2026-10-28T10:00:00Z', message: null, opportunity: { id: opportunityId, title },
+    profile: { public_id: publicId, headline: 'Analista de datos', program: 'Ingeniería', period_type: 'semester', period_number: 6 },
+    institution: { name: 'UT del Golfo', contact_name: null, contact_position: null, contact_email: 'dual@utgolfo.edu.mx', contact_phone: null },
+    responded_at: null, response_message: null,
+  })
+  const renderProfile = () => render(<MemoryRouter initialEntries={[`/talent/${publicId}`]}><App /></MemoryRouter>)
+
+  it('deshabilita con su motivo las oportunidades ya solicitadas y deja elegir las demás', async () => {
+    sentMock.mockImplementation(async () => sentPage([sentTo(12, 'Automatización de línea', 'RECHAZADA')]))
+    renderProfile()
+    fireEvent.click(await screen.findByRole('button', { name: 'Solicitar vinculación' }))
+    const select = await within(await screen.findByRole('dialog', { name: 'Solicitar vinculación' })).findByLabelText('Oportunidad')
+    expect(within(select).getByRole('option', { name: 'Automatización de línea · Reynosa · Rechazada' })).toBeDisabled()
+    expect(within(select).getByRole('option', { name: 'Calidad' })).toBeEnabled()
+  })
+
+  it('al abrir la hoja vuelve a consultar las oportunidades: una registrada en otra pestaña aparece', async () => {
+    options = []
+    renderProfile()
+    const open = await screen.findByRole('button', { name: 'Solicitar vinculación' })
+    await waitFor(() => expect(fetchMock.mock.calls.filter(([path]) => path === '/api/opportunities/options')).toHaveLength(1))
+    options = [{ id: 21, title: 'Recién registrada', program: 'Mecatrónica', municipality: null }]
+    fireEvent.click(open)
+    const select = await within(await screen.findByRole('dialog', { name: 'Solicitar vinculación' })).findByLabelText('Oportunidad')
+    expect(within(select).getByRole('option', { name: 'Recién registrada' })).toBeEnabled()
+  })
+
+  it('una solicitud cancelada no bloquea su oportunidad', async () => {
+    sentMock.mockImplementation(async () => sentPage([sentTo(13, 'Calidad', 'CANCELADA')]))
+    renderProfile()
+    fireEvent.click(await screen.findByRole('button', { name: 'Solicitar vinculación' }))
+    const select = await within(await screen.findByRole('dialog', { name: 'Solicitar vinculación' })).findByLabelText('Oportunidad')
+    expect(within(select).getByRole('option', { name: 'Calidad' })).toBeEnabled()
+  })
+
+  it('sin oportunidades disponibles no ofrece la acción y el aviso lo explica', async () => {
+    sentMock.mockImplementation(async () => sentPage([sentTo(12, 'Automatización de línea', 'ACEPTADA'), sentTo(13, 'Calidad', 'PENDIENTE_INSTITUCION')]))
+    renderProfile()
+    const notice = await screen.findByRole('note', { name: 'Solicitudes enviadas para este perfil' })
+    expect(notice).toHaveTextContent('Ya solicitaste este perfil para todas tus oportunidades activas:')
+    expect(within(notice).getByRole('link', { name: 'Ver tus solicitudes' })).toHaveAttribute('href', '/linkage-requests')
+    expect(screen.queryByRole('button', { name: 'Solicitar vinculación' })).not.toBeInTheDocument()
+  })
+
+  it('al enviar la última oportunidad disponible retira la acción', async () => {
+    const pendingBoth = [sentTo(12, 'Automatización de línea', 'PENDIENTE_INSTITUCION'), sentTo(13, 'Calidad', 'PENDIENTE_INSTITUCION')]
+    sentMock.mockImplementation(async () => sentPage(posts().length ? pendingBoth : [sentTo(13, 'Calidad', 'PENDIENTE_INSTITUCION')]))
+    linkageMock.mockResolvedValueOnce(Response.json({ data: created }, { status: 201 }))
+    renderProfile()
+    fireEvent.click(await screen.findByRole('button', { name: 'Solicitar vinculación' }))
+    const sheet = await screen.findByRole('dialog', { name: 'Solicitar vinculación' })
+    fireEvent.change(await within(sheet).findByLabelText('Oportunidad'), { target: { value: '12' } })
+    fireEvent.click(within(sheet).getByRole('button', { name: 'Enviar solicitud' }))
+
+    expect(await within(sheet).findByRole('status')).toHaveTextContent('Solicitud enviada a la institución del alumno')
+    expect(await within(sheet).findByText(/Ya solicitaste este perfil para todas tus oportunidades activas/)).toBeInTheDocument()
+    await waitFor(() => expect(screen.queryByRole('button', { name: 'Solicitar vinculación' })).not.toBeInTheDocument())
+  })
+})
+

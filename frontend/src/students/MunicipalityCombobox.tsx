@@ -117,7 +117,9 @@ export function MunicipalityCombobox({ id, state, code, initialName, invalid, de
           aria-autocomplete="list" aria-expanded={expanded} aria-controls={listId}
           aria-activedescendant={expanded && active >= 0 ? `${listId}-${active}` : undefined}
           aria-invalid={invalid} aria-describedby={[hint || current?.status === 'error' ? hintId : null, describedBy].filter(Boolean).join(' ') || undefined}
-          value={query} placeholder={state ? 'Escribe para buscar' : undefined}
+          // T-S12-07: un código que llega sin nombre (la URL del buscador) muestra su municipio en cuanto carga la lista;
+          // escribir borra la elección, así que no se mezcla con lo tecleado.
+          value={query || selected?.name || ''} placeholder={state ? 'Escribe para buscar' : undefined}
           onChange={(event) => type(event.target.value)} onKeyDown={onKeyDown}
           onFocus={() => setOpen(true)} onBlur={blur} />
         <ul id={listId} role="listbox" aria-label="Municipios" className="combobox-list" hidden={!expanded}>
