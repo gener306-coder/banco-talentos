@@ -195,12 +195,46 @@ describe('validaciones de integridad (CA-03)', function () {
         expect(LinkageRequest::query()->count())->toBe(1);
     })->with(['PENDIENTE_INSTITUCION', 'ACEPTADA']);
 
-    it('allows a new request after a rejected one', function () {
+    it('rejects a new request for the same opportunity after the institution rejected it (T-S12-07)', function () {
         sendLinkage($this)->assertCreated();
         LinkageRequest::query()->update(['status' => 'RECHAZADA']);
 
+        sendLinkage($this)->assertUnprocessable()->assertJsonValidationErrors([
+            'opportunity_id' => 'La institución ya rechazó una solicitud de este perfil para esa oportunidad. Elige otra oportunidad.',
+        ]);
+        expect(LinkageRequest::query()->count())->toBe(1);
+    });
+
+    it('allows another opportunity after a rejected or accepted one (T-S12-07)', function (string $status) {
+        sendLinkage($this)->assertCreated();
+        LinkageRequest::query()->update(['status' => $status]);
+        $other = linkageOpportunity($this->company);
+
+        sendLinkage($this, ['opportunity_id' => $other->id])->assertCreated();
+        expect(LinkageRequest::query()->where('opportunity_id', $other->id)->count())->toBe(1);
+    })->with(['RECHAZADA', 'ACEPTADA']);
+
+    it('allows the same opportunity again after the company cancelled it (T-S12-07)', function () {
+        sendLinkage($this)->assertCreated();
+        LinkageRequest::query()->update(['status' => 'CANCELADA']);
+
         sendLinkage($this)->assertCreated();
         expect(LinkageRequest::query()->count())->toBe(2);
+    });
+
+    it('does not let another company rejection block this company (T-S12-07)', function () {
+        $rival = Company::factory()->create();
+        $rivalOpportunity = linkageOpportunity($rival);
+        $linkage = new LinkageRequest(['message' => null]);
+        $linkage->company_id = $rival->id;
+        $linkage->opportunity_id = $rivalOpportunity->id;
+        $linkage->student_id = $this->student->id;
+        $linkage->institution_id = $this->student->institution_id;
+        $linkage->requested_by = User::factory()->forCompany($rival)->create()->id;
+        $linkage->status = 'RECHAZADA';
+        $linkage->save();
+
+        sendLinkage($this)->assertCreated();
     });
 
     it('enforces a single active request in the database even without the check', function () {

@@ -323,3 +323,50 @@ describe('regreso contextual del perfil público (T-S12-04)', () => {
   })
 })
 
+describe('filtros del buscador en la URL (T-S12-07)', () => {
+  it('reconstruye los filtros y la página desde la URL', async () => {
+    talentMock.mockResolvedValueOnce(page([card], { current_page: 2, last_page: 2, total: 21 }))
+    renderApp('/talent?skills[]=React&language=en&min_level=4&dual_available=1&state_code=28&radius_km=50&page=2')
+    await screen.findByRole('article', { name: 'Analista de datos' })
+    expect(String(talentMock.mock.calls[0][0])).toBe('/api/talent?skills%5B%5D=React&language=en&min_level=4&dual_available=1&state_code=28&radius_km=50&page=2')
+    const form = screen.getByRole('search', { name: 'Filtros de búsqueda' })
+    expect(within(form).getByRole('list', { name: 'Habilidades requeridas' })).toHaveTextContent('React')
+    expect(within(form).getByLabelText('Idioma')).toHaveValue('en')
+    expect(within(form).getByLabelText('Distancia máxima')).toHaveValue('50')
+    expect(within(form).getByLabelText('Disponible para el programa dual')).toBeChecked()
+    // Lo que viene de la URL ya está aplicado: no hay cambios pendientes.
+    expect(within(form).getByRole('button', { name: 'Buscar' })).toBeInTheDocument()
+  })
+
+  it('descarta los valores que no reconoce', async () => {
+    talentMock.mockResolvedValueOnce(page([card]))
+    renderApp('/talent?radius_km=7&state_code=99&language=xx&min_level=4&min_period=99&page=-3&skills[]=&origin_municipality_code=abc')
+    await screen.findByRole('article', { name: 'Analista de datos' })
+    expect(String(talentMock.mock.calls[0][0])).toBe('/api/talent?page=1')
+  })
+
+  it('recupera el origen «otro municipio» desde su clave', async () => {
+    talentMock.mockResolvedValueOnce(page([card]))
+    renderApp('/talent?radius_km=25&origin_municipality_code=28041')
+    await screen.findByRole('article', { name: 'Analista de datos' })
+    expect(String(talentMock.mock.calls[0][0])).toBe('/api/talent?radius_km=25&origin_municipality_code=28041&page=1')
+    expect(screen.getByLabelText('Otro municipio')).toBeChecked()
+    expect(screen.getByLabelText('Estado de origen')).toHaveValue('28')
+    expect(await screen.findByDisplayValue('Victoria')).toBeInTheDocument()
+  })
+
+  it('aplicar filtros escribe la URL y el perfil regresa a esa búsqueda', async () => {
+    talentMock.mockResolvedValueOnce(page([card])).mockResolvedValueOnce(page([card]))
+      .mockResolvedValueOnce(Response.json({ data: card }))
+    renderApp()
+    await screen.findByRole('article', { name: 'Analista de datos' })
+    const form = screen.getByRole('search', { name: 'Filtros de búsqueda' })
+    fireEvent.click(within(form).getByLabelText('Puede reubicarse'))
+    fireEvent.click(within(form).getByRole('button', { name: 'Aplicar filtros' }))
+    await waitFor(() => expect(String(talentMock.mock.calls.at(-1)?.[0])).toBe('/api/talent?can_relocate=1&page=1'))
+
+    fireEvent.click(await screen.findByRole('link', { name: 'Ver perfil: Analista de datos' }))
+    expect(await screen.findByRole('link', { name: 'Volver al buscador' })).toHaveAttribute('href', '/talent?can_relocate=1')
+  })
+})
+

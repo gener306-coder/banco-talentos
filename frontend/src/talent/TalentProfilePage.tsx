@@ -2,9 +2,11 @@ import { useCallback, useState } from 'react'
 import { Link, useParams } from 'react-router'
 import { InstitutionRequestError } from '../institutions/InstitutionLayout'
 import { linkageMessages, listLinkageRequests } from '../linkage/api'
+import { linkageAvailability } from '../linkage/availability'
 import { LinkageRequestForm } from '../linkage/LinkageRequestForm'
 import { LinkageStatus } from '../linkage/LinkageStatus'
 import { useApiRequest } from '../lib/useApiRequest'
+import { listOpportunityOptions, opportunityMessages } from '../opportunities/api'
 import { languageName, levelLabel } from '../students/cvCatalogs'
 import { useBackLink } from '../ui/backLink'
 import { Callout } from '../ui/Callout'
@@ -29,8 +31,14 @@ function TalentProfile({ publicId }: { publicId: string }) {
   // HU-S5-05 CA-04: solicitudes que la empresa ya envió para este perfil. Si fallan, el perfil se muestra igual.
   const loadSent = useCallback((signal: AbortSignal) => listLinkageRequests({ publicId }, signal), [publicId])
   const sent = useApiRequest(loadSent, linkageMessages)
+  // T-S12-07: las oportunidades activas se cargan con el perfil para saber si queda alguna disponible. La regla es por
+  // oportunidad (como en el backend): una solicitud pendiente, aceptada o rechazada bloquea solo la suya.
+  const options = useApiRequest(listOpportunityOptions, opportunityMessages)
+  const availability = options.data && sent.data ? linkageAvailability(options.data, sent.data.items) : null
+  // Sin datos para decidir (cargando o con error) el botón se ofrece: el formulario y el backend tienen la última palabra.
+  const exhausted = availability !== null && availability.items.length > 0 && availability.eligible === 0
   const [requesting, setRequesting] = useState(false)
-  // La hoja carga las oportunidades al abrirse por primera vez y conserva lo escrito al cerrarla.
+  // La hoja monta el formulario al abrirse por primera vez y conserva lo escrito al cerrarla.
   const [requested, setRequested] = useState(false)
   // T-S12-04: desde la bandeja de solicitudes se regresa a ella; desde el buscador (o sin origen), al buscador.
   const back = useBackLink({ to: '/talent', label: 'Volver al buscador' })
@@ -49,7 +57,7 @@ function TalentProfile({ publicId }: { publicId: string }) {
             {sent.data && sent.data.items.length > 0 && (
               <Callout tone="info" label="Solicitudes enviadas para este perfil"
                 action={<Link className="pill-link" to="/linkage-requests">Ver tus solicitudes<ChevronRightIcon /></Link>}>
-                <p>Ya solicitaste la vinculación de este perfil para:</p>
+                <p>{exhausted ? 'Ya solicitaste este perfil para todas tus oportunidades activas:' : 'Ya solicitaste la vinculación de este perfil para:'}</p>
                 <ul>
                   {sent.data.items.map((item) => (
                     <li key={item.id}><strong className="notice-subject">{item.opportunity.title}</strong> · <LinkageStatus status={item.status} /></li>
@@ -57,9 +65,15 @@ function TalentProfile({ publicId }: { publicId: string }) {
                 </ul>
               </Callout>
             )}
-            <div className="actions">
-              <button type="button" onClick={() => { setRequested(true); setRequesting(true) }}>Solicitar vinculación</button>
-            </div>
+            {!exhausted && (
+              <div className="actions">
+                {/* Al abrir la hoja se vuelven a consultar oportunidades y solicitudes: pudieron cambiar en otra pestaña
+                    (por ejemplo, una oportunidad recién registrada) desde que se cargó el perfil. */}
+                <button type="button" onClick={() => { setRequested(true); setRequesting(true); void options.refresh(); void sent.refresh() }}>
+                  Solicitar vinculación
+                </button>
+              </div>
+            )}
             <TalentFacts card={data} />
 
             <section aria-labelledby="talent-skills-title">
@@ -109,7 +123,7 @@ function TalentProfile({ publicId }: { publicId: string }) {
                 : <p className="notice-muted">Sin proyectos registrados.</p>}
             </section>
             <Sheet open={requesting} onClose={() => setRequesting(false)} labelledBy="linkage-request-title">
-              {requested && <LinkageRequestForm publicId={publicId} onSent={() => { void sent.refresh() }} />}
+              {requested && <LinkageRequestForm publicId={publicId} options={options} availability={availability?.items ?? null} onSent={() => { void sent.refresh() }} />}
             </Sheet>
           </>
         )}

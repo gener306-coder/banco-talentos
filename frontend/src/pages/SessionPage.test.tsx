@@ -83,17 +83,57 @@ describe('inicio por rol (tarea transversal del Sprint 4)', () => {
     expect(screen.queryByRole('link')).not.toBeInTheDocument()
   })
 
-  it('el atajo de la empresa abre el buscador con la habilidad ya filtrada', async () => {
-    user = { ...base, role: 'COMPANY', company: { id: 3, name: 'ManuGolfo' } }
-    renderApp()
-    const search = await screen.findByRole('search', { name: 'Buscar talento' })
-    fireEvent.change(within(search).getByLabelText('Buscar talento por habilidad'), { target: { value: '  Power   BI ' } })
-    fireEvent.click(within(search).getByRole('button', { name: 'Buscar' }))
+  describe('atajo de la empresa con el catálogo (T-S12-07)', () => {
+    // Autocompletar del catálogo (HU-S11-01): «power» por prefijo y «pyhton» como aproximación.
+    const catalog: Record<string, unknown[]> = {
+      power: [{ id: 1, name: 'Power BI', kind: 'technical', match: 'prefix' }],
+      pyhton: [{ id: 2, name: 'Python', kind: 'technical', match: 'fuzzy' }],
+    }
+    beforeEach(() => {
+      user = { ...base, role: 'COMPANY', company: { id: 3, name: 'ManuGolfo' } }
+      apiMock.mockImplementation(async (path) => {
+        if (typeof path === 'string' && path.startsWith('/api/skills?')) {
+          return Response.json({ data: catalog[new URLSearchParams(path.split('?')[1]).get('q')?.toLowerCase() ?? ''] ?? [] })
+        }
+        return Response.json({ data: [], meta: { current_page: 1, last_page: 1, total: 0, per_page: 20 } })
+      })
+    })
 
-    expect(await screen.findByRole('heading', { level: 2, name: 'Buscar talento' })).toBeInTheDocument()
-    expect(screen.getByLabelText('Ruta actual')).toHaveTextContent('/talent')
-    expect(within(screen.getByRole('list', { name: 'Habilidades requeridas' })).getByText('Power BI')).toBeInTheDocument()
-    await waitFor(() => expect(String(apiMock.mock.calls.at(-1)?.[0])).toBe('/api/talent?skills%5B%5D=Power+BI&page=1'))
+    it('Enter agrega la habilidad del catálogo sin salir del inicio y «Buscar» la aplica en el buscador', async () => {
+      renderApp()
+      const search = await screen.findByRole('search', { name: 'Buscar talento' })
+      const field = within(search).getByRole('combobox', { name: 'Buscar talento por habilidad' })
+      fireEvent.change(field, { target: { value: 'power' } })
+      await within(search).findByRole('option', { name: /Power BI/ })
+      fireEvent.keyDown(field, { key: 'Enter' })
+      expect(within(search).getByRole('list', { name: 'Habilidades requeridas' })).toHaveTextContent('Power BI')
+      expect(screen.getByLabelText('Ruta actual')).toHaveTextContent('/')
+
+      fireEvent.click(within(search).getByRole('button', { name: 'Buscar' }))
+      expect(await screen.findByRole('heading', { level: 2, name: 'Buscar talento' })).toBeInTheDocument()
+      expect(screen.getByLabelText('Ruta actual')).toHaveTextContent('/talent')
+      expect(within(screen.getByRole('list', { name: 'Habilidades requeridas' })).getByText('Power BI')).toBeInTheDocument()
+      await waitFor(() => expect(String(apiMock.mock.calls.at(-1)?.[0])).toBe('/api/talent?skills%5B%5D=Power+BI&page=1'))
+    })
+
+    it('una escritura aproximada exige elegir la sugerencia antes de buscar', async () => {
+      renderApp()
+      const search = await screen.findByRole('search', { name: 'Buscar talento' })
+      const field = within(search).getByRole('combobox', { name: 'Buscar talento por habilidad' })
+      fireEvent.change(field, { target: { value: 'pyhton' } })
+      await within(search).findByRole('option', { name: /Python/ })
+      fireEvent.click(within(search).getByRole('button', { name: 'Buscar' }))
+      expect(await within(search).findByRole('alert')).toHaveTextContent('Elige una sugerencia del catálogo o borra el texto.')
+      expect(screen.getByLabelText('Ruta actual')).toHaveTextContent('/')
+      expect(apiMock.mock.calls.some(([path]) => String(path).startsWith('/api/talent'))).toBe(false)
+    })
+
+    it('sin habilidades abre el buscador sin filtros', async () => {
+      renderApp()
+      fireEvent.click(within(await screen.findByRole('search', { name: 'Buscar talento' })).getByRole('button', { name: 'Buscar' }))
+      expect(await screen.findByRole('heading', { level: 2, name: 'Buscar talento' })).toBeInTheDocument()
+      await waitFor(() => expect(String(apiMock.mock.calls.at(-1)?.[0])).toBe('/api/talent?page=1'))
+    })
   })
 
   it('«Registrar alumno» abre directamente la hoja de alta del padrón', async () => {

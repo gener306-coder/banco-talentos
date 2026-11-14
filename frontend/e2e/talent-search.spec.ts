@@ -112,10 +112,11 @@ test('HU-S4-05, HU-S5-04, HU-S5-05, HU-S6-01, HU-S6-02 y HU-S6-03: una empresa e
     expect(body.includes(student.surname) || body.includes(student.enrollment) || body.includes('student_id')).toBe(false)
     await expect(sheet.getByRole('status')).toContainText(`Solicitud enviada a la institución del alumno para ${opportunityTitle}`)
 
-    // CA-03: una segunda solicitud para el mismo perfil y oportunidad se rechaza.
-    await sheet.getByLabel('Oportunidad').selectOption({ label: `${opportunityTitle} · Reynosa` })
-    await sheet.getByRole('button', { name: 'Enviar solicitud' }).click()
-    await expect(sheet.getByLabel('Oportunidad')).toHaveAccessibleDescription('Ya enviaste una solicitud para este perfil en esa oportunidad.')
+    // CA-03 y T-S12-07: la misma oportunidad ya no se puede elegir para este perfil. Queda deshabilitada con su motivo o,
+    // si era la única activa de la empresa, el formulario lo explica. El rechazo del backend lo cubren las pruebas Pest.
+    const blocked = sheet.locator('option', { hasText: `${opportunityTitle} · Reynosa · Pendiente` })
+    await expect(blocked.or(sheet.getByText('Ya solicitaste este perfil para todas tus oportunidades activas.', { exact: false }))).toBeAttached()
+    if (await blocked.count()) await expect(blocked).toBeDisabled()
 
     // HU-S5-05 CA-04: al volver al perfil, aviso con la oportunidad ya solicitada.
     await sheet.getByRole('button', { name: 'Cerrar', exact: true }).click()

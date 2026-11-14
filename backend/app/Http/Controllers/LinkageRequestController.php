@@ -23,6 +23,9 @@ class LinkageRequestController extends Controller
 {
     private const DUPLICATE = 'Ya enviaste una solicitud para este perfil en esa oportunidad.';
 
+    /** T-S12-07: la institución ya respondió esa pareja de perfil y oportunidad; la empresa puede usar otra oportunidad. */
+    private const REJECTED = 'La institución ya rechazó una solicitud de este perfil para esa oportunidad. Elige otra oportunidad.';
+
     private const PER_PAGE = 20;
 
     /**
@@ -124,6 +127,18 @@ class LinkageRequestController extends Controller
                     ->exists();
                 if ($duplicate) {
                     throw ValidationException::withMessages(['opportunity_id' => [self::DUPLICATE]]);
+                }
+
+                // T-S12-07: un rechazo es definitivo para la misma oportunidad (una cancelada sí puede reenviarse). No hace
+                // falta índice: RECHAZADA es un estado final, así que no hay carrera que proteger.
+                $rejected = LinkageRequest::query()
+                    ->where('company_id', $user->company_id)
+                    ->where('student_id', $student->id)
+                    ->where('opportunity_id', $opportunity->id)
+                    ->where('status', LinkageRequestStatus::REJECTED)
+                    ->exists();
+                if ($rejected) {
+                    throw ValidationException::withMessages(['opportunity_id' => [self::REJECTED]]);
                 }
 
                 // CA-04: trato directo, pendiente de la institución del alumno.
