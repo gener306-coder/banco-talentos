@@ -153,21 +153,32 @@ describe('bandeja de solicitudes HU-S5-05', () => {
     expect(row).toHaveTextContent('Respondida el 29 oct 2026')
     expect(within(row).queryByRole('button', { name: /Cancelar/ })).not.toBeInTheDocument()
 
-    // T-S12-06: el mensaje no se trunca en la celda; un ícono junto al estado lo abre completo en una hoja.
+    // HU-S13-06: el mensaje no está en la celda ni en una hoja; se lee en la conversación.
     expect(row).not.toHaveTextContent('Coordinemos la entrevista.')
-    fireEvent.click(within(row).getByRole('button', { name: 'Leer el mensaje de UT del Golfo' }))
-    const sheet = await screen.findByRole('dialog', { name: 'Mensaje de la institución' })
-    expect(within(sheet).getByText('Coordinemos la entrevista.')).toBeInTheDocument()
-    expect(sheet).toHaveTextContent('UT del Golfo · Aceptada · Respondida el 29 oct 2026')
-    expect(sheet).toHaveTextContent('Solicitud para Mantenimiento')
-    expect(screen.getByRole('table', { name: 'Solicitudes de vinculación enviadas' })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /Leer el mensaje/ })).not.toBeInTheDocument()
   })
+})
 
-  it('no ofrece el ícono del mensaje si la institución respondió sin mensaje', async () => {
-    apiMock.mockResolvedValueOnce(page([{ ...pending, status: 'RECHAZADA', responded_at: '2026-10-29T16:00:00Z', response_message: null }]))
-    renderApp()
+describe('acceso a la conversación desde la bandeja (HU-S13-06 CA-04)', () => {
+  function Location() {
+    const location = useLocation()
+    const state: unknown = location.state
+    const back = typeof state === 'object' && state !== null && 'back' in state ? JSON.stringify(state.back) : ''
+    return <output aria-label="Ruta actual" data-back={back}>{location.pathname + location.search}</output>
+  }
+
+  it('el ícono junto al estado abre la conversación de cualquier solicitud con regreso a la bandeja filtrada', async () => {
+    apiMock.mockResolvedValueOnce(page([pending, cancelled])).mockImplementation(() => new Promise<Response>(() => undefined))
+    render(<MemoryRouter initialEntries={['/linkage-requests?unread=1']}><App /><Location /></MemoryRouter>)
     const table = await screen.findByRole('table', { name: 'Solicitudes de vinculación enviadas' })
-    expect(within(table).queryByRole('button', { name: /Leer el mensaje/ })).not.toBeInTheDocument()
+    const links = within(table).getAllByRole('link', { name: 'Abrir la conversación con UT del Golfo' })
+    expect(links.map((link) => link.getAttribute('href'))).toEqual(['/linkage-requests/41/chat', '/linkage-requests/40/chat'])
+    expect(links[0].closest('td')).toHaveTextContent('Pendiente de la institución')
+
+    fireEvent.click(links[0])
+    const location = screen.getByRole('status', { name: 'Ruta actual' })
+    await waitFor(() => expect(location).toHaveTextContent('/linkage-requests/41/chat'))
+    expect(JSON.parse(location.dataset.back ?? '')).toEqual({ to: '/linkage-requests?unread=1', label: 'Volver a solicitudes' })
   })
 })
 

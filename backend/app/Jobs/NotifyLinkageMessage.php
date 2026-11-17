@@ -80,7 +80,8 @@ class NotifyLinkageMessage implements ShouldQueue
             Notification::send($recipients, new LinkageMessageReceived(
                 $sender,
                 $linkage->opportunity->title,
-                rtrim((string) config('app.frontend_url'), '/').$path.$linkage->id,
+                // HU-S13-06 CA-06: el correo lleva directo a la vista de la conversación.
+                rtrim((string) config('app.frontend_url'), '/').$path.$linkage->id.'/chat',
             ));
         } catch (Throwable $error) {
             // El reintento debe poder reclamar el aviso de nuevo.

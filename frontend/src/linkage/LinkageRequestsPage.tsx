@@ -6,7 +6,6 @@ import { useApiMutation, useApiRequest } from '../lib/useApiRequest'
 import { ConfirmDialog } from '../ui/ConfirmDialog'
 import { EmailMenu } from '../ui/EmailMenu'
 import { ChevronLeftIcon, ChevronRightIcon, MessageIcon, PhoneIcon, SearchIcon } from '../ui/icons'
-import { Sheet } from '../ui/Sheet'
 import { backState } from '../ui/backLink'
 import { LoadingState, StateMessage } from '../ui/StateMessage'
 import { useListParams } from '../ui/useListParams'
@@ -22,7 +21,7 @@ const dateFormat = new Intl.DateTimeFormat('es-MX', { dateStyle: 'medium' })
 /**
  * Bandeja de solicitudes de vinculación enviadas por la empresa (HU-S5-05 CA-05): filtro por estado, fila clicable al detalle
  * de la solicitud (HU-S13-02) y pastillas al detalle, al perfil anónimo y a la oportunidad (T-S12-04), correo de contacto de la institución y cancelación confirmada de las pendientes. Muestra
- * la fecha y el mensaje de la respuesta institucional (HU-S6-02 CA-04).
+ * la fecha de la respuesta institucional (HU-S6-02 CA-04); su mensaje se lee en la conversación (HU-S13-06).
  */
 export function LinkageRequestsPage() {
   // T-S12-04 y T-S12-05: el estado y la página viven en la URL, como en la bandeja de la institución, para que el regreso
@@ -40,11 +39,6 @@ export function LinkageRequestsPage() {
   const mutation = useApiMutation(linkageMessages)
   const [cancelling, setCancelling] = useState<LinkageInboxItem | null>(null)
   const [notice, setNotice] = useState<ReactNode>(null)
-  // T-S12-06: solicitud cuyo mensaje de respuesta se lee completo. La hoja vive fuera de la tabla: su contenido no
-  // está dentro de ninguna fila y su clic nunca la abre.
-  const [reading, setReading] = useState<LinkageInboxItem | null>(null)
-  const messageOrigin = useRef<HTMLButtonElement | null>(null)
-  const closeMessage = useCallback(() => { setReading(null); messageOrigin.current?.focus() }, [])
   const origin = useRef<HTMLButtonElement | null>(null)
 
   async function cancel() {
@@ -144,18 +138,14 @@ export function LinkageRequestsPage() {
                           </td>
                           <td className="nowrap">{dateFormat.format(new Date(item.created_at))}</td>
                           <td>
-                            {/* Respuesta de la institución (HU-S6-02 CA-04). T-S12-06: el mensaje no se trunca en la celda;
-                                un ícono junto al estado lo abre completo en una hoja. */}
+                            {/* HU-S13-06: el ícono junto al estado abre la conversación, que empieza con el mensaje de la
+                                solicitud y la respuesta de la institución (reemplaza la hoja de T-S12-06). */}
                             <span className="cell-meta">
                               <LinkageStatus status={item.status} />
-                              {item.response_message && (
-                                <span className="cell-actions">
-                                  <button type="button" aria-haspopup="dialog" aria-label={`Leer el mensaje de ${item.institution.name}`}
-                                    title="Mensaje de la institución" onClick={(event) => { messageOrigin.current = event.currentTarget; setReading(item) }}>
-                                    <MessageIcon />
-                                  </button>
-                                </span>
-                              )}
+                              <span className="cell-actions">
+                                <Link to={`/linkage-requests/${item.id}/chat`} state={back}
+                                  aria-label={`Abrir la conversación con ${item.institution.name}`} title="Conversación"><MessageIcon /></Link>
+                              </span>
                             </span>
                             {item.responded_at && <span className="linkage-meta">Respondida el {dateFormat.format(new Date(item.responded_at))}</span>}
                             {item.unread_count > 0 && <span className="linkage-meta"><UnreadTag count={item.unread_count} /></span>}
@@ -197,19 +187,6 @@ export function LinkageRequestsPage() {
         title="¿Cancelar la solicitud?"
         description="La institución ya no podrá responderla. Podrás enviar una nueva solicitud para el mismo perfil y oportunidad más adelante."
         confirmLabel="Cancelar solicitud" onConfirm={() => { void cancel() }} onCancel={() => setCancelling(null)} />
-      <Sheet open={reading !== null} onClose={closeMessage} labelledBy="linkage-message-title">
-        {reading && (
-          <div className="linkage-message">
-            <h3 id="linkage-message-title">Mensaje de la institución</h3>
-            <p className="linkage-message-meta">
-              <strong>{reading.institution.name}</strong> · <LinkageStatus status={reading.status} />
-              {reading.responded_at && <> · Respondida el {dateFormat.format(new Date(reading.responded_at))}</>}
-            </p>
-            <p className="linkage-message-meta">Solicitud para <strong>{reading.opportunity.title}</strong></p>
-            <blockquote className="linkage-message-text">{reading.response_message}</blockquote>
-          </div>
-        )}
-      </Sheet>
     </section>
   )
 }

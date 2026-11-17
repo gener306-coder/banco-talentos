@@ -127,11 +127,11 @@ describe('envío y contenido (CA-01, CA-03)', function () {
         expect($this->linkage->refresh()->institution_notified_at)->not->toBeNull();
     });
 
-    it('names the sender organization and the opportunity and links to the detail of each side', function (string $recipientSide) {
+    it('names the sender organization and the opportunity and links to the conversation of each side (HU-S13-06 CA-06)', function (string $recipientSide) {
         Notification::fake();
         [$sender, $recipient, $party, $name, $url] = $recipientSide === 'institución'
-            ? [$this->companyAccount, $this->institutionAccount, LinkageParty::INSTITUTION, 'Manufacturas del Norte', "https://banco.example/institution/linkage-requests/{$this->linkage->id}"]
-            : [$this->institutionAccount, $this->companyAccount, LinkageParty::COMPANY, 'Universidad Tecnológica de Victoria', "https://banco.example/linkage-requests/{$this->linkage->id}"];
+            ? [$this->companyAccount, $this->institutionAccount, LinkageParty::INSTITUTION, 'Manufacturas del Norte', "https://banco.example/institution/linkage-requests/{$this->linkage->id}/chat"]
+            : [$this->institutionAccount, $this->companyAccount, LinkageParty::COMPANY, 'Universidad Tecnológica de Victoria', "https://banco.example/linkage-requests/{$this->linkage->id}/chat"];
         runNotice($this->linkage, $party, noticeMessage($this->linkage, $sender, 'Texto confidencial del mensaje'));
 
         Notification::assertSentTo($recipient, LinkageMessageReceived::class, function (LinkageMessageReceived $notification) use ($recipient, $name, $url): bool {

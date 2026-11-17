@@ -66,7 +66,7 @@ describe('detalle de la solicitud para la empresa HU-S13-02', () => {
     expect(gets()).toEqual(['/api/linkage-requests/41'])
 
     expect(screen.getByText('Aceptada', { selector: '.linkage-status' })).toBeInTheDocument()
-    expect(screen.getByRole('note', { name: 'Estado de la solicitud' })).toHaveTextContent('UT del Golfo aceptó la solicitud. Coordina la vinculación en la conversación de abajo o con su contacto.')
+    expect(screen.getByRole('note', { name: 'Estado de la solicitud' })).toHaveTextContent('UT del Golfo aceptó la solicitud. Coordina la vinculación en la conversación o con su contacto.')
     expect(screen.getByText('Nos interesa su perfil.')).toBeInTheDocument()
     expect(screen.getByText('Coordinemos la entrevista.')).toBeInTheDocument()
     expect(screen.getByText('29 de octubre de 2026')).toBeInTheDocument()
@@ -83,10 +83,21 @@ describe('detalle de la solicitud para la empresa HU-S13-02', () => {
     expect(within(institution).getByRole('button', { name: 'Escribir a dual@utgolfo.edu.mx' })).toHaveAttribute('aria-haspopup', 'menu')
     expect(within(institution).getByRole('link', { name: '+52 833 357 4800' })).toHaveAttribute('href', 'tel:+528333574800')
 
-    // Aceptada: ya no se cancela, y se conversa con la institución (HU-S13-03).
+    // Aceptada: ya no se cancela. HU-S13-06: la conversación vive en su vista; el detalle no la carga.
     expect(screen.queryByRole('button', { name: 'Cancelar solicitud' })).not.toBeInTheDocument()
-    expect(await screen.findByRole('region', { name: 'Conversación con la institución' })).toBeInTheDocument()
-    expect(fetchMock.mock.calls.map(([path]) => path)).toContain('/api/linkage-requests/41/messages')
+    expect(screen.getByRole('link', { name: 'Abrir conversación' })).toHaveAttribute('href', '/linkage-requests/41/chat')
+    expect(screen.queryByRole('log', { name: 'Mensajes' })).not.toBeInTheDocument()
+    expect(fetchMock.mock.calls.map(([path]) => path)).not.toContain('/api/linkage-requests/41/messages')
+  })
+
+  it('muestra en «Abrir conversación» los mensajes sin leer y la abre con regreso al detalle (HU-S13-06 CA-05)', async () => {
+    apiMock.mockResolvedValueOnce(Response.json({ data: { ...accepted, unread_count: 2 } }))
+    renderApp('/linkage-requests/41?x=1')
+    const open = await screen.findByRole('link', { name: 'Abrir conversación Nuevo: 2 mensajes sin leer' })
+    fireEvent.click(open)
+    const location = screen.getByRole('status', { name: 'Ruta actual' })
+    await waitFor(() => expect(location).toHaveTextContent('/linkage-requests/41/chat'))
+    expect(JSON.parse(location.dataset.back ?? '')).toEqual({ to: '/linkage-requests/41?x=1', label: 'Volver a la solicitud' })
   })
 
   it('cancela una pendiente tras confirmarla y retira la cancelación (CA-02)', async () => {
@@ -94,7 +105,8 @@ describe('detalle de la solicitud para la empresa HU-S13-02', () => {
       .mockResolvedValueOnce(Response.json({ data: { ...pending, status: 'CANCELADA' } }))
     renderApp()
     expect(await screen.findByRole('note', { name: 'Estado de la solicitud' })).toHaveTextContent('La institución aún no responde.')
-    expect(screen.queryByRole('region', { name: 'Conversación con la institución' })).not.toBeInTheDocument()
+    // HU-S13-06: también se abre la conversación de una pendiente, en solo lectura con el mensaje de la solicitud.
+    expect(screen.getByRole('link', { name: 'Abrir conversación' })).toHaveAttribute('href', '/linkage-requests/41/chat')
 
     fireEvent.click(screen.getByRole('button', { name: 'Cancelar solicitud' }))
     const dialog = await screen.findByRole('alertdialog', { name: '¿Cancelar la solicitud?' })

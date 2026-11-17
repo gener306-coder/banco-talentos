@@ -279,13 +279,17 @@ describe('respuesta institucional HU-S6-02', () => {
     expect(result).toHaveTextContent('Coordinemos la entrevista.')
     expect(screen.queryByRole('region', { name: 'Responder solicitud' })).not.toBeInTheDocument()
 
-    // HU-S13-03: al aceptar aparece la conversación con la empresa, por la ruta de la institución; al rechazar, no.
-    if (status === 'ACEPTADA') {
-      expect(await screen.findByRole('region', { name: 'Conversación con la empresa' })).toBeInTheDocument()
-      expect(fetchMock.mock.calls.map(([path]) => path)).toContain('/api/institution/linkage-requests/41/messages')
-    } else {
-      expect(screen.queryByRole('region', { name: 'Conversación con la empresa' })).not.toBeInTheDocument()
-    }
+    // HU-S13-06: la conversación vive en su vista; el detalle la ofrece en cualquier estado y no la carga.
+    expect(screen.getByRole('link', { name: 'Abrir conversación' })).toHaveAttribute('href', '/institution/linkage-requests/41/chat')
+    expect(fetchMock.mock.calls.map(([path]) => path)).not.toContain('/api/institution/linkage-requests/41/messages')
+  })
+
+  it('el ícono de la bandeja abre la conversación con regreso a la bandeja (HU-S13-06 CA-04)', async () => {
+    apiMock.mockResolvedValueOnce(page([pending]))
+    renderApp('/institution/linkage-requests?status=PENDIENTE_INSTITUCION')
+    const table = await screen.findByRole('table', { name: 'Solicitudes de vinculación recibidas' })
+    expect(within(table).getByRole('link', { name: /^Abrir la conversación con ManuGolfo sobre / }))
+      .toHaveAttribute('href', '/institution/linkage-requests/41/chat')
   })
 
   it('envía null sin mensaje y rechaza datos de contacto antes de enviar', async () => {

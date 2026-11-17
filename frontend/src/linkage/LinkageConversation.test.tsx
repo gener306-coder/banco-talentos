@@ -3,10 +3,12 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { AuthContext } from '../auth/auth-context'
 import type { AuthState } from '../auth/auth-context'
 import { LinkageConversation, POLL_INTERVAL_MS } from './LinkageConversation'
-import { LINKAGE_READ_EVENT } from './conversationApi'
-import type { LinkageMessage, LinkageSide } from './conversationApi'
+import type { LinkageStatus } from './api'
+import { introMessages, LINKAGE_READ_EVENT } from './conversationApi'
+import type { IntroMessage, LinkageMessage, LinkageSide } from './conversationApi'
 
-// HU-S13-03: conversación de una solicitud aceptada con consulta periódica, envío, marcador de lectura y auto-scroll.
+// HU-S13-03 y HU-S13-06: conversación con las burbujas de la solicitud, consulta periódica, envío, marcador de lectura,
+// reglas de estado y auto-scroll.
 const auth: AuthState = {
   status: 'ready', user: null, message: null, pending: false,
   restore: async () => undefined, expireSession: () => undefined, signIn: async () => undefined, signOut: async () => undefined,
@@ -27,9 +29,20 @@ const calls = (method: string, suffix = '') => fetchMock.mock.calls
 const getPaths = () => calls('GET').map(([path]) => path)
 const readIds = () => calls('POST', '/read').map(([, init]) => JSON.parse(String(init?.body)).last_read_message_id)
 
-function renderConversation(role: LinkageSide = 'COMPANY', readOnly = false) {
-  return render(<AuthContext.Provider value={auth}><LinkageConversation linkageRequestId={41} role={role} readOnly={readOnly} /></AuthContext.Provider>)
+function renderConversation(role: LinkageSide = 'COMPANY', readOnly = false, status: LinkageStatus = 'ACEPTADA', intro: IntroMessage[] = []) {
+  return render(
+    <AuthContext.Provider value={auth}>
+      <LinkageConversation linkageRequestId={41} role={role} readOnly={readOnly} status={status} intro={intro} />
+    </AuthContext.Provider>,
+  )
 }
+
+/** Burbujas de la solicitud (HU-S13-06): el mensaje de la empresa y la respuesta de la institución. */
+const opening = {
+  message: 'Nos interesa su perfil para tableros.', created_at: '2026-11-10T10:00:00Z',
+  response_message: 'Coordinemos la entrevista.', responded_at: '2026-11-11T16:00:00Z',
+}
+const names = { company: 'ManuGolfo', institution: 'UT del Golfo' }
 
 /** Avanza el intervalo de la consulta periódica y deja resolver sus promesas. */
 async function tick(ms = POLL_INTERVAL_MS) {
@@ -77,13 +90,9 @@ afterEach(() => {
 })
 
 describe('hilo de la conversación', () => {
-  it('muestra el aviso de privacidad y los mensajes propios a la derecha y los ajenos a la izquierda (CA-02, CA-03)', async () => {
+  it('muestra los mensajes propios a la derecha y los ajenos a la izquierda (CA-02)', async () => {
     renderConversation()
-    const region = await screen.findByRole('region', { name: 'Conversación con la institución' })
-    expect(within(region).getByRole('note', { name: 'Aviso de privacidad' }))
-      .toHaveTextContent('La empresa conoce al alumno solo por su perfil. No compartas datos personales del alumno por este medio.')
-
-    const log = await within(region).findByRole('log', { name: 'Mensajes' })
+    const log = await screen.findByRole('log', { name: 'Mensajes' })
     const [first, second] = within(log).getAllByRole('listitem')
     expect(first).toHaveClass('linkage-bubble', 'other')
     expect(first).toHaveTextContent('UT del Golfo')
@@ -96,8 +105,7 @@ describe('hilo de la conversación', () => {
 
   it('usa la ruta de la institución y nombra a la empresa como contraparte', async () => {
     renderConversation('INSTITUTION')
-    expect(await screen.findByRole('region', { name: 'Conversación con la empresa' })).toBeInTheDocument()
-    expect(screen.getByLabelText('Mensaje para la empresa')).toBeInTheDocument()
+    expect(await screen.findByLabelText('Mensaje para la empresa')).toBeInTheDocument()
     expect(getPaths()).toEqual(['/api/institution/linkage-requests/41/messages'])
   })
 
@@ -107,6 +115,56 @@ describe('hilo de la conversación', () => {
     renderConversation()
     expect(await screen.findByText(/Aún no hay mensajes\. Escribe el primero/)).toBeInTheDocument()
     expect(readIds()).toEqual([])
+  })
+})
+
+describe('burbujas de la solicitud y estados (HU-S13-06)', () => {
+  it('empieza con el mensaje de la solicitud y la respuesta, propios u ajenos según el lado, sin tocar el marcador', async () => {
+    renderConversation('COMPANY', false, 'ACEPTADA', introMessages(opening, 'COMPANY', names))
+    const log = await screen.findByRole('log', { name: 'Mensajes' })
+    await within(log).findByText('El lunes 24.')
+    const bubbles = within(log).getAllByRole('listitem')
+    expect(bubbles.map((bubble) => bubble.querySelector('.linkage-bubble-text')?.textContent))
+      .toEqual(['Nos interesa su perfil para tableros.', 'Coordinemos la entrevista.', 'Hola, ¿cuándo inicia?', 'El lunes 24.'])
+    expect(bubbles[0]).toHaveClass('own', 'intro')
+    expect(bubbles[0]).toHaveTextContent('Mensaje de la solicitud')
+    expect(bubbles[0]).toHaveTextContent('ManuGolfo')
+    expect(within(bubbles[0]).getByText(/10 nov 2026/)).toHaveAttribute('datetime', '2026-11-10T10:00:00Z')
+    expect(bubbles[1]).toHaveClass('other', 'intro')
+    expect(bubbles[1]).toHaveTextContent('Respuesta a la solicitud')
+    // Las burbujas de la solicitud no tienen id: el marcador y `after` siguen el hilo.
+    await tick()
+    expect(getPaths().at(-1)).toBe('/api/linkage-requests/41/messages?after=2')
+    expect(readIds()).toEqual([])
+  })
+
+  it('del lado de la institución, el mensaje de la empresa es ajeno y su respuesta es propia', async () => {
+    renderConversation('INSTITUTION', false, 'ACEPTADA', introMessages(opening, 'INSTITUTION', names))
+    const bubbles = within(await screen.findByRole('log', { name: 'Mensajes' })).getAllByRole('listitem')
+    expect(bubbles[0]).toHaveClass('other')
+    expect(bubbles[1]).toHaveClass('own')
+  })
+
+  it.each([
+    ['PENDIENTE_INSTITUCION', 'COMPANY', 'La conversación se habilita cuando la institución acepte la solicitud.'],
+    ['PENDIENTE_INSTITUCION', 'INSTITUTION', 'La conversación se habilita cuando aceptes la solicitud.'],
+    ['RECHAZADA', 'COMPANY', 'La institución rechazó la solicitud; la conversación no se habilitó.'],
+    ['CANCELADA', 'INSTITUTION', 'La empresa canceló la solicitud; la conversación no se habilitó.'],
+  ] as const)('en %s (%s) no consulta el hilo, muestra solo la solicitud y explica por qué no se escribe (CA-03)', async (status, role, reason) => {
+    const intro = introMessages({ ...opening, ...(status === 'PENDIENTE_INSTITUCION' ? { response_message: null, responded_at: null } : {}) }, role, names)
+    renderConversation(role, false, status, intro)
+    expect(await screen.findByRole('note')).toHaveTextContent(reason)
+    expect(screen.getByText('Nos interesa su perfil para tableros.')).toBeInTheDocument()
+    expect(screen.queryByRole('textbox')).not.toBeInTheDocument()
+    await tick(POLL_INTERVAL_MS * 2)
+    expect(getPaths()).toEqual([])
+    expect(readIds()).toEqual([])
+  })
+
+  it('sin mensaje en la solicitud explica que la empresa no escribió', async () => {
+    renderConversation('INSTITUTION', false, 'PENDIENTE_INSTITUCION', [])
+    expect(await screen.findByText('La empresa no envió mensaje con la solicitud.')).toBeInTheDocument()
+    expect(getPaths()).toEqual([])
   })
 })
 

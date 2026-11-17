@@ -1,13 +1,13 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
-import type { FormEvent, KeyboardEvent } from 'react'
+import type { FormEvent, KeyboardEvent, ReactNode } from 'react'
 import { InstitutionRequestError } from '../institutions/InstitutionLayout'
 import { useApiMutation, useApiRequest } from '../lib/useApiRequest'
-import { Callout } from '../ui/Callout'
 import { LoadingState } from '../ui/StateMessage'
+import type { LinkageStatus } from './api'
 import {
   conversationMessages, LINKAGE_CONVERSATION_LIMIT, LINKAGE_READ_EVENT, listLinkageMessages, markLinkageMessagesRead, mergeThread, sendLinkageMessage,
 } from './conversationApi'
-import type { LinkageSide } from './conversationApi'
+import type { IntroMessage, LinkageSide, LinkageThread } from './conversationApi'
 import './linkage.css'
 
 /** Consulta periódica con la pestaña visible (HU-S13-03 CA-04). */
@@ -20,18 +20,58 @@ const timeFormat = new Intl.DateTimeFormat('es-MX', { dateStyle: 'medium', timeS
 
 const counterpart: Record<LinkageSide, string> = { COMPANY: 'la institución', INSTITUTION: 'la empresa' }
 
+/** Hilo de una solicitud que no está aceptada: no se consulta (la API respondería 422) y no admite escritura. */
+const CLOSED_THREAD: LinkageThread = { items: [], canWrite: false, lastReadMessageId: null }
+
+/** Por qué no se puede escribir en una solicitud que no está aceptada (HU-S13-06 CA-03). */
+function closedReason(status: LinkageStatus, role: LinkageSide): string {
+  switch (status) {
+    case 'PENDIENTE_INSTITUCION':
+      return role === 'COMPANY'
+        ? 'La conversación se habilita cuando la institución acepte la solicitud.'
+        : 'La conversación se habilita cuando aceptes la solicitud.'
+    case 'RECHAZADA':
+      return role === 'COMPANY'
+        ? 'La institución rechazó la solicitud; la conversación no se habilitó.'
+        : 'Rechazaste esta solicitud; la conversación no se habilitó.'
+    case 'CANCELADA':
+      return role === 'COMPANY'
+        ? 'Cancelaste esta solicitud; la conversación no se habilitó.'
+        : 'La empresa canceló la solicitud; la conversación no se habilitó.'
+    default:
+      return `La conversación es de solo lectura: ${counterpart[role]} ya no está activa en la plataforma. Conserva el historial para consulta.`
+  }
+}
+
+interface Bubble {
+  key: string
+  own: boolean
+  name: string
+  createdAt: string
+  body: string
+  label?: string
+}
+
 /**
- * Conversación de una solicitud aceptada (HU-S13-03), compartida por el detalle de la empresa y el de la institución.
- * Carga el hilo completo y luego consulta solo lo posterior al último mensaje cada 15 s, en pausa con la pestaña
- * oculta. Marca como leído el último mensaje mostrado. La escritura se bloquea si la otra organización está inactiva
- * (`meta.can_write`) o si quien la monta lo indica con `readOnly`.
+ * Conversación de una solicitud (HU-S13-03, HU-S13-06), compartida por las vistas de la empresa y de la institución.
+ * Empieza con las burbujas de la solicitud (`intro`). Solo una solicitud aceptada carga el hilo, lo consulta cada 15 s
+ * con la pestaña visible, marca como leído el último mensaje mostrado y admite escritura, salvo que la otra
+ * organización esté inactiva (`meta.can_write`) o quien la monta lo indique con `readOnly`.
  */
-export function LinkageConversation({ linkageRequestId, role, readOnly = false }: {
+export function LinkageConversation({ linkageRequestId, role, status, intro = [], readOnly = false, closedAction }: {
   linkageRequestId: number
   role: LinkageSide
+  status: LinkageStatus
+  intro?: IntroMessage[]
   readOnly?: boolean
+  /** Acción junto al motivo de solo lectura (por ejemplo, «Responder solicitud» para la institución). */
+  closedAction?: ReactNode
 }) {
-  const load = useCallback((signal: AbortSignal) => listLinkageMessages(role, linkageRequestId, 0, signal), [role, linkageRequestId])
+  const accepted = status === 'ACEPTADA'
+  const load = useCallback(
+    (signal: AbortSignal) => accepted ? listLinkageMessages(role, linkageRequestId, 0, signal) : Promise.resolve(CLOSED_THREAD),
+    [accepted, role, linkageRequestId],
+  )
   const { data, loading, failure, refresh, setData } = useApiRequest(load, conversationMessages)
   const mutation = useApiMutation(conversationMessages)
   const [body, setBody] = useState('')
@@ -44,14 +84,14 @@ export function LinkageConversation({ linkageRequestId, role, readOnly = false }
   const lastId = data?.items.at(-1)?.id ?? 0
   const lastIdRef = useRef(0)
   const readRequested = useRef(0)
-  const loaded = data !== null
-  const titleId = `linkage-conversation-title-${linkageRequestId}`
+  const polling = accepted && data !== null
 
   useEffect(() => { lastIdRef.current = lastId }, [lastId])
 
-  // CA-04: solo lo posterior al último mensaje conocido; en pausa con la pestaña oculta y al volver consulta enseguida.
+  // HU-S13-03 CA-04: solo lo posterior al último mensaje conocido; en pausa con la pestaña oculta y al volver consulta
+  // enseguida.
   useEffect(() => {
-    if (!loaded) return
+    if (!polling) return
     const controller = new AbortController()
     let timer: number | undefined
     const poll = () => {
@@ -73,10 +113,10 @@ export function LinkageConversation({ linkageRequestId, role, readOnly = false }
       controller.abort()
       document.removeEventListener('visibilitychange', onVisibility)
     }
-  }, [loaded, role, linkageRequestId, setData])
+  }, [polling, role, linkageRequestId, setData])
 
-  // CA-04: al montar y con cada mensaje nuevo, el marcador del lado avanza al último mostrado. Los propios ya lo
-  // avanzan en el servidor al enviarse.
+  // HU-S13-03 CA-04: al montar y con cada mensaje nuevo, el marcador del lado avanza al último mostrado. Los propios ya
+  // lo avanzan en el servidor al enviarse; las burbujas de la solicitud no tienen id y nunca cuentan.
   const knownRead = data?.lastReadMessageId ?? 0
   useEffect(() => {
     if (lastId === 0 || lastId <= knownRead || lastId <= readRequested.current) return
@@ -90,9 +130,19 @@ export function LinkageConversation({ linkageRequestId, role, readOnly = false }
       .catch(() => { readRequested.current = 0 })
   }, [lastId, knownRead, role, linkageRequestId, setData])
 
+  const bubbles: Bubble[] = [
+    ...intro.map((message) => ({
+      key: message.key, own: message.is_own, name: message.sender_name, createdAt: message.created_at, body: message.body, label: message.label,
+    })),
+    ...(data?.items ?? []).map((message) => ({
+      key: String(message.id), own: message.is_own, name: message.is_own ? (message.account_name ?? message.sender_name) : message.sender_name,
+      createdAt: message.created_at, body: message.body,
+    })),
+  ]
+
   // Auto-scroll: con cada mensaje nuevo, el hilo baja al final solo si la persona ya estaba ahí (o si el mensaje es
   // suyo). Se mueve el contenedor, no la página.
-  const count = data?.items.length ?? 0
+  const count = bubbles.length
   useLayoutEffect(() => {
     const list = thread.current
     if (!list || count === 0) return
@@ -144,35 +194,35 @@ export function LinkageConversation({ linkageRequestId, role, readOnly = false }
 
   const serverError = mutation.failure && (mutation.failure.errors.body?.join(' ') ?? mutation.failure.errors.status?.join(' ') ?? mutation.failure.message)
   const messageError = localError ?? serverError
-  const writable = !readOnly && data?.canWrite !== false
+  const writable = accepted && !readOnly && data?.canWrite !== false
+  const emptyText = accepted
+    ? `Aún no hay mensajes.${writable ? ` Escribe el primero para coordinar la vinculación con ${counterpart[role]}.` : ''}`
+    : 'La empresa no envió mensaje con la solicitud.'
 
   return (
-    <section className="student-section linkage-conversation" aria-labelledby={titleId}>
-      <h3 id={titleId}>Conversación con {counterpart[role]}</h3>
-      <Callout tone="info" label="Aviso de privacidad">
-        <p>La empresa conoce al alumno solo por su perfil. No compartas datos personales del alumno por este medio.</p>
-      </Callout>
+    <div className="linkage-conversation">
       {loading ? <LoadingState label="Cargando conversación…" variant="details" />
         : failure ? <InstitutionRequestError failure={failure} retry={refresh} />
         : data && (
           <>
-            {data.items.length === 0
-              ? <p className="linkage-thread-empty">Aún no hay mensajes. {writable ? `Escribe el primero para coordinar la vinculación con ${counterpart[role]}.` : ''}</p>
+            {bubbles.length === 0
+              ? <p className="linkage-thread-empty">{emptyText}</p>
               : (
                 <div className="linkage-thread-frame">
                   {/* Región desplazable con su propio foco: el teclado puede recorrer el historial. */}
                   <div ref={thread} className="linkage-thread" role="log" aria-label="Mensajes" aria-live="polite" tabIndex={0} onScroll={onScroll}>
-                  <ol className="linkage-thread-list">
-                    {data.items.map((message) => (
-                      <li key={message.id} className={`linkage-bubble ${message.is_own ? 'own' : 'other'}`}>
-                        <span className="linkage-bubble-meta">
-                          <strong>{message.is_own ? (message.account_name ?? message.sender_name) : message.sender_name}</strong>
-                          {' · '}<time dateTime={message.created_at}>{timeFormat.format(new Date(message.created_at))}</time>
-                        </span>
-                        <p className="linkage-bubble-text">{message.body}</p>
-                      </li>
-                    ))}
-                  </ol>
+                    <ol className="linkage-thread-list">
+                      {bubbles.map((bubble) => (
+                        <li key={bubble.key} className={`linkage-bubble ${bubble.own ? 'own' : 'other'}${bubble.label ? ' intro' : ''}`}>
+                          {bubble.label && <span className="linkage-bubble-label">{bubble.label}</span>}
+                          <span className="linkage-bubble-meta">
+                            <strong>{bubble.name}</strong>
+                            {' · '}<time dateTime={bubble.createdAt}>{timeFormat.format(new Date(bubble.createdAt))}</time>
+                          </span>
+                          <p className="linkage-bubble-text">{bubble.body}</p>
+                        </li>
+                      ))}
+                    </ol>
                   </div>
                   {unseen && <button type="button" className="secondary linkage-thread-latest" onClick={showLatest}>Ver mensajes nuevos</button>}
                 </div>
@@ -181,26 +231,27 @@ export function LinkageConversation({ linkageRequestId, role, readOnly = false }
               ? (
                 <form className="linkage-composer" onSubmit={(event) => { void send(event) }} aria-busy={mutation.pending} noValidate>
                   <label htmlFor={`linkage-composer-${linkageRequestId}`}>Mensaje para {counterpart[role]}</label>
-                  <textarea ref={textarea} id={`linkage-composer-${linkageRequestId}`} name="body" rows={3} maxLength={LINKAGE_CONVERSATION_LIMIT}
+                  <textarea ref={textarea} id={`linkage-composer-${linkageRequestId}`} name="body" rows={2} maxLength={LINKAGE_CONVERSATION_LIMIT}
                     value={body} disabled={mutation.pending} aria-invalid={Boolean(messageError)}
                     aria-describedby={[`linkage-composer-count-${linkageRequestId}`, messageError ? `linkage-composer-error-${linkageRequestId}` : null].filter(Boolean).join(' ')}
                     onChange={(event) => { setBody(event.target.value); setLocalError(null) }} onKeyDown={onKeyDown} />
-                  <p className="field-hint" id={`linkage-composer-count-${linkageRequestId}`}>
-                    {body.length} de {LINKAGE_CONVERSATION_LIMIT} caracteres · Ctrl + Enter para enviar
-                  </p>
-                  {messageError && <p className="field-error" id={`linkage-composer-error-${linkageRequestId}`} role="alert">{messageError}</p>}
-                  <div className="actions">
+                  <div className="linkage-composer-footer">
+                    <p className="field-hint" id={`linkage-composer-count-${linkageRequestId}`}>
+                      {body.length} de {LINKAGE_CONVERSATION_LIMIT} caracteres · Ctrl + Enter para enviar
+                    </p>
                     <button type="submit" disabled={mutation.pending}>{mutation.pending ? 'Enviando…' : 'Enviar mensaje'}</button>
                   </div>
+                  {messageError && <p className="field-error" id={`linkage-composer-error-${linkageRequestId}`} role="alert">{messageError}</p>}
                 </form>
               )
               : (
-                <p className="notice" role="note">
-                  La conversación es de solo lectura: {counterpart[role]} ya no está activa en la plataforma. Conserva el historial para consulta.
-                </p>
+                <div className="linkage-closed" role="note">
+                  <p>{closedReason(status, role)}</p>
+                  {!accepted && closedAction}
+                </div>
               )}
           </>
         )}
-    </section>
+    </div>
   )
 }

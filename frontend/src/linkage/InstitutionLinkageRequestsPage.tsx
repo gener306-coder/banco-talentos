@@ -5,7 +5,7 @@ import { InstitutionRequestError } from '../institutions/InstitutionLayout'
 import { useApiRequest } from '../lib/useApiRequest'
 import { surnames } from '../students/api'
 import { CsvDownloadButton } from '../ui/CsvDownloadButton'
-import { ChevronLeftIcon, ChevronRightIcon, SearchIcon } from '../ui/icons'
+import { ChevronLeftIcon, ChevronRightIcon, MessageIcon, SearchIcon } from '../ui/icons'
 import { LoadingState, StateMessage } from '../ui/StateMessage'
 import { backState } from '../ui/backLink'
 import { useListParams } from '../ui/useListParams'
@@ -114,7 +114,14 @@ export function InstitutionLinkageRequestsPage() {
                           <td><span className="linkage-title" title={item.opportunity.title}>{item.opportunity.title}</span></td>
                           <td className="nowrap">{dateFormat.format(new Date(item.created_at))}</td>
                           <td>
-                            <LinkageStatus status={item.status} />
+                            {/* HU-S13-06: el ícono junto al estado abre la conversación con la empresa. */}
+                            <span className="cell-meta">
+                              <LinkageStatus status={item.status} />
+                              <span className="cell-actions">
+                                <Link to={`${href}/chat`} state={back}
+                                  aria-label={`Abrir la conversación con ${item.company.name} sobre ${name}`} title="Conversación"><MessageIcon /></Link>
+                              </span>
+                            </span>
                             {item.unread_count > 0 && <span className="linkage-meta"><UnreadTag count={item.unread_count} /></span>}
                           </td>
                           <td>

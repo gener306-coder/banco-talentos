@@ -87,6 +87,46 @@ export async function markLinkageMessagesRead(side: LinkageSide, linkageRequestI
   return response.data.last_read_message_id
 }
 
+/**
+ * Burbuja de presentación que no es un mensaje del hilo (HU-S13-06 CA-02): el mensaje con el que la empresa abrió la
+ * solicitud y la respuesta de la institución. No tiene id, así que nunca entra en el marcador de lectura ni en `after`.
+ */
+export interface IntroMessage {
+  key: 'request-message' | 'response-message'
+  label: string
+  sender_party: LinkageSide
+  sender_name: string
+  is_own: boolean
+  body: string
+  created_at: string
+}
+
+/** Campos de la solicitud que abren la conversación, comunes a la vista de la empresa y a la de la institución. */
+export interface ConversationOpening {
+  message: string | null
+  created_at: string
+  response_message: string | null
+  responded_at: string | null
+}
+
+/** Primeras burbujas de la conversación, en orden: el mensaje de la solicitud y la respuesta de la institución. */
+export function introMessages(opening: ConversationOpening, role: LinkageSide, names: { company: string; institution: string }): IntroMessage[] {
+  const intro: IntroMessage[] = []
+  if (opening.message) {
+    intro.push({
+      key: 'request-message', label: 'Mensaje de la solicitud', sender_party: 'COMPANY', sender_name: names.company,
+      is_own: role === 'COMPANY', body: opening.message, created_at: opening.created_at,
+    })
+  }
+  if (opening.response_message && opening.responded_at) {
+    intro.push({
+      key: 'response-message', label: 'Respuesta a la solicitud', sender_party: 'INSTITUTION', sender_name: names.institution,
+      is_own: role === 'INSTITUTION', body: opening.response_message, created_at: opening.responded_at,
+    })
+  }
+  return intro
+}
+
 /** Conversaciones de la organización con mensajes sin leer, para el aviso del menú (HU-S13-04 CA-02). */
 export async function getUnreadConversations(side: LinkageSide, signal?: AbortSignal): Promise<number> {
   const prefix = side === 'COMPANY' ? '/api/linkage-requests' : '/api/institution/linkage-requests'

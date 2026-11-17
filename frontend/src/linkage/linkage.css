@@ -28,12 +28,34 @@
 .linkage-message-meta { margin: 0 0 0.35rem; font-size: var(--type-sm); color: var(--text); }
 .linkage-message-text { margin: 1rem 0 0; padding: 0.85rem 1rem; border-left: 4px solid var(--accent); border-radius: 0 12px 12px 0;
   background: var(--tint); color: var(--text); white-space: pre-line; overflow-wrap: anywhere; }
-/* HU-S13-03: conversación de la solicitud aceptada. Las burbujas propias van a la derecha con --tint y las del otro
-   lado a la izquierda con --fill; el texto conserva sus saltos de línea. El hilo se desplaza dentro de su marco. */
-.linkage-conversation { max-width: var(--content-readable); }
+/* HU-S13-06: vista dedicada a la conversación. La tarjeta ocupa la altura disponible bajo la barra superior (100dvh, que
+   descuenta el teclado del celular); el hilo toma el espacio restante y el campo de texto queda abajo. */
+.linkage-chat { display: flex; flex-direction: column; max-width: calc(var(--content-readable) + 3.5rem + 2px); margin-inline: auto;
+  height: calc(100dvh - 6.5rem - 4vh); min-height: 26rem; }
+.linkage-chat-back { margin: 0 0 0.5rem; }
+.linkage-chat-heading h2 { margin: 0; }
+.linkage-chat-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 0.35rem 0.6rem; margin: 0.35rem 0 0.75rem; font-size: var(--type-sm); }
+.linkage-chat > .callout { margin: 0; }
+.linkage-chat .linkage-conversation { display: flex; flex: 1; flex-direction: column; min-height: 0; }
+.linkage-chat .linkage-thread-frame { display: flex; flex: 1; flex-direction: column; min-height: 0; margin: 0.75rem 0; }
+.linkage-chat .linkage-thread { flex: 1; max-height: none; }
+@media (max-width: 600px) {
+  .linkage-chat { height: calc(100dvh - 5rem); min-height: 22rem; }
+}
+/* HU-S13-03: burbujas. Las propias van a la derecha con --tint y las del otro lado a la izquierda con --fill; el texto
+   conserva sus saltos de línea. El hilo se desplaza dentro de su marco. */
 .linkage-thread-frame { position: relative; margin: 1rem 0; }
 .linkage-thread { max-height: min(28rem, 60vh); overflow-y: auto; overscroll-behavior: contain; padding: 0.75rem;
   border: 1px solid var(--border); border-radius: 14px; background: var(--surface); }
+/* HU-S13-06: las burbujas de la solicitud (mensaje inicial y respuesta) llevan su etiqueta y un borde discreto. */
+.linkage-bubble.intro { border: 1px dashed var(--border-strong); }
+.linkage-bubble-label { display: block; margin-bottom: 0.15rem; font-size: var(--type-xs); font-weight: 700; color: var(--accent); }
+.linkage-composer-footer { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 0.5rem; }
+.linkage-composer-footer .field-hint { margin: 0; }
+.linkage-composer-footer button { margin: 0; }
+.linkage-closed { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 0.5rem 1rem; padding: 0.75rem 1rem;
+  border-radius: 12px; background: var(--surface-muted); color: var(--text); }
+.linkage-closed p { margin: 0; }
 .linkage-thread:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 2px; }
 .linkage-thread-list { display: flex; flex-direction: column; gap: 0.6rem; margin: 0; padding: 0; list-style: none; }
 .linkage-bubble { align-self: flex-start; max-width: min(85%, 32rem); padding: 0.55rem 0.8rem; border-radius: 14px 14px 14px 4px;

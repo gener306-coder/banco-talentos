@@ -44,7 +44,7 @@ async function publishStudent(page: Page, data: { surname: string; enrollment: s
   await expect(page.getByText('Habilidades guardadas correctamente.')).toBeVisible()
 }
 
-test('HU-S4-05, HU-S5-04, HU-S5-05, HU-S6-01, HU-S6-02, HU-S6-03, HU-S13-02 y HU-S13-03: una empresa encuentra un perfil anónimo por habilidad y distancia, sin datos personales, solicita la vinculación a su institución, esta la revisa con la identidad del alumno, la empresa la cancela y, al volver a solicitarla, la institución la acepta y ambas conversan', async ({ browser, baseURL }) => {
+test('HU-S4-05, HU-S5-04, HU-S5-05, HU-S6-01, HU-S6-02, HU-S6-03, HU-S13-02, HU-S13-03 y HU-S13-06: una empresa encuentra un perfil anónimo por habilidad y distancia, sin datos personales, solicita la vinculación a su institución, esta la revisa con la identidad del alumno, la empresa la cancela y, al volver a solicitarla, la institución la acepta y ambas conversan', async ({ browser, baseURL }) => {
   // Recorre tres sesiones (institución, empresa e institución); con la máquina cargada rebasa los 30 s por defecto.
   test.slow()
   const suffix = randomBytes(6).toString('hex')
@@ -162,6 +162,16 @@ test('HU-S4-05, HU-S5-04, HU-S5-05, HU-S6-01, HU-S6-02, HU-S6-03, HU-S13-02 y HU
     await expect(row.getByRole('link', { name: `Ver perfil: ${student.headline}` })).toHaveAttribute('href', /\/talent\/[0-9a-f-]{36}$/)
     // HU-S13-02: la fila y «Ver detalle» abren el detalle de la solicitud.
     await expect(row.getByRole('link', { name: /^Ver la solicitud de / })).toHaveAttribute('href', /\/linkage-requests\/\d+$/)
+    // HU-S13-06: con la solicitud pendiente, la conversación solo muestra el mensaje de la solicitud y no admite escritura.
+    await row.getByRole('link', { name: /^Abrir la conversación con / }).click()
+    await expect(company).toHaveURL(/\/linkage-requests\/\d+\/chat$/)
+    const pendingChat = company.getByRole('region', { name: /^Conversación con / })
+    await expect(pendingChat.getByRole('log', { name: 'Mensajes' }).getByRole('listitem')).toHaveCount(1)
+    await expect(pendingChat.getByRole('log', { name: 'Mensajes' })).toContainText('Nos interesa su perfil para el proyecto de tableros.')
+    await expect(pendingChat).toContainText('La conversación se habilita cuando la institución acepte la solicitud.')
+    await expect(pendingChat.getByRole('textbox')).toHaveCount(0)
+    await pendingChat.getByRole('link', { name: 'Volver a solicitudes' }).click()
+    await expect(company).toHaveURL(/\/linkage-requests$/)
     const emailButton = row.getByRole('button', { name: /^Escribir a / })
     await emailButton.click()
     await expect(company.getByRole('menu').getByRole('menuitem', { name: 'Abrir en app del sistema' })).toHaveAttribute('href', /^mailto:/)
@@ -208,11 +218,15 @@ test('HU-S4-05, HU-S5-04, HU-S5-05, HU-S6-01, HU-S6-02, HU-S6-03, HU-S13-02 y HU
       await expect(answer).toContainText('Aceptada')
       await expect(answer).toContainText('Coordinemos la entrevista con el área dual.')
 
-      // HU-S13-03: al aceptarla, la institución escribe en la conversación con la empresa.
-      const institutionChat = institution.getByRole('region', { name: 'Conversación con la empresa' })
+      // HU-S13-06: al aceptarla, la institución abre la conversación desde el detalle; su respuesta es la primera burbuja.
+      await institution.getByRole('link', { name: 'Abrir conversación' }).click()
+      await expect(institution).toHaveURL(/\/institution\/linkage-requests\/\d+\/chat$/)
+      const institutionChat = institution.getByRole('region', { name: /^Conversación con / })
+      const institutionLog = institutionChat.getByRole('log', { name: 'Mensajes' })
+      await expect(institutionLog.getByRole('listitem').first()).toContainText('Coordinemos la entrevista con el área dual.')
       await institutionChat.getByLabel('Mensaje para la empresa').fill('¿Puede presentarse el lunes?')
       await institutionChat.getByRole('button', { name: 'Enviar mensaje' }).click()
-      await expect(institutionChat.getByRole('log', { name: 'Mensajes' })).toContainText('¿Puede presentarse el lunes?')
+      await expect(institutionLog).toContainText('¿Puede presentarse el lunes?')
 
       // HU-S7-02 CA-02: la exportación CSV de la bandeja, con el filtro de estado, incluye al alumno y el contacto de la empresa.
       await institution.goto('/institution/linkage-requests')
@@ -239,13 +253,8 @@ test('HU-S4-05, HU-S5-04, HU-S5-05, HU-S6-01, HU-S6-02, HU-S6-03, HU-S13-02 y HU
     await company.getByLabel('Estado').selectOption('ACEPTADA')
     await filtered
     const acceptedRow = company.getByRole('table', { name: 'Solicitudes de vinculación enviadas' }).getByRole('row', { name: new RegExp(opportunityTitle) })
-    // T-S12-06: el mensaje se lee completo en una hoja desde el ícono junto al estado.
+    // HU-S13-06: el mensaje de la institución ya no está en la celda; se lee en la conversación.
     await expect(acceptedRow).not.toContainText('Coordinemos la entrevista')
-    await acceptedRow.getByRole('button', { name: /^Leer el mensaje de / }).click()
-    const message = company.getByRole('dialog', { name: 'Mensaje de la institución' })
-    await expect(message).toContainText('Coordinemos la entrevista con el área dual.')
-    await message.getByRole('button', { name: 'Cerrar', exact: true }).click()
-    await expect(message).toBeHidden()
     await expect(acceptedRow).toContainText('Respondida el')
     await expect(acceptedRow.getByRole('button', { name: /Cancelar/ })).toHaveCount(0)
 
@@ -255,24 +264,34 @@ test('HU-S4-05, HU-S5-04, HU-S5-05, HU-S6-01, HU-S6-02, HU-S6-03, HU-S13-02 y HU
     await expect(company).toHaveURL(/\/linkage-requests\?status=ACEPTADA$/)
     await expect(company.getByLabel('Estado')).toHaveValue('ACEPTADA')
 
-    // HU-S13-02 y HU-S13-03: la fila abre el detalle; la empresa lee a la institución por su nombre y le responde.
+    // HU-S13-02: la fila abre el detalle, que regresa a la bandeja con su filtro.
     await acceptedRow.getByRole('rowheader').click()
     await expect(company).toHaveURL(/\/linkage-requests\/\d+$/)
-    const companyChat = company.getByRole('region', { name: 'Conversación con la institución' })
+    await company.getByRole('link', { name: 'Volver a solicitudes' }).click()
+    await expect(company).toHaveURL(/\/linkage-requests\?status=ACEPTADA$/)
+
+    // HU-S13-06: el ícono de la fila abre la conversación, que empieza con la respuesta de la institución; la empresa
+    // lee a la institución por su nombre y le responde.
+    await acceptedRow.getByRole('link', { name: /^Abrir la conversación con / }).click()
+    await expect(company).toHaveURL(/\/linkage-requests\/\d+\/chat$/)
+    const companyChat = company.getByRole('region', { name: /^Conversación con / })
     const companyLog = companyChat.getByRole('log', { name: 'Mensajes' })
+    await expect(companyLog.getByRole('listitem').first()).toContainText('Coordinemos la entrevista con el área dual.')
     await expect(companyLog).toContainText('¿Puede presentarse el lunes?')
     await companyChat.getByLabel('Mensaje para la institución').fill('Sí, el lunes a las 9:00.')
     await companyChat.getByRole('button', { name: 'Enviar mensaje' }).click()
     await expect(companyLog).toContainText('Sí, el lunes a las 9:00.')
     await expect(companyChat.getByLabel('Mensaje para la institución')).toHaveValue('')
-    const detailPath = new URL(company.url()).pathname
+    const chatPath = new URL(company.url()).pathname
+    await companyChat.getByRole('link', { name: 'Volver a solicitudes' }).click()
+    await expect(company).toHaveURL(/\/linkage-requests\?status=ACEPTADA$/)
 
-    // La institución ve la respuesta en el detalle de la misma solicitud.
+    // La institución ve la respuesta en la conversación de la misma solicitud.
     const replying = await browser.newContext({ baseURL, storageState: INSTITUTION_STATE })
     try {
       const institution = await replying.newPage()
-      await institution.goto(`/institution${detailPath}`)
-      await expect(institution.getByRole('region', { name: 'Conversación con la empresa' }).getByRole('log', { name: 'Mensajes' }))
+      await institution.goto(`/institution${chatPath}`)
+      await expect(institution.getByRole('region', { name: /^Conversación con / }).getByRole('log', { name: 'Mensajes' }))
         .toContainText('Sí, el lunes a las 9:00.')
     } finally {
       await replying.close()

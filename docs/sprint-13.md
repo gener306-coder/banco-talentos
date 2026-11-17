@@ -35,6 +35,7 @@ Sprint vigente desde el 17 de noviembre de 2026. Sprint anterior: [sprint-12.md]
 3. **HU-S13-03** Conversación en los detalles de ambos lados.
 4. **HU-S13-04** Mensajes sin leer.
 5. **HU-S13-05** Aviso agrupado por correo.
+6. **HU-S13-06** Conversación en una vista dedicada (pivote de diseño sobre HU-S13-03, aprobado por el responsable el 17 de noviembre de 2026).
 
 ## Fuera de alcance
 
@@ -163,3 +164,28 @@ Sprint vigente desde el 17 de noviembre de 2026. Sprint anterior: [sprint-12.md]
 - **CA-02.** Como máximo un aviso por conversación y lado cada 6 horas, aunque lleguen varios mensajes.
 - **CA-03.** El correo nombra a la organización remitente y la oportunidad, y enlaza al detalle de la solicitud. No incluye el texto del mensaje ni datos del alumno.
 - **CA-04.** Pest cubre el envío, la agrupación, la cancelación al leer y que el correo no contenga el texto ni datos del alumno.
+
+---
+
+## HU-S13-06 — Conversación en una vista dedicada
+
+**Estado:** Completada (17 de noviembre de 2026).  
+**Diseño técnico y verificación:** `docs/HU-S13-06.md`  
+**Origen:** pivote de diseño del responsable y el Arquitecto sobre HU-S13-03 (ruta dedicada en lugar de un Sheet).  
+**Rol:** `COMPANY`, `INSTITUTION`
+
+### Historia de usuario
+
+**COMO** empresa o institución  
+**QUIERO** conversar en una vista dedicada que empiece con el mensaje con el que se abrió la solicitud  
+**PARA** darle a la coordinación el lugar principal y abrirla directamente desde la bandeja.
+
+### Criterios de aceptación
+
+- **CA-01.** Rutas `/linkage-requests/:id/chat` y `/institution/linkage-requests/:id/chat`, con encabezado (regreso contextual, otra organización, oportunidad, estado y enlace al detalle), aviso de privacidad, hilo desplazable y campo de texto abajo.
+- **CA-02.** El mensaje de la solicitud y la respuesta de la institución son las primeras burbujas, solo de presentación: no cambian el backend, el marcador de lectura ni la consulta periódica.
+- **CA-03.** Solo `ACEPTADA` carga el hilo y permite escribir. En los demás estados la vista no consulta mensajes, muestra las burbujas de la solicitud y explica por qué no se puede escribir.
+- **CA-04.** En ambas bandejas, el ícono de mensaje abre la vista con regreso a la bandeja filtrada; reemplaza la hoja de T-S12-06.
+- **CA-05.** Los detalles ofrecen «Abrir conversación» en lugar de la conversación en línea.
+- **CA-06.** El correo de HU-S13-05 enlaza a la vista de conversación.
+- **CA-07.** Vitest, Pest y Playwright cubren lo anterior.

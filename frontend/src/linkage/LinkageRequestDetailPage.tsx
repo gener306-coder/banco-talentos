@@ -8,13 +8,12 @@ import { backState, useBackLink } from '../ui/backLink'
 import { Callout } from '../ui/Callout'
 import { ConfirmDialog } from '../ui/ConfirmDialog'
 import { EmailMenu } from '../ui/EmailMenu'
-import { ChevronLeftIcon, ChevronRightIcon } from '../ui/icons'
+import { ChevronLeftIcon, ChevronRightIcon, MessageIcon } from '../ui/icons'
 import { LoadingState } from '../ui/StateMessage'
 import { cancelLinkageRequest, getLinkageRequest, linkageDetailMessages } from './api'
 import type { LinkageInboxItem } from './api'
-import { LinkageConversation } from './LinkageConversation'
 import { LinkageStatus } from './LinkageStatus'
-import { UnreadBadge } from './UnreadBadge'
+import { UnreadBadge, UnreadTag } from './UnreadBadge'
 import '../institutions/institutions.css'
 
 const dateFormat = new Intl.DateTimeFormat('es-MX', { dateStyle: 'long' })
@@ -31,7 +30,7 @@ function StatusCallout({ data }: { data: LinkageInboxItem }) {
   if (data.status === 'ACEPTADA') {
     return (
       <Callout tone="info" label="Estado de la solicitud">
-        <p>{data.institution.name} aceptó la solicitud. Coordina la vinculación en la conversación de abajo o con su contacto.</p>
+        <p>{data.institution.name} aceptó la solicitud. Coordina la vinculación en la conversación o con su contacto.</p>
       </Callout>
     )
   }
@@ -65,6 +64,12 @@ function Detail({ data, onCancelled }: { data: LinkageInboxItem; onCancelled: (u
       {notice && <p className="institution-success" role="status">{notice}</p>}
       {cancelError && <p className="notice" role="alert">{cancelError}</p>}
       <StatusCallout data={data} />
+      {/* HU-S13-06: la conversación vive en su propia vista; en una pendiente muestra solo el mensaje de la solicitud. */}
+      <p>
+        <Link className="institution-button" to={`/linkage-requests/${data.id}/chat`} state={toRequest}>
+          <MessageIcon />Abrir conversación{data.unread_count > 0 && <> <UnreadTag count={data.unread_count} /></>}
+        </Link>
+      </p>
 
       <dl className="student-identity">
         <dt>Estado de la solicitud</dt><dd><LinkageStatus status={data.status} /></dd>
@@ -113,8 +118,6 @@ function Detail({ data, onCancelled }: { data: LinkageInboxItem; onCancelled: (u
         </dl>
       </section>
 
-      {/* HU-S13-03: conversación con la institución, solo en solicitudes aceptadas. */}
-      {data.status === 'ACEPTADA' && <LinkageConversation linkageRequestId={data.id} role="COMPANY" />}
 
       <ConfirmDialog open={confirming} origin={origin}
         title="¿Cancelar la solicitud?"
