@@ -226,3 +226,43 @@ describe('cancelación (CA-03)', function () {
         expect($linkage->refresh()->status->value)->toBe('PENDIENTE_INSTITUCION');
     });
 });
+
+describe('detalle (HU-S13-02 CA-01)', function () {
+    it('returns its own request with exactly the inbox fields', function () {
+        $linkage = inboxLinkage($this->company, $this->opportunity, $this->student, 'ACEPTADA');
+        $this->loginWithCookies($this->account)->assertOk();
+
+        $inbox = $this->browserRequest('GET', '/api/linkage-requests')->assertOk()->json('data.0');
+        $detail = $this->browserRequest('GET', '/api/linkage-requests/'.$linkage->id)
+            ->assertOk()->assertHeader('Cache-Control', 'no-store, private');
+
+        expect($detail->json('data'))->toBe($inbox)
+            ->and($detail->json('data.profile.public_id'))->toBe($this->student->public_id)
+            ->and($detail->json('data.institution.contact_email'))->toBe('dual@utgolfo.edu.mx');
+        foreach (['student_id', 'Nombre Secreto', 'Apellido Secreto', 'enrollment_number', 'responded_by', 'last_read_message_id'] as $secret) {
+            expect($detail->getContent())->not->toContain($secret);
+        }
+    });
+
+    it('answers 404 for another company request exactly like a missing one', function () {
+        $foreign = inboxLinkage($other = Company::factory()->create(), inboxOpportunity($other, 'Ajena'), $this->student);
+        $this->loginWithCookies($this->account)->assertOk();
+
+        foreach ([$foreign->id, 999999] as $id) {
+            $this->browserRequest('GET', '/api/linkage-requests/'.$id)->assertNotFound()->assertExactJson(['message' => 'La solicitud no existe.']);
+        }
+    });
+
+    it('answers 404 to malformed or out-of-range identifiers', function (string $id) {
+        $this->loginWithCookies($this->account)->assertOk();
+        $this->browserRequest('GET', '/api/linkage-requests/'.$id)->assertNotFound();
+    })->with(['0', 'abc', '-1', '1234567890123456789']);
+
+    it('forbids every other role', function (UserRole $role) {
+        $linkage = inboxLinkage($this->company, $this->opportunity, $this->student);
+        $user = $role === UserRole::INSTITUTION ? User::factory()->forInstitution($this->institution)->create() : User::factory()->role($role)->create();
+        $this->loginWithCookies($user)->assertOk();
+
+        $this->browserRequest('GET', '/api/linkage-requests/'.$linkage->id)->assertForbidden();
+    })->with([UserRole::ADMIN, UserRole::INSTITUTION, UserRole::SECRETARY]);
+});

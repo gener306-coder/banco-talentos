@@ -21,6 +21,7 @@ import { SECRETARY_ACCOUNT_MANAGERS } from './secretary/api'
 import { SecretaryAccountsPage } from './secretary/SecretaryAccountsPage'
 import { InstitutionLinkageRequestDetailPage } from './linkage/InstitutionLinkageRequestDetailPage'
 import { InstitutionLinkageRequestsPage } from './linkage/InstitutionLinkageRequestsPage'
+import { LinkageRequestDetailPage } from './linkage/LinkageRequestDetailPage'
 import { LinkageRequestsPage } from './linkage/LinkageRequestsPage'
 import { REPORT_VIEWERS } from './reports/api'
 import { ReportsPage } from './reports/ReportsPage'
@@ -104,6 +105,7 @@ function AuthRoutes() {
       </Route>
       <Route element={<ProtectedRoute role="COMPANY" deniedMessage="No tienes permiso para consultar solicitudes de vinculación." />}>
         <Route path="/linkage-requests" element={<LinkageRequestsPage />} />
+        <Route path="/linkage-requests/:id" element={<LinkageRequestDetailPage />} />
       </Route>
       <Route element={<ProtectedRoute role="INSTITUTION" deniedMessage="No tienes permiso para acceder al padrón de alumnos." />}>
         <Route path="/students" element={<StudentsPage />} />

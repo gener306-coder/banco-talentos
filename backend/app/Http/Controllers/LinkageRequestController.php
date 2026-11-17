@@ -63,6 +63,25 @@ class LinkageRequestController extends Controller
     }
 
     /**
+     * Detalle de la solicitud para la empresa (HU-S13-02 CA-01): la misma lista explícita de campos de la bandeja. Una
+     * solicitud ajena o inexistente responde 404 idéntico.
+     */
+    public function show(Request $request, string $linkageRequest): JsonResponse
+    {
+        $linkage = LinkageRequest::query()
+            ->where('company_id', $request->user()->company_id)
+            ->with([
+                'opportunity:id,title',
+                'student:id,public_id,headline,program,period_type,period_number',
+                'institution:id,name,contact_name,contact_position,contact_email,contact_phone',
+            ])
+            ->find((int) $linkageRequest);
+        abort_if($linkage === null, 404, 'La solicitud no existe.');
+
+        return response()->json(['data' => $this->item($linkage)])->header('Cache-Control', 'no-store, private');
+    }
+
+    /**
      * Cancelación (CA-03): solo una solicitud propia y PENDIENTE_INSTITUCION. Una ajena o inexistente responde 404;
      * una que ya no está pendiente, 422. La fila se bloquea para que la institución no la responda a la vez.
      */

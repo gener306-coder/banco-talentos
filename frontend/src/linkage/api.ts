@@ -131,6 +131,19 @@ export async function listLinkageRequests(filters: { page?: number; status?: Lin
   return { items: response.data.map(inboxItem), page: meta.current_page, lastPage: meta.last_page, total: meta.total }
 }
 
+/** Detalle de la solicitud (HU-S13-02): el mismo 404 para una ajena o inexistente. */
+export const linkageDetailMessages: FailureMessages = {
+  403: 'No tienes permiso para consultar solicitudes de vinculación.',
+  404: 'La solicitud no existe.',
+}
+
+/** Detalle de una solicitud de la empresa (HU-S13-02 CA-01): los mismos campos que la bandeja. */
+export async function getLinkageRequest(id: string, signal?: AbortSignal): Promise<LinkageInboxItem> {
+  const response = await request(`/api/linkage-requests/${encodeURIComponent(id)}`, { signal })
+  if (!isObject(response)) throw new ApiError(502)
+  return inboxItem(response.data)
+}
+
 /** Cancelación de una solicitud pendiente (CA-03). */
 export async function cancelLinkageRequest(id: number): Promise<LinkageInboxItem> {
   await request('/sanctum/csrf-cookie')

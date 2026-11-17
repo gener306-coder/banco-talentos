@@ -61,8 +61,10 @@ describe('bandeja de solicitudes HU-S5-05', () => {
     const table = await screen.findByRole('table', { name: 'Solicitudes de vinculación enviadas' })
     expect(apiMock.mock.calls[0][0]).toBe('/api/linkage-requests?page=1')
     const row = within(table).getByRole('row', { name: /Tableros de producción/ })
-    // T-S12-04: sin enlaces subrayados; la fila abre el perfil y las acciones van en pastillas.
-    expect(row).toHaveAttribute('data-href', `/talent/${publicId}`)
+    // T-S12-04: sin enlaces subrayados; la fila abre el detalle (HU-S13-02) y las acciones van en pastillas.
+    expect(row).toHaveAttribute('data-href', '/linkage-requests/41')
+    expect(within(row).getByRole('link', { name: 'Ver la solicitud de Analista de datos para Tableros de producción' }))
+      .toHaveAttribute('href', '/linkage-requests/41')
     expect(within(row).getByRole('rowheader')).toHaveTextContent('Analista de datos')
     expect(within(row).getByRole('link', { name: 'Ver perfil: Analista de datos' })).toHaveAttribute('href', `/talent/${publicId}`)
     // T-S8-15: solo la carrera; el periodo está en el perfil.
@@ -173,7 +175,7 @@ describe('bandeja de solicitudes sin enlaces subrayados (T-S12-04)', () => {
     return <output aria-label="Ruta actual" data-back={back}>{location.pathname + location.search}</output>
   }
 
-  it('toda la fila abre el perfil y su regreso conserva el filtro de la URL', async () => {
+  it('toda la fila abre el detalle de la solicitud y su regreso conserva el filtro de la URL (HU-S13-02)', async () => {
     apiMock.mockResolvedValueOnce(page([{ ...pending, status: 'ACEPTADA' }]))
       .mockImplementation(() => new Promise<Response>(() => undefined))
     render(<MemoryRouter initialEntries={['/linkage-requests?status=ACEPTADA']}><App /><Location /></MemoryRouter>)
@@ -183,8 +185,21 @@ describe('bandeja de solicitudes sin enlaces subrayados (T-S12-04)', () => {
 
     fireEvent.click(within(table).getByRole('rowheader'))
     const location = screen.getByRole('status', { name: 'Ruta actual' })
-    await waitFor(() => expect(location).toHaveTextContent(`/talent/${publicId}`))
+    await waitFor(() => expect(location).toHaveTextContent('/linkage-requests/41'))
     expect(JSON.parse(location.dataset.back ?? '')).toEqual({ to: '/linkage-requests?status=ACEPTADA', label: 'Volver a solicitudes' })
+  })
+
+  it('las pastillas del perfil y de la oportunidad siguen en Acciones con el mismo regreso', async () => {
+    apiMock.mockResolvedValueOnce(page([pending])).mockImplementation(() => new Promise<Response>(() => undefined))
+    render(<MemoryRouter initialEntries={['/linkage-requests?status=PENDIENTE_INSTITUCION']}><App /><Location /></MemoryRouter>)
+    const table = await screen.findByRole('table', { name: 'Solicitudes de vinculación enviadas' })
+    const actions = within(table).getByRole('link', { name: 'Ver perfil: Analista de datos' }).closest('td')!
+    expect(within(actions).getAllByRole('link').map((link) => link.textContent)).toEqual(['Ver detalle', 'Ver perfil', 'Oportunidad'])
+
+    fireEvent.click(within(actions).getByRole('link', { name: 'Ver perfil: Analista de datos' }))
+    const location = screen.getByRole('status', { name: 'Ruta actual' })
+    await waitFor(() => expect(location).toHaveTextContent(`/talent/${publicId}`))
+    expect(JSON.parse(location.dataset.back ?? '')).toEqual({ to: '/linkage-requests?status=PENDIENTE_INSTITUCION', label: 'Volver a solicitudes' })
   })
 
   it('con una tecla modificadora la fila no navega: abrir en otra pestaña es de la pastilla', async () => {

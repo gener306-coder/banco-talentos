@@ -76,7 +76,7 @@ Sprint vigente desde el 17 de noviembre de 2026. Sprint anterior: [sprint-12.md]
 
 ## HU-S13-02 — Detalle de la solicitud para la empresa
 
-**Estado:** Pendiente  
+**Estado:** Completada (17 de noviembre de 2026). Pest (`LinkageInboxTest`, detalle) y Vitest (`LinkageRequestDetailPage.test.tsx`, bandeja) en verde; ESLint y build limpios. La columna Acciones suma «Ver detalle» como control accesible de la fila (mismo destino) y conserva «Ver perfil» y «Oportunidad». El detalle deja `.linkage-conversation-slot` en las solicitudes aceptadas para HU-S13-03.  
 **Story Points:** 3  
 **Rol:** `COMPANY`
 

@@ -183,6 +183,8 @@ Route::middleware(['auth:sanctum', 'active', 'role:'.UserRole::COMPANY->value, '
     ->group(function (): void {
         Route::get('/', [LinkageRequestController::class, 'index']);
         Route::post('/', [LinkageRequestController::class, 'store'])->middleware('throttle:linkage-requests');
+        // Detalle de la solicitud (HU-S13-02).
+        Route::get('{linkageRequest}', [LinkageRequestController::class, 'show']);
         Route::patch('{linkageRequest}/cancel', [LinkageRequestController::class, 'cancel']);
         // Conversación de la solicitud aceptada con la institución (HU-S13-01).
         Route::get('{linkageRequest}/messages', [LinkageMessageController::class, 'index']);

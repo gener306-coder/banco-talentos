@@ -19,13 +19,13 @@ import '../institutions/institutions.css'
 const dateFormat = new Intl.DateTimeFormat('es-MX', { dateStyle: 'medium' })
 
 /**
- * Bandeja de solicitudes de vinculación enviadas por la empresa (HU-S5-05 CA-05): filtro por estado, fila clicable al perfil
- * anónimo y pastillas al perfil y a la oportunidad (T-S12-04), correo de contacto de la institución y cancelación confirmada de las pendientes. Muestra
+ * Bandeja de solicitudes de vinculación enviadas por la empresa (HU-S5-05 CA-05): filtro por estado, fila clicable al detalle
+ * de la solicitud (HU-S13-02) y pastillas al detalle, al perfil anónimo y a la oportunidad (T-S12-04), correo de contacto de la institución y cancelación confirmada de las pendientes. Muestra
  * la fecha y el mensaje de la respuesta institucional (HU-S6-02 CA-04).
  */
 export function LinkageRequestsPage() {
   // T-S12-04 y T-S12-05: el estado y la página viven en la URL, como en la bandeja de la institución, para que el regreso
-  // desde el perfil o la oportunidad recupere la misma vista. Cambiar el filtro vuelve a la página 1.
+  // desde el detalle, el perfil o la oportunidad recupere la misma vista. Cambiar el filtro vuelve a la página 1.
   const list = useListParams()
   const statusParam = list.get('status')
   const status: Status | '' = LINKAGE_STATUSES.find((item) => item.value === statusParam)?.value ?? ''
@@ -99,11 +99,11 @@ export function LinkageRequestsPage() {
                   <tbody>
                     {data.items.map((item) => {
                       const headline = item.profile.headline ?? 'Perfil sin titular'
-                      const profileHref = `/talent/${item.profile.public_id}`
-                      // T-S12-04: el perfil y la oportunidad regresan a esta bandeja con su filtro.
+                      const href = `/linkage-requests/${item.id}`
+                      // T-S12-04: el detalle, el perfil y la oportunidad regresan a esta bandeja con su filtro.
                       const back = backState('Volver a solicitudes', location)
                       return (
-                        <tr key={item.id} data-href={profileHref} onClick={(event) => openRow(event, profileHref, back)}>
+                        <tr key={item.id} data-href={href} onClick={(event) => openRow(event, href, back)}>
                           {/* T-S8-15: lo esencial de cada columna; el periodo y el puesto quedan a un paso (perfil y cursor). */}
                           <th scope="row">
                             {headline}
@@ -147,7 +147,10 @@ export function LinkageRequestsPage() {
                           </td>
                           <td>
                             <div className="actions">
-                              <Link className="pill-link row-link" to={profileHref} state={back} aria-label={`Ver perfil: ${headline}`}>Ver perfil<ChevronRightIcon /></Link>
+                              {/* HU-S13-02: «Ver detalle» es el control accesible de la fila, con su mismo destino. */}
+                              <Link className="pill-link row-link" to={href} state={back}
+                                aria-label={`Ver la solicitud de ${headline} para ${item.opportunity.title}`}>Ver detalle<ChevronRightIcon /></Link>
+                              <Link className="pill-link" to={`/talent/${item.profile.public_id}`} state={back} aria-label={`Ver perfil: ${headline}`}>Ver perfil<ChevronRightIcon /></Link>
                               <Link className="pill-link" to={`/opportunities/${item.opportunity.id}`} state={back}
                                 aria-label={`Ver la oportunidad ${item.opportunity.title}`}>Oportunidad<ChevronRightIcon /></Link>
                               {item.status === 'PENDIENTE_INSTITUCION' && (
