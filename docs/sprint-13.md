@@ -146,7 +146,8 @@ Sprint vigente desde el 17 de noviembre de 2026. Sprint anterior: [sprint-12.md]
 
 ## HU-S13-05 — Aviso agrupado por correo
 
-**Estado:** Pendiente  
+**Estado:** Completada (17 de noviembre de 2026).  
+**Diseño técnico y verificación:** `docs/HU-S13-05.md`  
 **Story Points:** 3  
 **Rol:** `COMPANY`, `INSTITUTION`
 

@@ -26,6 +26,27 @@ enum LinkageParty: string
         };
     }
 
+    /** Columna de la solicitud con el último aviso por correo a este lado (HU-S13-05). */
+    public function notifiedAtColumn(): string
+    {
+        return match ($this) {
+            self::COMPANY => 'company_notified_at',
+            self::INSTITUTION => 'institution_notified_at',
+        };
+    }
+
+    /** El otro lado de la conversación: quien recibe lo que este lado escribe. */
+    public function counterpart(): self
+    {
+        return $this === self::COMPANY ? self::INSTITUTION : self::COMPANY;
+    }
+
+    /** Rol de las cuentas de este lado. */
+    public function role(): UserRole
+    {
+        return $this === self::COMPANY ? UserRole::COMPANY : UserRole::INSTITUTION;
+    }
+
     /** Columna de la solicitud que la acota a la organización de este lado. */
     public function ownerColumn(): string
     {

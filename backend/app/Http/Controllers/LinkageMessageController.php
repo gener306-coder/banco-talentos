@@ -7,6 +7,7 @@ use App\Enums\LinkageRequestStatus;
 use App\Http\Requests\ListLinkageMessagesRequest;
 use App\Http\Requests\MarkLinkageMessagesReadRequest;
 use App\Http\Requests\StoreLinkageMessageRequest;
+use App\Jobs\NotifyLinkageMessage;
 use App\Models\LinkageMessage;
 use App\Models\LinkageRequest;
 use Illuminate\Http\JsonResponse;
@@ -72,11 +73,18 @@ class LinkageMessageController extends Controller
             $message->sender_user_id = $user->id;
             $message->save();
 
-            // Sin tocar updated_at: un mensaje no modifica la solicitud.
+            // Sin tocar updated_at: un mensaje no modifica la solicitud. Quien escribe ya leyó lo anterior, así que su
+            // ventana de avisos por correo se reinicia (HU-S13-05).
             LinkageRequest::query()->whereKey($linkage->id)->toBase()->update([
                 'last_message_at' => $message->created_at,
                 $party->readMarkerColumn() => $message->id,
+                $party->notifiedAtColumn() => null,
             ]);
+
+            // HU-S13-05 CA-01: aviso por correo al otro lado si en unos minutos sigue sin leerlo. La cola lo entrega
+            // después del commit (after_commit).
+            NotifyLinkageMessage::dispatch($linkage->id, $party->counterpart(), $message->id)
+                ->delay(now()->addMinutes(NotifyLinkageMessage::DELAY_MINUTES));
 
             return [$message->setRelation('sender', $user), $linkage];
         });
@@ -103,7 +111,8 @@ class LinkageMessageController extends Controller
             if ($current !== null && $current >= $messageId) {
                 return $current;
             }
-            LinkageRequest::query()->whereKey($linkage->id)->toBase()->update([$column => $messageId]);
+            // HU-S13-05: al leer, la ventana de avisos del lado se reinicia y el siguiente mensaje vuelve a avisar.
+            LinkageRequest::query()->whereKey($linkage->id)->toBase()->update([$column => $messageId, $party->notifiedAtColumn() => null]);
 
             return $messageId;
         });

@@ -21,13 +21,17 @@ class LinkageRequest extends Model
 
     // La cuenta institucional que respondió (HU-S6-02 CA-04) tampoco sale nunca hacia la empresa.
     // Los marcadores de lectura de la conversación (HU-S13-01) son por lado: ninguno sale hacia el otro.
-    protected $hidden = ['student_id', 'responded_by', 'company_last_read_message_id', 'institution_last_read_message_id'];
+    protected $hidden = [
+        'student_id', 'responded_by', 'company_last_read_message_id', 'institution_last_read_message_id',
+        'company_notified_at', 'institution_notified_at',
+    ];
 
     protected $attributes = ['status' => 'PENDIENTE_INSTITUCION'];
 
     protected function casts(): array
     {
-        return ['status' => LinkageRequestStatus::class, 'responded_at' => 'datetime', 'last_message_at' => 'datetime'];
+        return ['status' => LinkageRequestStatus::class, 'responded_at' => 'datetime', 'last_message_at' => 'datetime',
+            'company_notified_at' => 'datetime', 'institution_notified_at' => 'datetime'];
     }
 
     public function company(): BelongsTo
