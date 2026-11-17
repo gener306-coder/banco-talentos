@@ -12,6 +12,7 @@ use App\Http\Controllers\InstitutionLinkageRequestController;
 use App\Http\Controllers\InstitutionPasswordResetController;
 use App\Http\Controllers\InstitutionSetupLinkController;
 use App\Http\Controllers\InstitutionVideoController;
+use App\Http\Controllers\LinkageMessageController;
 use App\Http\Controllers\LinkageRequestController;
 use App\Http\Controllers\MediaController;
 use App\Http\Controllers\MunicipalityController;
@@ -183,6 +184,10 @@ Route::middleware(['auth:sanctum', 'active', 'role:'.UserRole::COMPANY->value, '
         Route::get('/', [LinkageRequestController::class, 'index']);
         Route::post('/', [LinkageRequestController::class, 'store'])->middleware('throttle:linkage-requests');
         Route::patch('{linkageRequest}/cancel', [LinkageRequestController::class, 'cancel']);
+        // Conversación de la solicitud aceptada con la institución (HU-S13-01).
+        Route::get('{linkageRequest}/messages', [LinkageMessageController::class, 'index']);
+        Route::post('{linkageRequest}/messages', [LinkageMessageController::class, 'store'])->middleware('throttle:linkage-messages');
+        Route::post('{linkageRequest}/messages/read', [LinkageMessageController::class, 'read']);
     });
 
 // Bandeja institucional de solicitudes de vinculación con la identidad interna del alumno (HU-S6-01) y su respuesta
@@ -199,6 +204,10 @@ Route::middleware(['auth:sanctum', 'active', 'role:'.UserRole::INSTITUTION->valu
         Route::get('{linkageRequest}', [InstitutionLinkageRequestController::class, 'show']);
         // Respuesta institucional (HU-S6-02).
         Route::patch('{linkageRequest}/decision', [InstitutionLinkageRequestController::class, 'decide']);
+        // Conversación de la solicitud aceptada con la empresa (HU-S13-01).
+        Route::get('{linkageRequest}/messages', [LinkageMessageController::class, 'index']);
+        Route::post('{linkageRequest}/messages', [LinkageMessageController::class, 'store'])->middleware('throttle:linkage-messages');
+        Route::post('{linkageRequest}/messages/read', [LinkageMessageController::class, 'read']);
     });
 
 // Videos promocionales del programa dual (HU-S9-01, HU-S9-02): solo INSTITUTION con institución activa y vinculada.

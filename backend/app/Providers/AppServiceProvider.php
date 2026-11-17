@@ -55,6 +55,10 @@ class AppServiceProvider extends ServiceProvider
         RateLimiter::for('linkage-requests', fn (Request $request) => Limit::perMinute(20)->by('linkage-requests:'.$request->user()->id)
         );
 
+        // HU-S13-01: la conversación es entre personas; el límite frena el envío automatizado.
+        RateLimiter::for('linkage-messages', fn (Request $request) => Limit::perMinute(30)->by('linkage-messages:'.$request->user()->id)
+        );
+
         RateLimiter::for('company-setup-resend', fn (Request $request) => Limit::perMinute(10)->by('company-setup-resend:'.$request->user()->id)
         );
 

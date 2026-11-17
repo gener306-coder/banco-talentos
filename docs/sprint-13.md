@@ -47,7 +47,7 @@ Sprint vigente desde el 17 de noviembre de 2026. Sprint anterior: [sprint-12.md]
 
 ## HU-S13-01 — Hilo de mensajes: base de datos y API
 
-**Estado:** Pendiente  
+**Estado:** Backend completado (17 de noviembre de 2026). Pest en verde: 53 pruebas en `tests/Feature/LinkageMessageTest.php`.  
 **Story Points:** 5  
 **Rol:** `COMPANY`, `INSTITUTION`
 
