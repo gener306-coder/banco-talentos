@@ -149,6 +149,8 @@ form { display: flex; flex-direction: column; gap: 0.65rem; }
 label, dt { font-weight: 600; }
 input, button { font: inherit; }
 input { width: 100%; padding: 0.7rem; border: 1px solid var(--border-strong); margin-bottom: 0.6rem; background: var(--surface); }
+/* T-S12-08: casillas y radios nativos a 1.15rem (18px) en lugar de 13px; la etiqueta sigue ampliando el área táctil. */
+input:is([type='checkbox'], [type='radio']) { flex: none; width: 1.15rem; height: 1.15rem; margin: 0; padding: 0; accent-color: var(--accent-fill); cursor: pointer; }
 button { padding: 0.8rem 1rem; background: var(--accent-fill); color: var(--on-accent); border: 1px solid var(--accent); cursor: pointer; font-weight: 600; }
 @media (hover: hover) { button:hover:not(:disabled) { background: var(--accent-fill-hover); } }
 button:disabled, input:disabled { cursor: not-allowed; }

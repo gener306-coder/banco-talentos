@@ -25,10 +25,13 @@ Sprint vigente desde el 13 de noviembre de 2026. Sprint anterior: [sprint-11.md]
 5. **T-S12-05** Tablas: jerarquía de acciones, hover independiente y filtros en la URL (rama `chore/ui-polish-tables-filters`).
 6. **T-S12-06** Mensaje de respuesta en una hoja y menú del correo (rama `chore/ui-polish-messages-email`).
 7. **T-S12-07** «Solicitar vinculación» según la disponibilidad y buscador del inicio con el catálogo (rama `chore/s12-07-linkage-availability-home-search`).
+8. **T-S12-08** Pulido móvil pendiente de la Fase 2: encabezado, casillas y radios, y «Buscar» de las tablas (rama `chore/s12-08-mobile-polish`).
+9. **T-S12-09** Barra de orden flotante y «Volver arriba» en Historias del Dual (misma rama).
+10. **T-S12-10** Afinado del feed: pastilla única, entrada animada y skeleton (misma rama).
+11. **T-S12-11** Inicio dinámico: conteo de los indicadores y entrada en cascada de las tarjetas (misma rama).
 
 ## Fuera de alcance
 
-- Hallazgos de la Fase 2 que el responsable no incluyó en T-S12-03: título del encabezado en dos líneas a 390 px (4), radios y casillas nativos de 13 px y `.spotlight-dot` (6) y el botón «Buscar» del padrón en móvil (7).
 - Rediseño de vistas, nuevos componentes o cambios de paleta de marca.
 - Radios de los contenedores legacy de instituciones (`.delivery-method`, `.manual-setup-link`).
 
@@ -211,6 +214,91 @@ Como la columna de estado y la de acciones quedan fuera de la vista sin ninguna 
 
 ---
 
+## T-S12-08 — Pulido móvil pendiente de la Fase 2
+
+**Rama:** `chore/s12-08-mobile-polish`.
+
+**Origen:** hallazgos 4, 6 y 7 de la Fase 2, que habían quedado fuera de T-S12-03. El responsable pidió atenderlos el 13 de noviembre de 2026. Solo estilos; no cambia comportamiento.
+
+### Criterios de aceptación
+
+- **CA-01.** [Encabezado] Hasta 480 px, el logotipo de la Secretaría de Economía sale de la barra a una franja propia sobre ella (`.partner-band`, 36 px de alto, unos 167 px de ancho), completo y sin recortar. La franja se desplaza con la página, así que la barra fija no crece. En la barra, «Banco de Talentos» cabe en una línea con el avatar (`.app-bar-title`, `white-space: nowrap`) desde 320 px. En escritorio no cambia. Decisión del responsable: al principio el coemblema cedía ancho y a 390 px medía unos 100 px, y su subtítulo no se leía.
+- **CA-02.** [Casillas y radios] Una sola regla en `index.css` da a todas las casillas y radios nativos 1.15rem (18 px), sin margen y con `accent-color: var(--accent-fill)`. Se eliminan los `width: auto` locales (`.choice-group`, `.delivery-method`, `.talent-filters .check`, `.video-consent`). El selector segmentado de historias conserva su radio oculto.
+- **CA-03.** [Carrusel] `.spotlight-dot` conserva 24 px de ancho también en móvil (antes, 17.6 px), el área mínima de WCAG 2.5.8. Con 5 historias, los controles miden 216 px a 390 px.
+- **CA-04.** [Buscar] Hasta 40rem, el botón de `.table-search` ocupa todo el ancho, igual que la acción principal de `.page-toolbar`. Aplica al padrón, a las empresas, a las dos bandejas y a la auditoría.
+
+---
+
+## T-S12-09 — Barra de orden flotante y «Volver arriba» en Historias del Dual
+
+**Origen:** petición del responsable del 13 de noviembre de 2026. Con muchas historias, la empresa que bajó por el feed tenía que desplazarse mucho para volver a «Más recientes» o «Al azar». Pidió que esos controles se mantuvieran visibles, al estilo de los feeds de video verticales.
+
+### Decisiones
+
+- **Una sola pieza flotante.** La barra de orden existente se vuelve `sticky` bajo la barra general y, al flotar, toma forma de pastilla de vidrio (`--glass`, como la barra general) con «Volver arriba» al final. No se agrega un botón flotante aparte, para no sumar otra capa sobre los videos ni competir con sus controles.
+- **Solo aparece al flotar.** Arriba del feed, la barra se ve como antes y no muestra «Volver arriba».
+- **Cambiar el orden reinicia el feed a la vista.** Si la barra flota al elegir otro orden o «Otra mezcla», la página vuelve al principio del feed, para que el cambio no ocurra fuera de la vista.
+- **Accesibilidad.** «Volver arriba» enfoca el título «Historias del Dual», y el desplazamiento es instantáneo con `prefers-reduced-motion`. En móvil, al flotar, «Otra mezcla» queda como ícono con su nombre accesible.
+- **`--app-bar-height`.** `App.tsx` publica la altura real de la barra general, para que los elementos fijos se alineen debajo.
+
+### Criterios de aceptación
+
+- **CA-01.** Al bajar por `/promocion`, el control «Más recientes / Al azar» (y «Otra mezcla» al azar) queda fijo bajo la barra general, en una pastilla de vidrio con sombra suave, en claro y en oscuro.
+- **CA-02.** Mientras flota, «Volver arriba» regresa al inicio de la página y enfoca el título. Arriba del feed no se muestra.
+- **CA-03.** Elegir otro orden con la barra flotando regresa al principio del feed.
+- **CA-04.** A 390 px la pastilla cabe en una línea (56 px de alto), sin desbordar en horizontal. Con transparencia reducida, usa `--surface`.
+- **CA-05.** Vitest cubre la barra flotante, «Volver arriba» con el foco y el regreso al cambiar el orden.
+
+---
+
+## T-S12-10 — Afinado del feed: pastilla única, entrada animada y skeleton
+
+**Origen:** revisión del responsable en su celular, el 14 de noviembre de 2026, sobre T-S12-09:
+1. En móvil, con «Al azar» y «Otra mezcla», la flecha «Volver arriba» se salía de la pastilla al bajar.
+2. La barra se alineaba distinto arriba que al flotar, y el cambio se sentía estático.
+3. Al cambiar el orden, el feed se vaciaba y las historias aparecían de golpe.
+
+### Diagnóstico del bug
+
+El control segmentado mide 219 px fijos y los botones-ícono podían encogerse. La pastilla no pasaba del ancho de la tarjeta: necesitaba 288 px y había 244 a 320 px y 284 a 360 px. «Otra mezcla» quedaba en 16 px y la flecha terminaba fuera. En «Más recientes» no pasaba, porque no hay «Otra mezcla».
+
+### Criterios de aceptación
+
+- **CA-01.** [Pastilla única] La barra de orden es la misma pastilla arriba y al flotar, centrada en la columna del feed (decisión del responsable del 14 de noviembre de 2026, que prefirió el centrado de la flotante de T-S12-09 también para el estado estático). Al flotar no se mueve ni cambia de forma; solo pasa de `--surface` con borde a `--glass` con sombra (200 ms).
+- **CA-02.** [Entrada de botones] «Otra mezcla» (al azar) y «Volver arriba» (al flotar) entran en ranuras que crecen (`grid-template-columns` de `0fr` a `1fr`), con opacidad y escala con `--spring`. Ocultos son `inert` y `aria-hidden`.
+- **CA-03.** [Bug] Ningún botón se encoge (`flex: none`). Hasta 480 px:
+  - los botones-ícono miden 2.25rem, la altura del segmentado;
+  - las opciones bajan su relleno y «Al azar» no lleva ícono;
+  - «Otra mezcla» queda como ícono en los dos estados.
+  Por debajo de 360 px la pastilla puede ocupar el relleno de la tarjeta.
+- **CA-04.** [Skeleton] Al cargar o cambiar el orden, el feed muestra al instante dos esqueletos con la anatomía de la historia: reproductor 4/5, institución, título, descripción y acción. Usan los huesos de `ui.css` y se anuncian con «Cargando historias…». Al cargar más, se agrega un esqueleto al final del feed. El esqueleto conserva la altura, así que cambiar el orden desde abajo deja la página en el principio del feed.
+- **CA-05.** [Entrada de historias] Las historias entran con opacidad y un desplazamiento de 8 px (240 ms). Las tres primeras van escalonadas cada 60 ms. Sin animación con `prefers-reduced-motion`.
+- **CA-06.** [Pruebas] Vitest cubre los esqueletos (carga, cambio de orden y página siguiente), la carga anunciada y las ranuras accesibles solo cuando se muestran.
+
+---
+
+## T-S12-11 — Inicio dinámico: conteo de los indicadores y entrada en cascada de las tarjetas
+
+**Origen:** el 14 de noviembre de 2026 el responsable pidió hacer las vistas más dinámicas, con números aleatorios o un conteo en los contadores y con las tarjetas apareciendo al bajar. Aprobó la variante recomendada.
+
+### Decisiones del responsable
+
+- **Conteo con desaceleración, no números aleatorios.** Los dígitos al azar se leen como carga o error y restan confianza al dato; el conteo comunica la magnitud y termina en el valor real.
+- **Solo la primera vez desde que se carga la app.** Repetirlo en cada regreso al inicio cansa. La marca vive en memoria (`pages/homeCountUp.ts`), no en `sessionStorage`: la app mantiene vacío el almacenamiento del navegador, y `authentication.spec` lo verifica.
+- **Los avisos «Por atender» no se animan.** Piden una acción y deben leerse al instante.
+- **Las tarjetas de acceso entran en cascada cuando la lista asoma en pantalla.** Primero se planteó animarlas al abrir el inicio, pero el responsable no veía el efecto. Medido en la simulación, las tarjetas quedan bajo el pliegue (y≈1200 en un celular de 844 px y y≈1140 en la empresa a 1440×900), así que la cascada terminaba fuera de la vista. Revelarlas al llegar no retrasa nada, porque ya estaban fuera de la vista; si caben en la primera pantalla, entran al abrir.
+
+### Criterios de aceptación
+
+- **CA-01.** [Conteo] `ui/useCountUp.ts` cuenta de 0 al valor en 800 ms con *ease-out cúbico* y `requestAnimationFrame`, sin dependencias. El texto del `dd` es siempre el valor real (lo leen el lector de pantalla, las pruebas y E2E). La cifra intermedia se pinta encima con `::before` desde `data-count` y texto alternativo vacío (`content: attr(data-count) / ''`); el valor real queda transparente y conserva el ancho.
+- **CA-02.** [Una vez] Solo la primera vista del inicio desde que se cargó la app anima (marca en memoria; el almacenamiento del navegador sigue vacío). Con `prefers-reduced-motion` no hay conteo.
+- **CA-03.** [Cascada] `ui/useReveal.ts` marca la lista `data-reveal="pending"` hasta que asoma por abajo (`IntersectionObserver`, una sola vez) y después `shown`. Entonces los `li` entran con opacidad y 8 px de desplazamiento (360 ms), 60 ms entre uno y otro (`--enter-index`), el mismo lenguaje de movimiento que las historias de T-S12-10.
+  - Solo se observa cuando el inicio ya tiene su altura final, es decir, cuando cargaron los indicadores y, en la empresa, el carrusel; si no, la lista se revelaría en el instante en que aparece arriba, antes de que la empujen.
+  - Sin observador, nada se oculta. Con `prefers-reduced-motion`, se ven sin animación.
+- **CA-04.** [Pruebas] Vitest cubre el conteo de la primera vista con el texto real, la segunda vista sin conteo, el movimiento reducido, la espera de la lista hasta que cargan los indicadores, su revelado al entrar en pantalla y el índice de la cascada.
+
+---
+
 ## Verificación (13 de noviembre de 2026)
 
 - `tokens.test.ts`: 114 casos (contraste en claro y oscuro con mezclas y opacidades, capas, hover y escala). La prueba de capas encontró una quinta regla fuera de capa que la auditoría no había listado: `.institution-status.pending` en `institutions.css`, ahora dentro de `@layer legacy`.
@@ -223,3 +311,7 @@ Como la columna de estado y la de acciones quedan fuera de la vista sin ninguna 
 - T-S12-05: Vitest con las mismas 3 fallas previas de `object.stream`; ESLint y el build pasan. En Chromium (simulación, 1440 px), con el cursor en el texto de la fila solo se adelanta la flecha de «Ver perfil». Con el cursor en «Oportunidad» o en el ícono de correo, la fila no se resalta y solo ese control responde. `/linkage-requests?status=PENDIENTE_INSTITUCION&page=2` abre en la página 2, y el regreso desde el perfil vuelve a esa misma URL.
 - T-S12-06: Vitest con las mismas 3 fallas previas de `object.stream`; ESLint, el build y E2E (44) pasan. En la simulación, a 1440 y 390 px (tabla desplazada), el menú del correo aparece completo bajo el ícono, y abrir el menú o la hoja no cambia la URL.
 - T-S12-07: Pest (1459), Vitest (1012, con las mismas 3 fallas previas de `object.stream`), ESLint, el build y E2E (44) pasan. E2E detectó un defecto que se corrigió: el perfil cargaba las oportunidades al abrirse, así que una oportunidad registrada en otra pestaña no aparecía en la hoja; ahora la hoja vuelve a consultar oportunidades y solicitudes al abrirse. En la simulación, «pyhton» exige elegir Python y «Buscar» abre `/talent?skills[]=Python` (699 perfiles); la oportunidad ya solicitada aparece deshabilitada como «Pendiente».
+- T-S12-08: Vitest (1012, con las mismas 3 fallas previas de `object.stream`), ESLint y el build pasan. Medido en la simulación con sesión: la barra fija pasa de 83 a 67 px y el título cabe en una línea de 320 a 390 px; el logotipo de la Secretaría, en su franja, mide 167×36 px (antes, unos 100×22 en la barra). E2E (44) pasa. Las casillas y radios del buscador y del menú de cuenta miden 18×18 (antes, 13×13). «Buscar» del padrón mide 316 px a 390 px (antes, 105). Los puntos del carrusel miden 24 px. Ninguna vista desborda en horizontal.
+- T-S12-09: en la simulación (6 historias), a 390 y 1440 px, en claro y en oscuro, la barra flota en y=75 y y=87, justo bajo la barra general (67 y 79 px), con 56 px de alto. «Volver arriba» deja la página en y=0 con el foco en el título, y cambiar el orden con la barra flotando regresa al principio del feed.
+- T-S12-10: medido en la simulación en «Al azar», tras «Otra mezcla», a 320, 360, 375, 390, 412 y 1440 px. Todos los botones quedan dentro de la pastilla, sin scroll horizontal, y la pastilla queda centrada en la columna arriba y al flotar (desviación 0 px a 320, 360, 390 y 1440 px), creciendo por igual hacia los dos lados al aparecer «Volver arriba». Al cambiar el orden desde abajo, la página queda en el principio del feed (y=262) y ya no en y=0. Con la red frenada se ven los dos esqueletos en claro y en oscuro. Vitest (1018, con las mismas 3 fallas previas de `object.stream`), ESLint, el build y E2E (44) pasan.
+- T-S12-11: en la simulación, «Alumnos activos» de la institución pasa por 137 → 1,445 → 1,995 → 2,207 → 2,242 en unos 800 ms, y el texto del `dd` es 2,242 en todo momento. Al volver al inicio sin recargar ya no cuenta. Las tarjetas esperan ocultas bajo el pliegue y, al bajar, entran en cascada: a los 140 ms la opacidad va en 0.42, 0.18 y 0, y luego queda en 1 (celular de la institución y de la empresa, y empresa a 1440 px). La institución a 1440 px, que las ve sin bajar, las anima al abrir. Vitest (1026, con las mismas 3 fallas previas de `object.stream`), ESLint, el build y E2E (44) pasan.

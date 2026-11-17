@@ -39,6 +39,7 @@ import { PromotionalVideosPage } from './videos/PromotionalVideosPage'
 import { AccountMenu } from './ui/AccountMenu'
 import { BrandLogo } from './ui/BrandLogo'
 import { prefersReducedMotion } from './ui/modal'
+import { useMediaQuery } from './ui/useMediaQuery'
 
 function AuthRoutes() {
   const { status, message, pending, restore, signOut } = useAuth()
@@ -151,6 +152,18 @@ function useRouteTransition(element: RefObject<HTMLElement | null>, pathname: st
 }
 
 /** El borde suave bajo el encabezado solo aparece cuando hay contenido debajo. */
+/** T-S12-09: publica la altura de la barra fija en `--app-bar-height` para que otros elementos fijos se alineen debajo. */
+function useAppBarHeight(bar: RefObject<HTMLElement | null>) {
+  useEffect(() => {
+    const element = bar.current
+    if (!element || typeof ResizeObserver !== 'function') return
+    const root = document.documentElement
+    const observer = new ResizeObserver(() => root.style.setProperty('--app-bar-height', `${element.offsetHeight}px`))
+    observer.observe(element)
+    return () => { observer.disconnect(); root.style.removeProperty('--app-bar-height') }
+  }, [bar])
+}
+
 function useScrolled() {
   const [scrolled, setScrolled] = useState(false)
   useEffect(() => {
@@ -177,24 +190,29 @@ function App() {
   const withSession = !PASSWORD_PATHS.includes(pathname)
   const main = useRef<HTMLElement>(null)
   const scrolled = useScrolled()
+  const bar = useRef<HTMLElement>(null)
+  useAppBarHeight(bar)
+  // T-S12-08: en móvil el coemblema sale de la barra a una franja propia, donde se lee completo.
+  const narrow = useMediaQuery('(max-width: 480px)')
   useRouteTransition(main, pathname)
+  // Coemblema institucional. Se usa tal cual en ambos temas, por decisión del responsable (HU-S8-03).
+  const partner = <img src="/brand/sec-economia.png" alt="Secretaría de Economía" width={1920} height={414} className={`w-auto ${narrow ? 'h-9' : 'h-11'}`} />
 
   const shell = (
     <>
-      <header className="app-bar" data-scrolled={scrolled}>
+      {narrow && <div className="partner-band">{partner}</div>}
+      <header ref={bar} className="app-bar" data-scrolled={scrolled}>
         <div className={`app-bar-inner${wide ? ' wide' : ''}`}>
           {/* En /login el logotipo se muestra en el formulario; se evita duplicarlo. */}
           {pathname !== '/login' && (
             <BrandLogo className="h-11 w-auto shrink-0 min-[481px]:h-14" />
           )}
-          <div>
+          <div className="app-bar-title">
             <p className="eyebrow">Educación Dual</p>
             <h1>Banco de Talentos</h1>
           </div>
-          {/* Coemblema institucional a la derecha. Se usa tal cual en ambos temas, por decisión del responsable (HU-S8-03). */}
-          <span className="app-bar-partner">
-            <img src="/brand/sec-economia.png" alt="Secretaría de Economía" width={1920} height={414} className="h-[1.6rem] w-auto min-[481px]:h-11" />
-          </span>
+          {/* Coemblema a la derecha en pantallas anchas. */}
+          {!narrow && <span className="app-bar-partner">{partner}</span>}
           {/* Menú de cuenta: identidad y «Cerrar sesión» en todas las vistas con sesión. */}
           {withSession && <AccountMenu />}
         </div>

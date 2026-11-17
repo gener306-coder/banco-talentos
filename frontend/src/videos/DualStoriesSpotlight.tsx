@@ -229,10 +229,13 @@ function StoriesCarousel({ pool }: { pool: PromotionalVideo[] }) {
  * historia se anima sin sonido; el clic abre la vista previa en el mismo inicio. Sin historias o con un error no
  * aparece: nunca deja un hueco ni una alerta.
  */
-export function DualStoriesSpotlight() {
+export function DualStoriesSpotlight({ onSettled }: { onSettled?: () => void } = {}) {
   const [seed] = useState(randomSeed)
   const load = useCallback((signal: AbortSignal) => listPromotionalVideos(1, signal, { sort: { order: 'random', seed } }), [seed])
-  const { data } = useApiRequest(load)
+  const { data, failure } = useApiRequest(load)
+  // T-S12-11: avisa cuando ya tiene su altura final (con historias, vacío o con error).
+  const settled = Boolean(data || failure)
+  useEffect(() => { if (settled) onSettled?.() }, [settled, onSettled])
   if (!data || data.videos.length === 0) return null
   return <StoriesCarousel pool={data.videos} />
 }

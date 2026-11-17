@@ -50,7 +50,7 @@
   /* El estilo global input { width: 100% } centraba la casilla: aquí queda alineada al inicio del texto. */
   .video-consent { display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: start; gap: 0.7rem; margin-top: 1.25rem; padding: 0.9rem 1rem; border: 1px solid transparent; border-radius: 0.9rem; background: var(--tint); color: var(--text); font-weight: 400; cursor: pointer; }
   .video-consent[data-invalid='true'] { border-color: var(--danger-border); }
-  .video-consent input { width: 1.15rem; height: 1.15rem; margin: 0.15rem 0 0; accent-color: var(--accent-fill); cursor: pointer; }
+  .video-consent input { margin: 0.15rem 0 0; }
   .video-form .video-consent + .field-error { margin: 0.4rem 0 0; }
   .video-form-actions { justify-content: flex-end; margin-top: 1rem; }
   @media (hover: hover) { .video-dropzone-area:hover { border-color: var(--accent); background: var(--tint); } }
@@ -176,15 +176,53 @@
   .story-header { max-width: var(--content-readable); margin: 0 auto; }
   .story-header h2 { margin: 0 0 0.4rem; font-size: clamp(1.6rem, 4vw, 2.1rem); line-height: 1.15; }
   .story-header p { margin: 0; }
-  /* Orden del feed (T-S9-03): control segmentado de dos opciones y, al azar, otra mezcla. */
-  .story-toolbar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 0.6rem 1rem; max-width: var(--content-readable); margin: 1.25rem auto 0; }
-  .segmented { display: inline-flex; gap: 0.2rem; margin: 0; padding: 0.2rem; border: 1px solid var(--border); border-radius: 999px; background: var(--surface); }
+  /* Orden del feed (T-S9-03, T-S12-10): una sola pastilla, centrada en la columna del feed, igual arriba y al flotar.
+     Al bajar, flota bajo la barra general (T-S12-09) y solo cambia su superficie; «Otra mezcla» y «Volver arriba»
+     entran en ranuras que crecen, así la pastilla se ensancha sin saltos. El ancla marca dónde empieza a flotar. */
+  .story-toolbar-anchor { height: 0; }
+  .story-toolbar { position: sticky; top: calc(var(--app-bar-height, 4.25rem) + 0.5rem); z-index: 5; display: flex; justify-content: center; max-width: var(--content-readable); margin: 1.25rem auto 0; pointer-events: none; }
+  .story-pill { display: inline-flex; align-items: center; max-width: 100%; padding: 0.25rem; border: 1px solid var(--border); border-radius: 999px; background: var(--surface); pointer-events: auto;
+    transition: background-color 200ms ease-out, border-color 200ms ease-out, box-shadow 200ms ease-out; }
+  .story-toolbar[data-stuck='true'] .story-pill { background: var(--glass); -webkit-backdrop-filter: blur(20px) saturate(180%); backdrop-filter: blur(20px) saturate(180%);
+    box-shadow: 0 8px 24px color-mix(in srgb, var(--shadow) 12%, transparent); }
+  .segmented { display: inline-flex; flex: none; gap: 0.2rem; margin: 0; padding: 0; border: 0; }
   .segmented-option { position: relative; margin: 0; font-weight: 600; cursor: pointer; }
   .segmented-option input { position: absolute; inset: 0; width: 100%; height: 100%; margin: 0; opacity: 0; cursor: pointer; }
-  .segmented-option span { display: inline-flex; align-items: center; gap: 0.35rem; min-height: 2.25rem; padding: 0.35rem 0.95rem; border-radius: 999px; color: var(--text); font-size: var(--type-sm); transition: background 150ms ease-out, color 150ms ease-out; }
+  .segmented-option span { display: inline-flex; align-items: center; gap: 0.35rem; min-height: 2.25rem; padding: 0.35rem 0.95rem; border-radius: 999px; color: var(--text); font-size: var(--type-sm); white-space: nowrap; transition: background 150ms ease-out, color 150ms ease-out; }
   .segmented-option input:checked + span { background: var(--accent-fill); color: var(--on-accent); }
   .segmented-option input:focus-visible + span { outline: 3px solid var(--focus-ring); outline-offset: 2px; }
-  .story-reshuffle { display: inline-flex; align-items: center; gap: 0.35rem; font-weight: 600; }
+  .story-toolbar-slot { display: grid; grid-template-columns: 0fr; transition: grid-template-columns 320ms var(--spring); }
+  .story-toolbar-slot[data-shown='true'] { grid-template-columns: 1fr; }
+  .story-toolbar-slot > div { display: flex; min-width: 0; padding-left: 0.25rem; overflow: clip; overflow-clip-margin: 0.4rem; }
+  .story-toolbar-slot button { flex: none; opacity: 0; transform: scale(0.6); transition: opacity 180ms ease-out, transform 320ms var(--spring); }
+  .story-toolbar-slot[data-shown='true'] button { opacity: 1; transform: none; }
+  .story-pill button.story-reshuffle { display: inline-flex; align-items: center; justify-content: center; gap: 0.35rem; min-height: 2.25rem; margin: 0; padding: 0 0.85rem; border-radius: 999px; font-weight: 600; white-space: nowrap; }
+  .story-pill button.story-top { display: inline-grid; place-items: center; width: 2.25rem; height: 2.25rem; margin: 0; padding: 0; border-radius: 50%; }
+  /* Móvil: todo cabe en una línea. «Otra mezcla» queda como ícono (con su nombre accesible) y «Al azar» sin ícono. */
+  @media (max-width: 480px) {
+    .segmented-option span { padding: 0.35rem 0.65rem; }
+    .segmented-option .icon { display: none; }
+    .story-pill button.story-reshuffle { width: 2.25rem; padding: 0; }
+    .story-reshuffle-label { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+  }
+  /* Por debajo de 360px la pastilla puede ocupar el relleno de la tarjeta. */
+  @media (max-width: 359px) { .story-toolbar { margin-inline: -0.75rem; } }
+  @media (prefers-reduced-motion: reduce) { .story-pill, .story-toolbar-slot, .story-toolbar-slot button { transition: none; } }
+  @media (prefers-reduced-transparency: reduce) { .story-toolbar[data-stuck='true'] .story-pill { background: var(--surface); -webkit-backdrop-filter: none; backdrop-filter: none; } }
+  @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) { .story-toolbar[data-stuck='true'] .story-pill { background: var(--surface); } }
+  /* Skeleton del feed (T-S12-10): la misma anatomía que .story, con los huesos de ui.css. */
+  .story-skeleton { display: grid; gap: 1rem; }
+  .story-skeleton .bone { height: 0.9rem; }
+  .story-skeleton .bone.story-skeleton-player { width: 100%; height: auto; aspect-ratio: 4 / 5; max-height: 80vh; border-radius: 1.25rem; }
+  .story-skeleton-byline { display: flex; align-items: center; gap: 0.7rem; }
+  .story-skeleton .bone.story-skeleton-avatar { flex: none; width: 2.5rem; height: 2.5rem; border-radius: 50%; }
+  .story-skeleton-text { display: grid; gap: 0.5rem; }
+  .story-skeleton .bone.story-skeleton-title { width: 60%; height: 1.15rem; }
+  .story-skeleton .bone.story-skeleton-action { width: 8.5rem; height: 2rem; border-radius: 999px; }
+  /* Entrada de las historias al llegar: suben 8px y aparecen; las primeras, escalonadas. */
+  .story[data-enter] { animation: story-enter 240ms ease-out var(--enter-delay, 0ms) both; }
+  @keyframes story-enter { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+  @media (prefers-reduced-motion: reduce) { .story[data-enter] { animation: none; } }
   @media (hover: hover) { .segmented-option input:not(:checked):hover + span { background: var(--tint); color: var(--accent); } }
   @media (prefers-reduced-motion: reduce) { .segmented-option span { transition: none; } }
   @media (prefers-contrast: more) { .segmented { border-color: var(--border-strong); } }
@@ -259,7 +297,6 @@
   @media (max-width: 640px) {
     .spotlight { --slide: 90%; padding: 1rem; }
     .spotlight-play { width: 3.25rem; height: 3.25rem; margin: -1.625rem 0 0 -1.625rem; }
-    .spotlight button.spotlight-dot { width: 1.1rem; }
   }
 
 

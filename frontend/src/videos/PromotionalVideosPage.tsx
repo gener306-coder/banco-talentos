@@ -1,15 +1,16 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import type { ReactNode } from 'react'
+import type { CSSProperties, ReactNode, RefObject } from 'react'
 import { Link, useSearchParams } from 'react-router'
 import { useAuth } from '../auth/useAuth'
 import { InstitutionRequestError } from '../institutions/InstitutionLayout'
 import { useApiMutation, useApiRequest } from '../lib/useApiRequest'
 import { ConfirmDialog } from '../ui/ConfirmDialog'
-import { ChevronLeftIcon, ChevronRightIcon, ShuffleIcon, VideoIcon } from '../ui/icons'
+import { ArrowUpIcon, ChevronLeftIcon, ChevronRightIcon, ShuffleIcon, VideoIcon } from '../ui/icons'
 import { prefersReducedMotion } from '../ui/modal'
-import { LoadingState, StateMessage } from '../ui/StateMessage'
+import { StateMessage } from '../ui/StateMessage'
 import { deactivatePromotionalVideo, galleryMessages, listPromotionalVideos, randomSeed } from './galleryApi'
 import type { PromotionalVideo, PromotionalVideoPage, StoryOrder } from './galleryApi'
+import { StorySkeleton } from './StorySkeleton'
 import { VideoPlayer } from './VideoPlayer'
 import './videos.css'
 
@@ -30,8 +31,10 @@ function merge(current: PromotionalVideo[], incoming: PromotionalVideo[]): Promo
   return [...current.map((video) => updated.get(video.public_id) ?? video), ...incoming.filter((video) => !known.has(video.public_id))]
 }
 
-function Story({ story, muted, onMutedChange, onRetry, company, moderator, moderating, onDeactivate }: {
+function Story({ story, enter, muted, onMutedChange, onRetry, company, moderator, moderating, onDeactivate }: {
   story: PromotionalVideo
+  /** Retraso de entrada en ms (T-S12-10). */
+  enter: number
   muted: boolean
   onMutedChange: (muted: boolean) => void
   onRetry: () => void
@@ -45,7 +48,8 @@ function Story({ story, muted, onMutedChange, onRetry, company, moderator, moder
   const titleId = `story-${story.public_id}-title`
 
   return (
-    <article id={`story-${story.public_id}`} className="story" aria-labelledby={titleId} tabIndex={-1}>
+    <article id={`story-${story.public_id}`} className="story" aria-labelledby={titleId} tabIndex={-1}
+      data-enter="" style={{ '--enter-delay': `${enter}ms` } as CSSProperties}>
       <VideoPlayer src={story.video_url} poster={story.poster_url} label={`${story.title}, de ${story.institution.name}`}
         durationSeconds={story.duration_seconds} width={story.width} height={story.height}
         autoPlay muted={muted} onMutedChange={onMutedChange} onRetry={onRetry} />
@@ -92,6 +96,8 @@ function StoryFeed({ sort, target }: { sort: StoryOrder; target: string | null }
   }
 
   const hasMore = data !== null && data.page < data.lastPage
+  // Solo las historias de la primera página entran escalonadas; las que se cargan después, sin retraso.
+  const firstBatch = 3
   const loadingMore = data !== null && data.page !== page
   const loadMore = useCallback(() => {
     setPage((current) => current + 1)
@@ -135,7 +141,13 @@ function StoryFeed({ sort, target }: { sort: StoryOrder; target: string | null }
       {notice && <p className="institution-success" role="status">{notice}</p>}
       {moderation.failure && <InstitutionRequestError failure={moderation.failure} />}
 
-      {loading && stories.length === 0 ? <LoadingState label="Cargando historias…" variant="details" />
+      {loading && stories.length === 0 ? (
+        // T-S12-10: el esqueleto aparece de inmediato y conserva la altura del feed al cambiar el orden.
+        <div className="story-feed" aria-busy="true">
+          <p className="visually-hidden" role="status">Cargando historias…</p>
+          <StorySkeleton /><StorySkeleton />
+        </div>
+      )
         : failure && stories.length === 0 ? <InstitutionRequestError failure={failure} retry={refresh} page />
         : stories.length === 0
           ? <StateMessage kind="empty" icon={<VideoIcon />} title="Aún no hay historias."
@@ -143,18 +155,18 @@ function StoryFeed({ sort, target }: { sort: StoryOrder; target: string | null }
         : (
           <>
             <div className="story-feed" role="feed" aria-busy={loadingMore} aria-label="Historias del Dual">
-              {stories.map((story) => (
-                <Story key={story.public_id} story={story} muted={muted} onMutedChange={setMuted} onRetry={renewUrls}
+              {stories.map((story, position) => (
+                <Story key={story.public_id} story={story} enter={position < firstBatch ? position * 60 : 0} muted={muted} onMutedChange={setMuted} onRetry={renewUrls}
                   company={user?.role === 'COMPANY'} moderator={user?.role === 'ADMIN'} moderating={moderation.pending}
                   onDeactivate={(button) => { deactivateButton.current = button; setDeactivating(story) }} />
               ))}
+              {loadingMore && <StorySkeleton />}
             </div>
+            {loadingMore && <p className="visually-hidden" role="status">Cargando más historias…</p>}
             <div ref={sentinel} className="story-more-wrapper">
               {failure ? <InstitutionRequestError failure={failure} retry={refresh} />
-                : hasMore && (
-                  <button type="button" className="secondary" disabled={loadingMore} onClick={loadMore}>
-                    {loadingMore ? 'Cargando historias…' : 'Ver más historias'}
-                  </button>
+                : hasMore && !loadingMore && (
+                  <button type="button" className="secondary" onClick={loadMore}>Ver más historias</button>
                 )}
             </div>
           </>
@@ -166,6 +178,40 @@ function StoryFeed({ sort, target }: { sort: StoryOrder; target: string | null }
         confirmLabel="Inactivar" onConfirm={() => { if (deactivating) void deactivate(deactivating) }} onCancel={() => setDeactivating(null)} />
     </>
   )
+}
+
+/**
+ * Ranura de un botón contextual de la barra de orden (T-S12-10): siempre está en el DOM para animar su entrada;
+ * oculta, no recibe foco ni se anuncia.
+ */
+function ToolbarSlot({ shown, children }: { shown: boolean; children: ReactNode }) {
+  return (
+    <div className="story-toolbar-slot" data-shown={shown} inert={!shown} aria-hidden={shown ? undefined : true}>
+      <div>{children}</div>
+    </div>
+  )
+}
+
+/** Distancia desde el borde superior a la que flota la barra de orden: debajo de la barra general. */
+function stickyOffset(): number {
+  const bar = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--app-bar-height'))
+  return (Number.isFinite(bar) ? bar : 0) + 8
+}
+
+/** Si la barra de orden ya flota: su ancla quedó por encima de la barra general. */
+function useStuck(anchor: RefObject<HTMLElement | null>): boolean {
+  const [stuck, setStuck] = useState(false)
+  useEffect(() => {
+    const update = () => {
+      const top = anchor.current?.getBoundingClientRect().top
+      setStuck(top !== undefined && window.scrollY > 0 && top < stickyOffset())
+    }
+    update()
+    window.addEventListener('scroll', update, { passive: true })
+    window.addEventListener('resize', update)
+    return () => { window.removeEventListener('scroll', update); window.removeEventListener('resize', update) }
+  }, [anchor])
+  return stuck
 }
 
 const ORDERS = [
@@ -186,9 +232,26 @@ export function PromotionalVideosPage() {
   const [seed, setSeed] = useState(randomSeed)
   const sort = useMemo<StoryOrder>(() => random ? { order: 'random', seed } : { order: 'recent' }, [random, seed])
 
+  const title = useRef<HTMLHeadingElement>(null)
+  const anchor = useRef<HTMLDivElement>(null)
+  const stuck = useStuck(anchor)
+
+  // T-S12-09: un orden nuevo empieza el feed desde la primera historia; si la barra flotaba, se vuelve a ese punto.
+  function restart() {
+    const element = anchor.current
+    if (!stuck || !element) return
+    window.scrollTo({ top: element.getBoundingClientRect().top + window.scrollY - stickyOffset(), behavior: prefersReducedMotion() ? 'auto' : 'smooth' })
+  }
+
   // Al elegir otro orden ya no se fija la historia que se abrió desde el inicio.
   function choose(order: StoryOrder['order']) {
     setParams(order === 'random' ? { orden: 'azar' } : {}, { replace: true })
+    restart()
+  }
+
+  function backToTop() {
+    window.scrollTo({ top: 0, behavior: prefersReducedMotion() ? 'auto' : 'smooth' })
+    title.current?.focus({ preventScroll: true })
   }
 
   return (
@@ -197,25 +260,32 @@ export function PromotionalVideosPage() {
         <Link className="plain" to="/" aria-label="Volver al inicio"><ChevronLeftIcon />Inicio</Link>
       </nav>
       <header className="story-header">
-        <h2 id="promotional-videos-title">Historias del Dual</h2>
+        <h2 id="promotional-videos-title" ref={title} tabIndex={-1}>Historias del Dual</h2>
         <p>Alumnos que están o estuvieron en el programa dual cuentan cómo fue su experiencia en la empresa.</p>
       </header>
-      <div className="story-toolbar">
-        <fieldset className="segmented">
-          <legend className="visually-hidden">Ordenar las historias</legend>
-          {ORDERS.map((option) => (
-            <label key={option.value} className="segmented-option">
-              <input type="radio" name="story-order" value={option.value} checked={sort.order === option.value}
-                onChange={() => choose(option.value)} />
-              <span>{option.value === 'random' && <ShuffleIcon />}{option.label}</span>
-            </label>
-          ))}
-        </fieldset>
-        {random && (
-          <button type="button" className="plain story-reshuffle" onClick={() => setSeed(randomSeed())}>
-            <ShuffleIcon />Otra mezcla
-          </button>
-        )}
+      {/* Marca el punto donde la barra de orden empieza a flotar. */}
+      <div ref={anchor} className="story-toolbar-anchor" aria-hidden="true" />
+      <div className="story-toolbar" data-stuck={stuck}>
+        <div className="story-pill">
+          <fieldset className="segmented">
+            <legend className="visually-hidden">Ordenar las historias</legend>
+            {ORDERS.map((option) => (
+              <label key={option.value} className="segmented-option">
+                <input type="radio" name="story-order" value={option.value} checked={sort.order === option.value}
+                  onChange={() => choose(option.value)} />
+                <span>{option.value === 'random' && <ShuffleIcon />}{option.label}</span>
+              </label>
+            ))}
+          </fieldset>
+          <ToolbarSlot shown={random}>
+            <button type="button" className="plain story-reshuffle" aria-label="Otra mezcla" title="Otra mezcla" onClick={() => { setSeed(randomSeed()); restart() }}>
+              <ShuffleIcon /><span className="story-reshuffle-label">Otra mezcla</span>
+            </button>
+          </ToolbarSlot>
+          <ToolbarSlot shown={stuck}>
+            <button type="button" className="secondary story-top" aria-label="Volver arriba" title="Volver arriba" onClick={backToTop}><ArrowUpIcon /></button>
+          </ToolbarSlot>
+        </div>
       </div>
       {/* Cada orden o mezcla empieza un feed nuevo desde la primera página. */}
       <StoryFeed key={`${sort.order}-${random ? seed : 0}-${target ?? ''}`} sort={sort} target={target} />

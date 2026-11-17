@@ -414,4 +414,20 @@ describe('identidad visual', () => {
     expect(partner).toHaveAttribute('height', '414')
     expect(screen.getAllByRole('img', { name: 'Secretaría de Economía' })).toHaveLength(1)
   })
+
+  it('en móvil lleva el logotipo de la Secretaría a una franja sobre la barra (T-S12-08)', async () => {
+    const original = window.matchMedia
+    window.matchMedia = ((query: string) => ({ matches: query === '(max-width: 480px)', media: query, addEventListener: () => {}, removeEventListener: () => {} })) as unknown as typeof window.matchMedia
+    try {
+      fetchMock.mockResolvedValueOnce(Response.json({ user }))
+      renderApp('/')
+      await screen.findByRole('heading', { name: /^Hola, / })
+      const partners = screen.getAllByRole('img', { name: 'Secretaría de Economía' })
+      expect(partners).toHaveLength(1)
+      expect(partners[0].closest('.partner-band')).not.toBeNull()
+      expect(screen.getByRole('banner')).not.toContainElement(partners[0])
+    } finally {
+      window.matchMedia = original
+    }
+  })
 })
