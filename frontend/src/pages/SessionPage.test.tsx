@@ -1,8 +1,9 @@
-import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { MemoryRouter, useLocation } from 'react-router'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import App from '../App'
 import { initialsOf } from '../auth/user'
+import { firstViewInSession, resetHomeCountUp } from './homeCountUp'
 
 const fetchMock = vi.fn<typeof fetch>()
 const apiMock = vi.fn<typeof fetch>()
@@ -24,7 +25,7 @@ const zeroMetrics: Record<string, Record<string, number>> = {
   COMPANY: { available_talent_profiles: 0, active_opportunities: 0, pending_linkage_requests: 0 },
 }
 /** Respuesta de GET /api/dashboard; por defecto, ceros para el rol de la sesión. */
-let dashboard: (() => Response) | null
+let dashboard: (() => Response | Promise<Response>) | null
 const dashboardCalls = () => fetchMock.mock.calls.filter(([path]) => path === '/api/dashboard').length
 
 beforeEach(() => {
@@ -315,5 +316,83 @@ describe('menú de cuenta', () => {
     view.unmount()
     renderApp('/set-initial-password')
     expect(screen.queryByRole('button', { name: /^Cuenta de/ })).not.toBeInTheDocument()
+  })
+})
+
+describe('inicio dinámico T-S12-11', () => {
+  const metrics = { available_talent_profiles: 318, active_opportunities: 4, pending_linkage_requests: 6 }
+  const company = { company: { id: 3, name: 'ManuGolfo' } }
+  const stat = async (label: string) => {
+    const region = await screen.findByRole('region', { name: 'Indicadores' })
+    return within(region).getByText(label).nextElementSibling as HTMLElement
+  }
+
+  beforeEach(() => { resetHomeCountUp() })
+
+  it('la primera vez en la sesión los indicadores cuentan hasta su valor, que es siempre el texto real', async () => {
+    user = { ...base, role: 'COMPANY', ...company }
+    dashboard = () => Response.json({ data: { role: 'COMPANY', metrics } })
+    renderApp()
+    const profiles = await stat('Perfiles disponibles')
+    expect(profiles).toHaveTextContent('318')
+    expect(profiles).toHaveAttribute('data-count')
+    await waitFor(() => expect(profiles).not.toHaveAttribute('data-count'), { timeout: 2000 })
+    expect(profiles).toHaveTextContent('318')
+  })
+
+  it('al volver al inicio en la misma sesión no se repite el conteo', async () => {
+    firstViewInSession()
+    user = { ...base, role: 'COMPANY', ...company }
+    dashboard = () => Response.json({ data: { role: 'COMPANY', metrics } })
+    renderApp()
+    expect(await stat('Perfiles disponibles')).not.toHaveAttribute('data-count')
+  })
+
+  it('con movimiento reducido no hay conteo', async () => {
+    vi.stubGlobal('matchMedia', (query: string) => ({ matches: query === '(prefers-reduced-motion: reduce)', media: query, addEventListener: () => {}, removeEventListener: () => {} }))
+    try {
+      user = { ...base, role: 'COMPANY', ...company }
+      dashboard = () => Response.json({ data: { role: 'COMPANY', metrics } })
+      renderApp()
+      expect(await stat('Perfiles disponibles')).not.toHaveAttribute('data-count')
+    } finally {
+      vi.unstubAllGlobals()
+    }
+  })
+
+  it('las tarjetas esperan ocultas hasta que la lista entra en pantalla, ya cargados los indicadores, y entonces entran en cascada', async () => {
+    const observed = new Map<Element, IntersectionObserverCallback>()
+    vi.stubGlobal('IntersectionObserver', class {
+      private readonly callback: IntersectionObserverCallback
+      constructor(callback: IntersectionObserverCallback) { this.callback = callback }
+      observe(element: Element) { observed.set(element, this.callback) }
+      disconnect() {}
+    })
+    let respond: (response: Response) => void = () => {}
+    try {
+      user = { ...base, role: 'INSTITUTION', institution: { id: 7, name: 'Instituto Dual' } }
+      dashboard = () => new Promise<Response>((resolve) => { respond = resolve })
+      renderApp()
+      const list = within(await screen.findByRole('navigation', { name: /./ })).getByRole('list')
+      expect(list).toHaveAttribute('data-reveal', 'pending')
+      // Mientras los indicadores cargan, la lista todavía puede moverse: no se observa.
+      expect(observed.has(list)).toBe(false)
+
+      respond(Response.json({ data: { role: 'INSTITUTION', metrics: zeroMetrics.INSTITUTION } }))
+      await screen.findByRole('region', { name: 'Indicadores' })
+      await waitFor(() => expect(observed.has(list)).toBe(true))
+      act(() => observed.get(list)!([{ isIntersecting: true } as IntersectionObserverEntry], {} as IntersectionObserver))
+      expect(list).toHaveAttribute('data-reveal', 'shown')
+    } finally {
+      vi.unstubAllGlobals()
+    }
+  })
+
+  it('las tarjetas de acceso entran en cascada según su posición', async () => {
+    user = { ...base, role: 'COMPANY', ...company }
+    dashboard = () => Response.json({ data: { role: 'COMPANY', metrics } })
+    renderApp()
+    const cards = within(await screen.findByRole('navigation', { name: /./ })).getAllByRole('listitem')
+    cards.forEach((card, index) => expect(card.style.getPropertyValue('--enter-index')).toBe(String(index)))
   })
 })

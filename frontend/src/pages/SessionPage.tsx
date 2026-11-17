@@ -1,5 +1,5 @@
-import { useCallback, useId, useState } from 'react'
-import type { FormEvent, ReactNode } from 'react'
+import { useCallback, useEffect, useId, useState } from 'react'
+import type { CSSProperties, FormEvent, ReactNode } from 'react'
 import { Link, useNavigate } from 'react-router'
 import { roleLabels } from '../auth/api'
 import type { Role, User } from '../auth/api'
@@ -7,6 +7,9 @@ import { useAuth } from '../auth/useAuth'
 import { organizationOf } from '../auth/user'
 import { getDashboard, metricKeys, metricLabels } from '../dashboard/api'
 import { useApiRequest } from '../lib/useApiRequest'
+import { useCountUp } from '../ui/useCountUp'
+import { useReveal } from '../ui/useReveal'
+import { firstViewInSession } from './homeCountUp'
 import { displayName } from '../students/cvCatalogs'
 import { SkillPicker } from '../students/SkillPicker'
 import { emptyFilters, MAX_SKILL_FILTERS, talentViewParams } from '../talent/api'
@@ -133,6 +136,20 @@ function TalentShortcut() {
 const count = new Intl.NumberFormat('es-MX')
 
 /**
+ * Indicador con conteo (T-S12-11). El texto del `dd` es siempre el valor real (lo leen el lector de pantalla y las
+ * pruebas); la cifra intermedia se pinta encima con `::before` desde `data-count`, sin texto alternativo.
+ */
+function HomeStat({ label, value, animate }: { label: string; value: number; animate: boolean }) {
+  const current = useCountUp(value, animate)
+  return (
+    <div className="home-stat">
+      <dt>{label}</dt>
+      <dd data-count={current === null ? undefined : count.format(current)}>{count.format(value)}</dd>
+    </div>
+  )
+}
+
+/**
  * Pendiente del inicio (T-S8-10): conteo, motivo y acción juntos. Toda la tarjeta es clicable, pero el enlace conserva
  * como nombre accesible solo su acción.
  */
@@ -160,9 +177,13 @@ function HomeTask({ kind, icon, title, description, to, action }: {
  * Indicadores del rol (HU-S5-01 CA-07, HU-S6-03 CA-02). No bloquean el inicio: mientras cargan no se muestra nada y,
  * si fallan, un aviso discreto deja las tarjetas de acceso intactas.
  */
-function HomeIndicators({ role }: { role: Role }) {
+function HomeIndicators({ role, onSettled }: { role: Role; onSettled: () => void }) {
   const load = useCallback((signal: AbortSignal) => getDashboard(role, signal), [role])
   const { data, failure } = useApiRequest(load)
+  // T-S12-11: avisa cuando ya tiene su altura final, para que las tarjetas se revelen en su lugar definitivo.
+  const settled = Boolean(data || failure)
+  useEffect(() => { if (settled) onSettled() }, [settled, onSettled])
+  const [animate] = useState(firstViewInSession)
 
   if (failure) {
     return <p className="notice-muted home-stats-failure">No pudimos cargar los indicadores. Puedes seguir usando las secciones de tu inicio.</p>
@@ -191,10 +212,7 @@ function HomeIndicators({ role }: { role: Role }) {
       )}
       <dl className="home-stats">
         {metricKeys[role].map((key) => (
-          <div className="home-stat" key={key}>
-            <dt>{metricLabels[key]}</dt>
-            <dd>{count.format(metrics[key] ?? 0)}</dd>
-          </div>
+          <HomeStat key={key} label={metricLabels[key]} value={metrics[key] ?? 0} animate={animate} />
         ))}
       </dl>
     </section>
@@ -208,6 +226,14 @@ function HomeIndicators({ role }: { role: Role }) {
 export function SessionPage() {
   const { user } = useAuth()
   const titleId = useId()
+  // T-S12-11: las tarjetas suelen quedar bajo el pliegue; la cascada empieza cuando la lista entra en pantalla, ya con
+  // los indicadores (y el carrusel de la empresa) cargados, que las empujan hacia abajo.
+  const [indicatorsReady, setIndicatorsReady] = useState(false)
+  const [spotlightReady, setSpotlightReady] = useState(false)
+  const markIndicators = useCallback(() => setIndicatorsReady(true), [])
+  const markSpotlight = useCallback(() => setSpotlightReady(true), [])
+  const company = user?.role === 'COMPANY'
+  const [cards, reveal] = useReveal<HTMLUListElement>(indicatorsReady && (!company || spotlightReady))
   if (!user) return null
   const home = homeFor(user)
   const organization = organizationOf(user)
@@ -228,15 +254,16 @@ export function SessionPage() {
         </div>
       )}
       {user.role === 'COMPANY' && home && <TalentShortcut />}
-      {user.role === 'COMPANY' && home && <DualStoriesSpotlight />}
-      {home && <HomeIndicators role={user.role} />}
+      {user.role === 'COMPANY' && home && <DualStoriesSpotlight onSettled={markSpotlight} />}
+      {home && <HomeIndicators role={user.role} onSettled={markIndicators} />}
 
       {home
         ? (
           <nav aria-label={home.label}>
-            <ul className="home-cards">
+            <ul ref={cards} className="home-cards" data-reveal={reveal}>
               {home.sections.map((section, index) => (
-                <li key={section.to}>
+                // T-S12-11: entrada escalonada al llegar a la lista.
+                <li key={section.to} style={{ '--enter-index': index } as CSSProperties}>
                   <Link className="home-card" to={section.to}
                     aria-labelledby={`${titleId}-section-${index}`} aria-describedby={`${titleId}-section-${index}-description`}>
                     <span className="home-card-icon" aria-hidden="true">{section.icon}</span>

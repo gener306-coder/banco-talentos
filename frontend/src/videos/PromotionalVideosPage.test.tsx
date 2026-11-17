@@ -107,8 +107,12 @@ describe('Historias del Dual HU-S9-04', () => {
       ? pageOf([promo, second], { current_page: 2, last_page: 2, total: 2 }) : pageOf([promo], { last_page: 2, total: 2 }))
     start('COMPANY')
     fireEvent.click(await screen.findByRole('button', { name: 'Ver más historias' }))
+    // T-S12-10: mientras llega la página, un esqueleto al final del feed.
+    expect(screen.getAllByTestId('story-skeleton')).toHaveLength(1)
+    expect(screen.getByRole('status')).toHaveTextContent('Cargando más historias…')
 
     expect(await screen.findByRole('article', { name: 'Mi año en logística' })).toBeInTheDocument()
+    expect(screen.queryByTestId('story-skeleton')).not.toBeInTheDocument()
     expect(screen.getAllByRole('article')).toHaveLength(2)
     expect(screen.queryByRole('button', { name: 'Ver más historias' })).not.toBeInTheDocument()
   })
@@ -204,5 +208,70 @@ describe('orden de las historias T-S9-03', () => {
     await vi.waitFor(() => expect(urls()).toHaveLength(2), { timeout: 5000 })
     expect(urls()[1]).toMatch(/^\/api\/promotional-videos\?page=1&order=random&seed=\d+$/)
     expect(urls()[1]).not.toBe(first)
+  })
+})
+
+describe('barra de orden flotante T-S12-09', () => {
+  function scrollTo(y: number) {
+    Object.defineProperty(window, 'scrollY', { configurable: true, value: y })
+    act(() => { window.dispatchEvent(new Event('scroll')) })
+  }
+
+  afterEach(() => { Object.defineProperty(window, 'scrollY', { configurable: true, value: 0 }) })
+
+  it('al bajar, la barra flota con «Volver arriba», que regresa al inicio y enfoca el título', async () => {
+    const scroll = vi.fn()
+    vi.stubGlobal('scrollTo', scroll)
+    start('COMPANY')
+    await screen.findByRole('article', { name: promo.title })
+    const toolbar = screen.getByRole('group', { name: 'Ordenar las historias' }).closest('.story-toolbar')!
+    expect(toolbar).toHaveAttribute('data-stuck', 'false')
+    expect(screen.queryByRole('button', { name: 'Volver arriba' })).not.toBeInTheDocument()
+
+    // En jsdom el ancla mide 0: con la página desplazada ya quedó por encima de la barra general.
+    scrollTo(1800)
+    expect(toolbar).toHaveAttribute('data-stuck', 'true')
+    fireEvent.click(screen.getByRole('button', { name: 'Volver arriba' }))
+    expect(scroll).toHaveBeenCalledWith(expect.objectContaining({ top: 0 }))
+    expect(screen.getByRole('heading', { level: 2, name: 'Historias del Dual' })).toHaveFocus()
+
+    scrollTo(0)
+    expect(toolbar).toHaveAttribute('data-stuck', 'false')
+    expect(screen.queryByRole('button', { name: 'Volver arriba' })).not.toBeInTheDocument()
+  })
+
+  it('cambiar el orden con la barra flotando regresa al principio del feed', async () => {
+    const scroll = vi.fn()
+    vi.stubGlobal('scrollTo', scroll)
+    start('COMPANY')
+    await screen.findByRole('article', { name: promo.title })
+    scrollTo(1800)
+    fireEvent.click(screen.getByRole('radio', { name: 'Al azar' }))
+    expect(scroll).toHaveBeenCalledTimes(1)
+    expect(screen.getByRole('radio', { name: 'Al azar' })).toBeChecked()
+  })
+})
+
+describe('skeleton del feed T-S12-10', () => {
+  it('muestra esqueletos con la carga anunciada hasta que llegan las historias, y vuelve a mostrarlos al cambiar el orden', async () => {
+    start('COMPANY')
+    expect(await screen.findAllByTestId('story-skeleton')).toHaveLength(2)
+    expect(screen.getAllByTestId('story-skeleton')[0]).toHaveAttribute('aria-hidden', 'true')
+    expect(screen.getByRole('status')).toHaveTextContent('Cargando historias…')
+    await screen.findByRole('article', { name: promo.title })
+    expect(screen.queryByTestId('story-skeleton')).not.toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('radio', { name: 'Al azar' }))
+    expect(await screen.findAllByTestId('story-skeleton')).toHaveLength(2)
+    await screen.findByRole('article', { name: promo.title })
+    expect(screen.queryByTestId('story-skeleton')).not.toBeInTheDocument()
+  })
+
+  it('«Otra mezcla» solo es accesible en el orden al azar', async () => {
+    start('COMPANY')
+    await screen.findByRole('article', { name: promo.title })
+    expect(screen.queryByRole('button', { name: 'Otra mezcla' })).not.toBeInTheDocument()
+    fireEvent.click(screen.getByRole('radio', { name: 'Al azar' }))
+    expect(screen.getByRole('button', { name: 'Otra mezcla' })).toBeInTheDocument()
   })
 })

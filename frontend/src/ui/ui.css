@@ -29,16 +29,20 @@ h4 { font-weight: 600; }
 .app-bar-inner { width: min(100% - var(--page-gutter), var(--page-narrow)); margin: 0 auto; display: flex; align-items: center; gap: 0.9rem; padding: 0.7rem 0; }
 /* Mismo ancho que <main> (index.css): encabezado y contenido siempre alineados. */
 .app-bar-inner.wide { width: min(100% - var(--page-gutter), var(--page-wide)); }
-.app-bar h1 { margin: 0.1rem 0 0; font-size: var(--type-xl); color: var(--accent); }
+.app-bar h1 { margin: 0.1rem 0 0; font-size: var(--type-xl); color: var(--accent); white-space: nowrap; }
+/* T-S12-08: el título no cede ancho; sin coemblema en la barra (móvil), el menú de cuenta se alinea a la derecha. */
+.app-bar-title { flex: none; }
+.app-bar-title + .account-menu { margin-left: auto; }
 .app-bar .eyebrow { margin: 0; color: var(--text-strong); }
 .app-bar-partner { display: flex; margin-left: auto; padding-left: 0.9rem; border-left: 1px solid var(--border); flex-shrink: 1; min-width: 0; }
 .app-bar-partner img { min-width: 0; max-width: 100%; object-fit: contain; }
-/* En pantallas angostas el título se reduce (los logotipos, con h-* en App.tsx) para caber en una línea. */
+/* En pantallas angostas el título se reduce (el logotipo, con h-* en App.tsx) para caber en una línea. */
 @media (max-width: 480px) {
   .app-bar-inner { gap: 0.6rem; }
   .app-bar h1 { font-size: var(--type-lg); }
-  .app-bar-partner { padding-left: 0.6rem; }
 }
+/* T-S12-08: hasta 480px el coemblema va en una franja sobre la barra; se desplaza con la página y la barra fija no crece. */
+.partner-band { display: flex; justify-content: center; padding: 0.6rem 1rem; background: var(--surface); border-bottom: 1px solid var(--border); }
 /* Borde de scroll suave: aparece solo cuando hay contenido bajo el encabezado. */
 .app-bar::after { content: ''; position: absolute; left: 0; right: 0; top: 100%; height: 14px; pointer-events: none;
   background: linear-gradient(to bottom, color-mix(in srgb, var(--surface-muted) 90%, transparent), transparent);
@@ -251,7 +255,6 @@ select[aria-invalid='true'], .student-section input[aria-invalid='true'], .sheet
 .choice-group { border: 1px solid var(--border); border-radius: 8px; padding: 0.6rem 0.9rem; margin: 0.4rem 0 0.6rem; }
 .choice-group legend { padding: 0 0.3rem; font-weight: 600; }
 .choice-group div { display: flex; align-items: center; gap: 0.5rem; margin: 0.3rem 0; }
-.choice-group input[type='radio'] { width: auto; margin: 0; accent-color: var(--accent); }
 .choice-group label { font-weight: 400; }
 .field-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr)); gap: 0 1rem; }
 .student-section { margin-top: 2rem; padding-top: 1.5rem; border-top: 1px solid var(--border); }
@@ -386,6 +389,10 @@ textarea[aria-invalid='true'] { border-color: var(--danger-border); }
 .home-stat { display: flex; flex-direction: column-reverse; gap: 0.2rem; padding: 0.9rem 1.1rem; border: 1px solid var(--border); border-radius: 14px; background: var(--surface); }
 .home-stat dt { font-size: var(--type-sm); line-height: 1.35; color: var(--text); }
 .home-stat dd { margin: 0; font-size: var(--type-2xl); font-weight: 700; line-height: 1.1; color: var(--accent); font-variant-numeric: tabular-nums; }
+/* T-S12-11: conteo hasta el valor. El texto real queda transparente (conserva el ancho y es lo que se lee) y la cifra
+   intermedia se pinta encima desde data-count, sin texto alternativo para que no se anuncie. */
+.home-stat dd[data-count] { position: relative; color: transparent; }
+.home-stat dd[data-count]::before { content: attr(data-count); content: attr(data-count) / ''; position: absolute; inset: 0; color: var(--accent); }
 /* Solicitudes de vinculación por responder (HU-S6-03 CA-02): aviso destacado con el acento de la marca. */
 /* Pendientes del inicio (T-S8-10): tarjetas de dos columnas con la acción junto a su motivo; toda la tarjeta es clicable. */
 .home-tasks { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(24rem, 100%), 1fr)); gap: 0.9rem; margin: 0 0 1.25rem; padding: 0; list-style: none; }
@@ -409,6 +416,11 @@ textarea[aria-invalid='true'] { border-color: var(--danger-border); }
 .home-task-action:focus-visible::after { outline: 3px solid var(--focus-ring); outline-offset: 2px; }
 .home-stats-failure { margin: 0 0 1.75rem; }
 .home-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(16rem, 100%), 1fr)); gap: 0.9rem; margin: 0; padding: 0; list-style: none; }
+/* T-S12-11: las tarjetas entran en cascada (50 ms entre una y otra) cuando la lista asoma en pantalla, con el lenguaje
+   de movimiento de las historias. Solo se ocultan mientras useReveal espera; sin JS u observador se ven siempre. */
+.home-cards[data-reveal='pending'] > li { opacity: 0; }
+.home-cards[data-reveal='shown'] > li { animation: home-enter 360ms ease-out calc(var(--enter-index, 0) * 60ms) both; }
+@keyframes home-enter { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
 .home-card { display: flex; align-items: flex-start; gap: 0.9rem; height: 100%; padding: 1.1rem; border: 1px solid var(--border); border-radius: 14px;
   background: var(--surface); color: inherit; text-decoration: none; transition: transform 150ms ease-out, box-shadow 150ms ease-out, border-color 150ms ease-out; }
 .home-card:active { transform: scale(0.98); }
@@ -441,6 +453,7 @@ textarea[aria-invalid='true'] { border-color: var(--danger-border); }
 .account-theme div { margin-right: 0.75rem; }
 @media (prefers-reduced-motion: reduce) {
   .home-card, .home-action, .home-task, .home-task-action .icon { transition: none; }
+  .home-cards[data-reveal] > li { opacity: 1; animation: none; }
   .home-card:active, .home-action:active { transform: none; }
   .account-panel { animation: fade-in 160ms ease both; }
 }
@@ -526,6 +539,8 @@ textarea[aria-invalid='true'] { border-color: var(--danger-border); }
 .list-toolbar > .table-search, .list-toolbar > .csv-download { margin: 0; }
 @media (max-width: 40rem) {
   .table-search > .table-search-field, .table-search > .table-search-filter { flex-basis: 100%; max-width: none; }
+  /* T-S12-08: «Buscar» ocupa todo el ancho, igual que la acción principal de .page-toolbar. */
+  .table-search > button { flex-basis: 100%; }
 }
 /*
  * Tabla en tarjeta (T-S8-14): la tabla y su paginación comparten una tarjeta con el radio de las del inicio. Encabezado

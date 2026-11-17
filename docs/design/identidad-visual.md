@@ -32,7 +32,7 @@ Ubicaciones actuales:
 |---|---|---|
 | Encabezado general translúcido, junto al título | `App.tsx` | `h-14` (56 px); hasta 480 px, `h-11` (44 px). No se muestra en `/login` para no duplicarlo. |
 | Parte superior del formulario de login | `pages/LoginPage.tsx` | `h-36` (144 px), centrado. |
-| Secretaría de Economía, extremo derecho del encabezado general | `App.tsx` (`.app-bar-partner`) | `h-11` (44 px), centrado verticalmente con el logotipo principal y separado del título por un filete `neutral-200`. Se muestra en todas las vistas, también en `/login`. Hasta 480 px: `h-[1.6rem]`, con el título a 1.15rem. |
+| Secretaría de Economía, extremo derecho del encabezado general | `App.tsx` (`.app-bar-partner`) | `h-11` (44 px), centrado verticalmente con el logotipo principal y separado del título por un filete `neutral-200`. Se muestra en todas las vistas, también en `/login`. Hasta 480 px sale de la barra a una franja propia sobre ella (`.partner-band`, `h-9`, centrado, fondo `--surface` y filete inferior), que se desplaza con la página; la barra conserva el logotipo, el título en una línea a 1.15rem y el menú de cuenta (T-S12-08). |
 
 Las dos ubicaciones del logotipo de Nodologístico usan `BrandLogo`, que elige la versión según el tema.
 
@@ -290,6 +290,11 @@ Adoptado el 11 de octubre de 2026 como cambio transversal del Sprint 2 (`docs/sp
 - Textos largos de una celda (T-S12-06): no se truncan en la tabla. Un ícono `.cell-actions` junto al dato los abre completos en una `Sheet` (por ejemplo, el mensaje de respuesta de la institución).
 - Acción principal según su disponibilidad (T-S12-07): una acción que ya no se puede ejecutar no se muestra deshabilitada sin explicación. Se retira y un `Callout` dice por qué; las opciones bloqueadas de un `select` llevan su motivo.
 - Habilidades siempre del catálogo en los filtros (T-S12-07): el atajo del inicio y el buscador usan el mismo `SkillPicker` en modo catálogo.
+- Casillas y radios nativos a 1.15rem (18 px) con `accent-color: var(--accent-fill)`, en una sola regla de `index.css`; ningún módulo los vuelve a `width: auto` (T-S12-08).
+- Controles de un feed largo (T-S12-09, T-S12-10): la barra de orden es una sola pastilla centrada, igual arriba y al flotar (`sticky` bajo la barra general con `top: var(--app-bar-height)`). Al flotar solo cambia su superficie a vidrio. Los botones contextuales («Otra mezcla», «Volver arriba») entran en ranuras que crecen, en lugar de aparecer de golpe. No se agregan botones flotantes sueltos sobre el contenido.
+- Indicadores con conteo (T-S12-11): la primera vista del inicio desde que se carga la app cuenta de 0 al valor (800 ms, *ease-out*), sin números aleatorios. El texto real siempre está en el DOM y la cifra intermedia es decorativa (`::before`). Los avisos «Por atender» no se animan. Las tarjetas de acceso entran en cascada cuando la lista asoma en pantalla (`useReveal`), una sola vez y ya con la altura final de la vista; si caben en la primera pantalla, entran al abrir.
+- Skeleton con la anatomía del contenido (T-S12-10): un feed que reemplaza contenido muestra el esqueleto al instante, con la forma del elemento real y conservando su altura; las vistas que cargan por primera vez siguen esperando 300 ms (`LoadingState`). El contenido entra con opacidad y 8 px de desplazamiento, sin movimiento con `prefers-reduced-motion`.
+- En móvil (hasta 40rem), «Buscar» de las tablas ocupa todo el ancho, como la acción principal de la vista (T-S12-08). Los puntos del carrusel conservan 24 px de ancho.
 - Listados en la URL (T-S12-05): búsqueda, filtros y página se leen y se escriben con `ui/useListParams.ts`; el regreso contextual recupera la vista exacta.
 - Regreso contextual (T-S12-04): un detalle abierto desde otro flujo regresa a él con su texto («Volver a solicitudes») mediante `ui/backLink.ts`; sin origen, conserva su regreso de siempre.
 - Avisos informativos y de pendiente (`ui/Callout.tsx`): tono `info` (tinte de la marca) o `pending` (estado inactivo), con la anatomía de `.notice`; el dato clave va en `.notice-subject` y la acción, en una pastilla.

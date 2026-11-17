@@ -23,7 +23,6 @@
 .talent-filters legend { margin-bottom: 0.5rem; font-size: var(--type-base); font-weight: 600; color: var(--accent); }
 .talent-filters select, .talent-filters input[type='text'] { width: 100%; margin-bottom: 0.6rem; }
 .talent-filters .check { display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.4rem; }
-.talent-filters .check input { width: auto; margin: 0; }
 .talent-results-summary { margin: 0 0 0.8rem; font-weight: 600; }
 .talent-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(20rem, 100%), 1fr)); gap: 0.9rem; margin: 0; padding: 0; list-style: none; }
 .talent-card { height: 100%; padding: 1rem 1.1rem; border: 1px solid var(--border); border-radius: 12px; background: var(--surface);
