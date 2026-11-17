@@ -152,6 +152,7 @@ describe('bandeja (CA-02, CA-03, CA-04)', function () {
                 'id' => $this->student->id, 'enrollment_number' => 'MAT-0001', 'given_names' => 'Ana Sofía', 'first_surname' => 'García',
                 'second_surname' => 'López', 'is_active' => true, 'program' => 'Ingeniería en Datos', 'period_type' => 'semester', 'period_number' => 6,
             ],
+            'unread_count' => 0,
         ]]);
         expect($response->getContent())->not->toContain('12345678903')->not->toContain('secreto.pdf')->not->toContain('location');
     });

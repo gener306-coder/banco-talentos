@@ -13,12 +13,15 @@ import { firstViewInSession } from './homeCountUp'
 import { displayName } from '../students/cvCatalogs'
 import { SkillPicker } from '../students/SkillPicker'
 import { emptyFilters, MAX_SKILL_FILTERS, talentViewParams } from '../talent/api'
+import { UnreadBadge } from '../linkage/UnreadBadge'
 import { DualStoriesSpotlight } from '../videos/DualStoriesSpotlight'
 import { BriefcaseIcon, BuildingIcon, ChartIcon, ChevronRightIcon, ClipboardIcon, IdCardIcon, PlusIcon, SearchIcon, UsersIcon, VideoIcon } from '../ui/icons'
 
 interface Section {
   to: string
   title: string
+  /** Aviso junto al título, dentro del nombre del enlace (HU-S13-04: conversaciones sin leer). */
+  badge?: ReactNode
   description: string
   icon: ReactNode
 }
@@ -80,7 +83,7 @@ function homeFor(user: User): Home | null {
         primary: { to: '/students', label: 'Registrar alumno', state: { register: true } },
         sections: [
           { to: '/students', title: 'Alumnos', icon: <UsersIcon />, description: 'Administra el padrón, el expediente y el CV de tus alumnos.' },
-          { to: '/institution/linkage-requests', title: 'Solicitudes de vinculación', icon: <IdCardIcon />, description: 'Revisa las solicitudes de las empresas para tus alumnos y el contacto de cada empresa.' },
+          { to: '/institution/linkage-requests', title: 'Solicitudes de vinculación', badge: <UnreadBadge side="INSTITUTION" />, icon: <IdCardIcon />, description: 'Revisa las solicitudes de las empresas para tus alumnos y el contacto de cada empresa.' },
           { to: '/institution/videos', title: 'Historias del Dual', icon: <VideoIcon />, description: 'Comparte en video la experiencia de tus alumnos para animar a las empresas a recibirlos.' },
         ],
       } : null
@@ -91,7 +94,7 @@ function homeFor(user: User): Home | null {
           { to: '/talent', title: 'Buscar talento', icon: <SearchIcon />, description: 'Explora perfiles anónimos por habilidades, idiomas y distancia.' },
           // T-S9-02: sin tarjeta de Historias del Dual; el módulo del inicio ya lleva a todas.
           { to: '/opportunities', title: 'Oportunidades Duales', icon: <BriefcaseIcon />, description: 'Registra los proyectos, perfiles y lugares de tu empresa para alumnos de Educación Dual.' },
-          { to: '/linkage-requests', title: 'Solicitudes de vinculación', icon: <IdCardIcon />, description: 'Da seguimiento a las solicitudes enviadas y consulta el contacto de cada institución.' },
+          { to: '/linkage-requests', title: 'Solicitudes de vinculación', badge: <UnreadBadge side="COMPANY" />, icon: <IdCardIcon />, description: 'Da seguimiento a las solicitudes enviadas y consulta el contacto de cada institución.' },
         ],
       } : null
   }
@@ -268,7 +271,7 @@ export function SessionPage() {
                     aria-labelledby={`${titleId}-section-${index}`} aria-describedby={`${titleId}-section-${index}-description`}>
                     <span className="home-card-icon" aria-hidden="true">{section.icon}</span>
                     <span className="home-card-text">
-                      <span className="home-card-title" id={`${titleId}-section-${index}`}>{section.title}</span>
+                      <span className="home-card-title" id={`${titleId}-section-${index}`}>{section.title}{section.badge}</span>
                       <span className="home-card-description" id={`${titleId}-section-${index}-description`}>{section.description}</span>
                     </span>
                     <ChevronRightIcon />

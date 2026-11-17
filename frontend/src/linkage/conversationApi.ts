@@ -87,6 +87,19 @@ export async function markLinkageMessagesRead(side: LinkageSide, linkageRequestI
   return response.data.last_read_message_id
 }
 
+/** Conversaciones de la organización con mensajes sin leer, para el aviso del menú (HU-S13-04 CA-02). */
+export async function getUnreadConversations(side: LinkageSide, signal?: AbortSignal): Promise<number> {
+  const prefix = side === 'COMPANY' ? '/api/linkage-requests' : '/api/institution/linkage-requests'
+  const response = await request(`${prefix}/unread-summary`, { signal })
+  if (!isObject(response) || !isObject(response.data)) throw new ApiError(502)
+  const { conversations } = response.data
+  if (typeof conversations !== 'number' || !Number.isSafeInteger(conversations) || conversations < 0) throw new ApiError(502)
+  return conversations
+}
+
+/** Aviso de que el lado leyó una conversación: el contador del menú se actualiza sin esperar a su siguiente consulta. */
+export const LINKAGE_READ_EVENT = 'linkage-conversation-read'
+
 /** Une mensajes nuevos al hilo sin duplicarlos (un envío y la consulta periódica pueden traer el mismo) y en orden. */
 export function mergeThread(current: LinkageThread, update: Partial<LinkageThread> & { items: LinkageMessage[] }): LinkageThread {
   const known = new Set(current.items.map((message) => message.id))

@@ -20,6 +20,8 @@ class ListLinkageRequestsRequest extends FormRequest
             'status' => ['nullable', 'string', Rule::enum(LinkageRequestStatus::class)],
             'public_id' => ['nullable', 'string', 'uuid'],
             'page' => ['nullable', 'integer', 'min:1'],
+            // HU-S13-04 CA-04: solo las conversaciones con mensajes sin leer.
+            'unread' => ['nullable', 'boolean'],
         ];
     }
 
@@ -32,6 +34,7 @@ class ListLinkageRequestsRequest extends FormRequest
             'public_id.uuid' => 'El perfil no es válido.',
             'page.integer' => 'La página no es válida.',
             'page.min' => 'La página no es válida.',
+            'unread.boolean' => 'El filtro de mensajes sin leer no es válido.',
         ];
     }
 }

@@ -79,6 +79,8 @@ export interface LinkageInboxItem {
   /** Respuesta de la institución (HU-S6-02 CA-04), sin la cuenta que respondió. */
   responded_at: string | null
   response_message: string | null
+  /** Mensajes de la institución sin leer (HU-S13-04 CA-02). */
+  unread_count: number
 }
 
 export interface LinkageInboxPage {
@@ -99,7 +101,8 @@ function inboxItem(data: unknown): LinkageInboxItem {
       !isObject(data.institution) || typeof data.institution.name !== 'string' || typeof data.institution.contact_email !== 'string' ||
       !isOptionalText(data.institution.contact_name) || !isOptionalText(data.institution.contact_position) ||
       !isOptionalText(data.institution.contact_phone) ||
-      !isOptionalText(data.responded_at) || !isOptionalText(data.response_message)) {
+      !isOptionalText(data.responded_at) || !isOptionalText(data.response_message) ||
+      typeof data.unread_count !== 'number' || !Number.isSafeInteger(data.unread_count) || data.unread_count < 0) {
     throw new ApiError(502)
   }
   // Solo se conservan los campos del contrato.
@@ -114,14 +117,18 @@ function inboxItem(data: unknown): LinkageInboxItem {
       name: data.institution.name, contact_name: data.institution.contact_name, contact_position: data.institution.contact_position,
       contact_email: data.institution.contact_email, contact_phone: data.institution.contact_phone,
     },
-    responded_at: data.responded_at, response_message: data.response_message,
+    responded_at: data.responded_at, response_message: data.response_message, unread_count: data.unread_count,
   }
 }
 
-/** Bandeja de la empresa, de la más reciente a la más antigua; filtros opcionales por estado y perfil (CA-01, CA-04). */
-export async function listLinkageRequests(filters: { page?: number; status?: LinkageStatus | ''; publicId?: string }, signal?: AbortSignal): Promise<LinkageInboxPage> {
+/**
+ * Bandeja de la empresa, de la más reciente a la más antigua; filtros opcionales por estado y perfil (CA-01, CA-04) y por
+ * conversaciones con mensajes sin leer (HU-S13-04 CA-04).
+ */
+export async function listLinkageRequests(filters: { page?: number; status?: LinkageStatus | ''; publicId?: string; unread?: boolean }, signal?: AbortSignal): Promise<LinkageInboxPage> {
   const params = new URLSearchParams({ page: String(filters.page ?? 1) })
   if (filters.status) params.set('status', filters.status)
+  if (filters.unread) params.set('unread', '1')
   if (filters.publicId) params.set('public_id', filters.publicId)
   const response = await request(`/api/linkage-requests?${params.toString()}`, { signal })
   if (!isObject(response) || !Array.isArray(response.data) || !isObject(response.meta)) throw new ApiError(502)

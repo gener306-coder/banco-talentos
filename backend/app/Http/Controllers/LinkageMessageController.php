@@ -111,14 +111,37 @@ class LinkageMessageController extends Controller
         return response()->json(['data' => ['last_read_message_id' => $marker]])->header('Cache-Control', 'no-store, private');
     }
 
+    /**
+     * HU-S13-04 CA-02: cuántas conversaciones de la organización de la sesión tienen mensajes del otro lado sin leer,
+     * para el aviso del menú. Una sola consulta acotada a la organización.
+     */
+    public function summary(Request $request): JsonResponse
+    {
+        $party = LinkageParty::of($request->user()->role);
+        $conversations = LinkageRequest::query()
+            ->where($party->ownerColumn(), $this->ownerId($request))
+            ->where('status', LinkageRequestStatus::ACCEPTED)
+            ->withUnread($party)
+            ->count();
+
+        return response()->json(['data' => ['conversations' => $conversations]])->header('Cache-Control', 'no-store, private');
+    }
+
+    /** Organización de la sesión del lado que le corresponde. */
+    private function ownerId(Request $request): ?int
+    {
+        $user = $request->user();
+
+        return LinkageParty::of($user->role) === LinkageParty::COMPANY ? $user->company_id : $user->institution_id;
+    }
+
     /** CA-03, CA-04: solicitud propia y ACEPTADA, con las dos organizaciones para nombrarlas y saber si siguen activas. */
     private function conversation(Request $request, string $linkageRequest, bool $lock = false): LinkageRequest
     {
-        $user = $request->user();
-        $party = LinkageParty::of($user->role);
+        $party = LinkageParty::of($request->user()->role);
 
         $linkage = LinkageRequest::query()
-            ->where($party->ownerColumn(), $party === LinkageParty::COMPANY ? $user->company_id : $user->institution_id)
+            ->where($party->ownerColumn(), $this->ownerId($request))
             ->when($lock, fn ($query) => $query->lockForUpdate())
             ->find((int) $linkageRequest);
         abort_if($linkage === null, 404, 'La solicitud no existe.');

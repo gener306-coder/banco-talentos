@@ -5,7 +5,7 @@ import { useApiMutation, useApiRequest } from '../lib/useApiRequest'
 import { Callout } from '../ui/Callout'
 import { LoadingState } from '../ui/StateMessage'
 import {
-  conversationMessages, LINKAGE_CONVERSATION_LIMIT, listLinkageMessages, markLinkageMessagesRead, mergeThread, sendLinkageMessage,
+  conversationMessages, LINKAGE_CONVERSATION_LIMIT, LINKAGE_READ_EVENT, listLinkageMessages, markLinkageMessagesRead, mergeThread, sendLinkageMessage,
 } from './conversationApi'
 import type { LinkageSide } from './conversationApi'
 import './linkage.css'
@@ -82,7 +82,11 @@ export function LinkageConversation({ linkageRequestId, role, readOnly = false }
     if (lastId === 0 || lastId <= knownRead || lastId <= readRequested.current) return
     readRequested.current = lastId
     markLinkageMessagesRead(role, linkageRequestId, lastId)
-      .then((marker) => setData((current) => current && mergeThread(current, { items: [], lastReadMessageId: marker })))
+      .then((marker) => {
+        setData((current) => current && mergeThread(current, { items: [], lastReadMessageId: marker }))
+        // HU-S13-04: el contador del menú baja en cuanto se lee.
+        window.dispatchEvent(new Event(LINKAGE_READ_EVENT))
+      })
       .catch(() => { readRequested.current = 0 })
   }, [lastId, knownRead, role, linkageRequestId, setData])
 

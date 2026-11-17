@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Enums\InsuranceType;
+use App\Enums\LinkageParty;
 use App\Enums\LinkageRequestStatus;
 use App\Http\Requests\DecideLinkageRequestRequest;
 use App\Http\Requests\ListInstitutionLinkageRequestsRequest;
@@ -41,6 +42,9 @@ class InstitutionLinkageRequestController extends Controller
 
         $page = $this->owned($request)
             ->when($status !== null, fn (Builder $query) => $query->where('status', $status))
+            // HU-S13-04 CA-04: solo las que tienen mensajes de la empresa sin leer.
+            ->when($request->boolean('unread'), fn (Builder $query) => $query->withUnread(LinkageParty::INSTITUTION))
+            ->withUnreadCount(LinkageParty::INSTITUTION)
             ->with([
                 'company:id,legal_name,trade_name,municipality_code',
                 'company.municipality:code,name',
@@ -161,7 +165,8 @@ class InstitutionLinkageRequestController extends Controller
             'responder:id,name',
         ]);
 
-        $item = $this->item($linkage);
+        // El conteo de no leídos es de la bandeja (HU-S13-04); en el detalle la conversación ya se ve completa.
+        $item = array_diff_key($this->item($linkage), ['unread_count' => true]);
         $company = $linkage->company;
         $opportunity = $linkage->opportunity;
         $student = $linkage->student;
@@ -236,6 +241,8 @@ class InstitutionLinkageRequestController extends Controller
                 'vacancies' => $linkage->opportunity->vacancies,
             ],
             'student' => $this->studentSummary($linkage->student),
+            // HU-S13-04 CA-02: mensajes de la empresa sin leer.
+            'unread_count' => (int) $linkage->getAttribute('unread_count'),
         ];
     }
 

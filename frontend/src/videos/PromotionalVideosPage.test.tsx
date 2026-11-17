@@ -17,6 +17,7 @@ const second = { ...promo, public_id: '1c9f3a52-2d4e-4f7b-8c1a-9e5d6f7a8b9d', ti
 const pageOf = (data: unknown[], meta: Partial<Record<string, number>> = {}) =>
   Response.json({ data, meta: { current_page: 1, last_page: 1, total: data.length, per_page: 12, ...meta } })
 const fetchMock = vi.fn<typeof fetch>()
+let unreadConversations = 0
 const galleryMock = vi.fn<typeof fetch>()
 let observers: { callback: IntersectionObserverCallback; element: Element }[] = []
 
@@ -32,6 +33,8 @@ class FakeIntersectionObserver {
 function start(role: keyof typeof users, path = '/promocion') {
   fetchMock.mockImplementation(async (url, options) => {
     if (url === '/api/me') return Response.json({ user: users[role] })
+    // Aviso de conversaciones sin leer del menú (HU-S13-04): ajeno a estas pruebas salvo donde se indique.
+    if (typeof url === 'string' && url.endsWith('/unread-summary')) return Response.json({ data: { conversations: unreadConversations } })
     if (url === '/sanctum/csrf-cookie') {
       window.document.cookie = 'XSRF-TOKEN=csrf; Path=/'
       return new Response(null, { status: 204 })
@@ -45,6 +48,7 @@ function start(role: keyof typeof users, path = '/promocion') {
 beforeEach(() => {
   observers = []
   fetchMock.mockReset()
+  unreadConversations = 0
   galleryMock.mockReset()
   galleryMock.mockImplementation(async () => pageOf([promo]))
   vi.stubGlobal('fetch', fetchMock)

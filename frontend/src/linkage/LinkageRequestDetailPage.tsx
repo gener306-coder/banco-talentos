@@ -14,6 +14,7 @@ import { cancelLinkageRequest, getLinkageRequest, linkageDetailMessages } from '
 import type { LinkageInboxItem } from './api'
 import { LinkageConversation } from './LinkageConversation'
 import { LinkageStatus } from './LinkageStatus'
+import { UnreadBadge } from './UnreadBadge'
 import '../institutions/institutions.css'
 
 const dateFormat = new Intl.DateTimeFormat('es-MX', { dateStyle: 'long' })
@@ -133,7 +134,7 @@ function LinkageRequestDetail({ id }: { id: string }) {
     <section className="card institutions" aria-labelledby="linkage-request-title">
       <nav className="institution-navigation" aria-label="Navegación de solicitudes">
         <Link className="plain" to="/" aria-label="Volver al inicio"><ChevronLeftIcon />Inicio</Link>
-        <Link className="plain" to="/linkage-requests">Solicitudes de vinculación</Link>
+        <Link className="plain" to="/linkage-requests">Solicitudes de vinculación<UnreadBadge side="COMPANY" /></Link>
         <Link className="plain" to="/talent">Buscar talento</Link>
       </nav>
       <h2 id="linkage-request-title">Detalle de solicitud</h2>

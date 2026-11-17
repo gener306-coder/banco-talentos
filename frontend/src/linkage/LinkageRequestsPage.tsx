@@ -14,6 +14,7 @@ import { useRowNavigation } from '../ui/useRowNavigation'
 import { cancelLinkageRequest, LINKAGE_STATUSES, linkageMessages, listLinkageRequests } from './api'
 import type { LinkageInboxItem, LinkageStatus as Status } from './api'
 import { LinkageStatus } from './LinkageStatus'
+import { UnreadTag } from './UnreadBadge'
 import '../institutions/institutions.css'
 
 const dateFormat = new Intl.DateTimeFormat('es-MX', { dateStyle: 'medium' })
@@ -29,10 +30,12 @@ export function LinkageRequestsPage() {
   const list = useListParams()
   const statusParam = list.get('status')
   const status: Status | '' = LINKAGE_STATUSES.find((item) => item.value === statusParam)?.value ?? ''
+  // HU-S13-04 CA-04: solo las conversaciones con mensajes de la institución sin leer.
+  const unread = list.get('unread') === '1'
   const { page, setPage } = list
   const location = useLocation()
   const openRow = useRowNavigation()
-  const load = useCallback((signal: AbortSignal) => listLinkageRequests({ page, status }, signal), [page, status])
+  const load = useCallback((signal: AbortSignal) => listLinkageRequests({ page, status, unread }, signal), [page, status, unread])
   const { data, loading, failure, refresh, setData } = useApiRequest(load, linkageMessages)
   const mutation = useApiMutation(linkageMessages)
   const [cancelling, setCancelling] = useState<LinkageInboxItem | null>(null)
@@ -77,13 +80,24 @@ export function LinkageRequestsPage() {
             {LINKAGE_STATUSES.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}
           </select>
         </div>
+        <div className="unread-filter">
+          <input id="linkage-unread-filter" type="checkbox" checked={unread}
+            onChange={(event) => {
+              setNotice(null)
+              list.update({ unread: event.target.checked ? '1' : null })
+            }} />
+          <label htmlFor="linkage-unread-filter">Con mensajes sin leer</label>
+        </div>
       </form>
       {notice && <p className="institution-success" role="status">{notice}</p>}
       {cancelError && <p className="notice" role="alert">{cancelError}</p>}
       {loading ? <LoadingState label="Cargando solicitudes…" variant="table" />
         : failure ? <InstitutionRequestError failure={failure} retry={refresh} page />
         : data && data.items.length === 0
-          ? status
+          ? unread
+            ? <StateMessage kind="empty" icon={<SearchIcon />} title="Ninguna conversación con mensajes sin leer."
+              description="Quita el filtro para ver todas las solicitudes." />
+            : status
             ? <StateMessage kind="empty" icon={<SearchIcon />} title="Ninguna solicitud con ese estado."
               description="Elige otro estado o revisa todas las solicitudes." />
             : <StateMessage kind="empty" icon={<SearchIcon />} title="Aún no has enviado solicitudes."
@@ -144,6 +158,7 @@ export function LinkageRequestsPage() {
                               )}
                             </span>
                             {item.responded_at && <span className="linkage-meta">Respondida el {dateFormat.format(new Date(item.responded_at))}</span>}
+                            {item.unread_count > 0 && <span className="linkage-meta"><UnreadTag count={item.unread_count} /></span>}
                           </td>
                           <td>
                             <div className="actions">

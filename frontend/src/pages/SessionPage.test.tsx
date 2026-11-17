@@ -6,6 +6,7 @@ import { initialsOf } from '../auth/user'
 import { firstViewInSession, resetHomeCountUp } from './homeCountUp'
 
 const fetchMock = vi.fn<typeof fetch>()
+let unreadConversations = 0
 const apiMock = vi.fn<typeof fetch>()
 let user: Record<string, unknown>
 const base = { id: 4, name: 'Laura Torres', email: 'laura@example.test', institution: null, company: null }
@@ -33,8 +34,11 @@ beforeEach(() => {
   apiMock.mockReset()
   apiMock.mockImplementation(async () => Response.json(emptyPage))
   fetchMock.mockReset()
+  unreadConversations = 0
   fetchMock.mockImplementation(async (path, options) => {
     if (path === '/api/me') return Response.json({ user })
+    // Aviso de conversaciones sin leer del menú (HU-S13-04): ajeno a estas pruebas salvo donde se indique.
+    if (typeof path === 'string' && path.endsWith('/unread-summary')) return Response.json({ data: { conversations: unreadConversations } })
     if (path === '/sanctum/csrf-cookie') {
       document.cookie = 'XSRF-TOKEN=csrf; Path=/'
       return new Response(null, { status: 204 })

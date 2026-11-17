@@ -48,6 +48,7 @@ Sprint vigente desde el 17 de noviembre de 2026. Sprint anterior: [sprint-12.md]
 ## HU-S13-01 — Hilo de mensajes: base de datos y API
 
 **Estado:** Backend completado (17 de noviembre de 2026). Pest en verde: 53 pruebas en `tests/Feature/LinkageMessageTest.php`.  
+**Diseño técnico y verificación:** `docs/HU-S13-01.md`  
 **Story Points:** 5  
 **Rol:** `COMPANY`, `INSTITUTION`
 
@@ -77,6 +78,7 @@ Sprint vigente desde el 17 de noviembre de 2026. Sprint anterior: [sprint-12.md]
 ## HU-S13-02 — Detalle de la solicitud para la empresa
 
 **Estado:** Completada (17 de noviembre de 2026). Pest (`LinkageInboxTest`, detalle) y Vitest (`LinkageRequestDetailPage.test.tsx`, bandeja) en verde; ESLint y build limpios. La columna Acciones suma «Ver detalle» como control accesible de la fila (mismo destino) y conserva «Ver perfil» y «Oportunidad». El detalle deja `.linkage-conversation-slot` en las solicitudes aceptadas para HU-S13-03.  
+**Diseño técnico y verificación:** `docs/HU-S13-02.md`  
 **Story Points:** 3  
 **Rol:** `COMPANY`
 
@@ -98,6 +100,7 @@ Sprint vigente desde el 17 de noviembre de 2026. Sprint anterior: [sprint-12.md]
 ## HU-S13-03 — Conversación en los detalles de ambos lados
 
 **Estado:** Completada (17 de noviembre de 2026). Vitest (`LinkageConversation.test.tsx`: consulta periódica con intervalos falsos, pausa con la pestaña oculta, envío, marcador de lectura, solo lectura y auto-scroll) y Playwright (intercambio empresa ↔ institución en `talent-search.spec.ts`) en verde. El auto-scroll baja el hilo solo si la persona seguía el final o si envió el mensaje; si subió a leer, ofrece «Ver mensajes nuevos».  
+**Diseño técnico y verificación:** `docs/HU-S13-03.md`  
 **Story Points:** 5  
 **Rol:** `COMPANY`, `INSTITUTION`
 
@@ -120,7 +123,8 @@ Sprint vigente desde el 17 de noviembre de 2026. Sprint anterior: [sprint-12.md]
 
 ## HU-S13-04 — Mensajes sin leer
 
-**Estado:** Pendiente  
+**Estado:** Completada (17 de noviembre de 2026). Pest (`LinkageMessageTest`, «mensajes sin leer») y Vitest (`UnreadMessages.test.tsx`) en verde. El aviso va en la tarjeta «Solicitudes de vinculación» del inicio y en el enlace de la navegación de las vistas de solicitudes; la conversación avisa al contador al marcar como leído. El filtro «Con mensajes sin leer» vive en la URL (`unread=1`) y la exportación CSV de la institución no lo aplica (sigue filtrando solo por estado).  
+**Diseño técnico y verificación:** `docs/HU-S13-04.md`  
 **Story Points:** 3  
 **Rol:** `COMPANY`, `INSTITUTION`
 

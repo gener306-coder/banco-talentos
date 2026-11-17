@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\LinkageParty;
 use App\Enums\LinkageRequestStatus;
 use App\Http\Requests\ListLinkageRequestsRequest;
 use App\Http\Requests\StoreLinkageRequestRequest;
@@ -42,6 +43,9 @@ class LinkageRequestController extends Controller
             ->when(isset($filters['status']), fn ($query) => $query->where('status', $filters['status']))
             ->when(isset($filters['public_id']), fn ($query) => $query->whereHas(
                 'student', fn ($student) => $student->where('public_id', $filters['public_id'])))
+            // HU-S13-04 CA-04: solo las que tienen mensajes de la institución sin leer.
+            ->when($request->boolean('unread'), fn ($query) => $query->withUnread(LinkageParty::COMPANY))
+            ->withUnreadCount(LinkageParty::COMPANY)
             ->with([
                 'opportunity:id,title',
                 'student:id,public_id,headline,program,period_type,period_number',
@@ -70,6 +74,7 @@ class LinkageRequestController extends Controller
     {
         $linkage = LinkageRequest::query()
             ->where('company_id', $request->user()->company_id)
+            ->withUnreadCount(LinkageParty::COMPANY)
             ->with([
                 'opportunity:id,title',
                 'student:id,public_id,headline,program,period_type,period_number',
@@ -212,6 +217,8 @@ class LinkageRequestController extends Controller
             // Respuesta de la institución (HU-S6-02 CA-04), sin la cuenta que respondió.
             'responded_at' => $linkage->responded_at?->toISOString(),
             'response_message' => $linkage->response_message,
+            // HU-S13-04 CA-02: mensajes de la institución sin leer; una solicitud recién cancelada no tiene conversación.
+            'unread_count' => (int) ($linkage->getAttribute('unread_count') ?? 0),
         ];
     }
 

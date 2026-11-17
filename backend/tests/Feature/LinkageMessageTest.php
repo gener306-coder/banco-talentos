@@ -474,3 +474,105 @@ describe('integridad', function () {
         expect($message->refresh()->body)->toBe('Acordado');
     });
 });
+
+describe('mensajes sin leer (HU-S13-04)', function () {
+    /** unread_count de la solicitud en la bandeja del lado de la cuenta. */
+    function inboxUnread($test, User $user, LinkageRequest $linkage, string $query = ''): ?int
+    {
+        $prefix = $user->role === UserRole::COMPANY ? '/api/linkage-requests' : '/api/institution/linkage-requests';
+        $items = collect($test->browserRequest('GET', $prefix.$query)->assertOk()->json('data'));
+
+        return $items->firstWhere('id', $linkage->id)['unread_count'] ?? null;
+    }
+
+    function unreadSummary($test, User $user)
+    {
+        $prefix = $user->role === UserRole::COMPANY ? '/api/linkage-requests' : '/api/institution/linkage-requests';
+
+        return $test->browserRequest('GET', "{$prefix}/unread-summary");
+    }
+
+    it('counts only the other side messages after the own marker, on each inbox (CA-01, CA-02)', function () {
+        seedMessage($this->linkage, $this->companyAccount, 'Uno');
+        $second = seedMessage($this->linkage, $this->companyAccount, 'Dos');
+        seedMessage($this->linkage, $this->institutionAccount, 'Respuesta');
+
+        $this->loginWithCookies($this->institutionAccount)->assertOk();
+        expect(inboxUnread($this, $this->institutionAccount, $this->linkage))->toBe(2);
+        $this->loginWithCookies($this->companyAccount)->assertOk();
+        expect(inboxUnread($this, $this->companyAccount, $this->linkage))->toBe(1);
+
+        // El marcador es del lado: lo que lee una cuenta de la institución deja leído para su colega.
+        $this->loginWithCookies($this->institutionAccount)->assertOk();
+        markRead($this, $this->institutionAccount, $this->linkage, ['last_read_message_id' => $second->id])->assertOk();
+        $this->loginWithCookies($this->institutionColleague)->assertOk();
+        expect(inboxUnread($this, $this->institutionColleague, $this->linkage))->toBe(0);
+
+        // Un mensaje nuevo de la empresa vuelve a contar; los propios nunca.
+        seedMessage($this->linkage, $this->companyAccount, 'Tres');
+        seedMessage($this->linkage, $this->institutionAccount, 'Otra respuesta');
+        expect(inboxUnread($this, $this->institutionColleague, $this->linkage))->toBe(1);
+    });
+
+    it('reports zero for requests without a conversation', function () {
+        $pending = messageLinkage($this->company, messageOpportunity($this->company, 'B'), $this->student, 'PENDIENTE_INSTITUCION');
+        $this->loginWithCookies($this->companyAccount)->assertOk();
+
+        expect(inboxUnread($this, $this->companyAccount, $pending))->toBe(0)
+            ->and(inboxUnread($this, $this->companyAccount, $this->linkage))->toBe(0);
+    });
+
+    it('includes the unread count in the company detail', function () {
+        seedMessage($this->linkage, $this->institutionAccount, 'Hola');
+        $this->loginWithCookies($this->companyAccount)->assertOk();
+
+        $this->browserRequest('GET', '/api/linkage-requests/'.$this->linkage->id)->assertOk()->assertJsonPath('data.unread_count', 1);
+    });
+
+    it('filters both inboxes by conversations with unread messages (CA-04)', function () {
+        $quiet = messageLinkage($this->company, messageOpportunity($this->company, 'Sin novedades'), $this->student, 'ACEPTADA');
+        seedMessage($quiet, $this->companyAccount, 'Solo nuestro');
+        seedMessage($quiet, $this->institutionAccount, 'Solo de la institución');
+        seedMessage($this->linkage, $this->companyAccount, 'Para la institución');
+
+        $this->loginWithCookies($this->institutionAccount)->assertOk();
+        expect(array_column($this->browserRequest('GET', '/api/institution/linkage-requests?unread=1')->assertOk()->json('data'), 'id'))
+            ->toEqualCanonicalizing([$this->linkage->id, $quiet->id]);
+
+        $this->loginWithCookies($this->companyAccount)->assertOk();
+        expect(array_column($this->browserRequest('GET', '/api/linkage-requests?unread=1')->assertOk()->json('data'), 'id'))->toBe([$quiet->id])
+            ->and($this->browserRequest('GET', '/api/linkage-requests?unread=0')->assertOk()->json('data'))->toHaveCount(2);
+        $this->browserRequest('GET', '/api/linkage-requests?unread=abc')->assertUnprocessable()
+            ->assertJsonValidationErrors(['unread' => 'El filtro de mensajes sin leer no es válido.']);
+    });
+
+    it('summarizes the conversations with unread messages of the session organization only (CA-02)', function () {
+        $other = messageLinkage($this->company, messageOpportunity($this->company, 'B'), $this->student, 'ACEPTADA');
+        seedMessage($this->linkage, $this->institutionAccount, 'Uno');
+        seedMessage($this->linkage, $this->institutionAccount, 'Dos');
+        seedMessage($other, $this->institutionAccount, 'Tres');
+        // Ajena: otra empresa con la misma institución.
+        $foreignCompany = Company::factory()->create();
+        $foreign = messageLinkage($foreignCompany, messageOpportunity($foreignCompany, 'Ajena'), $this->student, 'ACEPTADA');
+        seedMessage($foreign, $this->institutionAccount, 'Para la otra empresa');
+
+        $this->loginWithCookies($this->companyAccount)->assertOk();
+        unreadSummary($this, $this->companyAccount)->assertOk()->assertHeader('Cache-Control', 'no-store, private')
+            ->assertExactJson(['data' => ['conversations' => 2]]);
+
+        $intruder = User::factory()->forCompany(Company::factory()->create())->create();
+        $this->loginWithCookies($intruder)->assertOk();
+        unreadSummary($this, $intruder)->assertOk()->assertExactJson(['data' => ['conversations' => 0]]);
+
+        // La institución no tiene nada sin leer: todo lo escribió ella.
+        $this->loginWithCookies($this->institutionAccount)->assertOk();
+        unreadSummary($this, $this->institutionAccount)->assertOk()->assertExactJson(['data' => ['conversations' => 0]]);
+    });
+
+    it('forbids the summary to admin and secretary accounts', function (UserRole $role) {
+        $this->loginWithCookies(User::factory()->role($role)->create())->assertOk();
+
+        $this->browserRequest('GET', '/api/linkage-requests/unread-summary')->assertForbidden();
+        $this->browserRequest('GET', '/api/institution/linkage-requests/unread-summary')->assertForbidden();
+    })->with([UserRole::ADMIN, UserRole::SECRETARY]);
+});

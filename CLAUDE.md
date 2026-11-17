@@ -60,6 +60,12 @@ Cada historia debe:
 3. Tener autorización backend cuando corresponda.
 4. Incluir pruebas automatizadas relevantes.
 5. Mantener el código sencillo y mantenible.
+6. Terminar con su reporte `docs/HU-SN-NN.md` antes de marcarla como
+   completada: alcance, contrato, decisiones, limitaciones, archivos y
+   cobertura de cada criterio de aceptación (ver `docs/HU-S11-03.md`).
+   El archivo del Sprint enlaza el reporte en la historia
+   («Diseño técnico y verificación»). Las tareas técnicas `T-*` se
+   documentan dentro del archivo del Sprint.
 
 ## Desarrollo por Sprint
 

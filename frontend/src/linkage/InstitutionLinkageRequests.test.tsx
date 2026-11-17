@@ -4,6 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import App from '../App'
 
 const fetchMock = vi.fn<typeof fetch>()
+let unreadConversations = 0
 const apiMock = vi.fn<typeof fetch>()
 let user: Record<string, unknown>
 const institutionUser = { id: 4, name: 'Coordinación dual', email: 'dual@utgolfo.edu.mx', role: 'INSTITUTION', institution: { id: 2, name: 'UT del Golfo' }, company: null }
@@ -16,6 +17,7 @@ const pending = {
   company: { name: 'ManuGolfo', municipality: 'Victoria' },
   opportunity: { id: 12, title: 'Tableros de producción', program: 'Ingeniería en Datos', vacancies: 2 },
   student,
+  unread_count: 0,
 }
 const accepted = { ...pending, id: 40, status: 'ACEPTADA', company: { name: 'Aceros del Norte', municipality: null } }
 const detail = {
@@ -48,8 +50,11 @@ beforeEach(() => {
   user = institutionUser
   apiMock.mockReset()
   fetchMock.mockReset()
+  unreadConversations = 0
   fetchMock.mockImplementation(async (path, init) => {
     if (path === '/api/me') return Response.json({ user })
+    // Aviso de conversaciones sin leer del menú (HU-S13-04): ajeno a estas pruebas salvo donde se indique.
+    if (typeof path === 'string' && path.endsWith('/unread-summary')) return Response.json({ data: { conversations: unreadConversations } })
     if (path === '/api/dashboard') return new Promise<Response>(() => undefined)
     if (path === '/sanctum/csrf-cookie') {
       document.cookie = 'XSRF-TOKEN=csrf; Path=/'

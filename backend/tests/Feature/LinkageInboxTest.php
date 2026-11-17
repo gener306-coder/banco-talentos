@@ -135,6 +135,7 @@ describe('bandeja (CA-01, CA-02)', function () {
             ],
             'responded_at' => null,
             'response_message' => null,
+            'unread_count' => 0,
         ]]);
         expect($response->getContent())->not->toContain('Nombre Secreto')->not->toContain('Apellido Secreto')->not->toContain('MAT-')
             ->not->toContain('github.com/secreta')->not->toContain('"student_id"')->not->toContain('location');

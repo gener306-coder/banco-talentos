@@ -37,8 +37,13 @@ export interface ReceivedLinkage {
   student: ReceivedStudent
 }
 
+/** Elemento de la bandeja: con los mensajes de la empresa sin leer (HU-S13-04 CA-02). */
+export interface ReceivedLinkageItem extends ReceivedLinkage {
+  unread_count: number
+}
+
 export interface ReceivedLinkagePage {
-  items: ReceivedLinkage[]
+  items: ReceivedLinkageItem[]
   page: number
   lastPage: number
   total: number
@@ -116,6 +121,12 @@ function item(data: unknown): ReceivedLinkage {
   }
 }
 
+function listItem(data: unknown): ReceivedLinkageItem {
+  const base = item(data)
+  if (!isObject(data) || typeof data.unread_count !== 'number' || !Number.isSafeInteger(data.unread_count) || data.unread_count < 0) return invalid()
+  return { ...base, unread_count: data.unread_count }
+}
+
 function detail(data: unknown): ReceivedLinkageDetail {
   const base = item(data)
   if (!isObject(data) || !isOptionalText(data.message) || !isOptionalText(data.responded_at) || !isOptionalText(data.response_message) ||
@@ -159,16 +170,20 @@ function detail(data: unknown): ReceivedLinkageDetail {
   }
 }
 
-/** Bandeja de la institución, de la más reciente a la más antigua, con filtro opcional por estado (HU-S6-01 CA-03). */
-export async function listReceivedLinkages(filters: { page?: number; status?: LinkageStatus | '' }, signal?: AbortSignal): Promise<ReceivedLinkagePage> {
+/**
+ * Bandeja de la institución, de la más reciente a la más antigua, con filtro opcional por estado (HU-S6-01 CA-03) y
+ * por conversaciones con mensajes sin leer (HU-S13-04 CA-04).
+ */
+export async function listReceivedLinkages(filters: { page?: number; status?: LinkageStatus | ''; unread?: boolean }, signal?: AbortSignal): Promise<ReceivedLinkagePage> {
   const params = new URLSearchParams({ page: String(filters.page ?? 1) })
   if (filters.status) params.set('status', filters.status)
+  if (filters.unread) params.set('unread', '1')
   const response = await request(`/api/institution/linkage-requests?${params.toString()}`, { signal })
   if (!isObject(response) || !Array.isArray(response.data) || !isObject(response.meta)) throw new ApiError(502)
   const meta = response.meta
   if (!isPositiveInt(meta.current_page) || !isPositiveInt(meta.last_page) ||
       typeof meta.total !== 'number' || !Number.isSafeInteger(meta.total) || meta.total < 0) throw new ApiError(502)
-  return { items: response.data.map(item), page: meta.current_page, lastPage: meta.last_page, total: meta.total }
+  return { items: response.data.map(listItem), page: meta.current_page, lastPage: meta.last_page, total: meta.total }
 }
 
 /** Exportación CSV de la bandeja con el mismo filtro de estado (HU-S7-02 CA-02). */

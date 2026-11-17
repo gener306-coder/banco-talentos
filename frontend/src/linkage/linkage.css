@@ -44,4 +44,13 @@
 .linkage-thread-latest { position: absolute; bottom: 0.75rem; left: 50%; transform: translateX(-50%); box-shadow: 0 4px 12px color-mix(in srgb, var(--shadow) 12%, transparent); }
 .linkage-thread-empty { color: var(--text); }
 .linkage-composer textarea { width: 100%; resize: vertical; }
+/* HU-S13-04: número de conversaciones sin leer junto a «Solicitudes de vinculación» y marca «Nuevo» de la fila. */
+.unread-badge { display: inline-flex; align-items: center; justify-content: center; min-width: 1.4rem; height: 1.4rem; margin-left: 0.45rem;
+  padding: 0 0.4rem; border-radius: 999px; background: var(--accent-fill); color: var(--on-accent); font-size: var(--type-xs);
+  font-weight: 700; line-height: 1; vertical-align: middle; font-variant-numeric: tabular-nums; }
+.unread-tag { display: inline-block; padding: 0.1rem 0.5rem; border-radius: 999px; background: var(--tint); color: var(--accent);
+  font-size: var(--type-xs); font-weight: 700; white-space: nowrap; }
+.unread-filter { display: flex; align-items: center; gap: 0.5rem; min-height: 2.5rem; }
+.table-search .unread-filter label { margin: 0; font-weight: 400; }
+.table-search .unread-filter input { width: auto; }
 }

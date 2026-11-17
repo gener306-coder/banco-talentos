@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { AuthContext } from '../auth/auth-context'
 import type { AuthState } from '../auth/auth-context'
 import { LinkageConversation, POLL_INTERVAL_MS } from './LinkageConversation'
+import { LINKAGE_READ_EVENT } from './conversationApi'
 import type { LinkageMessage, LinkageSide } from './conversationApi'
 
 // HU-S13-03: conversación de una solicitud aceptada con consulta periódica, envío, marcador de lectura y auto-scroll.
@@ -131,12 +132,17 @@ describe('consulta periódica (CA-04)', () => {
     expect(readIds()).toEqual([3])
   })
 
-  it('marca como leído al abrir si hay mensajes posteriores al marcador del lado', async () => {
+  it('marca como leído al abrir si hay mensajes posteriores al marcador del lado y avisa al contador del menú', async () => {
+    const onRead = vi.fn()
+    window.addEventListener(LINKAGE_READ_EVENT, onRead)
     lastRead = 1
     renderConversation()
     await screen.findByText('El lunes 24.')
     await waitFor(() => expect(readIds()).toEqual([2]))
     expect(calls('POST', '/read')[0][0]).toBe('/api/linkage-requests/41/messages/read')
+    // HU-S13-04: el aviso de conversaciones sin leer se actualiza sin esperar a su siguiente consulta.
+    await waitFor(() => expect(onRead).toHaveBeenCalledTimes(1))
+    window.removeEventListener(LINKAGE_READ_EVENT, onRead)
   })
 
   it('se detiene con la pestaña oculta y consulta en cuanto vuelve a estar visible', async () => {

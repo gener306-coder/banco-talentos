@@ -4,6 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import App from '../App'
 
 const fetchMock = vi.fn<typeof fetch>()
+let unreadConversations = 0
 const apiMock = vi.fn<typeof fetch>()
 let user: Record<string, unknown>
 const companyUser = { id: 9, name: 'Reclutadora', email: 'rh@manugolfo.test', role: 'COMPANY', institution: null, company: { id: 3, name: 'ManuGolfo' } }
@@ -13,7 +14,7 @@ const accepted = {
   opportunity: { id: 12, title: 'Tableros de producción' },
   profile: { public_id: publicId, headline: 'Analista de datos', program: 'Ingeniería en Datos', period_type: 'semester', period_number: 6 },
   institution: { name: 'UT del Golfo', contact_name: 'Laura Méndez', contact_position: 'Coordinación Dual', contact_email: 'dual@utgolfo.edu.mx', contact_phone: '+52 833 357 4800' },
-  responded_at: '2026-10-29T16:00:00Z', response_message: 'Coordinemos la entrevista.',
+  responded_at: '2026-10-29T16:00:00Z', response_message: 'Coordinemos la entrevista.', unread_count: 0,
 }
 const pending = { ...accepted, status: 'PENDIENTE_INSTITUCION', responded_at: null, response_message: null }
 const page = (items: unknown[]) => Response.json({ data: items, meta: { current_page: 1, last_page: 1, total: items.length, per_page: 20 } })
@@ -35,8 +36,11 @@ beforeEach(() => {
   user = companyUser
   apiMock.mockReset()
   fetchMock.mockReset()
+  unreadConversations = 0
   fetchMock.mockImplementation(async (path, init) => {
     if (path === '/api/me') return Response.json({ user })
+    // Aviso de conversaciones sin leer del menú (HU-S13-04): ajeno a estas pruebas salvo donde se indique.
+    if (typeof path === 'string' && path.endsWith('/unread-summary')) return Response.json({ data: { conversations: unreadConversations } })
     if (path === '/api/dashboard') return new Promise<Response>(() => undefined)
     if (typeof path === 'string' && path.startsWith('/api/promotional-videos')) return new Promise<Response>(() => undefined)
     if (path === '/sanctum/csrf-cookie') {

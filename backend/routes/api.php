@@ -182,6 +182,8 @@ Route::middleware(['auth:sanctum', 'active', 'role:'.UserRole::COMPANY->value, '
     ->where(['linkageRequest' => '[1-9][0-9]{0,17}'])
     ->group(function (): void {
         Route::get('/', [LinkageRequestController::class, 'index']);
+        // Conversaciones con mensajes sin leer, para el aviso del menú (HU-S13-04).
+        Route::get('unread-summary', [LinkageMessageController::class, 'summary']);
         Route::post('/', [LinkageRequestController::class, 'store'])->middleware('throttle:linkage-requests');
         // Detalle de la solicitud (HU-S13-02).
         Route::get('{linkageRequest}', [LinkageRequestController::class, 'show']);
@@ -201,6 +203,8 @@ Route::middleware(['auth:sanctum', 'active', 'role:'.UserRole::INSTITUTION->valu
     ->where(['linkageRequest' => '[1-9][0-9]{0,17}'])
     ->group(function (): void {
         Route::get('/', [InstitutionLinkageRequestController::class, 'index']);
+        // Conversaciones con mensajes sin leer, para el aviso del menú (HU-S13-04).
+        Route::get('unread-summary', [LinkageMessageController::class, 'summary']);
         // Exportación CSV de la bandeja (HU-S7-02).
         Route::get('/export.csv', [InstitutionLinkageRequestController::class, 'export']);
         Route::get('{linkageRequest}', [InstitutionLinkageRequestController::class, 'show']);

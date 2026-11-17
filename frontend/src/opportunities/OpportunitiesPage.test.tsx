@@ -6,6 +6,7 @@ import { clearMunicipalityCache } from '../students/municipalities'
 import { OPPORTUNITY_CONTACT_MESSAGE } from './OpportunityForm'
 
 const fetchMock = vi.fn<typeof fetch>()
+let unreadConversations = 0
 const apiMock = vi.fn<typeof fetch>()
 const skillsMock = vi.fn<typeof fetch>()
 let user: Record<string, unknown>
@@ -39,8 +40,11 @@ beforeEach(() => {
   skillsMock.mockReset()
   skillsMock.mockImplementation(async () => Response.json({ data: [] }))
   fetchMock.mockReset()
+  unreadConversations = 0
   fetchMock.mockImplementation(async (path, options) => {
     if (path === '/api/me') return Response.json({ user })
+    // Aviso de conversaciones sin leer del menú (HU-S13-04): ajeno a estas pruebas salvo donde se indique.
+    if (typeof path === 'string' && path.endsWith('/unread-summary')) return Response.json({ data: { conversations: unreadConversations } })
     // Indicadores del inicio (HU-S5-01): ajenos a estas pruebas, quedan pendientes sin consumir respuestas.
     if (path === '/api/dashboard') return new Promise<Response>(() => undefined)
     // Módulo destacado del inicio (HU-S9-05): ajeno a estas pruebas.

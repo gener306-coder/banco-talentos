@@ -14,6 +14,7 @@ import { LINKAGE_STATUSES } from './api'
 import type { LinkageStatus as Status } from './api'
 import { downloadReceivedLinkagesCsv, institutionLinkageMessages, listReceivedLinkages } from './institutionApi'
 import { LinkageStatus } from './LinkageStatus'
+import { UnreadBadge, UnreadTag } from './UnreadBadge'
 import '../institutions/institutions.css'
 
 const dateFormat = new Intl.DateTimeFormat('es-MX', { dateStyle: 'medium' })
@@ -25,7 +26,7 @@ export function InstitutionLinkageLayout({ title, children }: { title: string; c
     <section className="card institutions" aria-labelledby="institution-linkage-title">
       <nav className="institution-navigation" aria-label="Navegación de solicitudes">
         <Link className="plain" to="/" aria-label="Volver al inicio"><ChevronLeftIcon />Inicio</Link>
-        <Link className="plain" to="/institution/linkage-requests" aria-current={pathname === '/institution/linkage-requests' ? 'page' : undefined}>Solicitudes de vinculación</Link>
+        <Link className="plain" to="/institution/linkage-requests" aria-current={pathname === '/institution/linkage-requests' ? 'page' : undefined}>Solicitudes de vinculación<UnreadBadge side="INSTITUTION" /></Link>
         <Link className="plain" to="/students">Alumnos</Link>
       </nav>
       <h2 id="institution-linkage-title">{title}</h2>
@@ -45,9 +46,11 @@ export function InstitutionLinkageRequestsPage() {
   const list = useListParams()
   const statusParam = list.get('status')
   const status: Status | '' = LINKAGE_STATUSES.find((item) => item.value === statusParam)?.value ?? ''
+  // HU-S13-04 CA-04: solo las conversaciones con mensajes de la empresa sin leer.
+  const unread = list.get('unread') === '1'
   const { page, setPage } = list
   const location = useLocation()
-  const load = useCallback((signal: AbortSignal) => listReceivedLinkages({ page, status }, signal), [page, status])
+  const load = useCallback((signal: AbortSignal) => listReceivedLinkages({ page, status, unread }, signal), [page, status, unread])
   const { data, loading, failure, refresh } = useApiRequest(load, institutionLinkageMessages)
   const downloadCsv = useCallback(() => downloadReceivedLinkagesCsv(status), [status])
   // T-S12-04: toda la fila abre la solicitud, como en el padrón (HU-S8-01).
@@ -67,6 +70,11 @@ export function InstitutionLinkageRequestsPage() {
               {LINKAGE_STATUSES.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}
             </select>
           </div>
+          <div className="unread-filter">
+            <input id="institution-linkage-unread-filter" type="checkbox" checked={unread}
+              onChange={(event) => { list.update({ unread: event.target.checked ? '1' : null }) }} />
+            <label htmlFor="institution-linkage-unread-filter">Con mensajes sin leer</label>
+          </div>
         </form>
         {!loading && !failure && data && data.items.length > 0 && (
           <CsvDownloadButton download={downloadCsv} prefix="solicitudes-vinculacion" messages={institutionLinkageMessages} />
@@ -75,7 +83,10 @@ export function InstitutionLinkageRequestsPage() {
       {loading ? <LoadingState label="Cargando solicitudes…" variant="table" />
         : failure ? <InstitutionRequestError failure={failure} retry={refresh} page />
         : data && data.items.length === 0
-          ? status
+          ? unread
+            ? <StateMessage kind="empty" icon={<SearchIcon />} title="Ninguna conversación con mensajes sin leer."
+              description="Quita el filtro para ver todas las solicitudes." />
+            : status
             ? <StateMessage kind="empty" icon={<SearchIcon />} title="Ninguna solicitud con ese estado."
               description="Elige otro estado o revisa todas las solicitudes." />
             : <StateMessage kind="empty" icon={<SearchIcon />} title="Aún no has recibido solicitudes."
@@ -102,7 +113,10 @@ export function InstitutionLinkageRequestsPage() {
                           <td>{item.company.name}{item.company.municipality && <span className="linkage-meta">{item.company.municipality}</span>}</td>
                           <td><span className="linkage-title" title={item.opportunity.title}>{item.opportunity.title}</span></td>
                           <td className="nowrap">{dateFormat.format(new Date(item.created_at))}</td>
-                          <td><LinkageStatus status={item.status} /></td>
+                          <td>
+                            <LinkageStatus status={item.status} />
+                            {item.unread_count > 0 && <span className="linkage-meta"><UnreadTag count={item.unread_count} /></span>}
+                          </td>
                           <td>
                             <Link className="pill-link row-link" to={href} state={back} aria-label={`Ver la solicitud de ${item.company.name} para ${name}`}>Ver detalle<ChevronRightIcon /></Link>
                           </td>
