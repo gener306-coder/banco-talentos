@@ -44,7 +44,7 @@ async function publishStudent(page: Page, data: { surname: string; enrollment: s
   await expect(page.getByText('Habilidades guardadas correctamente.')).toBeVisible()
 }
 
-test('HU-S4-05, HU-S5-04, HU-S5-05, HU-S6-01, HU-S6-02 y HU-S6-03: una empresa encuentra un perfil anónimo por habilidad y distancia, sin datos personales, solicita la vinculación a su institución, esta la revisa con la identidad del alumno, la empresa la cancela y, al volver a solicitarla, la institución la acepta', async ({ browser, baseURL }) => {
+test('HU-S4-05, HU-S5-04, HU-S5-05, HU-S6-01, HU-S6-02, HU-S6-03, HU-S13-02 y HU-S13-03: una empresa encuentra un perfil anónimo por habilidad y distancia, sin datos personales, solicita la vinculación a su institución, esta la revisa con la identidad del alumno, la empresa la cancela y, al volver a solicitarla, la institución la acepta y ambas conversan', async ({ browser, baseURL }) => {
   // Recorre tres sesiones (institución, empresa e institución); con la máquina cargada rebasa los 30 s por defecto.
   test.slow()
   const suffix = randomBytes(6).toString('hex')
@@ -159,7 +159,9 @@ test('HU-S4-05, HU-S5-04, HU-S5-05, HU-S6-01, HU-S6-02 y HU-S6-03: una empresa e
     await notice.getByRole('link', { name: 'Ver tus solicitudes' }).click()
     await expect(company.getByRole('heading', { level: 2, name: 'Solicitudes de vinculación' })).toBeVisible()
     const row = company.getByRole('table', { name: 'Solicitudes de vinculación enviadas' }).getByRole('row', { name: new RegExp(opportunityTitle) })
-    await expect(row.getByRole('link', { name: student.headline })).toHaveAttribute('href', /\/talent\/[0-9a-f-]{36}$/)
+    await expect(row.getByRole('link', { name: `Ver perfil: ${student.headline}` })).toHaveAttribute('href', /\/talent\/[0-9a-f-]{36}$/)
+    // HU-S13-02: la fila y «Ver detalle» abren el detalle de la solicitud.
+    await expect(row.getByRole('link', { name: /^Ver la solicitud de / })).toHaveAttribute('href', /\/linkage-requests\/\d+$/)
     const emailButton = row.getByRole('button', { name: /^Escribir a / })
     await emailButton.click()
     await expect(company.getByRole('menu').getByRole('menuitem', { name: 'Abrir en app del sistema' })).toHaveAttribute('href', /^mailto:/)
@@ -206,6 +208,12 @@ test('HU-S4-05, HU-S5-04, HU-S5-05, HU-S6-01, HU-S6-02 y HU-S6-03: una empresa e
       await expect(answer).toContainText('Aceptada')
       await expect(answer).toContainText('Coordinemos la entrevista con el área dual.')
 
+      // HU-S13-03: al aceptarla, la institución escribe en la conversación con la empresa.
+      const institutionChat = institution.getByRole('region', { name: 'Conversación con la empresa' })
+      await institutionChat.getByLabel('Mensaje para la empresa').fill('¿Puede presentarse el lunes?')
+      await institutionChat.getByRole('button', { name: 'Enviar mensaje' }).click()
+      await expect(institutionChat.getByRole('log', { name: 'Mensajes' })).toContainText('¿Puede presentarse el lunes?')
+
       // HU-S7-02 CA-02: la exportación CSV de la bandeja, con el filtro de estado, incluye al alumno y el contacto de la empresa.
       await institution.goto('/institution/linkage-requests')
       await institution.getByLabel('Estado').selectOption('ACEPTADA')
@@ -246,6 +254,29 @@ test('HU-S4-05, HU-S5-04, HU-S5-05, HU-S6-01, HU-S6-02 y HU-S6-03: una empresa e
     await company.getByRole('link', { name: 'Volver a solicitudes' }).click()
     await expect(company).toHaveURL(/\/linkage-requests\?status=ACEPTADA$/)
     await expect(company.getByLabel('Estado')).toHaveValue('ACEPTADA')
+
+    // HU-S13-02 y HU-S13-03: la fila abre el detalle; la empresa lee a la institución por su nombre y le responde.
+    await acceptedRow.getByRole('rowheader').click()
+    await expect(company).toHaveURL(/\/linkage-requests\/\d+$/)
+    const companyChat = company.getByRole('region', { name: 'Conversación con la institución' })
+    const companyLog = companyChat.getByRole('log', { name: 'Mensajes' })
+    await expect(companyLog).toContainText('¿Puede presentarse el lunes?')
+    await companyChat.getByLabel('Mensaje para la institución').fill('Sí, el lunes a las 9:00.')
+    await companyChat.getByRole('button', { name: 'Enviar mensaje' }).click()
+    await expect(companyLog).toContainText('Sí, el lunes a las 9:00.')
+    await expect(companyChat.getByLabel('Mensaje para la institución')).toHaveValue('')
+    const detailPath = new URL(company.url()).pathname
+
+    // La institución ve la respuesta en el detalle de la misma solicitud.
+    const replying = await browser.newContext({ baseURL, storageState: INSTITUTION_STATE })
+    try {
+      const institution = await replying.newPage()
+      await institution.goto(`/institution${detailPath}`)
+      await expect(institution.getByRole('region', { name: 'Conversación con la empresa' }).getByRole('log', { name: 'Mensajes' }))
+        .toContainText('Sí, el lunes a las 9:00.')
+    } finally {
+      await replying.close()
+    }
   } finally {
     await context.close()
   }

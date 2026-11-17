@@ -12,6 +12,7 @@ import { ChevronLeftIcon, ChevronRightIcon } from '../ui/icons'
 import { LoadingState } from '../ui/StateMessage'
 import { cancelLinkageRequest, getLinkageRequest, linkageDetailMessages } from './api'
 import type { LinkageInboxItem } from './api'
+import { LinkageConversation } from './LinkageConversation'
 import { LinkageStatus } from './LinkageStatus'
 import '../institutions/institutions.css'
 
@@ -29,7 +30,7 @@ function StatusCallout({ data }: { data: LinkageInboxItem }) {
   if (data.status === 'ACEPTADA') {
     return (
       <Callout tone="info" label="Estado de la solicitud">
-        <p>{data.institution.name} aceptó la solicitud. Coordina la vinculación con su contacto.</p>
+        <p>{data.institution.name} aceptó la solicitud. Coordina la vinculación en la conversación de abajo o con su contacto.</p>
       </Callout>
     )
   }
@@ -111,8 +112,8 @@ function Detail({ data, onCancelled }: { data: LinkageInboxItem; onCancelled: (u
         </dl>
       </section>
 
-      {/* HU-S13-03: aquí se monta la conversación con la institución, solo en solicitudes aceptadas. */}
-      {data.status === 'ACEPTADA' && <div className="linkage-conversation-slot" data-linkage-id={data.id} />}
+      {/* HU-S13-03: conversación con la institución, solo en solicitudes aceptadas. */}
+      {data.status === 'ACEPTADA' && <LinkageConversation linkageRequestId={data.id} role="COMPANY" />}
 
       <ConfirmDialog open={confirming} origin={origin}
         title="¿Cancelar la solicitud?"

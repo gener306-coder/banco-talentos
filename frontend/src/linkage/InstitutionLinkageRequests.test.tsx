@@ -55,6 +55,10 @@ beforeEach(() => {
       document.cookie = 'XSRF-TOKEN=csrf; Path=/'
       return new Response(null, { status: 204 })
     }
+    // Conversación de la solicitud aceptada (HU-S13-03): hilo vacío; su comportamiento se prueba en LinkageConversation.test.tsx.
+    if (typeof path === 'string' && path.includes('/messages')) {
+      return Response.json({ data: [], meta: { has_more: false, can_write: true, last_read_message_id: null } })
+    }
     return apiMock(path, init)
   })
   vi.stubGlobal('fetch', fetchMock)
@@ -269,6 +273,14 @@ describe('respuesta institucional HU-S6-02', () => {
     expect(result).toHaveTextContent('Coordinación dual')
     expect(result).toHaveTextContent('Coordinemos la entrevista.')
     expect(screen.queryByRole('region', { name: 'Responder solicitud' })).not.toBeInTheDocument()
+
+    // HU-S13-03: al aceptar aparece la conversación con la empresa, por la ruta de la institución; al rechazar, no.
+    if (status === 'ACEPTADA') {
+      expect(await screen.findByRole('region', { name: 'Conversación con la empresa' })).toBeInTheDocument()
+      expect(fetchMock.mock.calls.map(([path]) => path)).toContain('/api/institution/linkage-requests/41/messages')
+    } else {
+      expect(screen.queryByRole('region', { name: 'Conversación con la empresa' })).not.toBeInTheDocument()
+    }
   })
 
   it('envía null sin mensaje y rechaza datos de contacto antes de enviar', async () => {

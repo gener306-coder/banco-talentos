@@ -16,6 +16,7 @@ import { LoadingState } from '../ui/StateMessage'
 import { getReceivedLinkage, institutionLinkageMessages } from './institutionApi'
 import type { ReceivedLinkageDetail } from './institutionApi'
 import { InstitutionLinkageLayout } from './InstitutionLinkageRequestsPage'
+import { LinkageConversation } from './LinkageConversation'
 import { LinkageDecisionSection } from './LinkageDecisionSection'
 import { LinkageStatus } from './LinkageStatus'
 
@@ -95,7 +96,7 @@ function Detail({ data, onDecided, refresh }: {
 
       <section className="student-section" aria-labelledby="linkage-company-title">
         <h3 id="linkage-company-title">Empresa y contacto del programa dual</h3>
-        <p>La coordinación de la vinculación ocurre fuera de la plataforma con este contacto.</p>
+        <p>Una vez aceptada la solicitud, coordina la vinculación en la conversación de esta página o con este contacto.</p>
         <dl className="student-identity">
           <dt>Razón social</dt><dd>{company.legal_name}</dd>
           {company.trade_name && <><dt>Nombre comercial</dt><dd>{company.trade_name}</dd></>}
@@ -110,6 +111,8 @@ function Detail({ data, onDecided, refresh }: {
       </section>
 
       <LinkageDecisionSection data={data} onDecided={onDecided} refresh={refresh} />
+      {/* HU-S13-03: conversación con la empresa, solo en solicitudes aceptadas; aparece en cuanto se acepta. */}
+      {data.status === 'ACEPTADA' && <LinkageConversation linkageRequestId={data.id} role="INSTITUTION" />}
     </>
   )
 }

@@ -43,6 +43,10 @@ beforeEach(() => {
       document.cookie = 'XSRF-TOKEN=csrf; Path=/'
       return new Response(null, { status: 204 })
     }
+    // Conversación de la solicitud aceptada (HU-S13-03): hilo vacío; su comportamiento se prueba en LinkageConversation.test.tsx.
+    if (typeof path === 'string' && path.includes('/messages')) {
+      return Response.json({ data: [], meta: { has_more: false, can_write: true, last_read_message_id: null } })
+    }
     return apiMock(path, init)
   })
   vi.stubGlobal('fetch', fetchMock)
@@ -52,13 +56,13 @@ afterEach(() => vi.unstubAllGlobals())
 describe('detalle de la solicitud para la empresa HU-S13-02', () => {
   it('resume la solicitud aceptada: estado, perfil anónimo, oportunidad y contacto de la institución (CA-02)', async () => {
     apiMock.mockResolvedValueOnce(Response.json({ data: accepted }))
-    const { container } = renderApp()
+    renderApp()
     expect(await screen.findByRole('heading', { name: 'Detalle de solicitud' })).toBeInTheDocument()
     expect(await screen.findByText('Analista de datos')).toBeInTheDocument()
     expect(gets()).toEqual(['/api/linkage-requests/41'])
 
     expect(screen.getByText('Aceptada', { selector: '.linkage-status' })).toBeInTheDocument()
-    expect(screen.getByRole('note', { name: 'Estado de la solicitud' })).toHaveTextContent('UT del Golfo aceptó la solicitud. Coordina la vinculación con su contacto.')
+    expect(screen.getByRole('note', { name: 'Estado de la solicitud' })).toHaveTextContent('UT del Golfo aceptó la solicitud. Coordina la vinculación en la conversación de abajo o con su contacto.')
     expect(screen.getByText('Nos interesa su perfil.')).toBeInTheDocument()
     expect(screen.getByText('Coordinemos la entrevista.')).toBeInTheDocument()
     expect(screen.getByText('29 de octubre de 2026')).toBeInTheDocument()
@@ -75,17 +79,18 @@ describe('detalle de la solicitud para la empresa HU-S13-02', () => {
     expect(within(institution).getByRole('button', { name: 'Escribir a dual@utgolfo.edu.mx' })).toHaveAttribute('aria-haspopup', 'menu')
     expect(within(institution).getByRole('link', { name: '+52 833 357 4800' })).toHaveAttribute('href', 'tel:+528333574800')
 
-    // Aceptada: ya no se cancela, y queda el espacio de la conversación (HU-S13-03).
+    // Aceptada: ya no se cancela, y se conversa con la institución (HU-S13-03).
     expect(screen.queryByRole('button', { name: 'Cancelar solicitud' })).not.toBeInTheDocument()
-    expect(container.querySelector('.linkage-conversation-slot')).not.toBeNull()
+    expect(await screen.findByRole('region', { name: 'Conversación con la institución' })).toBeInTheDocument()
+    expect(fetchMock.mock.calls.map(([path]) => path)).toContain('/api/linkage-requests/41/messages')
   })
 
   it('cancela una pendiente tras confirmarla y retira la cancelación (CA-02)', async () => {
     apiMock.mockResolvedValueOnce(Response.json({ data: pending }))
       .mockResolvedValueOnce(Response.json({ data: { ...pending, status: 'CANCELADA' } }))
-    const { container } = renderApp()
+    renderApp()
     expect(await screen.findByRole('note', { name: 'Estado de la solicitud' })).toHaveTextContent('La institución aún no responde.')
-    expect(container.querySelector('.linkage-conversation-slot')).toBeNull()
+    expect(screen.queryByRole('region', { name: 'Conversación con la institución' })).not.toBeInTheDocument()
 
     fireEvent.click(screen.getByRole('button', { name: 'Cancelar solicitud' }))
     const dialog = await screen.findByRole('alertdialog', { name: '¿Cancelar la solicitud?' })

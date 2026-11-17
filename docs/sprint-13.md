@@ -97,7 +97,7 @@ Sprint vigente desde el 17 de noviembre de 2026. Sprint anterior: [sprint-12.md]
 
 ## HU-S13-03 — Conversación en los detalles de ambos lados
 
-**Estado:** Pendiente  
+**Estado:** Completada (17 de noviembre de 2026). Vitest (`LinkageConversation.test.tsx`: consulta periódica con intervalos falsos, pausa con la pestaña oculta, envío, marcador de lectura, solo lectura y auto-scroll) y Playwright (intercambio empresa ↔ institución en `talent-search.spec.ts`) en verde. El auto-scroll baja el hilo solo si la persona seguía el final o si envió el mensaje; si subió a leer, ofrece «Ver mensajes nuevos».  
 **Story Points:** 5  
 **Rol:** `COMPANY`, `INSTITUTION`
 

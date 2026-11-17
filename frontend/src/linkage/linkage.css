@@ -28,4 +28,20 @@
 .linkage-message-meta { margin: 0 0 0.35rem; font-size: var(--type-sm); color: var(--text); }
 .linkage-message-text { margin: 1rem 0 0; padding: 0.85rem 1rem; border-left: 4px solid var(--accent); border-radius: 0 12px 12px 0;
   background: var(--tint); color: var(--text); white-space: pre-line; overflow-wrap: anywhere; }
+/* HU-S13-03: conversación de la solicitud aceptada. Las burbujas propias van a la derecha con --tint y las del otro
+   lado a la izquierda con --fill; el texto conserva sus saltos de línea. El hilo se desplaza dentro de su marco. */
+.linkage-conversation { max-width: var(--content-readable); }
+.linkage-thread-frame { position: relative; margin: 1rem 0; }
+.linkage-thread { max-height: min(28rem, 60vh); overflow-y: auto; overscroll-behavior: contain; padding: 0.75rem;
+  border: 1px solid var(--border); border-radius: 14px; background: var(--surface); }
+.linkage-thread:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 2px; }
+.linkage-thread-list { display: flex; flex-direction: column; gap: 0.6rem; margin: 0; padding: 0; list-style: none; }
+.linkage-bubble { align-self: flex-start; max-width: min(85%, 32rem); padding: 0.55rem 0.8rem; border-radius: 14px 14px 14px 4px;
+  background: var(--fill); color: var(--text); }
+.linkage-bubble.own { align-self: flex-end; border-radius: 14px 14px 4px 14px; background: var(--tint); }
+.linkage-bubble-meta { display: block; margin-bottom: 0.2rem; font-size: var(--type-xs); color: var(--text); }
+.linkage-bubble-text { margin: 0; white-space: pre-line; overflow-wrap: anywhere; }
+.linkage-thread-latest { position: absolute; bottom: 0.75rem; left: 50%; transform: translateX(-50%); box-shadow: 0 4px 12px color-mix(in srgb, var(--shadow) 12%, transparent); }
+.linkage-thread-empty { color: var(--text); }
+.linkage-composer textarea { width: 100%; resize: vertical; }
 }
