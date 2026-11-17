@@ -4,6 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import App from '../App'
 
 const fetchMock = vi.fn<typeof fetch>()
+let unreadConversations = 0
 const apiMock = vi.fn<typeof fetch>()
 let user: Record<string, unknown>
 const institutionUser = { id: 4, name: 'Coordinación dual', email: 'dual@utgolfo.edu.mx', role: 'INSTITUTION', institution: { id: 2, name: 'UT del Golfo' }, company: null }
@@ -16,6 +17,7 @@ const pending = {
   company: { name: 'ManuGolfo', municipality: 'Victoria' },
   opportunity: { id: 12, title: 'Tableros de producción', program: 'Ingeniería en Datos', vacancies: 2 },
   student,
+  unread_count: 0,
 }
 const accepted = { ...pending, id: 40, status: 'ACEPTADA', company: { name: 'Aceros del Norte', municipality: null } }
 const detail = {
@@ -48,12 +50,19 @@ beforeEach(() => {
   user = institutionUser
   apiMock.mockReset()
   fetchMock.mockReset()
+  unreadConversations = 0
   fetchMock.mockImplementation(async (path, init) => {
     if (path === '/api/me') return Response.json({ user })
+    // Aviso de conversaciones sin leer del menú (HU-S13-04): ajeno a estas pruebas salvo donde se indique.
+    if (typeof path === 'string' && path.endsWith('/unread-summary')) return Response.json({ data: { conversations: unreadConversations } })
     if (path === '/api/dashboard') return new Promise<Response>(() => undefined)
     if (path === '/sanctum/csrf-cookie') {
       document.cookie = 'XSRF-TOKEN=csrf; Path=/'
       return new Response(null, { status: 204 })
+    }
+    // Conversación de la solicitud aceptada (HU-S13-03): hilo vacío; su comportamiento se prueba en LinkageConversation.test.tsx.
+    if (typeof path === 'string' && path.includes('/messages')) {
+      return Response.json({ data: [], meta: { has_more: false, can_write: true, last_read_message_id: null } })
     }
     return apiMock(path, init)
   })
@@ -269,6 +278,18 @@ describe('respuesta institucional HU-S6-02', () => {
     expect(result).toHaveTextContent('Coordinación dual')
     expect(result).toHaveTextContent('Coordinemos la entrevista.')
     expect(screen.queryByRole('region', { name: 'Responder solicitud' })).not.toBeInTheDocument()
+
+    // HU-S13-06: la conversación vive en su vista; el detalle la ofrece en cualquier estado y no la carga.
+    expect(screen.getByRole('link', { name: 'Abrir conversación' })).toHaveAttribute('href', '/institution/linkage-requests/41/chat')
+    expect(fetchMock.mock.calls.map(([path]) => path)).not.toContain('/api/institution/linkage-requests/41/messages')
+  })
+
+  it('el ícono de la bandeja abre la conversación con regreso a la bandeja (HU-S13-06 CA-04)', async () => {
+    apiMock.mockResolvedValueOnce(page([pending]))
+    renderApp('/institution/linkage-requests?status=PENDIENTE_INSTITUCION')
+    const table = await screen.findByRole('table', { name: 'Solicitudes de vinculación recibidas' })
+    expect(within(table).getByRole('link', { name: /^Abrir la conversación con ManuGolfo sobre / }))
+      .toHaveAttribute('href', '/institution/linkage-requests/41/chat')
   })
 
   it('envía null sin mensaje y rechaza datos de contacto antes de enviar', async () => {

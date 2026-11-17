@@ -14,7 +14,7 @@ const dateFormat = new Intl.DateTimeFormat('es-MX', { dateStyle: 'long', timeSty
 const decisions: Record<LinkageDecision, { label: string; title: string; description: string; done: string }> = {
   ACEPTADA: {
     label: 'Aceptar solicitud', title: '¿Aceptar la solicitud?', done: 'Solicitud aceptada correctamente.',
-    description: 'La empresa verá que aceptaste, la fecha y tu mensaje. La coordinación continúa fuera de la plataforma con su contacto del programa dual. No podrás cambiar la respuesta.',
+    description: 'La empresa verá que aceptaste, la fecha y tu mensaje. La coordinación continúa en la conversación de esta solicitud o con su contacto del programa dual. No podrás cambiar la respuesta.',
   },
   RECHAZADA: {
     label: 'Rechazar solicitud', title: '¿Rechazar la solicitud?', done: 'Solicitud rechazada correctamente.',

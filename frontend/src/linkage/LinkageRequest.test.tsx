@@ -6,6 +6,7 @@ import { OPPORTUNITY_CONTACT_MESSAGE } from '../opportunities/OpportunityForm'
 import { createLinkageRequest } from './api'
 
 const fetchMock = vi.fn<typeof fetch>()
+let unreadConversations = 0
 const linkageMock = vi.fn<typeof fetch>()
 // Solicitudes ya enviadas para el perfil (HU-S5-05 CA-04).
 const sentMock = vi.fn<typeof fetch>()
@@ -35,8 +36,11 @@ beforeEach(() => {
   sentMock.mockReset()
   sentMock.mockImplementation(async () => sentPage([]))
   fetchMock.mockReset()
+  unreadConversations = 0
   fetchMock.mockImplementation(async (path, init) => {
     if (path === '/api/me') return Response.json({ user })
+    // Aviso de conversaciones sin leer del menú (HU-S13-04): ajeno a estas pruebas salvo donde se indique.
+    if (typeof path === 'string' && path.endsWith('/unread-summary')) return Response.json({ data: { conversations: unreadConversations } })
     if (path === '/api/dashboard') return new Promise<Response>(() => undefined)
     if (path === '/sanctum/csrf-cookie') {
       document.cookie = 'XSRF-TOKEN=csrf; Path=/'
@@ -131,7 +135,7 @@ describe('solicitud de vinculación HU-S5-04', () => {
     const sentItem = (id: number, title: string, status: string) => ({
       id, status, created_at: '2026-10-28T10:00:00Z', message: null, opportunity: { id, title },
       profile: { public_id: publicId, headline: 'Analista de datos', program: 'Ingeniería', period_type: 'semester', period_number: 6 },
-      institution: { name: 'UT del Golfo', contact_name: 'Laura Méndez', contact_position: 'Coordinación Dual', contact_email: 'dual@utgolfo.edu.mx', contact_phone: '+52 833 357 4800' }, responded_at: null, response_message: null,
+      institution: { name: 'UT del Golfo', contact_name: 'Laura Méndez', contact_position: 'Coordinación Dual', contact_email: 'dual@utgolfo.edu.mx', contact_phone: '+52 833 357 4800' }, responded_at: null, response_message: null, unread_count: 0,
     })
     // Las solicitudes previas cambian solo después de enviar (el perfil también las vuelve a consultar al abrir la hoja).
     sentMock.mockImplementation(async () => sentPage(posts().length
@@ -165,7 +169,7 @@ describe('solicitar vinculación según las solicitudes previas (T-S12-07)', () 
     id: 100 + opportunityId, status, created_at: '2026-10-28T10:00:00Z', message: null, opportunity: { id: opportunityId, title },
     profile: { public_id: publicId, headline: 'Analista de datos', program: 'Ingeniería', period_type: 'semester', period_number: 6 },
     institution: { name: 'UT del Golfo', contact_name: null, contact_position: null, contact_email: 'dual@utgolfo.edu.mx', contact_phone: null },
-    responded_at: null, response_message: null,
+    responded_at: null, response_message: null, unread_count: 0,
   })
   const renderProfile = () => render(<MemoryRouter initialEntries={[`/talent/${publicId}`]}><App /></MemoryRouter>)
 

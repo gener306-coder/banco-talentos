@@ -6,6 +6,7 @@ import App from '../App'
 /** Aviso cuyo texto completo, con el nombre resaltado en strong, es exactamente `text`. */
 const noticeText = (text: string) => (_: string, element: Element | null) => element?.tagName === 'P' && element.textContent === text
 const fetchMock = vi.fn<typeof fetch>()
+let unreadConversations = 0
 const apiMock = vi.fn<typeof fetch>()
 let user: Record<string, unknown>
 const companyUser = { id: 9, name: 'Reclutadora', email: 'rh@manugolfo.test', role: 'COMPANY', institution: null, company: { id: 3, name: 'ManuGolfo' } }
@@ -14,7 +15,7 @@ const pending = {
   id: 41, status: 'PENDIENTE_INSTITUCION', created_at: '2026-10-28T10:00:00Z', message: 'Nos interesa su perfil.',
   opportunity: { id: 12, title: 'Tableros de producción' },
   profile: { public_id: publicId, headline: 'Analista de datos', program: 'Ingeniería en Datos', period_type: 'semester', period_number: 6 },
-  institution: { name: 'UT del Golfo', contact_name: 'Laura Méndez', contact_position: 'Coordinación Dual', contact_email: 'dual@utgolfo.edu.mx', contact_phone: '+52 833 357 4800' }, responded_at: null, response_message: null,
+  institution: { name: 'UT del Golfo', contact_name: 'Laura Méndez', contact_position: 'Coordinación Dual', contact_email: 'dual@utgolfo.edu.mx', contact_phone: '+52 833 357 4800' }, responded_at: null, response_message: null, unread_count: 0,
 }
 const cancelled = { ...pending, id: 40, status: 'CANCELADA', opportunity: { id: 13, title: 'Calidad' } }
 const page = (items: unknown[], meta = {}) => Response.json({ data: items, meta: { current_page: 1, last_page: 1, total: items.length, per_page: 20, ...meta } })
@@ -28,8 +29,11 @@ beforeEach(() => {
   user = companyUser
   apiMock.mockReset()
   fetchMock.mockReset()
+  unreadConversations = 0
   fetchMock.mockImplementation(async (path, init) => {
     if (path === '/api/me') return Response.json({ user })
+    // Aviso de conversaciones sin leer del menú (HU-S13-04): ajeno a estas pruebas salvo donde se indique.
+    if (typeof path === 'string' && path.endsWith('/unread-summary')) return Response.json({ data: { conversations: unreadConversations } })
     if (path === '/api/dashboard') return new Promise<Response>(() => undefined)
     // Módulo destacado del inicio (HU-S9-05): ajeno a estas pruebas.
     if (typeof path === 'string' && path.startsWith('/api/promotional-videos')) return new Promise<Response>(() => undefined)
@@ -61,8 +65,10 @@ describe('bandeja de solicitudes HU-S5-05', () => {
     const table = await screen.findByRole('table', { name: 'Solicitudes de vinculación enviadas' })
     expect(apiMock.mock.calls[0][0]).toBe('/api/linkage-requests?page=1')
     const row = within(table).getByRole('row', { name: /Tableros de producción/ })
-    // T-S12-04: sin enlaces subrayados; la fila abre el perfil y las acciones van en pastillas.
-    expect(row).toHaveAttribute('data-href', `/talent/${publicId}`)
+    // T-S12-04: sin enlaces subrayados; la fila abre el detalle (HU-S13-02) y las acciones van en pastillas.
+    expect(row).toHaveAttribute('data-href', '/linkage-requests/41')
+    expect(within(row).getByRole('link', { name: 'Ver la solicitud de Analista de datos para Tableros de producción' }))
+      .toHaveAttribute('href', '/linkage-requests/41')
     expect(within(row).getByRole('rowheader')).toHaveTextContent('Analista de datos')
     expect(within(row).getByRole('link', { name: 'Ver perfil: Analista de datos' })).toHaveAttribute('href', `/talent/${publicId}`)
     // T-S8-15: solo la carrera; el periodo está en el perfil.
@@ -147,21 +153,32 @@ describe('bandeja de solicitudes HU-S5-05', () => {
     expect(row).toHaveTextContent('Respondida el 29 oct 2026')
     expect(within(row).queryByRole('button', { name: /Cancelar/ })).not.toBeInTheDocument()
 
-    // T-S12-06: el mensaje no se trunca en la celda; un ícono junto al estado lo abre completo en una hoja.
+    // HU-S13-06: el mensaje no está en la celda ni en una hoja; se lee en la conversación.
     expect(row).not.toHaveTextContent('Coordinemos la entrevista.')
-    fireEvent.click(within(row).getByRole('button', { name: 'Leer el mensaje de UT del Golfo' }))
-    const sheet = await screen.findByRole('dialog', { name: 'Mensaje de la institución' })
-    expect(within(sheet).getByText('Coordinemos la entrevista.')).toBeInTheDocument()
-    expect(sheet).toHaveTextContent('UT del Golfo · Aceptada · Respondida el 29 oct 2026')
-    expect(sheet).toHaveTextContent('Solicitud para Mantenimiento')
-    expect(screen.getByRole('table', { name: 'Solicitudes de vinculación enviadas' })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /Leer el mensaje/ })).not.toBeInTheDocument()
   })
+})
 
-  it('no ofrece el ícono del mensaje si la institución respondió sin mensaje', async () => {
-    apiMock.mockResolvedValueOnce(page([{ ...pending, status: 'RECHAZADA', responded_at: '2026-10-29T16:00:00Z', response_message: null }]))
-    renderApp()
+describe('acceso a la conversación desde la bandeja (HU-S13-06 CA-04)', () => {
+  function Location() {
+    const location = useLocation()
+    const state: unknown = location.state
+    const back = typeof state === 'object' && state !== null && 'back' in state ? JSON.stringify(state.back) : ''
+    return <output aria-label="Ruta actual" data-back={back}>{location.pathname + location.search}</output>
+  }
+
+  it('el ícono junto al estado abre la conversación de cualquier solicitud con regreso a la bandeja filtrada', async () => {
+    apiMock.mockResolvedValueOnce(page([pending, cancelled])).mockImplementation(() => new Promise<Response>(() => undefined))
+    render(<MemoryRouter initialEntries={['/linkage-requests?unread=1']}><App /><Location /></MemoryRouter>)
     const table = await screen.findByRole('table', { name: 'Solicitudes de vinculación enviadas' })
-    expect(within(table).queryByRole('button', { name: /Leer el mensaje/ })).not.toBeInTheDocument()
+    const links = within(table).getAllByRole('link', { name: 'Abrir la conversación con UT del Golfo' })
+    expect(links.map((link) => link.getAttribute('href'))).toEqual(['/linkage-requests/41/chat', '/linkage-requests/40/chat'])
+    expect(links[0].closest('td')).toHaveTextContent('Pendiente de la institución')
+
+    fireEvent.click(links[0])
+    const location = screen.getByRole('status', { name: 'Ruta actual' })
+    await waitFor(() => expect(location).toHaveTextContent('/linkage-requests/41/chat'))
+    expect(JSON.parse(location.dataset.back ?? '')).toEqual({ to: '/linkage-requests?unread=1', label: 'Volver a solicitudes' })
   })
 })
 
@@ -173,7 +190,7 @@ describe('bandeja de solicitudes sin enlaces subrayados (T-S12-04)', () => {
     return <output aria-label="Ruta actual" data-back={back}>{location.pathname + location.search}</output>
   }
 
-  it('toda la fila abre el perfil y su regreso conserva el filtro de la URL', async () => {
+  it('toda la fila abre el detalle de la solicitud y su regreso conserva el filtro de la URL (HU-S13-02)', async () => {
     apiMock.mockResolvedValueOnce(page([{ ...pending, status: 'ACEPTADA' }]))
       .mockImplementation(() => new Promise<Response>(() => undefined))
     render(<MemoryRouter initialEntries={['/linkage-requests?status=ACEPTADA']}><App /><Location /></MemoryRouter>)
@@ -183,8 +200,21 @@ describe('bandeja de solicitudes sin enlaces subrayados (T-S12-04)', () => {
 
     fireEvent.click(within(table).getByRole('rowheader'))
     const location = screen.getByRole('status', { name: 'Ruta actual' })
-    await waitFor(() => expect(location).toHaveTextContent(`/talent/${publicId}`))
+    await waitFor(() => expect(location).toHaveTextContent('/linkage-requests/41'))
     expect(JSON.parse(location.dataset.back ?? '')).toEqual({ to: '/linkage-requests?status=ACEPTADA', label: 'Volver a solicitudes' })
+  })
+
+  it('las pastillas del perfil y de la oportunidad siguen en Acciones con el mismo regreso', async () => {
+    apiMock.mockResolvedValueOnce(page([pending])).mockImplementation(() => new Promise<Response>(() => undefined))
+    render(<MemoryRouter initialEntries={['/linkage-requests?status=PENDIENTE_INSTITUCION']}><App /><Location /></MemoryRouter>)
+    const table = await screen.findByRole('table', { name: 'Solicitudes de vinculación enviadas' })
+    const actions = within(table).getByRole('link', { name: 'Ver perfil: Analista de datos' }).closest('td')!
+    expect(within(actions).getAllByRole('link').map((link) => link.textContent)).toEqual(['Ver detalle', 'Ver perfil', 'Oportunidad'])
+
+    fireEvent.click(within(actions).getByRole('link', { name: 'Ver perfil: Analista de datos' }))
+    const location = screen.getByRole('status', { name: 'Ruta actual' })
+    await waitFor(() => expect(location).toHaveTextContent(`/talent/${publicId}`))
+    expect(JSON.parse(location.dataset.back ?? '')).toEqual({ to: '/linkage-requests?status=PENDIENTE_INSTITUCION', label: 'Volver a solicitudes' })
   })
 
   it('con una tecla modificadora la fila no navega: abrir en otra pestaña es de la pastilla', async () => {

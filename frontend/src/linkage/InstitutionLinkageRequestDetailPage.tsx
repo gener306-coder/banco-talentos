@@ -11,7 +11,7 @@ import { StudentStatus } from '../students/StudentStatus'
 import { backState, useBackLink } from '../ui/backLink'
 import { Callout } from '../ui/Callout'
 import { EmailMenu } from '../ui/EmailMenu'
-import { ChevronLeftIcon, ChevronRightIcon } from '../ui/icons'
+import { ChevronLeftIcon, ChevronRightIcon, MessageIcon } from '../ui/icons'
 import { LoadingState } from '../ui/StateMessage'
 import { getReceivedLinkage, institutionLinkageMessages } from './institutionApi'
 import type { ReceivedLinkageDetail } from './institutionApi'
@@ -45,6 +45,12 @@ function Detail({ data, onDecided, refresh }: {
         <dt>Recibida</dt><dd>{dateFormat.format(new Date(data.created_at))}</dd>
         <dt>Mensaje de la empresa</dt><dd className="opportunity-description">{data.message ?? 'Sin mensaje'}</dd>
       </dl>
+      {/* HU-S13-06: la conversación vive en su propia vista; mientras siga pendiente muestra solo el mensaje de la empresa. */}
+      <p>
+        <Link className="institution-button" to={`/institution/linkage-requests/${data.id}/chat`} state={toRequest}>
+          <MessageIcon />Abrir conversación
+        </Link>
+      </p>
 
       <section className="student-section" aria-labelledby="linkage-student-title">
         <h3 id="linkage-student-title">Alumno solicitado</h3>
@@ -95,7 +101,7 @@ function Detail({ data, onDecided, refresh }: {
 
       <section className="student-section" aria-labelledby="linkage-company-title">
         <h3 id="linkage-company-title">Empresa y contacto del programa dual</h3>
-        <p>La coordinación de la vinculación ocurre fuera de la plataforma con este contacto.</p>
+        <p>Una vez aceptada la solicitud, coordina la vinculación en la conversación de esta página o con este contacto.</p>
         <dl className="student-identity">
           <dt>Razón social</dt><dd>{company.legal_name}</dd>
           {company.trade_name && <><dt>Nombre comercial</dt><dd>{company.trade_name}</dd></>}

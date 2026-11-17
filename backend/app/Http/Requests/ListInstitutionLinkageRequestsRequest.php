@@ -19,6 +19,8 @@ class ListInstitutionLinkageRequestsRequest extends FormRequest
         return [
             'status' => ['nullable', 'string', Rule::enum(LinkageRequestStatus::class)],
             'page' => ['nullable', 'integer', 'min:1'],
+            // HU-S13-04 CA-04: solo las conversaciones con mensajes sin leer.
+            'unread' => ['nullable', 'boolean'],
         ];
     }
 
@@ -29,6 +31,7 @@ class ListInstitutionLinkageRequestsRequest extends FormRequest
             'status.enum' => 'El estado no es válido.',
             'page.integer' => 'La página no es válida.',
             'page.min' => 'La página no es válida.',
+            'unread.boolean' => 'El filtro de mensajes sin leer no es válido.',
         ];
     }
 }

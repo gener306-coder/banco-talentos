@@ -6,7 +6,6 @@ import { useApiMutation, useApiRequest } from '../lib/useApiRequest'
 import { ConfirmDialog } from '../ui/ConfirmDialog'
 import { EmailMenu } from '../ui/EmailMenu'
 import { ChevronLeftIcon, ChevronRightIcon, MessageIcon, PhoneIcon, SearchIcon } from '../ui/icons'
-import { Sheet } from '../ui/Sheet'
 import { backState } from '../ui/backLink'
 import { LoadingState, StateMessage } from '../ui/StateMessage'
 import { useListParams } from '../ui/useListParams'
@@ -14,34 +13,32 @@ import { useRowNavigation } from '../ui/useRowNavigation'
 import { cancelLinkageRequest, LINKAGE_STATUSES, linkageMessages, listLinkageRequests } from './api'
 import type { LinkageInboxItem, LinkageStatus as Status } from './api'
 import { LinkageStatus } from './LinkageStatus'
+import { UnreadTag } from './UnreadBadge'
 import '../institutions/institutions.css'
 
 const dateFormat = new Intl.DateTimeFormat('es-MX', { dateStyle: 'medium' })
 
 /**
- * Bandeja de solicitudes de vinculación enviadas por la empresa (HU-S5-05 CA-05): filtro por estado, fila clicable al perfil
- * anónimo y pastillas al perfil y a la oportunidad (T-S12-04), correo de contacto de la institución y cancelación confirmada de las pendientes. Muestra
- * la fecha y el mensaje de la respuesta institucional (HU-S6-02 CA-04).
+ * Bandeja de solicitudes de vinculación enviadas por la empresa (HU-S5-05 CA-05): filtro por estado, fila clicable al detalle
+ * de la solicitud (HU-S13-02) y pastillas al detalle, al perfil anónimo y a la oportunidad (T-S12-04), correo de contacto de la institución y cancelación confirmada de las pendientes. Muestra
+ * la fecha de la respuesta institucional (HU-S6-02 CA-04); su mensaje se lee en la conversación (HU-S13-06).
  */
 export function LinkageRequestsPage() {
   // T-S12-04 y T-S12-05: el estado y la página viven en la URL, como en la bandeja de la institución, para que el regreso
-  // desde el perfil o la oportunidad recupere la misma vista. Cambiar el filtro vuelve a la página 1.
+  // desde el detalle, el perfil o la oportunidad recupere la misma vista. Cambiar el filtro vuelve a la página 1.
   const list = useListParams()
   const statusParam = list.get('status')
   const status: Status | '' = LINKAGE_STATUSES.find((item) => item.value === statusParam)?.value ?? ''
+  // HU-S13-04 CA-04: solo las conversaciones con mensajes de la institución sin leer.
+  const unread = list.get('unread') === '1'
   const { page, setPage } = list
   const location = useLocation()
   const openRow = useRowNavigation()
-  const load = useCallback((signal: AbortSignal) => listLinkageRequests({ page, status }, signal), [page, status])
+  const load = useCallback((signal: AbortSignal) => listLinkageRequests({ page, status, unread }, signal), [page, status, unread])
   const { data, loading, failure, refresh, setData } = useApiRequest(load, linkageMessages)
   const mutation = useApiMutation(linkageMessages)
   const [cancelling, setCancelling] = useState<LinkageInboxItem | null>(null)
   const [notice, setNotice] = useState<ReactNode>(null)
-  // T-S12-06: solicitud cuyo mensaje de respuesta se lee completo. La hoja vive fuera de la tabla: su contenido no
-  // está dentro de ninguna fila y su clic nunca la abre.
-  const [reading, setReading] = useState<LinkageInboxItem | null>(null)
-  const messageOrigin = useRef<HTMLButtonElement | null>(null)
-  const closeMessage = useCallback(() => { setReading(null); messageOrigin.current?.focus() }, [])
   const origin = useRef<HTMLButtonElement | null>(null)
 
   async function cancel() {
@@ -64,7 +61,7 @@ export function LinkageRequestsPage() {
         <Link className="plain" to="/talent">Buscar talento</Link>
       </nav>
       <h2 id="linkage-requests-title">Solicitudes de vinculación</h2>
-      <p>Solicitudes que tu empresa envió a las instituciones educativas. La coordinación posterior ocurre fuera de la plataforma con el contacto de cada institución.</p>
+      <p>Solicitudes que tu empresa envió a las instituciones educativas. Las aceptadas se coordinan en la conversación de su detalle o con el contacto de cada institución.</p>
       <form className="table-search" role="search" aria-label="Filtrar solicitudes" onSubmit={(event) => event.preventDefault()}>
         <div className="table-search-filter">
           <label htmlFor="linkage-status-filter">Estado</label>
@@ -77,13 +74,24 @@ export function LinkageRequestsPage() {
             {LINKAGE_STATUSES.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}
           </select>
         </div>
+        <div className="unread-filter">
+          <input id="linkage-unread-filter" type="checkbox" checked={unread}
+            onChange={(event) => {
+              setNotice(null)
+              list.update({ unread: event.target.checked ? '1' : null })
+            }} />
+          <label htmlFor="linkage-unread-filter">Con mensajes sin leer</label>
+        </div>
       </form>
       {notice && <p className="institution-success" role="status">{notice}</p>}
       {cancelError && <p className="notice" role="alert">{cancelError}</p>}
       {loading ? <LoadingState label="Cargando solicitudes…" variant="table" />
         : failure ? <InstitutionRequestError failure={failure} retry={refresh} page />
         : data && data.items.length === 0
-          ? status
+          ? unread
+            ? <StateMessage kind="empty" icon={<SearchIcon />} title="Ninguna conversación con mensajes sin leer."
+              description="Quita el filtro para ver todas las solicitudes." />
+            : status
             ? <StateMessage kind="empty" icon={<SearchIcon />} title="Ninguna solicitud con ese estado."
               description="Elige otro estado o revisa todas las solicitudes." />
             : <StateMessage kind="empty" icon={<SearchIcon />} title="Aún no has enviado solicitudes."
@@ -99,11 +107,11 @@ export function LinkageRequestsPage() {
                   <tbody>
                     {data.items.map((item) => {
                       const headline = item.profile.headline ?? 'Perfil sin titular'
-                      const profileHref = `/talent/${item.profile.public_id}`
-                      // T-S12-04: el perfil y la oportunidad regresan a esta bandeja con su filtro.
+                      const href = `/linkage-requests/${item.id}`
+                      // T-S12-04: el detalle, el perfil y la oportunidad regresan a esta bandeja con su filtro.
                       const back = backState('Volver a solicitudes', location)
                       return (
-                        <tr key={item.id} data-href={profileHref} onClick={(event) => openRow(event, profileHref, back)}>
+                        <tr key={item.id} data-href={href} onClick={(event) => openRow(event, href, back)}>
                           {/* T-S8-15: lo esencial de cada columna; el periodo y el puesto quedan a un paso (perfil y cursor). */}
                           <th scope="row">
                             {headline}
@@ -130,24 +138,24 @@ export function LinkageRequestsPage() {
                           </td>
                           <td className="nowrap">{dateFormat.format(new Date(item.created_at))}</td>
                           <td>
-                            {/* Respuesta de la institución (HU-S6-02 CA-04). T-S12-06: el mensaje no se trunca en la celda;
-                                un ícono junto al estado lo abre completo en una hoja. */}
+                            {/* HU-S13-06: el ícono junto al estado abre la conversación, que empieza con el mensaje de la
+                                solicitud y la respuesta de la institución (reemplaza la hoja de T-S12-06). */}
                             <span className="cell-meta">
                               <LinkageStatus status={item.status} />
-                              {item.response_message && (
-                                <span className="cell-actions">
-                                  <button type="button" aria-haspopup="dialog" aria-label={`Leer el mensaje de ${item.institution.name}`}
-                                    title="Mensaje de la institución" onClick={(event) => { messageOrigin.current = event.currentTarget; setReading(item) }}>
-                                    <MessageIcon />
-                                  </button>
-                                </span>
-                              )}
+                              <span className="cell-actions">
+                                <Link to={`/linkage-requests/${item.id}/chat`} state={back}
+                                  aria-label={`Abrir la conversación con ${item.institution.name}`} title="Conversación"><MessageIcon /></Link>
+                              </span>
                             </span>
                             {item.responded_at && <span className="linkage-meta">Respondida el {dateFormat.format(new Date(item.responded_at))}</span>}
+                            {item.unread_count > 0 && <span className="linkage-meta"><UnreadTag count={item.unread_count} /></span>}
                           </td>
                           <td>
                             <div className="actions">
-                              <Link className="pill-link row-link" to={profileHref} state={back} aria-label={`Ver perfil: ${headline}`}>Ver perfil<ChevronRightIcon /></Link>
+                              {/* HU-S13-02: «Ver detalle» es el control accesible de la fila, con su mismo destino. */}
+                              <Link className="pill-link row-link" to={href} state={back}
+                                aria-label={`Ver la solicitud de ${headline} para ${item.opportunity.title}`}>Ver detalle<ChevronRightIcon /></Link>
+                              <Link className="pill-link" to={`/talent/${item.profile.public_id}`} state={back} aria-label={`Ver perfil: ${headline}`}>Ver perfil<ChevronRightIcon /></Link>
                               <Link className="pill-link" to={`/opportunities/${item.opportunity.id}`} state={back}
                                 aria-label={`Ver la oportunidad ${item.opportunity.title}`}>Oportunidad<ChevronRightIcon /></Link>
                               {item.status === 'PENDIENTE_INSTITUCION' && (
@@ -179,19 +187,6 @@ export function LinkageRequestsPage() {
         title="¿Cancelar la solicitud?"
         description="La institución ya no podrá responderla. Podrás enviar una nueva solicitud para el mismo perfil y oportunidad más adelante."
         confirmLabel="Cancelar solicitud" onConfirm={() => { void cancel() }} onCancel={() => setCancelling(null)} />
-      <Sheet open={reading !== null} onClose={closeMessage} labelledBy="linkage-message-title">
-        {reading && (
-          <div className="linkage-message">
-            <h3 id="linkage-message-title">Mensaje de la institución</h3>
-            <p className="linkage-message-meta">
-              <strong>{reading.institution.name}</strong> · <LinkageStatus status={reading.status} />
-              {reading.responded_at && <> · Respondida el {dateFormat.format(new Date(reading.responded_at))}</>}
-            </p>
-            <p className="linkage-message-meta">Solicitud para <strong>{reading.opportunity.title}</strong></p>
-            <blockquote className="linkage-message-text">{reading.response_message}</blockquote>
-          </div>
-        )}
-      </Sheet>
     </section>
   )
 }

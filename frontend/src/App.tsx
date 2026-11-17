@@ -21,6 +21,8 @@ import { SECRETARY_ACCOUNT_MANAGERS } from './secretary/api'
 import { SecretaryAccountsPage } from './secretary/SecretaryAccountsPage'
 import { InstitutionLinkageRequestDetailPage } from './linkage/InstitutionLinkageRequestDetailPage'
 import { InstitutionLinkageRequestsPage } from './linkage/InstitutionLinkageRequestsPage'
+import { LinkageChatPage } from './linkage/LinkageChatPage'
+import { LinkageRequestDetailPage } from './linkage/LinkageRequestDetailPage'
 import { LinkageRequestsPage } from './linkage/LinkageRequestsPage'
 import { REPORT_VIEWERS } from './reports/api'
 import { ReportsPage } from './reports/ReportsPage'
@@ -104,6 +106,8 @@ function AuthRoutes() {
       </Route>
       <Route element={<ProtectedRoute role="COMPANY" deniedMessage="No tienes permiso para consultar solicitudes de vinculación." />}>
         <Route path="/linkage-requests" element={<LinkageRequestsPage />} />
+        <Route path="/linkage-requests/:id" element={<LinkageRequestDetailPage />} />
+        <Route path="/linkage-requests/:id/chat" element={<LinkageChatPage side="COMPANY" />} />
       </Route>
       <Route element={<ProtectedRoute role="INSTITUTION" deniedMessage="No tienes permiso para acceder al padrón de alumnos." />}>
         <Route path="/students" element={<StudentsPage />} />
@@ -113,6 +117,7 @@ function AuthRoutes() {
       <Route element={<ProtectedRoute role="INSTITUTION" deniedMessage="No tienes permiso para consultar solicitudes de vinculación." />}>
         <Route path="/institution/linkage-requests" element={<InstitutionLinkageRequestsPage />} />
         <Route path="/institution/linkage-requests/:id" element={<InstitutionLinkageRequestDetailPage />} />
+        <Route path="/institution/linkage-requests/:id/chat" element={<LinkageChatPage side="INSTITUTION" />} />
       </Route>
       <Route element={<ProtectedRoute role="INSTITUTION" deniedMessage="No tienes permiso para gestionar las Historias del Dual." />}>
         <Route path="/institution/videos" element={<InstitutionVideosPage />} />
