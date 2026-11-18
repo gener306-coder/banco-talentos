@@ -4,7 +4,7 @@ import { InstitutionRequestError, InstitutionStatus } from '../institutions/Inst
 import { useApiMutation, useApiRequest } from '../lib/useApiRequest'
 import { periodLabel, stateName } from '../students/catalogs'
 import { languageName, levelLabel } from '../students/cvCatalogs'
-import { useBackLink } from '../ui/backLink'
+import { useBackLink, useContextualBack } from '../ui/backLink'
 import { ConfirmDialog } from '../ui/ConfirmDialog'
 import { ChevronLeftIcon } from '../ui/icons'
 import { LoadingState } from '../ui/StateMessage'
@@ -25,6 +25,8 @@ function OpportunityDetail({ id }: { id: string }) {
   const [statusNotice, setStatusNotice] = useState<string | null>(null)
   // T-S12-04: desde la bandeja de solicitudes se regresa a ella; si no, al listado de oportunidades.
   const back = useBackLink({ to: '/opportunities', label: 'Volver a oportunidades' })
+  // T-S13-07: abierta desde otro flujo (la conversación, la bandeja), el regreso toma el lugar de «Inicio».
+  const contextual = useContextualBack()
   const statusButton = useRef<HTMLButtonElement>(null)
   const [confirming, setConfirming] = useState(false)
 
@@ -46,7 +48,7 @@ function OpportunityDetail({ id }: { id: string }) {
   }
 
   return (
-    <OpportunityLayout title="Detalle de oportunidad">
+    <OpportunityLayout title="Detalle de oportunidad" back={contextual}>
       {loading ? <LoadingState label="Cargando oportunidad…" variant="details" />
         : failure ? <InstitutionRequestError failure={failure} retry={refresh} page notFoundTitle="No encontramos esta oportunidad" />
         : data && (
@@ -93,7 +95,7 @@ function OpportunityDetail({ id }: { id: string }) {
         title="¿Inactivar la oportunidad?"
         description="No podrá elegirse para nuevas solicitudes de vinculación. No se borra ningún dato y podrás reactivarla después."
         confirmLabel="Inactivar" onConfirm={() => { void changeStatus() }} onCancel={() => setConfirming(false)} />
-      <p className="institution-back"><Link className="plain" to={back.to} state={back.state}><ChevronLeftIcon />{back.label}</Link></p>
+      {!contextual && <p className="institution-back"><Link className="plain" to={back.to} state={back.state}><ChevronLeftIcon />{back.label}</Link></p>}
     </OpportunityLayout>
   )
 }

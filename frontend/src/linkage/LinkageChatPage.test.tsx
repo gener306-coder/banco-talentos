@@ -57,7 +57,10 @@ beforeEach(() => {
   })
   vi.stubGlobal('fetch', fetchMock)
 })
-afterEach(() => vi.unstubAllGlobals())
+afterEach(() => {
+  vi.unstubAllGlobals()
+  sessionStorage.clear()
+})
 
 describe('vista de la conversación de la empresa', () => {
   it('encabeza con la institución, la oportunidad y el estado, y empieza con el mensaje de la solicitud (CA-01, CA-02)', async () => {
@@ -65,10 +68,23 @@ describe('vista de la conversación de la empresa', () => {
     render(<MemoryRouter initialEntries={['/linkage-requests/41/chat']}><App /></MemoryRouter>)
     const page = await screen.findByRole('region', { name: 'Conversación con UT del Golfo' })
     expect(apiMock.mock.calls[0][0]).toBe('/api/linkage-requests/41')
-    expect(page).toHaveTextContent('Tableros de producción')
-    expect(within(page).getByText('Aceptada', { selector: '.linkage-status' })).toBeInTheDocument()
-    expect(within(page).getByRole('link', { name: /Ver detalle/ })).toHaveAttribute('href', '/linkage-requests/41')
-    expect(within(page).getByRole('note', { name: 'Aviso de privacidad' })).toHaveTextContent('No compartas datos personales del alumno por este medio.')
+    expect(within(page).getByRole('link', { name: 'Ver solicitud' })).toHaveAttribute('href', '/linkage-requests/41')
+    // T-S13-07: la conversación mide su posición para ocupar el alto restante de la ventana.
+    expect(page.style.getPropertyValue('--chat-offset')).toBe('0px')
+    // T-S13-07: encabezado compacto estilo Marketplace, sin el aviso de privacidad (decisión del responsable).
+    expect(within(page).getByRole('heading', { level: 2 })).toHaveTextContent('UT del Golfo')
+    expect(page.querySelector('.linkage-chat-topbar .linkage-avatar')).toHaveTextContent('UG')
+    expect(page.querySelector('.linkage-chat-subtitle')).toHaveTextContent('Solicitud aceptada')
+    // Tercera revisión: tarjetas del alumno y de la oportunidad, cada una con su acceso.
+    const cards = within(within(page).getByRole('list', { name: 'Tema de la conversación' })).getAllByRole('listitem')
+    expect(cards[0]).toHaveTextContent('Perfil del alumno')
+    expect(cards[0]).toHaveTextContent('Analista de datos')
+    expect(cards[0]).toHaveTextContent('Ingeniería en Datos · 6.º semestre')
+    expect(within(cards[0]).getByRole('link', { name: 'Ver perfil: Analista de datos' })).toHaveAttribute('href', '/talent/3f2c1b9e-8a7d-4c6b-9e5f-1a2b3c4d5e6f')
+    expect(cards[1]).toHaveTextContent('Oportunidad')
+    expect(cards[1]).toHaveTextContent('Tableros de producción')
+    expect(within(cards[1]).getByRole('link', { name: 'Ver la oportunidad Tableros de producción' })).toHaveAttribute('href', '/opportunities/12')
+    expect(within(page).queryByRole('note', { name: 'Aviso de privacidad' })).not.toBeInTheDocument()
 
     const log = await within(page).findByRole('log', { name: 'Mensajes' })
     await within(log).findByText('¿Puede iniciar el lunes?')
@@ -88,7 +104,7 @@ describe('vista de la conversación de la empresa', () => {
     apiMock.mockResolvedValueOnce(Response.json({ data: { ...sent, status: 'PENDIENTE_INSTITUCION', responded_at: null, response_message: null } }))
     render(<MemoryRouter initialEntries={['/linkage-requests/41/chat']}><App /></MemoryRouter>)
     const log = await screen.findByRole('log', { name: 'Mensajes' })
-    expect(within(log).getAllByRole('listitem')).toHaveLength(1)
+    expect(await within(log).findAllByRole('listitem')).toHaveLength(1)
     expect(screen.getByText('La conversación se habilita cuando la institución acepte la solicitud.')).toBeInTheDocument()
     expect(screen.queryByRole('textbox')).not.toBeInTheDocument()
     expect(messagePaths()).toEqual([])
@@ -100,10 +116,40 @@ describe('vista de la conversación de la empresa', () => {
       .mockResolvedValue(Response.json({ data: [sent], meta: { current_page: 1, last_page: 1, total: 1, per_page: 20 } }))
     render(<MemoryRouter initialEntries={['/linkage-requests?status=ACEPTADA']}><App /><Location /></MemoryRouter>)
     fireEvent.click(await screen.findByRole('link', { name: 'Abrir la conversación con UT del Golfo' }))
-    const back = await screen.findByRole('link', { name: 'Volver a solicitudes' })
+    // El regreso de la pantalla de carga se reemplaza por el del encabezado cuando llega la solicitud.
+    const page = await screen.findByRole('region', { name: 'Conversación con UT del Golfo' })
+    const back = within(page).getByRole('link', { name: 'Volver a solicitudes' })
     expect(back).toHaveAttribute('href', '/linkage-requests?status=ACEPTADA')
     fireEvent.click(back)
     await waitFor(() => expect(screen.getByRole('status', { name: 'Ruta actual' })).toHaveTextContent('/linkage-requests?status=ACEPTADA'))
+  })
+
+  it.each([
+    ['Ver perfil: Analista de datos', '/talent/3f2c1b9e-8a7d-4c6b-9e5f-1a2b3c4d5e6f'],
+    ['Ver la oportunidad Tableros de producción', '/opportunities/12'],
+    ['Ver solicitud', '/linkage-requests/41'],
+  ])('«%s» abre su pantalla con «Volver a la conversación» en la navegación', async (name, path) => {
+    apiMock.mockResolvedValueOnce(Response.json({ data: sent })).mockReturnValue(new Promise<Response>(() => undefined))
+    render(<MemoryRouter initialEntries={['/linkage-requests/41/chat']}><App /><Location /></MemoryRouter>)
+    fireEvent.click(await screen.findByRole('link', { name }))
+    await waitFor(() => expect(screen.getByRole('status', { name: 'Ruta actual' })).toHaveTextContent(path))
+    const back = await screen.findByRole('link', { name: 'Volver a la conversación' })
+    expect(back).toHaveAttribute('href', '/linkage-requests/41/chat')
+    // T-S13-07: el regreso toma el lugar de «Inicio» en la navegación y no se repite al final.
+    expect(screen.getAllByRole('link', { name: 'Volver a la conversación' })).toHaveLength(1)
+    expect(screen.queryByRole('link', { name: 'Volver al inicio' })).not.toBeInTheDocument()
+    fireEvent.click(back)
+    await waitFor(() => expect(screen.getByRole('status', { name: 'Ruta actual' })).toHaveTextContent('/linkage-requests/41/chat'))
+  })
+
+  it('el detalle abierto desde la conversación no repite «Abrir conversación»: el regreso ya lleva a ella', async () => {
+    apiMock.mockResolvedValueOnce(Response.json({ data: sent })).mockResolvedValueOnce(Response.json({ data: sent }))
+    render(<MemoryRouter initialEntries={['/linkage-requests/41/chat']}><App /></MemoryRouter>)
+    fireEvent.click(await screen.findByRole('link', { name: 'Ver solicitud' }))
+    expect(await screen.findByRole('heading', { name: 'Detalle de solicitud' })).toBeInTheDocument()
+    await screen.findByText('Respondida')
+    expect(screen.getByRole('navigation', { name: 'Navegación de solicitudes' })).toContainElement(screen.getByRole('link', { name: 'Volver a la conversación' }))
+    expect(screen.queryByRole('link', { name: /Abrir conversación/ })).not.toBeInTheDocument()
   })
 
   it('sin regreso contextual vuelve a la bandeja completa', async () => {
@@ -134,14 +180,34 @@ describe('vista de la conversación de la institución', () => {
     render(<MemoryRouter initialEntries={['/institution/linkage-requests/41/chat']}><App /></MemoryRouter>)
     const page = await screen.findByRole('region', { name: 'Conversación con ManuGolfo' })
     expect(apiMock.mock.calls[0][0]).toBe('/api/institution/linkage-requests/41')
-    const bubbles = within(await within(page).findByRole('log', { name: 'Mensajes' })).getAllByRole('listitem')
+    const bubbles = await within(await within(page).findByRole('log', { name: 'Mensajes' })).findAllByRole('listitem')
     expect(bubbles).toHaveLength(1)
     expect(bubbles[0]).toHaveClass('other')
     expect(bubbles[0]).toHaveTextContent('ManuGolfo')
     expect(within(page).getByText('La conversación se habilita cuando aceptes la solicitud.')).toBeInTheDocument()
     expect(within(page).getByRole('link', { name: /Responder solicitud/ })).toHaveAttribute('href', '/institution/linkage-requests/41')
     expect(within(page).getByRole('link', { name: 'Volver a solicitudes' })).toHaveAttribute('href', '/institution/linkage-requests')
+    // La institución ve al alumno por su identidad y su expediente; la oportunidad, en el detalle de la solicitud.
+    const cards = within(within(page).getByRole('list', { name: 'Tema de la conversación' })).getAllByRole('listitem')
+    expect(cards[0]).toHaveTextContent('Ana Sofía García López')
+    expect(cards[0]).toHaveTextContent('MAT-0001 · Ingeniería en Datos')
+    expect(within(cards[0]).getByRole('link', { name: 'Ver expediente de Ana Sofía García López' })).toHaveAttribute('href', '/students/7')
+    expect(cards[1]).toHaveTextContent('Ingeniería en Datos · 2 vacantes')
+    expect(within(cards[1]).getByRole('link', { name: 'Ver la oportunidad Tableros de producción' })).toHaveAttribute('href', '/institution/linkage-requests/41')
     expect(messagePaths()).toEqual([])
+  })
+
+  it.each([
+    ['Ver expediente de Ana Sofía García López', '/students/7'],
+    ['Ver la oportunidad Tableros de producción', '/institution/linkage-requests/41'],
+    ['Ver solicitud', '/institution/linkage-requests/41'],
+  ])('«%s» abre su pantalla con «Volver a la conversación»', async (name, path) => {
+    user = institutionUser
+    apiMock.mockResolvedValueOnce(Response.json({ data: received })).mockReturnValue(new Promise<Response>(() => undefined))
+    render(<MemoryRouter initialEntries={['/institution/linkage-requests/41/chat']}><App /><Location /></MemoryRouter>)
+    fireEvent.click(await screen.findByRole('link', { name }))
+    await waitFor(() => expect(screen.getByRole('status', { name: 'Ruta actual' })).toHaveTextContent(path))
+    expect(await screen.findByRole('link', { name: 'Volver a la conversación' })).toHaveAttribute('href', '/institution/linkage-requests/41/chat')
   })
 
   it('en una aceptada consulta el hilo por la ruta de la institución y permite escribir', async () => {

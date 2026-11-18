@@ -1,4 +1,4 @@
-import { useCallback } from 'react'
+import { useCallback, useEffect, useRef } from 'react'
 import { useSearchParams } from 'react-router'
 
 /** Valor de un filtro o de la página: vacío, nulo o la página 1 se quitan de la URL. */
@@ -16,21 +16,28 @@ export function useListParams() {
   const page = Number.isSafeInteger(pageParam) && pageParam > 1 ? pageParam : 1
   const get = useCallback((name: string) => params.get(name) ?? '', [params])
 
+  // T-S13-13: React Router aplica la navegación como transición, así que dos cambios seguidos (buscar y, enseguida, elegir
+  // un filtro) podían partir de la URL de la última vista pintada y perder el primero. `update` parte siempre del último
+  // valor que escribió.
+  const latest = useRef(params)
+  useEffect(() => { latest.current = params }, [params])
   const update = useCallback((changes: Record<string, ParamValue>) => {
-    setParams((current) => {
-      const next = new URLSearchParams(current)
-      if (!('page' in changes)) next.delete('page')
-      for (const [name, value] of Object.entries(changes)) {
-        const text = value === null || value === undefined ? '' : String(value)
-        if (text === '' || (name === 'page' && text === '1')) next.delete(name)
-        else next.set(name, text)
-      }
-      return next
-    }, { replace: true })
+    const next = new URLSearchParams(latest.current)
+    if (!('page' in changes)) next.delete('page')
+    for (const [name, value] of Object.entries(changes)) {
+      const text = value === null || value === undefined ? '' : String(value)
+      if (text === '' || (name === 'page' && text === '1')) next.delete(name)
+      else next.set(name, text)
+    }
+    latest.current = next
+    setParams(next, { replace: true })
   }, [setParams])
 
   const setPage = useCallback((value: number) => update({ page: value }), [update])
-  const clear = useCallback(() => setParams({}, { replace: true }), [setParams])
+  const clear = useCallback(() => {
+    latest.current = new URLSearchParams()
+    setParams({}, { replace: true })
+  }, [setParams])
 
   return { get, page, setPage, update, clear }
 }

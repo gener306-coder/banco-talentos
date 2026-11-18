@@ -4,7 +4,8 @@ import { Link, useLocation, useParams } from 'react-router'
 import { InstitutionRequestError } from '../institutions/InstitutionLayout'
 import { useApiMutation, useApiRequest } from '../lib/useApiRequest'
 import { periodLabel } from '../students/catalogs'
-import { backState, useBackLink } from '../ui/backLink'
+import { backState, useBackLink, useContextualBack } from '../ui/backLink'
+import { NavBackLink } from '../ui/NavBackLink'
 import { Callout } from '../ui/Callout'
 import { ConfirmDialog } from '../ui/ConfirmDialog'
 import { EmailMenu } from '../ui/EmailMenu'
@@ -42,6 +43,9 @@ function Detail({ data, onCancelled }: { data: LinkageInboxItem; onCancelled: (u
   const headline = profile.headline ?? 'Perfil sin titular'
   // T-S12-04: el perfil y la oportunidad regresan a esta solicitud, que a su vez conserva el regreso a la bandeja.
   const toRequest = backState('Volver a la solicitud', useLocation())
+  const chatPath = `/linkage-requests/${data.id}/chat`
+  // T-S13-07: si se llegó desde la conversación, «Volver a la conversación» ya lleva a ella; no se repite el botón.
+  const fromChat = useContextualBack()?.to === chatPath
   const mutation = useApiMutation(linkageDetailMessages)
   const [confirming, setConfirming] = useState(false)
   const [notice, setNotice] = useState<ReactNode>(null)
@@ -65,20 +69,19 @@ function Detail({ data, onCancelled }: { data: LinkageInboxItem; onCancelled: (u
       {cancelError && <p className="notice" role="alert">{cancelError}</p>}
       <StatusCallout data={data} />
       {/* HU-S13-06: la conversación vive en su propia vista; en una pendiente muestra solo el mensaje de la solicitud. */}
-      <p>
-        <Link className="institution-button" to={`/linkage-requests/${data.id}/chat`} state={toRequest}>
-          <MessageIcon />Abrir conversación{data.unread_count > 0 && <> <UnreadTag count={data.unread_count} /></>}
-        </Link>
-      </p>
+      {!fromChat && (
+        <p>
+          <Link className="institution-button" to={chatPath} state={toRequest}>
+            <MessageIcon />Abrir conversación{data.unread_count > 0 && <> <UnreadTag count={data.unread_count} /></>}
+          </Link>
+        </p>
+      )}
 
       <dl className="student-identity">
         <dt>Estado de la solicitud</dt><dd><LinkageStatus status={data.status} /></dd>
         <dt>Enviada</dt><dd>{dateFormat.format(new Date(data.created_at))}</dd>
-        <dt>Mensaje de tu empresa</dt><dd className="opportunity-description">{data.message ?? 'Sin mensaje'}</dd>
+        {/* T-S13-14: el mensaje de la solicitud y la respuesta de la institución se leen en la conversación. */}
         {data.responded_at && <><dt>Respondida</dt><dd>{dateFormat.format(new Date(data.responded_at))}</dd></>}
-        {data.response_message && (
-          <><dt>Mensaje de la institución</dt><dd><blockquote className="linkage-message-text">{data.response_message}</blockquote></dd></>
-        )}
       </dl>
       {data.status === 'PENDIENTE_INSTITUCION' && (
         <p>
@@ -132,19 +135,23 @@ function LinkageRequestDetail({ id }: { id: string }) {
   const { data, loading, failure, refresh, setData } = useApiRequest(load, linkageDetailMessages)
   // T-S12-05: regresa a la bandeja con el filtro y la página de origen.
   const back = useBackLink({ to: '/linkage-requests', label: 'Volver a solicitudes' })
+  // T-S13-07: abierta desde otro flujo (la conversación, la bandeja), el regreso toma el lugar de «Inicio».
+  const contextual = useContextualBack()
 
   return (
     <section className="card institutions" aria-labelledby="linkage-request-title">
       <nav className="institution-navigation" aria-label="Navegación de solicitudes">
-        <Link className="plain" to="/" aria-label="Volver al inicio"><ChevronLeftIcon />Inicio</Link>
-        <Link className="plain" to="/linkage-requests">Solicitudes de vinculación<UnreadBadge side="COMPANY" /></Link>
-        <Link className="plain" to="/talent">Buscar talento</Link>
+        <NavBackLink back={contextual} />
+        {/* T-S13-14: si el regreso ya lleva a la bandeja, no se repite su enlace. */}
+        {contextual?.to.split('?')[0] !== '/linkage-requests' && (
+          <Link className="plain" to="/linkage-requests">Solicitudes de vinculación<UnreadBadge side="COMPANY" /></Link>
+        )}
       </nav>
       <h2 id="linkage-request-title">Detalle de solicitud</h2>
       {loading ? <LoadingState label="Cargando solicitud…" variant="details" />
         : failure ? <InstitutionRequestError failure={failure} retry={refresh} page notFoundTitle="No encontramos esta solicitud" />
         : data && <Detail data={data} onCancelled={setData} />}
-      <p className="institution-back"><Link className="plain" to={back.to} state={back.state}><ChevronLeftIcon />{back.label}</Link></p>
+      {!contextual && <p className="institution-back"><Link className="plain" to={back.to} state={back.state}><ChevronLeftIcon />{back.label}</Link></p>}
     </section>
   )
 }

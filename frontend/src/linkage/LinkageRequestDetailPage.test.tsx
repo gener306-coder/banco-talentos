@@ -67,8 +67,9 @@ describe('detalle de la solicitud para la empresa HU-S13-02', () => {
 
     expect(screen.getByText('Aceptada', { selector: '.linkage-status' })).toBeInTheDocument()
     expect(screen.getByRole('note', { name: 'Estado de la solicitud' })).toHaveTextContent('UT del Golfo aceptó la solicitud. Coordina la vinculación en la conversación o con su contacto.')
-    expect(screen.getByText('Nos interesa su perfil.')).toBeInTheDocument()
-    expect(screen.getByText('Coordinemos la entrevista.')).toBeInTheDocument()
+    // T-S13-14: los mensajes de la solicitud y de la respuesta se leen en la conversación, no en el detalle.
+    expect(screen.queryByText('Nos interesa su perfil.')).not.toBeInTheDocument()
+    expect(screen.queryByText('Coordinemos la entrevista.')).not.toBeInTheDocument()
     expect(screen.getByText('29 de octubre de 2026')).toBeInTheDocument()
 
     const profile = screen.getByRole('region', { name: 'Perfil solicitado' })
@@ -150,6 +151,11 @@ describe('regreso contextual del detalle (HU-S13-02 CA-03)', () => {
     expect(screen.getByRole('status', { name: 'Ruta actual' })).toHaveTextContent('/linkage-requests/41')
     const back = await screen.findByRole('link', { name: 'Volver a solicitudes' })
     expect(back).toHaveAttribute('href', '/linkage-requests?status=ACEPTADA&page=2')
+    // T-S13-14: el regreso ya lleva a la bandeja; la navegación no repite «Solicitudes de vinculación».
+    const nav = screen.getByRole('navigation', { name: 'Navegación de solicitudes' })
+    expect(within(nav).queryByRole('link', { name: /^Solicitudes de vinculación/ })).not.toBeInTheDocument()
+    // T-S13-15: «Buscar talento» no pertenece al detalle de una solicitud.
+    expect(within(nav).queryByRole('link', { name: 'Buscar talento' })).not.toBeInTheDocument()
 
     fireEvent.click(back)
     expect(await screen.findByRole('table', { name: 'Solicitudes de vinculación enviadas' })).toBeInTheDocument()

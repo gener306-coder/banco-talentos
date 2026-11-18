@@ -9,6 +9,8 @@ use App\Http\Requests\StoreLinkageRequestRequest;
 use App\Models\LinkageRequest;
 use App\Models\Opportunity;
 use App\Models\Student;
+use App\Support\InboxSearch;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -43,16 +45,15 @@ class LinkageRequestController extends Controller
             ->when(isset($filters['status']), fn ($query) => $query->where('status', $filters['status']))
             ->when(isset($filters['public_id']), fn ($query) => $query->whereHas(
                 'student', fn ($student) => $student->where('public_id', $filters['public_id'])))
-            // HU-S13-04 CA-04: solo las que tienen mensajes de la institución sin leer.
-            ->when($request->boolean('unread'), fn ($query) => $query->withUnread(LinkageParty::COMPANY))
+            ->withInteraction($filters['interaction'] ?? null, LinkageParty::COMPANY)
+            ->tap(fn ($query) => $this->search($query, $filters['q'] ?? null))
             ->withUnreadCount(LinkageParty::COMPANY)
             ->with([
                 'opportunity:id,title',
                 'student:id,public_id,headline,program,period_type,period_number',
                 'institution:id,name,contact_name,contact_position,contact_email,contact_phone',
             ])
-            ->orderByDesc('created_at')
-            ->orderByDesc('id')
+            ->inboxSort($filters['sort'] ?? null)
             ->paginate(self::PER_PAGE);
 
         return response()->json([
@@ -189,6 +190,20 @@ class LinkageRequestController extends Controller
     }
 
     /** Elemento de la bandeja (HU-S5-05 CA-02): lista explícita de campos públicos. */
+    /**
+     * T-S13-09: la empresa busca por la institución, la oportunidad y el titular público del perfil. Nunca por datos
+     * del alumno: no se consulta student_identities (nombre, apellidos, matrícula) ni ningún dato protegido.
+     */
+    private function search(Builder $query, ?string $q): void
+    {
+        foreach (InboxSearch::patterns($q) as $pattern) {
+            $query->where(fn (Builder $match) => $match
+                ->whereHas('institution', fn (Builder $institution) => $institution->whereRaw(InboxSearch::matches('institutions.name'), [$pattern]))
+                ->orWhereHas('opportunity', fn (Builder $opportunity) => $opportunity->whereRaw(InboxSearch::matches('opportunities.title'), [$pattern]))
+                ->orWhereHas('student', fn (Builder $student) => $student->whereRaw('students.headline_search LIKE talent_search_text(?)', [$pattern])));
+        }
+    }
+
     private function item(LinkageRequest $linkage): array
     {
         $student = $linkage->student;
@@ -219,6 +234,8 @@ class LinkageRequestController extends Controller
             'response_message' => $linkage->response_message,
             // HU-S13-04 CA-02: mensajes de la institución sin leer; una solicitud recién cancelada no tiene conversación.
             'unread_count' => (int) ($linkage->getAttribute('unread_count') ?? 0),
+            // T-S13-09: último mensaje del hilo, para explicar el orden por actividad.
+            'last_message_at' => $linkage->last_message_at?->toISOString(),
         ];
     }
 

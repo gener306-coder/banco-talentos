@@ -8,7 +8,7 @@ import { fullName } from '../students/api'
 import { periodLabel, stateName } from '../students/catalogs'
 import { languageName, levelLabel } from '../students/cvCatalogs'
 import { StudentStatus } from '../students/StudentStatus'
-import { backState, useBackLink } from '../ui/backLink'
+import { backState, useBackLink, useContextualBack } from '../ui/backLink'
 import { Callout } from '../ui/Callout'
 import { EmailMenu } from '../ui/EmailMenu'
 import { ChevronLeftIcon, ChevronRightIcon, MessageIcon } from '../ui/icons'
@@ -37,20 +37,25 @@ function Detail({ data, onDecided, refresh }: {
   const studentPath = `/students/${student.id}`
   // T-S12-04: el expediente regresa a esta solicitud, no al padrón.
   const toRequest = backState('Volver a la solicitud', useLocation())
+  const chatPath = `/institution/linkage-requests/${data.id}/chat`
+  // T-S13-07: si se llegó desde la conversación, «Volver a la conversación» ya lleva a ella; no se repite el botón.
+  const fromChat = useContextualBack()?.to === chatPath
 
   return (
     <>
       <dl className="student-identity">
         <dt>Estado de la solicitud</dt><dd><LinkageStatus status={data.status} /></dd>
         <dt>Recibida</dt><dd>{dateFormat.format(new Date(data.created_at))}</dd>
-        <dt>Mensaje de la empresa</dt><dd className="opportunity-description">{data.message ?? 'Sin mensaje'}</dd>
       </dl>
-      {/* HU-S13-06: la conversación vive en su propia vista; mientras siga pendiente muestra solo el mensaje de la empresa. */}
-      <p>
-        <Link className="institution-button" to={`/institution/linkage-requests/${data.id}/chat`} state={toRequest}>
-          <MessageIcon />Abrir conversación
-        </Link>
-      </p>
+      {/* HU-S13-06 y T-S13-14: el mensaje de la empresa y la respuesta se leen en la conversación, que mientras siga
+          pendiente muestra solo el mensaje de la empresa. */}
+      {!fromChat && (
+        <p>
+          <Link className="institution-button" to={chatPath} state={toRequest}>
+            <MessageIcon />Abrir conversación
+          </Link>
+        </p>
+      )}
 
       <section className="student-section" aria-labelledby="linkage-student-title">
         <h3 id="linkage-student-title">Alumno solicitado</h3>
@@ -125,13 +130,15 @@ function InstitutionLinkageRequestDetail({ id }: { id: string }) {
   const { data, loading, failure, refresh, setData } = useApiRequest(load, institutionLinkageMessages)
   // T-S12-05: regresa a la bandeja con el filtro y la página de origen.
   const back = useBackLink({ to: '/institution/linkage-requests', label: 'Volver a solicitudes' })
+  // T-S13-07: abierta desde otro flujo (la conversación, la bandeja), el regreso toma el lugar de «Inicio».
+  const contextual = useContextualBack()
 
   return (
-    <InstitutionLinkageLayout title="Detalle de solicitud">
+    <InstitutionLinkageLayout title="Detalle de solicitud" back={contextual}>
       {loading ? <LoadingState label="Cargando solicitud…" variant="details" />
         : failure ? <InstitutionRequestError failure={failure} retry={refresh} page notFoundTitle="No encontramos esta solicitud" />
         : data && <Detail data={data} onDecided={setData} refresh={refresh} />}
-      <p className="institution-back"><Link className="plain" to={back.to} state={back.state}><ChevronLeftIcon />{back.label}</Link></p>
+      {!contextual && <p className="institution-back"><Link className="plain" to={back.to} state={back.state}><ChevronLeftIcon />{back.label}</Link></p>}
     </InstitutionLinkageLayout>
   )
 }

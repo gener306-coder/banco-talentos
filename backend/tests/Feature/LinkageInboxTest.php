@@ -136,6 +136,7 @@ describe('bandeja (CA-01, CA-02)', function () {
             'responded_at' => null,
             'response_message' => null,
             'unread_count' => 0,
+            'last_message_at' => null,
         ]]);
         expect($response->getContent())->not->toContain('Nombre Secreto')->not->toContain('Apellido Secreto')->not->toContain('MAT-')
             ->not->toContain('github.com/secreta')->not->toContain('"student_id"')->not->toContain('location');
@@ -225,6 +226,94 @@ describe('cancelación (CA-03)', function () {
         $this->browserRequest('PATCH', '/api/linkage-requests/'.$linkage->id.'/cancel', csrf: false)->assertStatus(419);
         $this->browserRequest('DELETE', '/api/linkage-requests/'.$linkage->id.'/cancel')->assertStatus(405);
         expect($linkage->refresh()->status->value)->toBe('PENDIENTE_INSTITUCION');
+    });
+});
+
+/** Fija los momentos de una solicitud para probar el orden (T-S13-09). */
+function inboxMoments(LinkageRequest $linkage, string $created, ?string $responded = null, ?string $lastMessage = null): void
+{
+    // La respuesta va siempre con quien respondió (restricción linkage_requests_response_pair_check).
+    $responder = $responded === null ? null : User::factory()->forInstitution($linkage->institution)->create()->id;
+    DB::table('linkage_requests')->where('id', $linkage->id)->update([
+        'created_at' => $created, 'responded_at' => $responded, 'responded_by' => $responder, 'last_message_at' => $lastMessage,
+    ]);
+}
+
+describe('búsqueda, interacción y orden (T-S13-09)', function () {
+    /** Ids de la bandeja de la empresa con una consulta. */
+    function sentIds($test, string $query = ''): array
+    {
+        return array_column($test->browserRequest('GET', '/api/linkage-requests'.$query)->assertOk()->json('data'), 'id');
+    }
+
+    beforeEach(function () {
+        $this->old = inboxLinkage($this->company, $this->opportunity, $this->student, 'ACEPTADA');
+        $this->middle = inboxLinkage($this->company, inboxOpportunity($this->company, 'Soporte de redes'), inboxStudent($this->institution, 'Técnico en redes'));
+        $other = Institution::factory()->create(['name' => 'Instituto Politécnico del Norte']);
+        $this->recent = inboxLinkage($this->company, inboxOpportunity($this->company, 'Diseño 100% web'), inboxStudent($other, 'Diseñadora UX'));
+        inboxMoments($this->old, '2026-10-01 09:00:00', '2026-10-02 09:00:00', '2026-11-15 10:00:00');
+        inboxMoments($this->middle, '2026-10-10 09:00:00');
+        inboxMoments($this->recent, '2026-10-20 09:00:00');
+        $this->loginWithCookies($this->account)->assertOk();
+    });
+
+    it('orders by the latest activity by default: a new message brings an old request to the top', function () {
+        expect(sentIds($this))->toBe([$this->old->id, $this->recent->id, $this->middle->id])
+            ->and(sentIds($this, '?sort=activity'))->toBe([$this->old->id, $this->recent->id, $this->middle->id]);
+
+        // La respuesta de la institución también es actividad.
+        inboxMoments($this->middle, '2026-10-10 09:00:00', '2026-11-16 09:00:00');
+        expect(sentIds($this))->toBe([$this->middle->id, $this->old->id, $this->recent->id])
+            ->and($this->browserRequest('GET', '/api/linkage-requests')->json('data.1.last_message_at'))->toBe('2026-11-15T10:00:00.000000Z');
+    });
+
+    it('orders by request date, newest or oldest first, with the id as tie breaker', function () {
+        $twin = inboxLinkage($this->company, inboxOpportunity($this->company, 'Gemela'), inboxStudent($this->institution, 'Gemelo'));
+        inboxMoments($twin, '2026-10-20 09:00:00');
+
+        expect(sentIds($this, '?sort=created_desc'))->toBe([$twin->id, $this->recent->id, $this->middle->id, $this->old->id])
+            ->and(sentIds($this, '?sort=created_asc'))->toBe([$this->old->id, $this->middle->id, $this->recent->id, $twin->id]);
+    });
+
+    it('searches by institution, opportunity and public headline, without accents, case or wildcards', function () {
+        expect(sentIds($this, '?q=politecnico'))->toBe([$this->recent->id])
+            ->and(sentIds($this, '?q=TABLEROS'))->toBe([$this->old->id])
+            ->and(sentIds($this, '?q=tecnico%20redes'))->toBe([$this->middle->id])
+            // Varias palabras: todas deben aparecer (en el mismo o en distintos campos).
+            ->and(sentIds($this, '?q=golfo%20redes'))->toBe([$this->middle->id])
+            ->and(sentIds($this, '?q=golfo%20inexistente'))->toBe([])
+            // % y _ se buscan literalmente.
+            ->and(sentIds($this, '?q=100%25'))->toBe([$this->recent->id])
+            ->and(sentIds($this, '?q=%25'))->toBe([$this->recent->id])
+            ->and(sentIds($this, '?q=_'))->toBe([]);
+    });
+
+    it('never finds or filters requests by the student real name or enrollment number', function () {
+        $identity = DB::table('student_identities')->where('student_id', $this->student->id)->first();
+        expect($identity->given_names)->toBe('Nombre Secreto');
+
+        foreach (['Secreto', 'Nombre Secreto', 'Apellido', $identity->enrollment_number, strtolower($identity->enrollment_number), 'MAT-'] as $private) {
+            $response = $this->browserRequest('GET', '/api/linkage-requests?q='.urlencode($private))->assertOk();
+            expect($response->json('data'))->toBe([])
+                ->and($response->json('meta.total'))->toBe(0)
+                ->and($response->getContent())->not->toContain('Secreto')->not->toContain($identity->enrollment_number);
+        }
+    });
+
+    it('filters by interaction: with a conversation (read or not) and with unread messages', function () {
+        expect(sentIds($this, '?interaction=conversation'))->toBe([$this->old->id])
+            ->and(sentIds($this, '?interaction=unread'))->toBe([])
+            ->and(sentIds($this, '?interaction=all'))->toHaveCount(3)
+            ->and(sentIds($this, '?interaction=conversation&q=redes'))->toBe([]);
+    });
+
+    it('rejects an invalid sort, interaction or a search that is too long', function () {
+        $this->browserRequest('GET', '/api/linkage-requests?sort=name')->assertUnprocessable()
+            ->assertJsonValidationErrors(['sort' => 'El orden no es válido.']);
+        $this->browserRequest('GET', '/api/linkage-requests?interaction=read')->assertUnprocessable()
+            ->assertJsonValidationErrors(['interaction' => 'El filtro de conversación no es válido.']);
+        $this->browserRequest('GET', '/api/linkage-requests?q='.str_repeat('a', 101))->assertUnprocessable()
+            ->assertJsonValidationErrors(['q' => 'La búsqueda admite hasta 100 caracteres.']);
     });
 });
 

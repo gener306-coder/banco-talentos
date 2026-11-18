@@ -153,6 +153,7 @@ describe('bandeja (CA-02, CA-03, CA-04)', function () {
                 'second_surname' => 'López', 'is_active' => true, 'program' => 'Ingeniería en Datos', 'period_type' => 'semester', 'period_number' => 6,
             ],
             'unread_count' => 0,
+            'last_message_at' => null,
         ]]);
         expect($response->getContent())->not->toContain('12345678903')->not->toContain('secreto.pdf')->not->toContain('location');
     });
@@ -182,6 +183,61 @@ describe('bandeja (CA-02, CA-03, CA-04)', function () {
 
         $this->browserRequest('GET', '/api/institution/linkage-requests?'.$query)->assertUnprocessable()->assertJsonValidationErrors([$field]);
     })->with([['status=pendiente', 'status'], ['status[]=ACEPTADA', 'status'], ['page=0', 'page'], ['page=x', 'page']]);
+});
+
+describe('búsqueda, interacción y orden (T-S13-09)', function () {
+    function receivedIds($test, string $query = ''): array
+    {
+        return array_column($test->browserRequest('GET', '/api/institution/linkage-requests'.$query)->assertOk()->json('data'), 'id');
+    }
+
+    beforeEach(function () {
+        $this->first = receivedLinkage($this->company, $this->opportunity, $this->student, 'ACEPTADA');
+        $other = Company::factory()->create(['legal_name' => 'Servicios Logísticos del Norte, S.A.', 'trade_name' => null]);
+        $this->second = receivedLinkage($other, receivedOpportunity($other, 'Almacén inteligente'), receivedStudent($this->institution, [
+            'enrollment_number' => 'MAT-0002', 'given_names' => 'Luis', 'first_surname' => 'Pérez', 'second_surname' => 'Núñez']));
+        DB::table('linkage_requests')->where('id', $this->first->id)->update(['created_at' => '2026-10-01 09:00:00', 'last_message_at' => '2026-11-15 09:00:00']);
+        DB::table('linkage_requests')->where('id', $this->second->id)->update(['created_at' => '2026-10-20 09:00:00']);
+        // De otra institución: nunca aparece, aunque coincida.
+        $foreign = receivedStudent(Institution::factory()->create(), ['enrollment_number' => 'MAT-0001', 'given_names' => 'Ana Sofía', 'first_surname' => 'García']);
+        $this->foreign = receivedLinkage($this->company, $this->opportunity, $foreign);
+        $this->loginWithCookies($this->account)->assertOk();
+    });
+
+    it('searches by company trade or legal name, opportunity and its own students name or enrollment', function () {
+        expect(receivedIds($this, '?q=manugolfo'))->toBe([$this->first->id])
+            ->and(receivedIds($this, '?q=manufacturas'))->toBe([$this->first->id])
+            ->and(receivedIds($this, '?q=logisticos%20norte'))->toBe([$this->second->id])
+            ->and(receivedIds($this, '?q=almacen'))->toBe([$this->second->id])
+            ->and(receivedIds($this, '?q=nunez%20luis'))->toBe([$this->second->id])
+            ->and(receivedIds($this, '?q=mat-0001'))->toBe([$this->first->id])
+            ->and(receivedIds($this, '?q=garcia'))->not->toContain($this->foreign->id);
+    });
+
+    it('orders by activity by default, by date on demand, and filters by interaction', function () {
+        expect(receivedIds($this))->toBe([$this->first->id, $this->second->id])
+            ->and(receivedIds($this, '?sort=created_desc'))->toBe([$this->second->id, $this->first->id])
+            ->and(receivedIds($this, '?sort=created_asc'))->toBe([$this->first->id, $this->second->id])
+            ->and(receivedIds($this, '?interaction=conversation'))->toBe([$this->first->id]);
+        $this->browserRequest('GET', '/api/institution/linkage-requests?sort=x&interaction=y&q='.str_repeat('a', 101))->assertUnprocessable()
+            ->assertJsonValidationErrors(['sort', 'interaction', 'q']);
+    });
+
+    it('limits the search to eight unique words', function () {
+        // Nueve palabras: la novena no se procesa (si se procesara, no habría resultados).
+        $words = implode('%20', array_fill(0, 8, 'manugolfo')).'%20inexistente';
+        expect(receivedIds($this, '?q='.$words))->toBe([]);
+        $unique = 'manugolfo%20tableros%20del%20golfo%20ana%20sofia%20garcia%20lopez%20inexistente';
+        expect(receivedIds($this, '?q='.$unique))->toBe([$this->first->id]);
+    });
+
+    it('exports to CSV the same filtered, searched and sorted requests as the table', function () {
+        $csv = $this->browserRequest('GET', '/api/institution/linkage-requests/export.csv?q=almacen')->assertOk()->streamedContent();
+        expect($csv)->toContain('Almacén inteligente')->not->toContain('Tableros de producción');
+        $all = $this->browserRequest('GET', '/api/institution/linkage-requests/export.csv?sort=created_asc')->assertOk()->streamedContent();
+        expect(strpos($all, 'Tableros de producción'))->toBeLessThan(strpos($all, 'Almacén inteligente'));
+        $this->browserRequest('GET', '/api/institution/linkage-requests/export.csv?interaction=conversation')->assertOk();
+    });
 });
 
 describe('detalle (CA-02, CA-05)', function () {

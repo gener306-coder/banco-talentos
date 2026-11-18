@@ -7,6 +7,8 @@ import { backState } from '../ui/backLink'
 import { LoadingState, StateMessage } from '../ui/StateMessage'
 import { useListParams } from '../ui/useListParams'
 import { useRowNavigation } from '../ui/useRowNavigation'
+import { useTableMemory } from '../ui/useTableMemory'
+import { rowIndex } from '../ui/tableMotion'
 import { listOpportunities, opportunityMessages } from './api'
 import { OpportunityLayout, SkillTags } from './OpportunityLayout'
 
@@ -16,10 +18,14 @@ export function OpportunitiesPage() {
   const { page, setPage } = useListParams()
   const location = useLocation()
   const load = useCallback((signal: AbortSignal) => listOpportunities(page, signal), [page])
-  const { data, loading, failure, refresh } = useApiRequest(load, opportunityMessages)
+  const { data, loading, failure, refresh, pending } = useApiRequest(load, opportunityMessages)
+  // T-S13-13: con un resultado a la vista, una consulta nueva lo atenúa en lugar de desmontarlo.
+  const refreshing = pending && data !== null
 
   // Toda la fila abre el detalle con el puntero; el enlace «Ver detalle» sigue siendo el control accesible (HU-S8-01).
   const openRow = useRowNavigation()
+  // T-S13-12: al volver de una fila, la tabla recupera su posición y la fila parpadea.
+  const tableMemory = useTableMemory(page)
 
   return (
     <OpportunityLayout title="Oportunidades Duales">
@@ -27,7 +33,7 @@ export function OpportunitiesPage() {
         <p>Proyectos y lugares de tu empresa para alumnos de Educación Dual.</p>
         <Link className="institution-button" to="/opportunities/new"><PlusIcon />Nueva oportunidad</Link>
       </div>
-      {loading ? <LoadingState label="Cargando oportunidades…" variant="table" />
+      {loading && !data ? <LoadingState label="Cargando oportunidades…" variant="table" />
         : failure ? <InstitutionRequestError failure={failure} retry={refresh} page />
         : data && data.opportunities.length === 0
           ? <StateMessage kind="empty" icon={<BriefcaseIcon />} title="Aún no hay oportunidades registradas."
@@ -35,17 +41,19 @@ export function OpportunitiesPage() {
             action={<Link className="institution-button" to="/opportunities/new"><PlusIcon />Registrar la primera oportunidad</Link>} />
         : data && (
           <>
-            <div className="table-card">
-              <div className="institution-table-wrapper" role="region" aria-label="Listado de oportunidades" tabIndex={0}>
+            <div className={`table-card${refreshing ? ' is-refreshing' : ''}`}>
+              {/* T-S13-13: al buscar, filtrar o paginar, la tabla anterior se queda atenuada mientras llega la nueva. */}
+              {refreshing && <p className="visually-hidden" role="status">Actualizando resultados…</p>}
+              <div className="institution-table-wrapper" ref={tableMemory} aria-busy={refreshing} role="region" aria-label="Listado de oportunidades" tabIndex={0}>
                 <table className="institution-table has-actions">
                   <caption className="visually-hidden">Oportunidades de la empresa</caption>
                   <thead><tr><th scope="col">Oportunidad</th><th scope="col">Municipio</th><th scope="col">Lugares</th><th scope="col">Habilidades</th><th scope="col">Estado</th><th scope="col">Acciones</th></tr></thead>
-                  <tbody>
-                    {data.opportunities.map((opportunity) => {
+                  <tbody key={location.search} className="rows-enter">
+                    {data.opportunities.map((opportunity, index) => {
                       const href = `/opportunities/${opportunity.id}`
                       const back = backState('Volver a oportunidades', location)
                       return (
-                        <tr key={opportunity.id} data-href={href} onClick={(event) => openRow(event, href, back)}>
+                        <tr key={opportunity.id} data-href={href} style={rowIndex(index)} onClick={(event) => openRow(event, href, back)}>
                           <th scope="row">{opportunity.title}<span className="option-meta"> · {opportunity.program}</span></th>
                           <td>{opportunity.municipality ?? opportunity.municipality_code}</td>
                           <td>{opportunity.vacancies}</td>

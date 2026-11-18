@@ -44,7 +44,7 @@ async function publishStudent(page: Page, data: { surname: string; enrollment: s
   await expect(page.getByText('Habilidades guardadas correctamente.')).toBeVisible()
 }
 
-test('HU-S4-05, HU-S5-04, HU-S5-05, HU-S6-01, HU-S6-02, HU-S6-03, HU-S13-02, HU-S13-03 y HU-S13-06: una empresa encuentra un perfil anónimo por habilidad y distancia, sin datos personales, solicita la vinculación a su institución, esta la revisa con la identidad del alumno, la empresa la cancela y, al volver a solicitarla, la institución la acepta y ambas conversan', async ({ browser, baseURL }) => {
+test('HU-S4-05, HU-S5-04, HU-S5-05, HU-S6-01, HU-S6-02, HU-S6-03, HU-S13-02, HU-S13-03, HU-S13-06 y T-S13-09: una empresa encuentra un perfil anónimo por habilidad y distancia, sin datos personales, solicita la vinculación a su institución, esta la revisa con la identidad del alumno, la empresa la cancela y, al volver a solicitarla, la institución la acepta y ambas conversan', async ({ browser, baseURL }) => {
   // Recorre tres sesiones (institución, empresa e institución); con la máquina cargada rebasa los 30 s por defecto.
   test.slow()
   const suffix = randomBytes(6).toString('hex')
@@ -143,7 +143,9 @@ test('HU-S4-05, HU-S5-04, HU-S5-05, HU-S6-01, HU-S6-02, HU-S6-03, HU-S13-02, HU-
       await received.getByRole('link', { name: /Ver la solicitud/ }).click()
       const identity = institution.getByRole('region', { name: 'Alumno solicitado' })
       await expect(identity).toContainText(`Valeria Secreta ${student.surname}`)
-      await expect(institution.getByText('Nos interesa su perfil para el proyecto de tableros.')).toBeVisible()
+      // T-S13-14: el mensaje de la empresa se lee en la conversación; el detalle la ofrece y no lo repite.
+      await expect(institution.getByRole('link', { name: 'Abrir conversación' })).toBeVisible()
+      await expect(institution.getByText('Nos interesa su perfil para el proyecto de tableros.')).toHaveCount(0)
       // Sin NSS ni comprobante: aviso con enlace al expediente.
       const missing = institution.getByRole('region', { name: 'Seguro del alumno' }).getByRole('note')
       await expect(missing).toContainText('Al alumno le falta el número del seguro o el comprobante de vigencia.')
@@ -216,7 +218,8 @@ test('HU-S4-05, HU-S5-04, HU-S5-05, HU-S6-01, HU-S6-02, HU-S6-03, HU-S13-02, HU-
       const answer = institution.getByRole('region', { name: 'Respuesta' })
       await expect(answer.getByRole('status')).toHaveText('Solicitud aceptada correctamente.')
       await expect(answer).toContainText('Aceptada')
-      await expect(answer).toContainText('Coordinemos la entrevista con el área dual.')
+      // T-S13-14: el resumen de la respuesta no repite su mensaje; se lee como primera burbuja en la conversación.
+      await expect(answer).not.toContainText('Coordinemos la entrevista con el área dual.')
 
       // HU-S13-06: al aceptarla, la institución abre la conversación desde el detalle; su respuesta es la primera burbuja.
       await institution.getByRole('link', { name: 'Abrir conversación' }).click()
@@ -263,9 +266,12 @@ test('HU-S4-05, HU-S5-04, HU-S5-05, HU-S6-01, HU-S6-02, HU-S6-03, HU-S13-02, HU-
     await company.getByRole('link', { name: 'Volver a solicitudes' }).click()
     await expect(company).toHaveURL(/\/linkage-requests\?status=ACEPTADA$/)
     await expect(company.getByLabel('Estado')).toHaveValue('ACEPTADA')
+    // T-S13-12: la fila que se abrió se ubica con un parpadeo al volver.
+    await expect(acceptedRow).toHaveClass(/row-return/)
 
     // HU-S13-02: la fila abre el detalle, que regresa a la bandeja con su filtro.
-    await acceptedRow.getByRole('rowheader').click()
+    // T-S13-10: el perfil es una pastilla en su celda; se hace clic en la fecha, que es parte de la fila.
+    await acceptedRow.getByRole('cell').nth(2).click()
     await expect(company).toHaveURL(/\/linkage-requests\/\d+$/)
     await company.getByRole('link', { name: 'Volver a solicitudes' }).click()
     await expect(company).toHaveURL(/\/linkage-requests\?status=ACEPTADA$/)
@@ -286,6 +292,36 @@ test('HU-S4-05, HU-S5-04, HU-S5-05, HU-S6-01, HU-S6-02, HU-S6-03, HU-S13-02, HU-
     await companyChat.getByRole('link', { name: 'Volver a solicitudes' }).click()
     await expect(company).toHaveURL(/\/linkage-requests\?status=ACEPTADA$/)
 
+    // T-S13-09: la empresa busca la solicitud por la oportunidad, se queda con las que tienen conversación y, al volver
+    // del chat después de escribir, conserva la búsqueda y los filtros con la solicitud arriba por su actividad.
+    await company.getByLabel('Buscar por institución, oportunidad o perfil').fill(opportunityTitle)
+    await company.getByRole('button', { name: 'Buscar' }).click()
+    await company.getByLabel('Interacción').selectOption('conversation')
+    await expect(company).toHaveURL(/\/linkage-requests\?status=ACEPTADA&q=[^&]+&interaction=conversation$/)
+    const inbox = company.getByRole('table', { name: 'Solicitudes de vinculación enviadas' })
+    await expect(inbox.getByRole('row').nth(1)).toContainText(opportunityTitle)
+    await expect(inbox.getByRole('row').nth(1)).toContainText('Último mensaje: hoy')
+    const filteredUrl = company.url()
+    await inbox.getByRole('row').nth(1).getByRole('link', { name: /^Abrir la conversación con / }).click()
+    await companyChat.getByLabel('Mensaje para la institución').fill('Confirmo la asistencia.')
+    await companyChat.getByRole('button', { name: 'Enviar mensaje' }).click()
+    await expect(companyLog).toContainText('Confirmo la asistencia.')
+    await companyChat.getByRole('link', { name: 'Volver a solicitudes' }).click()
+    await expect(company).toHaveURL(filteredUrl)
+    await expect(company.getByLabel('Buscar por institución, oportunidad o perfil')).toHaveValue(opportunityTitle)
+    await expect(inbox.getByRole('row').nth(1)).toContainText(opportunityTitle)
+
+    // T-S13-11: a 390 px la bandeja no ensancha la página (los textos ocultos de la tabla quedan dentro de su
+    // contenedor) y la hoja de Filtros se abre a la vista con sus selectores.
+    await company.setViewportSize({ width: 390, height: 844 })
+    await expect(inbox).toBeVisible()
+    expect(await company.evaluate<number>('document.documentElement.scrollWidth')).toBeLessThanOrEqual(390)
+    await company.getByRole('button', { name: /^Filtros/ }).click()
+    const filtersSheet = company.getByRole('dialog', { name: 'Filtros' })
+    await expect(filtersSheet.getByLabel('Interacción')).toBeInViewport()
+    await filtersSheet.getByRole('button', { name: 'Ver resultados' }).click()
+    await company.setViewportSize({ width: 1280, height: 800 })
+
     // La institución ve la respuesta en la conversación de la misma solicitud.
     const replying = await browser.newContext({ baseURL, storageState: INSTITUTION_STATE })
     try {
@@ -293,6 +329,16 @@ test('HU-S4-05, HU-S5-04, HU-S5-05, HU-S6-01, HU-S6-02, HU-S6-03, HU-S13-02, HU-
       await institution.goto(`/institution${chatPath}`)
       await expect(institution.getByRole('region', { name: /^Conversación con / }).getByRole('log', { name: 'Mensajes' }))
         .toContainText('Sí, el lunes a las 9:00.')
+
+      // T-S13-09: la institución encuentra la solicitud por la matrícula de su alumno.
+      await institution.goto('/institution/linkage-requests')
+      await institution.getByLabel('Buscar por empresa, oportunidad, alumno o matrícula').fill(student.enrollment)
+      await institution.getByRole('button', { name: 'Buscar' }).click()
+      const received = institution.getByRole('table', { name: 'Solicitudes de vinculación recibidas' })
+      // Las dos solicitudes del alumno (la cancelada y la aceptada) y el encabezado; ninguna otra.
+      await expect(received.getByRole('row')).toHaveCount(3)
+      await expect(received.getByRole('row').nth(1)).toContainText(student.enrollment)
+      await expect(received.getByRole('row').nth(2)).toContainText(student.enrollment)
     } finally {
       await replying.close()
     }

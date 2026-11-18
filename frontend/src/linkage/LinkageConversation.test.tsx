@@ -2,7 +2,7 @@ import { act, fireEvent, render, screen, waitFor, within } from '@testing-librar
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { AuthContext } from '../auth/auth-context'
 import type { AuthState } from '../auth/auth-context'
-import { LinkageConversation, POLL_INTERVAL_MS } from './LinkageConversation'
+import { COUNTER_FROM, DAY_LABEL_IDLE_MS, LinkageConversation, POLL_INTERVAL_MS, SEND_HINT } from './LinkageConversation'
 import type { LinkageStatus } from './api'
 import { introMessages, LINKAGE_READ_EVENT } from './conversationApi'
 import type { IntroMessage, LinkageMessage, LinkageSide } from './conversationApi'
@@ -87,13 +87,14 @@ afterEach(() => {
   vi.useRealTimers()
   vi.unstubAllGlobals()
   Reflect.deleteProperty(document, 'hidden')
+  sessionStorage.clear()
 })
 
 describe('hilo de la conversación', () => {
   it('muestra los mensajes propios a la derecha y los ajenos a la izquierda (CA-02)', async () => {
     renderConversation()
     const log = await screen.findByRole('log', { name: 'Mensajes' })
-    const [first, second] = within(log).getAllByRole('listitem')
+    const [first, second] = await within(log).findAllByRole('listitem')
     expect(first).toHaveClass('linkage-bubble', 'other')
     expect(first).toHaveTextContent('UT del Golfo')
     expect(first).toHaveTextContent('Hola, ¿cuándo inicia?')
@@ -124,12 +125,13 @@ describe('burbujas de la solicitud y estados (HU-S13-06)', () => {
     const log = await screen.findByRole('log', { name: 'Mensajes' })
     await within(log).findByText('El lunes 24.')
     const bubbles = within(log).getAllByRole('listitem')
-    expect(bubbles.map((bubble) => bubble.querySelector('.linkage-bubble-text')?.textContent))
+    // El texto de la burbuja, sin la hora que va dentro de ella (T-S13-07).
+    expect(bubbles.map((bubble) => bubble.querySelector('.linkage-bubble-text')?.firstChild?.textContent))
       .toEqual(['Nos interesa su perfil para tableros.', 'Coordinemos la entrevista.', 'Hola, ¿cuándo inicia?', 'El lunes 24.'])
     expect(bubbles[0]).toHaveClass('own', 'intro')
     expect(bubbles[0]).toHaveTextContent('Mensaje de la solicitud')
     expect(bubbles[0]).toHaveTextContent('ManuGolfo')
-    expect(within(bubbles[0]).getByText(/10 nov 2026/)).toHaveAttribute('datetime', '2026-11-10T10:00:00Z')
+    expect(bubbles[0].querySelector('time')).toHaveAttribute('datetime', '2026-11-10T10:00:00Z')
     expect(bubbles[1]).toHaveClass('other', 'intro')
     expect(bubbles[1]).toHaveTextContent('Respuesta a la solicitud')
     // Las burbujas de la solicitud no tienen id: el marcador y `after` siguen el hilo.
@@ -140,7 +142,7 @@ describe('burbujas de la solicitud y estados (HU-S13-06)', () => {
 
   it('del lado de la institución, el mensaje de la empresa es ajeno y su respuesta es propia', async () => {
     renderConversation('INSTITUTION', false, 'ACEPTADA', introMessages(opening, 'INSTITUTION', names))
-    const bubbles = within(await screen.findByRole('log', { name: 'Mensajes' })).getAllByRole('listitem')
+    const bubbles = await within(await screen.findByRole('log', { name: 'Mensajes' })).findAllByRole('listitem')
     expect(bubbles[0]).toHaveClass('other')
     expect(bubbles[1]).toHaveClass('own')
   })
@@ -242,8 +244,14 @@ describe('envío (CA-02)', () => {
     })
     renderConversation()
     const field = await screen.findByLabelText('Mensaje para la institución')
+    // T-S13-07: sin línea fija; el atajo es parte de la descripción accesible y el contador aparece cerca del límite.
+    expect(field).toHaveAccessibleDescription(SEND_HINT)
+    fireEvent.change(field, { target: { value: 'a'.repeat(COUNTER_FROM - 1) } })
+    expect(screen.queryByText(/de 2000 caracteres/)).not.toBeInTheDocument()
+    fireEvent.change(field, { target: { value: 'a'.repeat(COUNTER_FROM) } })
+    expect(screen.getByText(`${COUNTER_FROM} de 2000 caracteres`)).toBeInTheDocument()
+    expect(field).toHaveAccessibleDescription(`${SEND_HINT} ${COUNTER_FROM} de 2000 caracteres`)
     fireEvent.change(field, { target: { value: '  Llevará gafete.  ' } })
-    expect(screen.getByText('19 de 2000 caracteres · Ctrl + Enter para enviar')).toBeInTheDocument()
 
     fireEvent.click(screen.getByRole('button', { name: 'Enviar mensaje' }))
     expect(await screen.findByRole('button', { name: 'Enviando…' })).toBeDisabled()
@@ -266,21 +274,54 @@ describe('envío (CA-02)', () => {
     expect(readIds()).toEqual([])
   })
 
-  it('envía con Ctrl + Enter; Enter solo es un salto de línea', async () => {
+  it('envía con Enter (y con Ctrl + Enter); Shift + Enter es un salto de línea', async () => {
     renderConversation()
     const field = await screen.findByLabelText('Mensaje para la institución')
+    const posts = () => calls('POST').filter(([path]) => !String(path).endsWith('/read'))
     fireEvent.change(field, { target: { value: 'Confirmado' } })
+    fireEvent.keyDown(field, { key: 'Enter', shiftKey: true })
+    // Mientras un método de entrada compone una palabra, Enter la confirma y no envía.
+    fireEvent.keyDown(field, { key: 'Enter', isComposing: true })
+    expect(posts()).toHaveLength(0)
+    fireEvent.keyDown(field, { key: 'Enter' })
+    expect(await screen.findByText('Confirmado')).toBeInTheDocument()
+    fireEvent.change(field, { target: { value: 'Y otra cosa' } })
+    fireEvent.keyDown(field, { key: 'Enter', ctrlKey: true })
+    expect(await screen.findByText('Y otra cosa')).toBeInTheDocument()
+    expect(posts()).toHaveLength(2)
+  })
+
+  it('en pantallas táctiles Enter es salto de línea y se envía con el botón', async () => {
+    vi.stubGlobal('matchMedia', (query: string) => ({ matches: query === '(pointer: coarse)', media: query, addEventListener() {}, removeEventListener() {} }))
+    renderConversation()
+    const field = await screen.findByLabelText('Mensaje para la institución')
+    fireEvent.change(field, { target: { value: 'Desde el celular' } })
     fireEvent.keyDown(field, { key: 'Enter' })
     expect(calls('POST').filter(([path]) => !String(path).endsWith('/read'))).toHaveLength(0)
-    fireEvent.keyDown(field, { key: 'Enter', ctrlKey: true })
-    expect(await screen.findByText('Confirmado')).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Enviar mensaje' }))
+    expect(await screen.findByText('Desde el celular')).toBeInTheDocument()
+  })
+
+  it('conserva el borrador al salir y volver a la conversación, y lo descarta al enviarlo', async () => {
+    const first = renderConversation()
+    fireEvent.change(await screen.findByLabelText('Mensaje para la institución'), { target: { value: 'Pendiente de confirmar' } })
+    first.unmount()
+    renderConversation()
+    const field = await screen.findByLabelText('Mensaje para la institución')
+    expect(field).toHaveValue('Pendiente de confirmar')
+    fireEvent.keyDown(field, { key: 'Enter' })
+    expect(await screen.findByText('Pendiente de confirmar', { selector: '.linkage-bubble-text' })).toBeInTheDocument()
+    expect(sessionStorage.getItem('linkage-draft:COMPANY:41')).toBeNull()
   })
 
   it('no envía un mensaje vacío y conserva el texto si el servidor lo rechaza', async () => {
     renderConversation()
     const field = await screen.findByLabelText('Mensaje para la institución')
+    // T-S13-07: el botón circular solo se habilita con texto; Enter con espacios explica por qué no se envía.
+    expect(screen.getByRole('button', { name: 'Enviar mensaje' })).toBeDisabled()
     fireEvent.change(field, { target: { value: '   ' } })
-    fireEvent.click(screen.getByRole('button', { name: 'Enviar mensaje' }))
+    expect(screen.getByRole('button', { name: 'Enviar mensaje' })).toBeDisabled()
+    fireEvent.keyDown(field, { key: 'Enter', ctrlKey: true })
     expect(await screen.findByRole('alert')).toHaveTextContent('Escribe un mensaje.')
     expect(field).toHaveAccessibleDescription(/Escribe un mensaje\./)
 
@@ -307,6 +348,94 @@ describe('solo lectura (CA-05)', () => {
     renderConversation('INSTITUTION', true)
     expect(await screen.findByText('El lunes 24.')).toBeInTheDocument()
     expect(screen.queryByRole('textbox')).not.toBeInTheDocument()
+  })
+})
+
+describe('presentación de mensajería (T-S13-07)', () => {
+  it('pinta un separador por día y agrupa las burbujas consecutivas del mismo remitente', async () => {
+    const today = new Date()
+    const iso = (daysAgo: number, minutes: number) => new Date(today.getFullYear(), today.getMonth(), today.getDate() - daysAgo, 9, minutes).toISOString()
+    thread = [
+      { ...message(1, false, 'Ayer'), created_at: iso(1, 0) },
+      { ...message(2, true, 'Uno'), created_at: iso(0, 0) },
+      { ...message(3, true, 'Dos'), created_at: iso(0, 1) },
+      { ...message(4, true, 'Tres'), created_at: iso(0, 2) },
+    ]
+    lastRead = 4
+    renderConversation()
+    const log = await screen.findByRole('log', { name: 'Mensajes' })
+    const yesterday = await within(log).findByRole('region', { name: 'Ayer' })
+    const todayGroup = within(log).getByRole('region', { name: 'Hoy' })
+    expect(within(yesterday).getAllByRole('listitem')).toHaveLength(1)
+    const bubbles = within(todayGroup).getAllByRole('listitem')
+    expect(bubbles.map((bubble) => [...bubble.classList].find((name) => ['single', 'first', 'middle', 'last'].includes(name))))
+      .toEqual(['first', 'middle', 'last'])
+    // Solo la primera burbuja del grupo nombra al remitente; todas llevan su hora dentro.
+    expect(bubbles.map((bubble) => bubble.querySelector('.linkage-bubble-name')?.textContent ?? null)).toEqual(['Reclutadora', null, null])
+    expect(bubbles.every((bubble) => bubble.querySelector('time.linkage-bubble-time'))).toBe(true)
+    // Las propias no llevan avatar.
+    expect(todayGroup.querySelector('.linkage-avatar')).toBeNull()
+  })
+
+  it('el separador fijo se ve mientras se desplaza el hilo y se desvanece al detenerse, para no tapar mensajes', async () => {
+    const position = (top: number) => ({ top, bottom: top, left: 0, right: 0, width: 0, height: 0, x: 0, y: top, toJSON: () => ({}) })
+    renderConversation()
+    const log = await screen.findByRole('log', { name: 'Mensajes' })
+    const label = log.querySelector<HTMLElement>('.linkage-day-label')!
+    // En su lugar dentro del hilo (más abajo que la posición fija) nunca se marca como fijo.
+    vi.spyOn(label, 'getBoundingClientRect').mockReturnValue(position(120))
+    fireEvent.scroll(log)
+    expect(log).toHaveClass('is-scrolling')
+    expect(label).not.toHaveClass('stuck')
+    // Fijo bajo el encabezado: solo visible mientras dura el desplazamiento.
+    vi.spyOn(label, 'getBoundingClientRect').mockReturnValue(position(0))
+    fireEvent.scroll(log)
+    expect(label).toHaveClass('stuck')
+    await waitFor(() => expect(log).not.toHaveClass('is-scrolling'), { timeout: DAY_LABEL_IDLE_MS + 1000 })
+  })
+
+  it('del otro lado, el avatar acompaña solo la última burbuja del grupo y las demás reservan su espacio', async () => {
+    const base = new Date(2026, 10, 17, 9, 0).getTime()
+    const minute = (n: number) => new Date(base + n * 60_000).toISOString()
+    thread = [
+      { ...message(1, false, 'Uno'), created_at: minute(0) },
+      { ...message(2, false, 'Dos'), created_at: minute(1) },
+      { ...message(3, false, 'Tres'), created_at: minute(2) },
+    ]
+    lastRead = 3
+    renderConversation()
+    const log = await screen.findByRole('log', { name: 'Mensajes' })
+    const bubbles = await within(log).findAllByRole('listitem')
+    expect(bubbles.map((bubble) => bubble.querySelector('.linkage-avatar')?.textContent ?? null)).toEqual([null, null, 'UG'])
+    expect(bubbles.map((bubble) => Boolean(bubble.querySelector('.linkage-avatar-spacer')))).toEqual([true, true, false])
+    expect(bubbles[2].querySelector('.linkage-avatar')).toHaveAttribute('aria-hidden', 'true')
+  })
+
+  it('el botón circular de enviar solo se habilita con texto', async () => {
+    renderConversation()
+    const field = await screen.findByLabelText('Mensaje para la institución')
+    const button = screen.getByRole('button', { name: 'Enviar mensaje' })
+    expect(field).toHaveAttribute('placeholder', 'Mensaje para la institución')
+    expect(button).toBeDisabled()
+    fireEvent.change(field, { target: { value: 'Hola' } })
+    expect(button).toBeEnabled()
+    fireEvent.change(field, { target: { value: '' } })
+    expect(button).toBeDisabled()
+  })
+
+  it('pasa al hilo la altura del encabezado y del campo de texto, que flotan sobre él', async () => {
+    const { container } = render(
+      <AuthContext.Provider value={auth}>
+        <LinkageConversation linkageRequestId={41} role="COMPANY" status="ACEPTADA" header={<h2>Conversación con UT del Golfo</h2>} />
+      </AuthContext.Provider>,
+    )
+    await screen.findByText('El lunes 24.')
+    const frame = container.querySelector<HTMLElement>('.linkage-conversation')!
+    expect(frame.querySelector('.linkage-chat-bar')).toHaveTextContent('Conversación con UT del Golfo')
+    expect(frame.querySelector('.linkage-chat-dock form')).not.toBeNull()
+    // jsdom no calcula alturas, pero las variables quedan definidas para el relleno del hilo.
+    expect(frame.style.getPropertyValue('--chat-top')).toBe('0px')
+    expect(frame.style.getPropertyValue('--chat-bottom')).toBe('0px')
   })
 })
 

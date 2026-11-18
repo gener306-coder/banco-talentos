@@ -48,6 +48,9 @@ export function useApiRequest<T>(load: (signal: AbortSignal) => Promise<T>, mess
   const [failure, setFailure] = useState<ApiFailure | null>(null)
   const [requestVersion, setRequestVersion] = useState(0)
   const describeFailure = useFailure(messages)
+  // T-S13-13: la consulta cuyo resultado se muestra. Mientras la vigente (otra búsqueda, filtro o página) no termina,
+  // `pending` es verdadero y la vista puede atenuar el resultado anterior en lugar de desmontarlo.
+  const [settled, setSettled] = useState<typeof load | null>(null)
 
   const refresh = useCallback(async () => {
     setLoading(true)
@@ -66,7 +69,10 @@ export function useApiRequest<T>(load: (signal: AbortSignal) => Promise<T>, mess
       } catch (error) {
         if (!disposed) setFailure(describeFailure(error))
       } finally {
-        if (!disposed) setLoading(false)
+        if (!disposed) {
+          setLoading(false)
+          setSettled(() => load)
+        }
       }
     }
 
@@ -77,7 +83,7 @@ export function useApiRequest<T>(load: (signal: AbortSignal) => Promise<T>, mess
     }
   }, [load, describeFailure, requestVersion])
 
-  return { data, loading, failure, refresh, setData }
+  return { data, loading, failure, refresh, setData, pending: settled !== load }
 }
 
 export function useApiMutation(messages: FailureMessages = NO_OVERRIDES) {
