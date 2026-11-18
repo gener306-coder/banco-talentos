@@ -9,6 +9,8 @@ import { backState } from '../ui/backLink'
 import { LoadingState, StateMessage } from '../ui/StateMessage'
 import { useListParams } from '../ui/useListParams'
 import { useRowNavigation } from '../ui/useRowNavigation'
+import { useTableMemory } from '../ui/useTableMemory'
+import { rowIndex } from '../ui/tableMotion'
 import { listStudents, surnames } from './api'
 import type { StudentStatusFilter } from './api'
 import { studentMessages } from './messages'
@@ -31,7 +33,9 @@ export function StudentsPage() {
   const missingData = list.get('data') === 'missing'
   const { page, setPage } = list
   const load = useCallback((signal: AbortSignal) => listStudents({ page, q: query, status, missingData }, signal), [page, query, status, missingData])
-  const { data, loading, failure, refresh } = useApiRequest(load, studentMessages)
+  const { data, loading, failure, refresh, pending } = useApiRequest(load, studentMessages)
+  // T-S13-13: con un resultado a la vista, una consulta nueva lo atenúa en lugar de desmontarlo.
+  const refreshing = pending && data !== null
   const navigate = useNavigate()
   const filtered = query !== '' || status !== '' || missingData
 
@@ -51,6 +55,8 @@ export function StudentsPage() {
 
   // Toda la fila abre el detalle con el puntero; el enlace «Ver detalle» sigue siendo el control accesible (HU-S8-01).
   const openRow = useRowNavigation()
+  // T-S13-12: al volver de una fila, la tabla recupera su posición y la fila parpadea.
+  const tableMemory = useTableMemory(page)
   // «Registrar alumno» del inicio abre directamente la hoja de alta.
   const location = useLocation()
   const [registering, setRegistering] = useState(() => {
@@ -98,7 +104,7 @@ export function StudentsPage() {
         </div>
         <button type="submit" className="secondary"><SearchIcon />Buscar</button>
       </form>
-      {loading ? <LoadingState label="Cargando alumnos…" variant="table" />
+      {loading && !data ? <LoadingState label="Cargando alumnos…" variant="table" />
         : failure ? <InstitutionRequestError failure={failure} retry={refresh} page />
         : data && data.total === 0
           ? filtered
@@ -111,18 +117,20 @@ export function StudentsPage() {
               action={openButton('Registrar el primer alumno')} />
         : data && (
           // T-S8-14: la tabla y su paginación viven en una sola tarjeta.
-          <div className="table-card">
-            <div className="data-table-wrapper" role="region" aria-label="Padrón de alumnos" tabIndex={0}>
+          <div className={`table-card${refreshing ? ' is-refreshing' : ''}`}>
+              {/* T-S13-13: al buscar, filtrar o paginar, la tabla anterior se queda atenuada mientras llega la nueva. */}
+              {refreshing && <p className="visually-hidden" role="status">Actualizando resultados…</p>}
+            <div className="data-table-wrapper" ref={tableMemory} aria-busy={refreshing} role="region" aria-label="Padrón de alumnos" tabIndex={0}>
               <table className="data-table has-actions">
                 <caption className="visually-hidden">Alumnos registrados</caption>
                 <thead><tr><th scope="col">Matrícula</th><th scope="col">Apellidos</th><th scope="col">Nombre(s)</th><th scope="col">Estado</th><th scope="col">Acciones</th></tr></thead>
-                <tbody>
-                  {data.students.map((student) => {
+                <tbody key={location.search} className="rows-enter">
+                  {data.students.map((student, index) => {
                     const href = `/students/${student.id}`
                     // T-S12-04: el detalle regresa al padrón con la misma búsqueda y filtros.
                     const back = backState('Alumnos', location)
                     return (
-                      <tr key={student.id} data-href={href} onClick={(event) => openRow(event, href, back)}>
+                      <tr key={student.id} data-href={href} style={rowIndex(index)} onClick={(event) => openRow(event, href, back)}>
                         <td className="mono">{student.enrollment_number}</td>
                         <th scope="row">{surnames(student)}</th>
                         <td>{student.given_names}</td>

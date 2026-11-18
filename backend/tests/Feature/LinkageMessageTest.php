@@ -529,21 +529,21 @@ describe('mensajes sin leer (HU-S13-04)', function () {
         $this->browserRequest('GET', '/api/linkage-requests/'.$this->linkage->id)->assertOk()->assertJsonPath('data.unread_count', 1);
     });
 
-    it('filters both inboxes by conversations with unread messages (CA-04)', function () {
+    it('filters both inboxes by conversations with unread messages (CA-04, interaction=unread desde T-S13-09)', function () {
         $quiet = messageLinkage($this->company, messageOpportunity($this->company, 'Sin novedades'), $this->student, 'ACEPTADA');
         seedMessage($quiet, $this->companyAccount, 'Solo nuestro');
         seedMessage($quiet, $this->institutionAccount, 'Solo de la institución');
         seedMessage($this->linkage, $this->companyAccount, 'Para la institución');
 
         $this->loginWithCookies($this->institutionAccount)->assertOk();
-        expect(array_column($this->browserRequest('GET', '/api/institution/linkage-requests?unread=1')->assertOk()->json('data'), 'id'))
+        expect(array_column($this->browserRequest('GET', '/api/institution/linkage-requests?interaction=unread')->assertOk()->json('data'), 'id'))
             ->toEqualCanonicalizing([$this->linkage->id, $quiet->id]);
 
         $this->loginWithCookies($this->companyAccount)->assertOk();
-        expect(array_column($this->browserRequest('GET', '/api/linkage-requests?unread=1')->assertOk()->json('data'), 'id'))->toBe([$quiet->id])
-            ->and($this->browserRequest('GET', '/api/linkage-requests?unread=0')->assertOk()->json('data'))->toHaveCount(2);
-        $this->browserRequest('GET', '/api/linkage-requests?unread=abc')->assertUnprocessable()
-            ->assertJsonValidationErrors(['unread' => 'El filtro de mensajes sin leer no es válido.']);
+        expect(array_column($this->browserRequest('GET', '/api/linkage-requests?interaction=unread')->assertOk()->json('data'), 'id'))->toBe([$quiet->id])
+            ->and($this->browserRequest('GET', '/api/linkage-requests?interaction=all')->assertOk()->json('data'))->toHaveCount(2);
+        $this->browserRequest('GET', '/api/linkage-requests?interaction=abc')->assertUnprocessable()
+            ->assertJsonValidationErrors(['interaction' => 'El filtro de conversación no es válido.']);
     });
 
     it('summarizes the conversations with unread messages of the session organization only (CA-02)', function () {
@@ -557,16 +557,57 @@ describe('mensajes sin leer (HU-S13-04)', function () {
         seedMessage($foreign, $this->institutionAccount, 'Para la otra empresa');
 
         $this->loginWithCookies($this->companyAccount)->assertOk();
-        unreadSummary($this, $this->companyAccount)->assertOk()->assertHeader('Cache-Control', 'no-store, private')
-            ->assertExactJson(['data' => ['conversations' => 2]]);
+        $summary = unreadSummary($this, $this->companyAccount)->assertOk()->assertHeader('Cache-Control', 'no-store, private');
+        expect($summary->json('data.conversations'))->toBe(2);
 
         $intruder = User::factory()->forCompany(Company::factory()->create())->create();
         $this->loginWithCookies($intruder)->assertOk();
-        unreadSummary($this, $intruder)->assertOk()->assertExactJson(['data' => ['conversations' => 0]]);
+        unreadSummary($this, $intruder)->assertOk()->assertExactJson(['data' => ['conversations' => 0, 'items' => []]]);
 
         // La institución no tiene nada sin leer: todo lo escribió ella.
         $this->loginWithCookies($this->institutionAccount)->assertOk();
-        unreadSummary($this, $this->institutionAccount)->assertOk()->assertExactJson(['data' => ['conversations' => 0]]);
+        unreadSummary($this, $this->institutionAccount)->assertOk()->assertExactJson(['data' => ['conversations' => 0, 'items' => []]]);
+    });
+
+    it('lists the conversations with news, newest first, with organization names only (T-S13-08)', function () {
+        $other = messageLinkage($this->company, messageOpportunity($this->company, 'Soporte de redes'), $this->student, 'ACEPTADA');
+        $pending = messageLinkage($this->company, messageOpportunity($this->company, 'Pendiente'), $this->student, 'PENDIENTE_INSTITUCION');
+        seedMessage($this->linkage, $this->institutionAccount, 'Uno');
+        $last = seedMessage($this->linkage, $this->institutionAccount, 'Dos');
+        $newest = seedMessage($other, $this->institutionAccount, 'Tres');
+        // Lo propio no cuenta como novedad.
+        seedMessage($this->linkage, $this->companyAccount, 'Respuesta');
+
+        $this->loginWithCookies($this->companyAccount)->assertOk();
+        $items = unreadSummary($this, $this->companyAccount)->assertOk()->json('data.items');
+        expect($items)->toBe([
+            ['id' => $other->id, 'counterpart_name' => $this->institution->name, 'opportunity_title' => 'Soporte de redes', 'unread_count' => 1, 'last_message_id' => $newest->id],
+            ['id' => $this->linkage->id, 'counterpart_name' => $this->institution->name, 'opportunity_title' => $this->linkage->opportunity->title, 'unread_count' => 2, 'last_message_id' => $last->id],
+        ])->and(array_column($items, 'id'))->not->toContain($pending->id);
+        // Nunca el texto de los mensajes ni datos del alumno.
+        expect(json_encode($items))->not->toContain('Tres')->not->toContain('Nombre Secreto');
+
+        // La institución ve el nombre de la empresa; al leer, la conversación sale del resumen.
+        $this->loginWithCookies($this->institutionAccount)->assertOk();
+        expect(unreadSummary($this, $this->institutionAccount)->json('data.items'))
+            ->toBe([['id' => $this->linkage->id, 'counterpart_name' => $this->company->trade_name ?? $this->company->legal_name, 'opportunity_title' => $this->linkage->opportunity->title, 'unread_count' => 1, 'last_message_id' => $this->linkage->messages()->max('id')]]);
+        $this->loginWithCookies($this->companyAccount)->assertOk();
+        $this->browserRequest('POST', messagesUri($this->companyAccount, $other, '/read'), ['last_read_message_id' => $newest->id])->assertOk();
+        expect(array_column(unreadSummary($this, $this->companyAccount)->json('data.items'), 'id'))->toBe([$this->linkage->id]);
+    });
+
+    it('limits the summary to the ten most recent conversations (T-S13-08)', function () {
+        $linkages = collect(range(1, 11))->map(function (int $n) {
+            $linkage = messageLinkage($this->company, messageOpportunity($this->company, "Oportunidad {$n}"), $this->student, 'ACEPTADA');
+            seedMessage($linkage, $this->institutionAccount, "Mensaje {$n}");
+
+            return $linkage;
+        });
+
+        $this->loginWithCookies($this->companyAccount)->assertOk();
+        $summary = unreadSummary($this, $this->companyAccount)->assertOk();
+        expect($summary->json('data.conversations'))->toBe(11)
+            ->and(array_column($summary->json('data.items'), 'id'))->toBe($linkages->reverse()->take(10)->pluck('id')->values()->all());
     });
 
     it('forbids the summary to admin and secretary accounts', function (UserRole $role) {

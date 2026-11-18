@@ -6,6 +6,8 @@ import { isCvLanguage, isLanguageLevel, isSkillKind } from '../students/cvCatalo
 import type { SkillKind } from '../students/cvCatalogs'
 import { LINKAGE_STATUSES } from './api'
 import type { LinkageStatus } from './api'
+import { inboxParams } from './inboxFilters'
+import type { InboxFilters } from './inboxFilters'
 
 export const institutionLinkageMessages: FailureMessages = {
   403: 'No tienes permiso para consultar solicitudes de vinculación.',
@@ -40,6 +42,8 @@ export interface ReceivedLinkage {
 /** Elemento de la bandeja: con los mensajes de la empresa sin leer (HU-S13-04 CA-02). */
 export interface ReceivedLinkageItem extends ReceivedLinkage {
   unread_count: number
+  /** Último mensaje del hilo (T-S13-09), para explicar el orden por actividad. */
+  last_message_at: string | null
 }
 
 export interface ReceivedLinkagePage {
@@ -123,8 +127,9 @@ function item(data: unknown): ReceivedLinkage {
 
 function listItem(data: unknown): ReceivedLinkageItem {
   const base = item(data)
-  if (!isObject(data) || typeof data.unread_count !== 'number' || !Number.isSafeInteger(data.unread_count) || data.unread_count < 0) return invalid()
-  return { ...base, unread_count: data.unread_count }
+  if (!isObject(data) || typeof data.unread_count !== 'number' || !Number.isSafeInteger(data.unread_count) || data.unread_count < 0 ||
+      (data.last_message_at !== undefined && !isOptionalText(data.last_message_at))) return invalid()
+  return { ...base, unread_count: data.unread_count, last_message_at: (data.last_message_at as string | null | undefined) ?? null }
 }
 
 function detail(data: unknown): ReceivedLinkageDetail {
@@ -174,10 +179,9 @@ function detail(data: unknown): ReceivedLinkageDetail {
  * Bandeja de la institución, de la más reciente a la más antigua, con filtro opcional por estado (HU-S6-01 CA-03) y
  * por conversaciones con mensajes sin leer (HU-S13-04 CA-04).
  */
-export async function listReceivedLinkages(filters: { page?: number; status?: LinkageStatus | ''; unread?: boolean }, signal?: AbortSignal): Promise<ReceivedLinkagePage> {
-  const params = new URLSearchParams({ page: String(filters.page ?? 1) })
-  if (filters.status) params.set('status', filters.status)
-  if (filters.unread) params.set('unread', '1')
+export async function listReceivedLinkages(filters: Partial<InboxFilters> & { page?: number }, signal?: AbortSignal): Promise<ReceivedLinkagePage> {
+  // T-S13-09: búsqueda, interacción y orden; los valores predeterminados no viajan.
+  const params = inboxParams(filters, new URLSearchParams({ page: String(filters.page ?? 1) }))
   const response = await request(`/api/institution/linkage-requests?${params.toString()}`, { signal })
   if (!isObject(response) || !Array.isArray(response.data) || !isObject(response.meta)) throw new ApiError(502)
   const meta = response.meta
@@ -186,9 +190,10 @@ export async function listReceivedLinkages(filters: { page?: number; status?: Li
   return { items: response.data.map(listItem), page: meta.current_page, lastPage: meta.last_page, total: meta.total }
 }
 
-/** Exportación CSV de la bandeja con el mismo filtro de estado (HU-S7-02 CA-02). */
-export function downloadReceivedLinkagesCsv(status: LinkageStatus | ''): Promise<Blob> {
-  const query = status ? `?${new URLSearchParams({ status }).toString()}` : ''
+/** Exportación CSV de la bandeja con los mismos filtros, búsqueda y orden que la tabla (HU-S7-02 CA-02, T-S13-09). */
+export function downloadReceivedLinkagesCsv(filters: Partial<InboxFilters>): Promise<Blob> {
+  const params = inboxParams(filters).toString()
+  const query = params ? `?${params}` : ''
   return requestBlob(`/api/institution/linkage-requests/export.csv${query}`)
 }
 

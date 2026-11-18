@@ -239,6 +239,44 @@ body.modal-open { overflow: hidden; }
     linear-gradient(to right, color-mix(in srgb, var(--text) 16%, transparent), transparent) left / 0.75rem 100% no-repeat scroll,
     linear-gradient(to left, color-mix(in srgb, var(--text) 16%, transparent), transparent) right / 0.75rem 100% no-repeat scroll;
   background-color: var(--surface); }
+/* T-S13-11: el contenedor desplazable es el bloque contenedor de lo posicionado dentro de la tabla. Sin esto, los textos
+   para lector de pantalla (.visually-hidden, position: absolute) de las columnas fuera de la vista se ubicaban respecto a
+   la página: ensanchaban el documento en el celular, el navegador alejaba la vista y aparecía media página en blanco
+   (y la hoja de Filtros quedaba fuera de la pantalla). */
+.data-table-wrapper, .institution-table-wrapper { position: relative; }
+/* T-S13-15: solo desplazamiento horizontal. Con overflow-x: auto, el eje vertical también pasaba a auto y el ascenso de
+   6 px de las filas al entrar (row-enter) desbordaba el contenedor un instante: aparecía una barra lateral y se iba. */
+.data-table-wrapper, .institution-table-wrapper { overflow-y: hidden; }
+/* T-S13-12: al volver a un listado, la fila que se abrió parpadea dos veces con el tinte de la marca para ubicarla. */
+@keyframes row-return { 0%, 50%, 100% { background-color: transparent; } 25%, 75% { background-color: var(--tint-hover); } }
+:is(.institution-table, .data-table) tbody tr.row-return > * { animation: row-return 1.6s ease-in-out; }
+/*
+ * T-S13-13: movimiento de las tablas.
+ * - Recarga (búsqueda, filtros, orden, página): la tabla anterior se queda, atenuada, con una barra de progreso fina
+ *   arriba que solo aparece si la espera pasa de 150 ms. Así la página no se encoge ni salta.
+ * - Entrada: cada resultado nuevo entra con un leve ascenso escalonado (30 ms por fila, hasta 10 filas).
+ * - Actualización en vivo: la fila que recibió mensajes pulsa una vez con el tinte y su contador da un rebote.
+ */
+.table-card { position: relative; }
+.table-card > [role='region'] { transition: opacity 150ms ease-out; }
+.table-card.is-refreshing > [role='region'] { opacity: 0.55; }
+.table-card.is-refreshing tbody { pointer-events: none; }
+.table-card.is-refreshing::before { content: ''; position: absolute; z-index: 2; top: 0; left: 0; width: 35%; height: 2px;
+  border-radius: 0 2px 2px 0; background: var(--accent); opacity: 0; animation: table-progress 1.1s ease-in-out 150ms infinite; }
+@keyframes table-progress { 0% { opacity: 1; transform: translateX(-100%); } 100% { opacity: 1; transform: translateX(300%); } }
+:is(.institution-table, .data-table) tbody.rows-enter > tr { animation: row-enter 320ms var(--spring) both;
+  animation-delay: calc(min(var(--row-index, 0), 10) * 30ms); }
+@keyframes row-enter { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+:is(.institution-table, .data-table) tbody tr.row-updated > * { animation: row-updated 1.6s ease-out; }
+@keyframes row-updated { 0% { background-color: var(--tint-hover); } 100% { background-color: transparent; } }
+tr.row-updated .conversation-count { animation: count-pop 420ms var(--spring); }
+@keyframes count-pop { 0% { transform: scale(1); } 40% { transform: scale(1.18); } 100% { transform: scale(1); } }
+@media (prefers-reduced-motion: reduce) {
+  :is(.institution-table, .data-table) tbody tr.row-return > * { animation: none; background-color: var(--tint); }
+  :is(.institution-table, .data-table) tbody.rows-enter > tr, tr.row-updated .conversation-count { animation: none; }
+  :is(.institution-table, .data-table) tbody tr.row-updated > * { animation: none; }
+  .table-card.is-refreshing::before { animation: none; opacity: 1; width: 100%; transform: none; }
+}
 /* Formularios de alta y edición (T-S12-03): la tarjeta se ciñe al ancho de lectura y se centra en pantallas anchas. */
 .card.institutions:has(form.institution-form, form.company-form, form.opportunity-form) {
   max-width: calc(var(--content-readable) + 3.5rem + 2px); margin-inline: auto; }
@@ -478,6 +516,16 @@ textarea[aria-invalid='true'] { border-color: var(--danger-border); }
 .cell-actions :is(a, button) { display: inline-grid; place-items: center; width: var(--icon-button-sm); height: var(--icon-button-sm); margin: 0; padding: 0;
   border: 0; border-radius: 50%; background: transparent; color: var(--accent); transition: background-color 150ms ease-out, transform 100ms ease-out; }
 .cell-actions .icon { width: 0.9rem; height: 0.9rem; }
+/*
+ * T-S13-15: en pantallas táctiles, las vías de contacto de la fila (chat, correo, teléfono) son botones de 44 px, la
+ * medida mínima recomendada para un dedo, con fondo de tinte para que se lean como botones y no como adornos, íconos
+ * más grandes y aire entre ellos para no tocar el vecino.
+ */
+@media (pointer: coarse), (max-width: 600px) {
+  .cell-actions { gap: 0.5rem; margin-top: 0.35rem; }
+  .cell-actions :is(a, button) { width: 2.75rem; height: 2.75rem; border-radius: 0.85rem; background: var(--tint); color: var(--accent); }
+  .cell-actions .icon { width: 1.25rem; height: 1.25rem; }
+}
 .cell-actions :is(a, button):focus-visible { outline: 3px solid var(--focus-ring); outline-offset: 1px; }
 .cell-actions :is(a, button):active { transform: scale(0.92); }
 @media (hover: hover) { .cell-actions :is(a, button):hover { background: var(--tint-hover); } }

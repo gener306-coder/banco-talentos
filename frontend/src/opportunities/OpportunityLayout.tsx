@@ -1,16 +1,17 @@
 import type { ReactNode } from 'react'
 import { Link, useLocation } from 'react-router'
-import { ChevronLeftIcon } from '../ui/icons'
+import type { BackTarget } from '../ui/backLink'
+import { NavBackLink } from '../ui/NavBackLink'
 import '../institutions/institutions.css'
 import './opportunities.css'
 
 /** Marco de las vistas de oportunidades (HU-S5-02), con la misma estructura que las de empresas. */
-export function OpportunityLayout({ title, children }: { title: string; children: ReactNode }) {
+export function OpportunityLayout({ title, back, children }: { title: string; back?: BackTarget; children: ReactNode }) {
   const { pathname } = useLocation()
   return (
     <section className="card institutions" aria-labelledby="opportunities-title">
       <nav className="institution-navigation" aria-label="Navegación de oportunidades">
-        <Link className="plain" to="/" aria-label="Volver al inicio"><ChevronLeftIcon />Inicio</Link>
+        <NavBackLink back={back} />
         <Link className="plain" to="/opportunities" aria-current={pathname === '/opportunities' ? 'page' : undefined}>Oportunidades Duales</Link>
       </nav>
       <h2 id="opportunities-title">{title}</h2>

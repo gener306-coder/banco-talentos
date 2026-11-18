@@ -39,6 +39,8 @@ import { GALLERY_VIEWERS } from './videos/galleryApi'
 import { InstitutionVideosPage } from './videos/InstitutionVideosPage'
 import { PromotionalVideosPage } from './videos/PromotionalVideosPage'
 import { AccountMenu } from './ui/AccountMenu'
+import { LinkageNotifier } from './linkage/LinkageNotifier'
+import { UnreadSummaryProvider } from './linkage/UnreadSummaryProvider'
 import { BrandLogo } from './ui/BrandLogo'
 import { prefersReducedMotion } from './ui/modal'
 import { useMediaQuery } from './ui/useMediaQuery'
@@ -233,7 +235,11 @@ function App() {
   )
 
   // El proveedor envuelve encabezado y contenido para que el menú de cuenta comparta la sesión.
-  return withSession ? <AuthProvider>{shell}</AuthProvider> : shell
+  // T-S13-08: una sola consulta del resumen de mensajes sin leer alimenta el contador del menú, el título de la pestaña
+  // y los avisos del navegador.
+  return withSession
+    ? <AuthProvider><UnreadSummaryProvider>{shell}<LinkageNotifier /></UnreadSummaryProvider></AuthProvider>
+    : shell
 }
 
 export default App

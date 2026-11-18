@@ -24,6 +24,9 @@ class LinkageMessageController extends Controller
 {
     private const PER_PAGE = 100;
 
+    /** Conversaciones con novedades que trae el resumen (T-S13-08). */
+    private const SUMMARY_ITEMS = 10;
+
     private const NOT_ACCEPTED = 'La conversación solo está disponible en solicitudes aceptadas.';
 
     private const READ_ONLY = 'La conversación es de solo lectura: la otra organización ya no está activa.';
@@ -127,13 +130,30 @@ class LinkageMessageController extends Controller
     public function summary(Request $request): JsonResponse
     {
         $party = LinkageParty::of($request->user()->role);
-        $conversations = LinkageRequest::query()
+        $unread = LinkageRequest::query()
             ->where($party->ownerColumn(), $this->ownerId($request))
             ->where('status', LinkageRequestStatus::ACCEPTED)
-            ->withUnread($party)
-            ->count();
+            ->withUnread($party);
+        $conversations = (clone $unread)->count();
 
-        return response()->json(['data' => ['conversations' => $conversations]])->header('Cache-Control', 'no-store, private');
+        // T-S13-08: las conversaciones con novedades, para que el aviso del navegador nombre la otra organización y
+        // lleve al chat. Solo nombres de organización y títulos de oportunidad, que los dos lados ya ven: nunca el
+        // texto de los mensajes ni datos del alumno.
+        $items = $unread->select('linkage_requests.*')->withUnreadCount($party)->withLastUnreadId($party)
+            ->with([$party === LinkageParty::COMPANY ? 'institution:id,name' : 'company:id,legal_name,trade_name', 'opportunity:id,title'])
+            ->orderByDesc('last_unread_id')->limit(self::SUMMARY_ITEMS)->get()
+            ->map(fn (LinkageRequest $linkage) => [
+                'id' => $linkage->id,
+                'counterpart_name' => $party === LinkageParty::COMPANY
+                    ? $linkage->institution->name
+                    : ($linkage->company->trade_name ?? $linkage->company->legal_name),
+                'opportunity_title' => $linkage->opportunity->title,
+                'unread_count' => (int) $linkage->unread_count,
+                'last_message_id' => (int) $linkage->last_unread_id,
+            ]);
+
+        return response()->json(['data' => ['conversations' => $conversations, 'items' => $items]])
+            ->header('Cache-Control', 'no-store, private');
     }
 
     /** Organización de la sesión del lado que le corresponde. */

@@ -8,6 +8,8 @@ import { backState } from '../ui/backLink'
 import { LoadingState, StateMessage } from '../ui/StateMessage'
 import { useListParams } from '../ui/useListParams'
 import { useRowNavigation } from '../ui/useRowNavigation'
+import { useTableMemory } from '../ui/useTableMemory'
+import { rowIndex } from '../ui/tableMotion'
 import { companyMessages, listCompanies } from './api'
 import { CompanyLayout } from './CompanyLayout'
 
@@ -20,7 +22,9 @@ export function CompaniesPage() {
   const { page, setPage } = list
   const location = useLocation()
   const load = useCallback((signal: AbortSignal) => listCompanies(page, query, signal), [page, query])
-  const { data, loading, failure, refresh } = useApiRequest(load, companyMessages)
+  const { data, loading, failure, refresh, pending } = useApiRequest(load, companyMessages)
+  // T-S13-13: con un resultado a la vista, una consulta nueva lo atenúa en lugar de desmontarlo.
+  const refreshing = pending && data !== null
 
   function search(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -29,6 +33,8 @@ export function CompaniesPage() {
 
   // Toda la fila abre el detalle con el puntero; el enlace «Ver detalle» sigue siendo el control accesible (HU-S8-01).
   const openRow = useRowNavigation()
+  // T-S13-12: al volver de una fila, la tabla recupera su posición y la fila parpadea.
+  const tableMemory = useTableMemory(page)
 
   return (
     <CompanyLayout title="Empresas">
@@ -44,7 +50,7 @@ export function CompaniesPage() {
         </div>
         <button type="submit" className="secondary"><SearchIcon />Buscar</button>
       </form>
-      {loading ? <LoadingState label="Cargando empresas…" variant="table" />
+      {loading && !data ? <LoadingState label="Cargando empresas…" variant="table" />
         : failure ? <InstitutionRequestError failure={failure} retry={refresh} page />
         : data && data.companies.length === 0
           ? query
@@ -55,17 +61,19 @@ export function CompaniesPage() {
               action={<Link className="institution-button" to="/companies/new"><PlusIcon />Registrar la primera empresa</Link>} />
         : data && (
           <>
-            <div className="table-card">
-              <div className="institution-table-wrapper" role="region" aria-label="Listado de empresas" tabIndex={0}>
+            <div className={`table-card${refreshing ? ' is-refreshing' : ''}`}>
+              {/* T-S13-13: al buscar, filtrar o paginar, la tabla anterior se queda atenuada mientras llega la nueva. */}
+              {refreshing && <p className="visually-hidden" role="status">Actualizando resultados…</p>}
+              <div className="institution-table-wrapper" ref={tableMemory} aria-busy={refreshing} role="region" aria-label="Listado de empresas" tabIndex={0}>
                 <table className="institution-table has-actions">
                   <caption className="visually-hidden">Empresas registradas</caption>
                   <thead><tr><th scope="col">Razón social</th><th scope="col">RFC</th><th scope="col">Municipio</th><th scope="col">Estado</th><th scope="col">Acciones</th></tr></thead>
-                  <tbody>
-                    {data.companies.map((company) => {
+                  <tbody key={location.search} className="rows-enter">
+                    {data.companies.map((company, index) => {
                       const href = `/companies/${company.id}`
                       const back = backState('Volver a empresas', location)
                       return (
-                        <tr key={company.id} data-href={href} onClick={(event) => openRow(event, href, back)}>
+                        <tr key={company.id} data-href={href} style={rowIndex(index)} onClick={(event) => openRow(event, href, back)}>
                           <th scope="row">{company.legal_name}{company.trade_name && <span className="option-meta"> · {company.trade_name}</span>}</th>
                           <td>{company.rfc}</td>
                           <td>{company.municipality ?? company.municipality_code}</td>

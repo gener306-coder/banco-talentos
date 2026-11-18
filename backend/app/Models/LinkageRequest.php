@@ -78,6 +78,40 @@ class LinkageRequest extends Model
         $query->addSelect(['unread_count' => self::unreadMessages($party)->selectRaw('count(*)')]);
     }
 
+    /** Momento de la última actividad (T-S13-09): la solicitud, la respuesta de la institución o el último mensaje. */
+    public const ACTIVITY = "GREATEST(linkage_requests.created_at AT TIME ZONE 'UTC', linkage_requests.responded_at, linkage_requests.last_message_at)";
+
+    /** Órdenes de las bandejas (T-S13-09); `activity` es el predeterminado y usa los índices de actividad. */
+    public const SORTS = ['activity', 'created_desc', 'created_asc'];
+
+    /** Interacciones del filtro de las bandejas (T-S13-09). */
+    public const INTERACTIONS = ['all', 'conversation', 'unread'];
+
+    public function scopeInboxSort(Builder $query, ?string $sort): void
+    {
+        match ($sort ?? 'activity') {
+            'created_desc' => $query->orderByDesc('linkage_requests.created_at')->orderByDesc('linkage_requests.id'),
+            'created_asc' => $query->orderBy('linkage_requests.created_at')->orderBy('linkage_requests.id'),
+            default => $query->orderByRaw(self::ACTIVITY.' DESC')->orderByDesc('linkage_requests.id'),
+        };
+    }
+
+    /** Filtro de interacción (T-S13-09): con conversación (algún mensaje, leído o no) o con mensajes sin leer. */
+    public function scopeWithInteraction(Builder $query, ?string $interaction, LinkageParty $party): void
+    {
+        match ($interaction ?? 'all') {
+            'conversation' => $query->whereNotNull('linkage_requests.last_message_at'),
+            'unread' => $query->withUnread($party),
+            default => null,
+        };
+    }
+
+    /** Agrega `last_unread_id`, el último mensaje sin leer para el lado: el aviso del navegador lo compara (T-S13-08). */
+    public function scopeWithLastUnreadId(Builder $query, LinkageParty $party): void
+    {
+        $query->addSelect(['last_unread_id' => self::unreadMessages($party)->selectRaw('max(linkage_messages.id)')]);
+    }
+
     /** Solo las solicitudes con mensajes sin leer para el lado (HU-S13-04 CA-02, CA-04). */
     public function scopeWithUnread(Builder $query, LinkageParty $party): void
     {

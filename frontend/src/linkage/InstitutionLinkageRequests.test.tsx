@@ -97,7 +97,10 @@ describe('bandeja institucional HU-S6-01', () => {
     expect(row).toHaveTextContent('Victoria')
     expect(row).toHaveTextContent('Pendiente de la institución')
     expect(within(row).getByRole('link', { name: 'Ver la solicitud de ManuGolfo para García López, Ana Sofía' })).toHaveAttribute('href', '/institution/linkage-requests/41')
-    expect(within(row).getByRole('link', { name: 'Ver la solicitud de ManuGolfo para García López, Ana Sofía' })).toHaveClass('pill-link')
+    // T-S13-10: sin columna Acciones; el detalle es una flecha y el alumno, una pastilla a su expediente.
+    expect(within(row).getByRole('link', { name: 'Ver la solicitud de ManuGolfo para García López, Ana Sofía' })).toHaveClass('row-open')
+    expect(within(within(row).getByRole('rowheader')).getByRole('link', { name: 'Ver expediente de García López, Ana Sofía' })).toHaveAttribute('href', '/students/7')
+    expect(within(table).queryByRole('columnheader', { name: 'Acciones' })).not.toBeInTheDocument()
     expect(within(table).getByRole('row', { name: /Aceros del Norte/ })).toHaveTextContent('Aceptada')
   })
 
@@ -111,7 +114,7 @@ describe('bandeja institucional HU-S6-01', () => {
     expect(apiMock.mock.calls[1][0]).toBe('/api/institution/linkage-requests?page=2')
 
     fireEvent.change(screen.getByLabelText('Estado'), { target: { value: 'RECHAZADA' } })
-    expect(await screen.findByText('Ninguna solicitud con ese estado.')).toBeInTheDocument()
+    expect(await screen.findByText('Ninguna solicitud coincide con la búsqueda o los filtros.')).toBeInTheDocument()
     expect(apiMock.mock.calls[2][0]).toBe('/api/institution/linkage-requests?page=1&status=RECHAZADA')
   })
 
@@ -185,7 +188,8 @@ describe('detalle de solicitud HU-S6-01', () => {
     expect(studentSection).toHaveTextContent('Ana Sofía García López')
     expect(studentSection).toHaveTextContent('MAT-0001')
     expect(within(studentSection).getByRole('link', { name: /Ver expediente del alumno/ })).toHaveAttribute('href', '/students/7')
-    expect(screen.getByText('Nos interesa su perfil.')).toBeInTheDocument()
+    // T-S13-14: el mensaje de la empresa se lee en la conversación, no en el detalle.
+    expect(screen.queryByText('Nos interesa su perfil.')).not.toBeInTheDocument()
 
     const security = screen.getByRole('region', { name: 'Seguro del alumno' })
     expect(security).toHaveTextContent('Capturado')
@@ -276,7 +280,8 @@ describe('respuesta institucional HU-S6-02', () => {
     expect(within(result).getByRole('status')).toHaveTextContent(done)
     expect(result).toHaveTextContent(label)
     expect(result).toHaveTextContent('Coordinación dual')
-    expect(result).toHaveTextContent('Coordinemos la entrevista.')
+    // T-S13-14: el mensaje de la respuesta abre la conversación; el resumen no lo repite.
+    expect(result).not.toHaveTextContent('Coordinemos la entrevista.')
     expect(screen.queryByRole('region', { name: 'Responder solicitud' })).not.toBeInTheDocument()
 
     // HU-S13-06: la conversación vive en su vista; el detalle la ofrece en cualquier estado y no la carga.
@@ -345,6 +350,10 @@ describe('bandeja de la institución en la URL (T-S12-05)', () => {
     fireEvent.click(within(table).getByRole('rowheader'))
     expect(await screen.findByRole('link', { name: 'Volver a solicitudes' }))
       .toHaveAttribute('href', '/institution/linkage-requests?status=PENDIENTE_INSTITUCION&page=2')
+    // T-S13-14: la navegación no repite «Solicitudes de vinculación» cuando el regreso ya lleva a la bandeja.
+    const nav = screen.getByRole('navigation', { name: 'Navegación de solicitudes' })
+    expect(within(nav).queryByRole('link', { name: /^Solicitudes de vinculación/ })).not.toBeInTheDocument()
+    expect(within(nav).getByRole('link', { name: 'Alumnos' })).toBeInTheDocument()
   })
 })
 

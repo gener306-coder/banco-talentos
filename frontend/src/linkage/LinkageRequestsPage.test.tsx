@@ -102,7 +102,7 @@ describe('bandeja de solicitudes HU-S5-05', () => {
     expect(await screen.findByText('Calidad')).toBeInTheDocument()
     expect(apiMock.mock.calls[1][0]).toBe('/api/linkage-requests?page=1&status=CANCELADA')
     fireEvent.change(screen.getByLabelText('Estado'), { target: { value: 'ACEPTADA' } })
-    expect(await screen.findByText('Ninguna solicitud con ese estado.')).toBeInTheDocument()
+    expect(await screen.findByText('Ninguna solicitud coincide con la búsqueda o los filtros.')).toBeInTheDocument()
   })
 
   it('invita a buscar talento cuando no hay solicitudes', async () => {
@@ -167,13 +167,14 @@ describe('acceso a la conversación desde la bandeja (HU-S13-06 CA-04)', () => {
     return <output aria-label="Ruta actual" data-back={back}>{location.pathname + location.search}</output>
   }
 
-  it('el ícono junto al estado abre la conversación de cualquier solicitud con regreso a la bandeja filtrada', async () => {
+  it('el ícono junto al correo abre la conversación de cualquier solicitud con regreso a la bandeja filtrada (T-S13-08)', async () => {
     apiMock.mockResolvedValueOnce(page([pending, cancelled])).mockImplementation(() => new Promise<Response>(() => undefined))
     render(<MemoryRouter initialEntries={['/linkage-requests?unread=1']}><App /><Location /></MemoryRouter>)
     const table = await screen.findByRole('table', { name: 'Solicitudes de vinculación enviadas' })
     const links = within(table).getAllByRole('link', { name: 'Abrir la conversación con UT del Golfo' })
     expect(links.map((link) => link.getAttribute('href'))).toEqual(['/linkage-requests/41/chat', '/linkage-requests/40/chat'])
-    expect(links[0].closest('td')).toHaveTextContent('Pendiente de la institución')
+    expect(links[0].closest('td')).toHaveTextContent('UT del Golfo')
+    expect(links[0].nextElementSibling).toHaveAccessibleName(/^Escribir a /)
 
     fireEvent.click(links[0])
     const location = screen.getByRole('status', { name: 'Ruta actual' })
@@ -204,14 +205,20 @@ describe('bandeja de solicitudes sin enlaces subrayados (T-S12-04)', () => {
     expect(JSON.parse(location.dataset.back ?? '')).toEqual({ to: '/linkage-requests?status=ACEPTADA', label: 'Volver a solicitudes' })
   })
 
-  it('las pastillas del perfil y de la oportunidad siguen en Acciones con el mismo regreso', async () => {
+  it('sin columna Acciones: el perfil y la oportunidad son pastillas en su celda, con el mismo regreso (T-S13-10)', async () => {
     apiMock.mockResolvedValueOnce(page([pending])).mockImplementation(() => new Promise<Response>(() => undefined))
     render(<MemoryRouter initialEntries={['/linkage-requests?status=PENDIENTE_INSTITUCION']}><App /><Location /></MemoryRouter>)
     const table = await screen.findByRole('table', { name: 'Solicitudes de vinculación enviadas' })
-    const actions = within(table).getByRole('link', { name: 'Ver perfil: Analista de datos' }).closest('td')!
-    expect(within(actions).getAllByRole('link').map((link) => link.textContent)).toEqual(['Ver detalle', 'Ver perfil', 'Oportunidad'])
+    expect(within(table).queryByRole('columnheader', { name: 'Acciones' })).not.toBeInTheDocument()
+    const row = within(table).getByRole('row', { name: /Analista de datos/ })
+    const profile = within(within(row).getByRole('rowheader')).getByRole('link', { name: 'Ver perfil: Analista de datos' })
+    expect(profile).toHaveClass('cell-pill')
+    expect(within(row).getByRole('link', { name: 'Ver la oportunidad Tableros de producción' }).closest('td')).toHaveTextContent(/^Tableros de producción$/)
+    // Cancelar queda bajo el estado pendiente y el detalle es la flecha de la última columna.
+    expect(within(row).getByRole('button', { name: /^Cancelar la solicitud/ }).closest('td')).toHaveTextContent('Pendiente de la institución')
+    expect(within(row).getByRole('link', { name: /^Ver la solicitud de / }).closest('td')).toHaveTextContent(/^$/)
 
-    fireEvent.click(within(actions).getByRole('link', { name: 'Ver perfil: Analista de datos' }))
+    fireEvent.click(profile)
     const location = screen.getByRole('status', { name: 'Ruta actual' })
     await waitFor(() => expect(location).toHaveTextContent(`/talent/${publicId}`))
     expect(JSON.parse(location.dataset.back ?? '')).toEqual({ to: '/linkage-requests?status=PENDIENTE_INSTITUCION', label: 'Volver a solicitudes' })

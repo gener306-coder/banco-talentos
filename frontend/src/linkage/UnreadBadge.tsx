@@ -1,3 +1,5 @@
+import { Link } from 'react-router'
+import { MessageIcon } from '../ui/icons'
 import type { LinkageSide } from './conversationApi'
 import { useUnreadConversations } from './useUnreadConversations'
 import './linkage.css'
@@ -25,5 +27,20 @@ export function UnreadTag({ count }: { count: number }) {
     <span className="unread-tag" title={label}>
       Nuevo<span className="visually-hidden">: {label}</span>
     </span>
+  )
+}
+
+/**
+ * Acceso a la conversación desde una fila de la bandeja (T-S13-08), junto a las demás vías de contacto. Con mensajes
+ * sin leer se resalta con el color de acento y muestra cuántos son, como el contador de una app de mensajería.
+ */
+export function ConversationLink({ to, state, counterpart, count }: { to: string; state?: unknown; counterpart: string; count: number }) {
+  const unread = count === 1 ? '1 mensaje sin leer' : `${count} mensajes sin leer`
+  return (
+    <Link to={to} state={state} className={`conversation-link${count > 0 ? ' has-unread' : ''}`}
+      aria-label={`Abrir la conversación con ${counterpart}${count > 0 ? `: ${unread}` : ''}`} title={count > 0 ? unread : 'Conversación'}>
+      <MessageIcon />
+      {count > 0 && <span className="conversation-count" aria-hidden="true">{count > 99 ? '99+' : count}</span>}
+    </Link>
   )
 }

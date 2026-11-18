@@ -35,3 +35,8 @@ export function backState(label: string, location: Pick<Location, 'pathname' | '
 export function useBackLink(fallback: BackTarget): BackTarget {
   return backOf(useLocation().state) ?? fallback
 }
+
+/** Solo el regreso contextual, sin respaldo: las páginas lo destacan arriba cuando la persona viene de otro flujo. */
+export function useContextualBack(): BackTarget | undefined {
+  return backOf(useLocation().state)
+}

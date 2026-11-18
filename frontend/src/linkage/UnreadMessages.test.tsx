@@ -2,11 +2,15 @@ import { act, fireEvent, render, screen, waitFor, within } from '@testing-librar
 import { Link, MemoryRouter, useLocation } from 'react-router'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import App from '../App'
+import { AuthContext } from '../auth/auth-context'
+import type { AuthState } from '../auth/auth-context'
+import type { User } from '../auth/api'
 import { LINKAGE_READ_EVENT } from './conversationApi'
 import { UnreadBadge } from './UnreadBadge'
+import { UnreadSummaryProvider } from './UnreadSummaryProvider'
 import { UNREAD_POLL_INTERVAL_MS } from './useUnreadConversations'
 
-// HU-S13-04: aviso de conversaciones sin leer en el menú, marca «Nuevo» en las bandejas y filtro.
+// HU-S13-04: aviso de conversaciones sin leer en el menú, contador en las bandejas (T-S13-08) y filtro.
 const fetchMock = vi.fn<typeof fetch>()
 const apiMock = vi.fn<typeof fetch>()
 let user: Record<string, unknown>
@@ -85,10 +89,20 @@ describe('aviso del menú (CA-03)', () => {
 
   describe('actualización', () => {
     function renderBadge() {
+      const auth: AuthState = {
+        status: 'ready', user: companyUser as User, message: null, pending: false,
+        restore: async () => undefined, expireSession: () => undefined, signIn: async () => undefined, signOut: async () => undefined,
+      }
+      // T-S13-08: el contador lee la consulta única del proveedor montado en el shell con sesión.
       return render(
         <MemoryRouter initialEntries={['/']}>
-          <Link to="/linkage-requests">Solicitudes de vinculación<UnreadBadge side="COMPANY" /></Link>
-          <Link to="/talent">Otra vista</Link>
+          <AuthContext.Provider value={auth}>
+            <UnreadSummaryProvider>
+              <Link to="/linkage-requests">Solicitudes de vinculación<UnreadBadge side="COMPANY" /></Link>
+              <UnreadBadge side="COMPANY" />
+              <Link to="/talent">Otra vista</Link>
+            </UnreadSummaryProvider>
+          </AuthContext.Provider>
         </MemoryRouter>,
       )
     }
@@ -96,7 +110,7 @@ describe('aviso del menú (CA-03)', () => {
 
     beforeEach(() => { vi.useFakeTimers({ toFake: ['setInterval', 'clearInterval'] }) })
 
-    it('consulta cada 60 s con la pestaña visible, en pausa con la oculta y enseguida al volver', async () => {
+    it('consulta una sola vez para varios contadores, cada 60 s aun con la pestaña oculta, y enseguida al volver', async () => {
       renderBadge()
       await waitFor(() => expect(summaries()).toHaveLength(1))
 
@@ -104,16 +118,17 @@ describe('aviso del menú (CA-03)', () => {
       await act(async () => { vi.advanceTimersByTime(UNREAD_POLL_INTERVAL_MS) })
       await waitFor(() => expect(badge()).toHaveAccessibleName('Solicitudes de vinculación, 2 conversaciones con mensajes sin leer'))
 
+      // T-S13-08: con la pestaña oculta sigue consultando, porque es cuando sirve el aviso del navegador.
       hidden = true
       act(() => { document.dispatchEvent(new Event('visibilitychange')) })
       await act(async () => { vi.advanceTimersByTime(UNREAD_POLL_INTERVAL_MS * 3) })
-      expect(summaries()).toHaveLength(2)
+      expect(summaries()).toHaveLength(5)
 
       unreadConversations = 0
       hidden = false
       act(() => { document.dispatchEvent(new Event('visibilitychange')) })
       await waitFor(() => expect(badge()).toHaveAccessibleName('Solicitudes de vinculación'))
-      expect(summaries()).toHaveLength(3)
+      expect(summaries()).toHaveLength(6)
     })
 
     it('se actualiza al navegar y en cuanto una conversación se marca como leída', async () => {
@@ -133,46 +148,58 @@ describe('aviso del menú (CA-03)', () => {
     it('abrevia más de 99 conversaciones', async () => {
       unreadConversations = 120
       renderBadge()
-      await waitFor(() => expect(screen.getByText('99+')).toBeInTheDocument())
+      await waitFor(() => expect(screen.getAllByText('99+')).toHaveLength(2))
     })
   })
 })
 
 describe('bandejas (CA-04)', () => {
-  it('marca «Nuevo» las solicitudes de la empresa con mensajes sin leer y filtra por ellas en la URL', async () => {
+  it('muestra en la fila cuántos mensajes sin leer hay, junto al correo, y filtra por ellos en la URL (T-S13-08)', async () => {
     apiMock.mockResolvedValueOnce(page([sent(1, 'Con mensajes', 2), sent(2, 'Al día', 0)]))
       .mockResolvedValueOnce(page([sent(1, 'Con mensajes', 2)]))
       .mockResolvedValueOnce(page([]))
     render(<MemoryRouter initialEntries={['/linkage-requests']}><App /><Location /></MemoryRouter>)
     const table = await screen.findByRole('table', { name: 'Solicitudes de vinculación enviadas' })
     const withMessages = within(table).getByRole('row', { name: /Con mensajes/ })
-    expect(within(withMessages).getByText('Nuevo')).toHaveAttribute('title', '2 mensajes sin leer')
-    expect(within(withMessages).getByText('Nuevo')).toHaveTextContent('Nuevo: 2 mensajes sin leer')
-    expect(within(within(table).getByRole('row', { name: /Al día/ })).queryByText('Nuevo')).not.toBeInTheDocument()
+    const chat = within(withMessages).getByRole('link', { name: 'Abrir la conversación con UT del Golfo: 2 mensajes sin leer' })
+    expect(chat).toHaveClass('has-unread')
+    expect(chat).toHaveAttribute('title', '2 mensajes sin leer')
+    expect(chat).toHaveTextContent('2')
+    // El chat es la primera vía de contacto, junto al correo de la institución.
+    expect(chat.parentElement).toHaveClass('cell-actions')
+    expect(chat.nextElementSibling).toHaveAccessibleName(/dual@utgolfo\.edu\.mx/)
+    expect(withMessages).toHaveClass('has-unread')
+    expect(within(withMessages).queryByText('Nuevo')).not.toBeInTheDocument()
+    const quiet = within(table).getByRole('row', { name: /Al día/ })
+    expect(quiet).not.toHaveClass('has-unread')
+    expect(within(quiet).getByRole('link', { name: 'Abrir la conversación con UT del Golfo' })).not.toHaveClass('has-unread')
 
-    fireEvent.click(screen.getByRole('checkbox', { name: 'Con mensajes sin leer' }))
-    await waitFor(() => expect(screen.getByRole('status', { name: 'Ruta actual' })).toHaveTextContent('/linkage-requests?unread=1'))
-    await waitFor(() => expect(apiMock.mock.calls[1][0]).toBe('/api/linkage-requests?page=1&unread=1'))
+    // T-S13-09: la casilla pasó a ser la opción del filtro de interacción.
+    fireEvent.change(screen.getByLabelText('Interacción'), { target: { value: 'unread' } })
+    await waitFor(() => expect(screen.getByRole('status', { name: 'Ruta actual' })).toHaveTextContent('/linkage-requests?interaction=unread'))
+    await waitFor(() => expect(apiMock.mock.calls[1][0]).toBe('/api/linkage-requests?page=1&interaction=unread'))
     expect(await screen.findByRole('row', { name: /Con mensajes/ })).toBeInTheDocument()
     expect(screen.queryByRole('row', { name: /Al día/ })).not.toBeInTheDocument()
 
     // Con el estado: los dos filtros se combinan; sin resultados, el vacío lo explica.
     fireEvent.change(screen.getByLabelText('Estado'), { target: { value: 'CANCELADA' } })
-    expect(await screen.findByText('Ninguna conversación con mensajes sin leer.')).toBeInTheDocument()
-    expect(apiMock.mock.calls[2][0]).toBe('/api/linkage-requests?page=1&status=CANCELADA&unread=1')
+    expect(await screen.findByText('Ninguna solicitud coincide con la búsqueda o los filtros.')).toBeInTheDocument()
+    expect(apiMock.mock.calls[2][0]).toBe('/api/linkage-requests?page=1&status=CANCELADA&interaction=unread')
   })
 
-  it('reconstruye el filtro desde la URL en la bandeja de la institución y marca sus filas', async () => {
+  it('traduce una URL antigua con unread=1 al filtro de interacción en la bandeja de la institución y marca sus filas', async () => {
     user = institutionUser
     apiMock.mockResolvedValueOnce(page([received(5, 'Uno', 1)]))
-    render(<MemoryRouter initialEntries={['/institution/linkage-requests?unread=1']}><App /></MemoryRouter>)
+    render(<MemoryRouter initialEntries={['/institution/linkage-requests?unread=1']}><App /><Location /></MemoryRouter>)
     const table = await screen.findByRole('table', { name: 'Solicitudes de vinculación recibidas' })
-    expect(apiMock.mock.calls[0][0]).toBe('/api/institution/linkage-requests?page=1&unread=1')
-    expect(screen.getByRole('checkbox', { name: 'Con mensajes sin leer' })).toBeChecked()
-    expect(within(table).getByText('Nuevo')).toHaveAttribute('title', '1 mensaje sin leer')
+    expect(apiMock.mock.calls[0][0]).toBe('/api/institution/linkage-requests?page=1&interaction=unread')
+    expect(screen.getByLabelText('Interacción')).toHaveValue('unread')
+    await waitFor(() => expect(screen.getByRole('status', { name: 'Ruta actual' })).toHaveTextContent('/institution/linkage-requests?interaction=unread'))
+    expect(within(table).getByRole('link', { name: 'Abrir la conversación con ManuGolfo sobre García Uno, Ana: 1 mensaje sin leer' })).toHaveTextContent('1')
+    expect(within(table).getByRole('row', { name: /García Uno/ })).toHaveClass('has-unread')
 
     apiMock.mockResolvedValueOnce(page([received(5, 'Uno', 1)]))
-    fireEvent.click(screen.getByRole('checkbox', { name: 'Con mensajes sin leer' }))
+    fireEvent.change(screen.getByLabelText('Interacción'), { target: { value: 'all' } })
     await waitFor(() => expect(apiMock.mock.calls[1][0]).toBe('/api/institution/linkage-requests?page=1'))
   })
 })

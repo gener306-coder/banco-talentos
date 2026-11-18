@@ -18,61 +18,241 @@
 .linkage-inbox tbody th[scope='row'] { min-width: 12.5rem; }
 .linkage-inbox tbody td:nth-of-type(1) { min-width: 12rem; }
 /* Bandeja de la empresa: el perfil y la oportunidad comparten el espacio, y la institución cabe en una o dos líneas. */
-.linkage-sent tbody th[scope='row'] { min-width: 11rem; }
-.linkage-sent tbody td:nth-of-type(1) { min-width: 11rem; }
-.linkage-sent tbody td:nth-of-type(2) { min-width: 13.5rem; }
-/* T-S12-04, HU-S13-02: «Ver detalle», «Ver perfil», «Oportunidad» y «Cancelar» se apilan para que la columna de acciones no desborde la tabla. */
-.table-card .linkage-sent td:last-child > .actions { flex-direction: column; align-items: stretch; gap: 0.4rem; }
+.linkage-sent tbody th[scope='row'] { min-width: 12rem; }
+.linkage-sent tbody td:nth-of-type(1) { min-width: 12rem; }
+.linkage-sent tbody td:nth-of-type(2) { min-width: 12rem; }
+/* T-S13-10: sin columna Acciones. El perfil (o el alumno) y la oportunidad son pastillas de la marca dentro de su celda,
+   en dos líneas como máximo; cancelar es una acción de texto bajo el estado pendiente y el detalle, una flecha angosta. */
+.cell-pill { display: inline-flex; align-items: center; gap: 0.3rem; max-width: 100%; padding: 0.35rem 0.55rem 0.35rem 0.75rem;
+  border-radius: 999px; background: var(--tint); color: var(--accent); font-size: var(--type-sm); font-weight: 600; line-height: 1.35;
+  text-align: left; text-decoration: none; }
+.cell-pill > span { display: -webkit-box; overflow: hidden; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2; overflow-wrap: anywhere; }
+.cell-pill .icon { flex: none; width: 0.85rem; height: 0.85rem; transition: transform 150ms ease-out; }
+.cell-pill:focus-visible, .row-open:focus-visible { outline: 3px solid var(--focus-ring); outline-offset: 2px; }
+@media (hover: hover) {
+  .cell-pill:hover { background: var(--tint-hover); }
+  .cell-pill:hover .icon { transform: translateX(2px); }
+  .row-open:hover { background: var(--tint-hover); }
+}
+.row-open { display: inline-grid; place-items: center; width: 2.25rem; height: 2.25rem; border-radius: 50%; color: var(--accent); text-decoration: none; }
+.row-open .icon { width: 1.05rem; height: 1.05rem; }
+/* T-S13-15: en pantallas táctiles, la flecha del detalle también mide 44 px. */
+@media (pointer: coarse), (max-width: 600px) { .row-open { width: 2.75rem; height: 2.75rem; } }
+/* Cancelar: acción de texto en el tono de peligro, sin subrayado; al pasar el puntero toma su superficie, como una pastilla. */
+.institution-table .cell-cancel { display: inline-flex; align-items: center; gap: 0.3rem; min-height: 0; margin: 0.3rem 0 0 -0.5rem;
+  padding: 0.2rem 0.5rem; border: 0; border-radius: 999px; background: none; color: var(--danger-text); font-size: var(--type-xs);
+  font-weight: 600; text-decoration: none; }
+.institution-table .cell-cancel .icon { width: 0.75rem; height: 0.75rem; }
+.institution-table .cell-cancel:focus-visible { outline: 3px solid var(--focus-ring); outline-offset: 1px; }
+@media (hover: hover) { .institution-table .cell-cancel:hover:not(:disabled) { background: var(--danger-surface); } }
+@media (prefers-reduced-motion: reduce) { .cell-pill .icon { transition: none; } }
 /* T-S12-06: mensaje de respuesta completo en una hoja, con saltos de línea y sin truncar. */
 .linkage-message h3 { margin: 0 0 0.6rem; }
 .linkage-message-meta { margin: 0 0 0.35rem; font-size: var(--type-sm); color: var(--text); }
 .linkage-message-text { margin: 1rem 0 0; padding: 0.85rem 1rem; border-left: 4px solid var(--accent); border-radius: 0 12px 12px 0;
   background: var(--tint); color: var(--text); white-space: pre-line; overflow-wrap: anywhere; }
-/* HU-S13-06: vista dedicada a la conversación. La tarjeta ocupa la altura disponible bajo la barra superior (100dvh, que
-   descuenta el teclado del celular); el hilo toma el espacio restante y el campo de texto queda abajo. */
-.linkage-chat { display: flex; flex-direction: column; max-width: calc(var(--content-readable) + 3.5rem + 2px); margin-inline: auto;
-  height: calc(100dvh - 6.5rem - 4vh); min-height: 26rem; }
-.linkage-chat-back { margin: 0 0 0.5rem; }
-.linkage-chat-heading h2 { margin: 0; }
-.linkage-chat-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 0.35rem 0.6rem; margin: 0.35rem 0 0.75rem; font-size: var(--type-sm); }
-.linkage-chat > .callout { margin: 0; }
-.linkage-chat .linkage-conversation { display: flex; flex: 1; flex-direction: column; min-height: 0; }
-.linkage-chat .linkage-thread-frame { display: flex; flex: 1; flex-direction: column; min-height: 0; margin: 0.75rem 0; }
-.linkage-chat .linkage-thread { flex: 1; max-height: none; }
+/* HU-S13-06 y T-S13-07: vista dedicada con presentación de app de mensajería. La tarjeta ocupa la altura disponible
+   bajo la barra superior (100dvh descuenta el teclado del celular). El hilo llena la tarjeta y pasa por debajo del
+   encabezado y del campo de texto, que flotan con efecto de vidrio (--glass y desenfoque); su relleno superior e
+   inferior (--chat-top, --chat-bottom) lo mide el componente. */
+.linkage-chat { display: flex; flex-direction: column; max-width: 56rem; margin-inline: auto; }
+/* T-S13-07: alto de la ventana menos la posición medida de la conversación (--chat-offset) y un margen inferior. */
+.linkage-chat.is-ready { height: calc(100dvh - var(--chat-offset, 7rem) - 1rem); min-height: 26rem; padding: 0; overflow: hidden; border-radius: 1rem; }
+main:has(.linkage-chat.is-ready) { margin-bottom: 1rem; }
+.linkage-chat-back { margin: 0 0 0.35rem; }
+/* En el celular la conversación va de borde a borde y aprovecha toda la altura. */
 @media (max-width: 600px) {
-  .linkage-chat { height: calc(100dvh - 5rem); min-height: 22rem; }
+  .linkage-chat.is-ready { height: calc(100dvh - var(--chat-offset, 5rem)); min-height: 22rem; margin-inline: calc(var(--page-gutter) / -2);
+    border-inline: 0; border-bottom: 0; border-radius: 0; }
+  main:has(.linkage-chat.is-ready) { margin-bottom: 0; }
+  /* T-S13-07: en el celular la conversación es de pantalla completa, como en las apps de mensajería. La barra de la
+     aplicación y la franja del coemblema se ocultan: el regreso de la conversación lleva de vuelta a la bandeja, donde
+     reaparecen. Así no hay dos encabezados ni espacio entre ellos y el hilo gana todo ese alto. */
+  :root:has(.linkage-chat.is-ready) .app-bar, :root:has(.linkage-chat.is-ready) .partner-band { display: none; }
+  .linkage-chat-bar { padding-top: env(safe-area-inset-top, 0px); }
 }
-/* HU-S13-03: burbujas. Las propias van a la derecha con --tint y las del otro lado a la izquierda con --fill; el texto
-   conserva sus saltos de línea. El hilo se desplaza dentro de su marco. */
-.linkage-thread-frame { position: relative; margin: 1rem 0; }
-.linkage-thread { max-height: min(28rem, 60vh); overflow-y: auto; overscroll-behavior: contain; padding: 0.75rem;
-  border: 1px solid var(--border); border-radius: 14px; background: var(--surface); }
-/* HU-S13-06: las burbujas de la solicitud (mensaje inicial y respuesta) llevan su etiqueta y un borde discreto. */
-.linkage-bubble.intro { border: 1px dashed var(--border-strong); }
-.linkage-bubble-label { display: block; margin-bottom: 0.15rem; font-size: var(--type-xs); font-weight: 700; color: var(--accent); }
-.linkage-composer-footer { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 0.5rem; }
-.linkage-composer-footer .field-hint { margin: 0; }
-.linkage-composer-footer button { margin: 0; }
-.linkage-closed { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 0.5rem 1rem; padding: 0.75rem 1rem;
-  border-radius: 12px; background: var(--surface-muted); color: var(--text); }
-.linkage-closed p { margin: 0; }
-.linkage-thread:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 2px; }
-.linkage-thread-list { display: flex; flex-direction: column; gap: 0.6rem; margin: 0; padding: 0; list-style: none; }
-.linkage-bubble { align-self: flex-start; max-width: min(85%, 32rem); padding: 0.55rem 0.8rem; border-radius: 14px 14px 14px 4px;
-  background: var(--fill); color: var(--text); }
-.linkage-bubble.own { align-self: flex-end; border-radius: 14px 14px 4px 14px; background: var(--tint); }
-.linkage-bubble-meta { display: block; margin-bottom: 0.2rem; font-size: var(--type-xs); color: var(--text); }
+
+.linkage-conversation { position: relative; flex: 1; min-height: 0; }
+.linkage-chat-bar, .linkage-chat-dock { position: absolute; left: 0; right: 0; z-index: 2; background: var(--glass);
+  -webkit-backdrop-filter: blur(12px) saturate(180%); backdrop-filter: blur(12px) saturate(180%); }
+.linkage-chat-bar { top: 0; border-bottom: 1px solid var(--border); }
+.linkage-chat-dock { bottom: 0; padding: 0.5rem 0.75rem calc(0.5rem + env(safe-area-inset-bottom, 0px)); border-top: 1px solid var(--border); }
+
+/* T-S13-07: encabezado de una sola barra (estilo Marketplace): regreso, avatar, nombre con el estado y detalle. */
+.linkage-chat-topbar { display: flex; align-items: center; gap: 0.6rem; min-height: 3.5rem; padding: 0.4rem 0.6rem 0.4rem 0.35rem; }
+.linkage-icon-button { flex: none; display: grid; place-items: center; width: 2.25rem; height: 2.25rem; border-radius: 50%;
+  color: var(--accent); text-decoration: none; }
+.linkage-icon-button .icon { width: 1.15rem; height: 1.15rem; }
+.linkage-icon-button:focus-visible { outline: 3px solid var(--focus-ring); outline-offset: 1px; }
+@media (hover: hover) { .linkage-icon-button:hover { background: var(--fill); } }
+.linkage-avatar { flex: none; display: grid; place-items: center; width: 2.5rem; height: 2.5rem; border-radius: 50%;
+  background: var(--accent-fill); color: var(--on-accent); font-size: var(--type-sm); font-weight: 700; letter-spacing: 0.02em; line-height: 1; }
+.linkage-avatar.small { width: 1.75rem; height: 1.75rem; font-size: var(--type-xs); }
+.linkage-chat-identity { flex: 1; min-width: 0; }
+.linkage-chat-identity h2 { margin: 0; overflow: hidden; font-size: var(--type-base); font-weight: 700; line-height: 1.25;
+  text-overflow: ellipsis; white-space: nowrap; }
+.linkage-chat-subtitle { display: flex; align-items: center; gap: 0.35rem; margin: 0.1rem 0 0; overflow: hidden; color: var(--text);
+  font-size: var(--type-xs); white-space: nowrap; }
+.linkage-status-dot { flex: none; width: 0.5rem; height: 0.5rem; border-radius: 50%; background: var(--accent); }
+.linkage-status-dot.accepted { background: var(--success-text); }
+.linkage-status-dot.rejected { background: var(--danger-text); }
+.linkage-status-dot.cancelled { background: var(--status-off-text); }
+/* «Ver solicitud»: texto en escritorio, solo el ícono en el celular (conserva su nombre accesible). */
+.linkage-chat-request { flex: none; }
+/* T-S13-07: tarjetas de contexto. Dicen de qué alumno y de qué oportunidad trata la conversación, cada una con su acceso. */
+.linkage-chat-cards { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.5rem; margin: 0; padding: 0 0.75rem 0.6rem;
+  list-style: none; }
+.linkage-context-card { display: flex; align-items: center; gap: 0.6rem; min-width: 0; padding: 0.45rem 0.5rem 0.45rem 0.55rem;
+  border: 1px solid var(--border); border-radius: 0.75rem; background: var(--surface); }
+.linkage-context-icon { flex: none; display: grid; place-items: center; width: 2.1rem; height: 2.1rem; border-radius: 0.6rem;
+  background: var(--tint); color: var(--accent); }
+.linkage-context-icon .icon { width: 1.05rem; height: 1.05rem; }
+.linkage-context-text { flex: 1; display: flex; flex-direction: column; min-width: 0; line-height: 1.3; }
+.linkage-context-kicker { color: var(--text); font-size: var(--type-xs); font-weight: 600; letter-spacing: 0.02em; }
+.linkage-context-title, .linkage-context-detail { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.linkage-context-title { font-size: var(--type-sm); font-weight: 700; }
+.linkage-context-detail { color: var(--text); font-size: var(--type-xs); }
+.linkage-context-action { flex: none; white-space: nowrap; }
+@media (max-width: 600px) {
+  .linkage-chat-request-text { display: none; }
+  .linkage-chat-request { padding: 0.45rem; }
+  .linkage-chat-cards { grid-template-columns: 1fr; gap: 0.35rem; padding: 0 0.6rem 0.5rem; }
+  .linkage-context-card { padding: 0.3rem 0.4rem 0.3rem 0.45rem; }
+  .linkage-context-icon { width: 1.75rem; height: 1.75rem; }
+  .linkage-context-detail { display: none; }
+}
+
+.linkage-thread { position: absolute; inset: 0; overflow-y: auto; overscroll-behavior: contain; background: var(--surface);
+  padding: calc(var(--chat-top, 0px) + 0.5rem) 0.85rem calc(var(--chat-bottom, 0px) + 0.75rem); }
+.linkage-thread:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: -2px; }
+.linkage-thread-empty { margin: 2rem 1rem; text-align: center; color: var(--text); }
+.linkage-thread-latest { position: absolute; z-index: 3; bottom: calc(var(--chat-bottom, 0px) + 0.75rem); left: 50%; transform: translateX(-50%);
+  box-shadow: 0 4px 12px color-mix(in srgb, var(--shadow) 12%, transparent); }
+
+/* Separador de día (estilo Apple): se queda fijo bajo el encabezado mientras su día está a la vista. */
+.linkage-day-label { position: sticky; top: calc(var(--chat-top, 0px) + 0.5rem); z-index: 1; display: flex; justify-content: center;
+  margin: 0.75rem 0; pointer-events: none; }
+.linkage-day-label span { padding: 0.2rem 0.75rem; border: 1px solid var(--border); border-radius: 999px; background: var(--glass);
+  -webkit-backdrop-filter: blur(4px); backdrop-filter: blur(4px); color: var(--text); font-size: var(--type-xs); font-weight: 700; }
+/* Fijo bajo el encabezado, el separador solo se ve mientras se desplaza el hilo y luego se desvanece para no tapar
+   mensajes (como en WhatsApp). En su lugar dentro del hilo siempre se ve. */
+.linkage-day-label.stuck span { opacity: 0; transition: opacity 300ms ease-out; }
+.linkage-thread.is-scrolling .linkage-day-label.stuck span { opacity: 1; transition-duration: 100ms; }
+
+/* Burbujas (estilo Messenger). Cada mensaje es una fila: el remitente va sobre el grupo, fuera de la burbuja; del otro
+   lado, su avatar acompaña la última burbuja del grupo. Las propias, a la derecha con el color de acento; las ajenas, a
+   la izquierda sobre --fill. Un grupo (mismo remitente, menos de 5 minutos) se separa 2px y solo su primera burbuja
+   lleva la «cola» (la esquina superior del lado del remitente). */
+.linkage-thread-list { display: flex; flex-direction: column; gap: 2px; margin: 0; padding: 0; list-style: none; }
+.linkage-bubble { display: flex; flex-direction: column; align-items: flex-start; }
+.linkage-bubble.own { align-items: flex-end; }
+.linkage-bubble:is(.single, .first) { margin-top: 0.75rem; }
+.linkage-thread-list > .linkage-bubble:first-child { margin-top: 0; }
+.linkage-bubble-name { margin: 0 0 0.15rem 2.25rem; color: var(--text); font-size: var(--type-xs); font-weight: 600; }
+.linkage-bubble.own .linkage-bubble-name { margin: 0 0.35rem 0.15rem 0; }
+.linkage-bubble-row { display: flex; align-items: flex-end; gap: 0.5rem; max-width: min(70%, 34rem); }
+.linkage-avatar-spacer { flex: none; width: 1.75rem; }
+.linkage-bubble-body { min-width: 0; padding: 0.45rem 0.75rem; border-radius: 18px; background: var(--fill); color: var(--text); }
+.linkage-bubble.other:is(.single, .first) .linkage-bubble-body { border-top-left-radius: 4px; }
+.linkage-bubble.own .linkage-bubble-body { background: var(--accent-fill); color: var(--on-accent); }
+.linkage-bubble.own:is(.single, .first) .linkage-bubble-body { border-top-right-radius: 4px; }
 .linkage-bubble-text { margin: 0; white-space: pre-line; overflow-wrap: anywhere; }
-.linkage-thread-latest { position: absolute; bottom: 0.75rem; left: 50%; transform: translateX(-50%); box-shadow: 0 4px 12px color-mix(in srgb, var(--shadow) 12%, transparent); }
-.linkage-thread-empty { color: var(--text); }
-.linkage-composer textarea { width: 100%; resize: vertical; }
+/* La hora, discreta en la esquina inferior derecha dentro de la burbuja. */
+.linkage-bubble-time { float: right; margin: 0.3rem 0 -0.2rem 0.65rem; font-size: var(--type-xs); line-height: 1.5; white-space: nowrap; opacity: 0.8; }
+/* HU-S13-06: las burbujas de la solicitud son el contexto inicial: más tenues, con borde y su etiqueta. */
+.linkage-bubble.intro .linkage-bubble-body { border: 1px solid var(--border); background: var(--surface-muted); color: var(--text); }
+.linkage-bubble-label { display: block; margin-bottom: 0.15rem; font-size: var(--type-xs); font-weight: 700; color: var(--accent); }
+@media (max-width: 600px) {
+  .linkage-bubble-row { max-width: 85%; }
+}
+
+/* Campo de texto orgánico: una píldora con el botón de enviar circular a la derecha. Crece hasta unas 6 líneas. */
+.linkage-composer { margin: 0; }
+.linkage-composer-pill { display: flex; align-items: flex-end; gap: 0.4rem; padding: 0.3rem 0.3rem 0.3rem 1rem;
+  border: 1px solid var(--border-strong); border-radius: 1.4rem; background: var(--surface); }
+.linkage-composer-pill:focus-within { outline: 3px solid var(--focus-ring); outline-offset: 1px; }
+.linkage-composer-pill textarea { flex: 1; min-width: 0; min-height: 2.25rem; margin: 0; padding: 0.5rem 0; border: 0; border-radius: 0;
+  background: transparent; color: var(--text); font: inherit; line-height: 1.4; resize: none; outline: none; box-shadow: none; }
+.linkage-send { flex: none; display: grid; place-items: center; width: 2.25rem; height: 2.25rem; margin: 0; padding: 0; border-radius: 50%;
+  background: var(--accent-fill); color: var(--on-accent); }
+.linkage-send:disabled { background: var(--fill); color: var(--text); cursor: default; }
+.linkage-send .icon { width: 1.1rem; height: 1.1rem; }
+.linkage-composer-hint { margin: 0.3rem 0.9rem 0; font-size: var(--type-xs); color: var(--text); }
+.linkage-chat-dock .field-error { margin: 0.3rem 0.9rem 0; }
+/* Solo lectura: una línea con su motivo y, si aplica, la acción a la derecha. */
+.linkage-closed { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 0.4rem 0.75rem;
+  padding: 0.45rem 0.75rem; border-radius: 1.4rem; background: var(--surface-muted); color: var(--text); font-size: var(--type-sm); }
+.linkage-closed p { margin: 0; }
 /* HU-S13-04: número de conversaciones sin leer junto a «Solicitudes de vinculación» y marca «Nuevo» de la fila. */
 .unread-badge { display: inline-flex; align-items: center; justify-content: center; min-width: 1.4rem; height: 1.4rem; margin-left: 0.45rem;
   padding: 0 0.4rem; border-radius: 999px; background: var(--accent-fill); color: var(--on-accent); font-size: var(--type-xs);
   font-weight: 700; line-height: 1; vertical-align: middle; font-variant-numeric: tabular-nums; }
+/* T-S13-08: acceso a la conversación en la fila, junto al correo y el teléfono. Con mensajes sin leer se resalta con el
+   acento y lleva el número, como el contador de una app de mensajería. */
+.cell-actions .conversation-link { position: relative; }
+.cell-actions .conversation-link.has-unread { background: var(--accent-fill); color: var(--on-accent); }
+@media (hover: hover) { .cell-actions .conversation-link.has-unread:hover { background: var(--accent-fill-hover); } }
+.conversation-count { position: absolute; top: -0.45rem; right: -0.5rem; min-width: 1.25rem; height: 1.25rem; padding: 0 0.3rem;
+  border: 2px solid var(--surface); border-radius: 999px; background: var(--danger-border); color: var(--on-danger);
+  font-size: var(--type-xs); font-weight: 700; line-height: 0.85rem; text-align: center; font-variant-numeric: tabular-nums; pointer-events: none; }
+/* Fila con mensajes sin leer, como un correo no leído: barra de acento en la primera celda (en la celda, no en la fila,
+   para que se pinte igual en Safari y con border-collapse) y el dato principal en negrita. */
+tr.has-unread > :first-child { box-shadow: inset 3px 0 0 var(--accent); font-weight: 700; }
+tr.has-unread > :first-child .linkage-meta { font-weight: 400; }
+
+/* T-S13-08: invitación a activar los avisos del navegador, sobre la tabla de cada bandeja. */
+/* El ícono y el texto comparten la fila también en el celular; el cierre va fijo arriba a la derecha. */
+.notify-prompt { position: relative; display: flex; flex-wrap: wrap; align-items: flex-start; gap: 0.6rem 0.75rem; margin: 0 0 1rem;
+  padding: 0.65rem 2.75rem 0.65rem 0.75rem; border: 1px solid var(--border); border-radius: 0.75rem; background: var(--surface-muted);
+  font-size: var(--type-sm); line-height: 1.45; }
+.notify-prompt p { flex: 1 1 12rem; min-width: 0; margin: 0.3rem 0 0; }
+.notify-prompt-icon { flex: none; display: grid; place-items: center; width: 2rem; height: 2rem; border-radius: 0.6rem; background: var(--tint); color: var(--accent); }
+.notify-prompt-icon .icon { width: 1rem; height: 1rem; }
+.notify-prompt-actions { display: flex; gap: 0.4rem; }
+.notify-prompt-close { position: absolute; top: 0.4rem; right: 0.4rem; width: 2rem; height: 2rem; padding: 0; border-radius: 50%; }
+.notify-prompt-actions { margin-left: auto; }
+@media (max-width: 600px) { .notify-prompt-actions { flex: 1 1 100%; } }
+
 .unread-tag { display: inline-block; padding: 0.1rem 0.5rem; border-radius: 999px; background: var(--tint); color: var(--accent);
   font-size: var(--type-xs); font-weight: 700; white-space: nowrap; }
-.unread-filter { display: flex; align-items: center; gap: 0.5rem; min-height: 2.5rem; }
-.table-search .unread-filter label { margin: 0; font-weight: 400; }
-.table-search .unread-filter input { width: auto; }
+/* T-S13-09: barra de la bandeja. En pantallas anchas, búsqueda y selectores en una fila; las acciones del listado
+   (Descargar CSV) a la derecha. */
+.linkage-inbox-bar { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 0.5rem 0.75rem; margin: 0 0 1rem; }
+.linkage-inbox-bar > .table-search { margin: 0; }
+/* Prefijo .linkage-inbox-bar: estas reglas deben ganar a las genéricas de .table-search de ui.css, que se carga después. */
+.linkage-inbox-bar .linkage-inbox-search { flex: 1 1 24rem; flex-wrap: nowrap; }
+/* La etiqueta del buscador en una línea: así su campo queda alineado con los selectores. */
+.linkage-inbox-bar:not(.compact) .linkage-inbox-search label { white-space: nowrap; }
+.linkage-inbox-bar .linkage-inbox-search > .table-search-field { flex: 1 1 auto; max-width: none; }
+.linkage-inbox-search-button { position: relative; }
+/* Los tres selectores van juntos en la misma fila que el buscador; si no caben, bajan juntos debajo de él. */
+.linkage-inbox-bar .linkage-inbox-selects { flex: 0 0 auto; flex-wrap: nowrap; }
+.linkage-inbox-bar .linkage-inbox-selects > .table-search-filter { flex: 0 0 11rem; }
+@media (max-width: 900px) {
+  .linkage-inbox-bar .linkage-inbox-selects { flex: 1 1 100%; flex-wrap: wrap; }
+  .linkage-inbox-bar .linkage-inbox-selects > .table-search-filter { flex: 1 1 10rem; }
+}
+.linkage-inbox-clear { align-self: flex-end; min-height: 2.5rem; animation: chip-in 180ms var(--spring) both; }
+.linkage-inbox-label-row { display: flex; align-items: baseline; justify-content: space-between; gap: 0.75rem; margin-bottom: 0.3rem; }
+.linkage-inbox-bar .linkage-inbox-label-row label { margin: 0; }
+.linkage-inbox-label-row .linkage-inbox-clear { min-height: 0; padding: 0 0.2rem; font-size: var(--type-sm); line-height: 1.2; }
+/* T-S13-13: el número de «Filtros (n)» rebota al cambiar; el botón de búsqueda conserva su ancho mientras busca. */
+.linkage-inbox-count { display: inline-block; animation: count-pop 420ms var(--spring); }
+.linkage-inbox-search-button .spinner { width: 1em; height: 1em; }
+@media (prefers-reduced-motion: reduce) { .linkage-inbox-clear, .linkage-inbox-count { animation: none; } }
+.linkage-inbox-actions { margin-left: auto; }
+.linkage-inbox-bar .linkage-inbox-actions > .csv-download { margin: 0; }
+/* A 600 px o menos: el buscador a todo el ancho (con su botón en la misma fila) y debajo «Filtros (n)». */
+.linkage-inbox-bar.compact { display: grid; gap: 0.5rem; }
+.linkage-inbox-bar.compact .linkage-inbox-search { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: end; gap: 0.5rem; }
+.linkage-inbox-bar.compact .linkage-inbox-search > .table-search-field { flex-basis: auto; }
+.linkage-inbox-bar.compact .linkage-inbox-search-button { flex-basis: auto; width: 2.9rem; min-height: 2.9rem; padding: 0; }
+.linkage-inbox-row { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem; }
+.linkage-inbox-row .linkage-inbox-clear { align-self: center; }
+.linkage-inbox-sheet { display: grid; gap: 0.9rem; margin: 0.75rem 0 1.25rem; }
+.linkage-inbox-sheet label { display: block; margin-bottom: 0.3rem; }
+.linkage-inbox-sheet select { width: 100%; margin: 0; }
+.linkage-inbox-sheet-title { margin: 0; font-size: var(--type-lg); }
+.linkage-inbox-sheet-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem; }
+.linkage-inbox-sheet-actions > :first-child { flex: 1 1 auto; }
 }

@@ -12,6 +12,7 @@ use App\Models\LinkageRequest;
 use App\Models\Skill;
 use App\Models\Student;
 use App\Support\CsvExport;
+use App\Support\InboxSearch;
 use Carbon\CarbonImmutable;
 use DateTimeInterface;
 use Illuminate\Database\Eloquent\Builder;
@@ -38,12 +39,7 @@ class InstitutionLinkageRequestController extends Controller
     /** CA-03, CA-04: de la más reciente a la más antigua, con filtro opcional por estado. */
     public function index(ListInstitutionLinkageRequestsRequest $request): JsonResponse
     {
-        $status = $request->validated('status');
-
-        $page = $this->owned($request)
-            ->when($status !== null, fn (Builder $query) => $query->where('status', $status))
-            // HU-S13-04 CA-04: solo las que tienen mensajes de la empresa sin leer.
-            ->when($request->boolean('unread'), fn (Builder $query) => $query->withUnread(LinkageParty::INSTITUTION))
+        $page = $this->filtered($request)
             ->withUnreadCount(LinkageParty::INSTITUTION)
             ->with([
                 'company:id,legal_name,trade_name,municipality_code',
@@ -52,8 +48,7 @@ class InstitutionLinkageRequestController extends Controller
                 self::STUDENT_COLUMNS,
                 'student.identity',
             ])
-            ->orderByDesc('created_at')
-            ->orderByDesc('id')
+            ->inboxSort($request->validated('sort'))
             ->paginate(self::PER_PAGE);
 
         return response()->json([
@@ -73,17 +68,15 @@ class InstitutionLinkageRequestController extends Controller
      */
     public function export(ListInstitutionLinkageRequestsRequest $request): StreamedResponse
     {
-        $status = $request->validated('status');
-        $linkages = $this->owned($request)
-            ->when($status !== null, fn (Builder $query) => $query->where('status', $status))
+        // T-S13-09: el CSV descarga lo que muestra la tabla: mismos filtros, búsqueda y orden.
+        $linkages = $this->filtered($request)
             ->with([
                 'company:id,legal_name,trade_name,contact_name,contact_position,contact_email,contact_phone',
                 'opportunity:id,title',
                 'student:id,program',
                 'student.identity',
             ])
-            ->orderByDesc('created_at')
-            ->orderByDesc('id')
+            ->inboxSort($request->validated('sort'))
             ->lazy(200)
             ->map(fn (LinkageRequest $linkage): array => [
                 $linkage->id,
@@ -166,7 +159,7 @@ class InstitutionLinkageRequestController extends Controller
         ]);
 
         // El conteo de no leídos es de la bandeja (HU-S13-04); en el detalle la conversación ya se ve completa.
-        $item = array_diff_key($this->item($linkage), ['unread_count' => true]);
+        $item = array_diff_key($this->item($linkage), ['unread_count' => true, 'last_message_at' => true]);
         $company = $linkage->company;
         $opportunity = $linkage->opportunity;
         $student = $linkage->student;
@@ -226,6 +219,32 @@ class InstitutionLinkageRequestController extends Controller
         return LinkageRequest::query()->where('institution_id', $request->user()->institution_id);
     }
 
+    /** Solicitudes propias con el estado, la interacción y la búsqueda de la bandeja (T-S13-09), sin orden. */
+    private function filtered(ListInstitutionLinkageRequestsRequest $request): Builder
+    {
+        $status = $request->validated('status');
+        $query = $this->owned($request)
+            ->when($status !== null, fn (Builder $query) => $query->where('status', $status))
+            ->withInteraction($request->validated('interaction'), LinkageParty::INSTITUTION);
+
+        // La institución busca por la empresa (nombre comercial o razón social), la oportunidad y sus propios alumnos
+        // (nombre, apellidos o matrícula).
+        foreach (InboxSearch::patterns($request->validated('q')) as $pattern) {
+            $query->where(fn (Builder $match) => $match
+                ->whereHas('company', fn (Builder $company) => $company->where(fn (Builder $names) => $names
+                    ->whereRaw(InboxSearch::matches('companies.trade_name'), [$pattern])
+                    ->orWhereRaw(InboxSearch::matches('companies.legal_name'), [$pattern])))
+                ->orWhereHas('opportunity', fn (Builder $opportunity) => $opportunity->whereRaw(InboxSearch::matches('opportunities.title'), [$pattern]))
+                ->orWhereHas('student.identity', fn (Builder $identity) => $identity->where(fn (Builder $fields) => $fields
+                    ->whereRaw(InboxSearch::matches('student_identities.given_names'), [$pattern])
+                    ->orWhereRaw(InboxSearch::matches('student_identities.first_surname'), [$pattern])
+                    ->orWhereRaw(InboxSearch::matches('student_identities.second_surname'), [$pattern])
+                    ->orWhereRaw(InboxSearch::matches('student_identities.enrollment_number'), [$pattern]))));
+        }
+
+        return $query;
+    }
+
     /** Elemento del listado (CA-04): lista explícita de campos. */
     private function item(LinkageRequest $linkage): array
     {
@@ -243,6 +262,8 @@ class InstitutionLinkageRequestController extends Controller
             'student' => $this->studentSummary($linkage->student),
             // HU-S13-04 CA-02: mensajes de la empresa sin leer.
             'unread_count' => (int) $linkage->getAttribute('unread_count'),
+            // T-S13-09: último mensaje del hilo, para explicar el orden por actividad.
+            'last_message_at' => $linkage->last_message_at?->toISOString(),
         ];
     }
 

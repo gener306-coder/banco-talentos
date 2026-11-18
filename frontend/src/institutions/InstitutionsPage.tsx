@@ -2,15 +2,21 @@ import { Link } from 'react-router'
 import { BuildingIcon, ChevronRightIcon, PlusIcon } from '../ui/icons'
 import { LoadingState, StateMessage } from '../ui/StateMessage'
 import { useRowNavigation } from '../ui/useRowNavigation'
+import { useTableMemory } from '../ui/useTableMemory'
+import { rowIndex } from '../ui/tableMotion'
 import { listInstitutions } from './api'
 import { InstitutionLayout, InstitutionRequestError, InstitutionStatus } from './InstitutionLayout'
 import { useInstitutionRequest } from './useInstitutionRequest'
 
 export function InstitutionsPage() {
-  const { data, loading, failure, refresh } = useInstitutionRequest(listInstitutions)
+  const { data, loading, failure, refresh, pending } = useInstitutionRequest(listInstitutions)
+  // T-S13-13: con un resultado a la vista, una consulta nueva lo atenúa en lugar de desmontarlo.
+  const refreshing = pending && data !== null
 
   // Toda la fila abre el detalle con el puntero; el enlace «Ver detalle» sigue siendo el control accesible (HU-S8-01).
   const openRow = useRowNavigation()
+  // T-S13-12: al volver de una fila, la tabla recupera su posición y la fila parpadea.
+  const tableMemory = useTableMemory()
 
   return (
     <InstitutionLayout title="Instituciones">
@@ -18,23 +24,25 @@ export function InstitutionsPage() {
         <p>Consulta y administra las instituciones educativas registradas.</p>
         <Link className="institution-button" to="/institutions/new"><PlusIcon />Nueva institución</Link>
       </div>
-      {loading ? <LoadingState label="Cargando instituciones…" variant="table" />
+      {loading && !data ? <LoadingState label="Cargando instituciones…" variant="table" />
         : failure ? <InstitutionRequestError failure={failure} retry={refresh} page />
         : data && data.length === 0
           ? <StateMessage kind="empty" icon={<BuildingIcon />} title="No hay instituciones registradas."
             description="Registra la primera institución para empezar a crear sus cuentas y enlaces de configuración."
             action={<Link className="institution-button" to="/institutions/new"><PlusIcon />Registrar la primera institución</Link>} />
         : data && (
-          <div className="table-card">
-            <div className="institution-table-wrapper" role="region" aria-label="Listado de instituciones" tabIndex={0}>
+          <div className={`table-card${refreshing ? ' is-refreshing' : ''}`}>
+              {/* T-S13-13: al buscar, filtrar o paginar, la tabla anterior se queda atenuada mientras llega la nueva. */}
+              {refreshing && <p className="visually-hidden" role="status">Actualizando resultados…</p>}
+            <div className="institution-table-wrapper" ref={tableMemory} aria-busy={refreshing} role="region" aria-label="Listado de instituciones" tabIndex={0}>
               <table className="institution-table has-actions">
                 <caption className="visually-hidden">Instituciones registradas</caption>
                 <thead><tr><th scope="col">Nombre</th><th scope="col">CCT</th><th scope="col">Correo de contacto</th><th scope="col">Estado</th><th scope="col">Acciones</th></tr></thead>
-                <tbody>
-                  {data.map((institution) => {
+                <tbody className="rows-enter">
+                  {data.map((institution, index) => {
                     const href = `/institutions/${institution.id}`
                     return (
-                      <tr key={institution.id} data-href={href} onClick={(event) => openRow(event, href)}>
+                      <tr key={institution.id} data-href={href} style={rowIndex(index)} onClick={(event) => openRow(event, href)}>
                         <th scope="row">{institution.name}</th>
                         <td>{institution.cct}</td>
                         <td>{institution.contact_email}</td>

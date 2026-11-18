@@ -128,14 +128,45 @@ export function introMessages(opening: ConversationOpening, role: LinkageSide, n
 }
 
 /** Conversaciones de la organización con mensajes sin leer, para el aviso del menú (HU-S13-04 CA-02). */
-export async function getUnreadConversations(side: LinkageSide, signal?: AbortSignal): Promise<number> {
+/** Conversación con novedades del resumen (T-S13-08): lo necesario para nombrarla en un aviso y llevar a ella. */
+export interface UnreadConversation {
+  id: number
+  counterpart_name: string
+  opportunity_title: string
+  unread_count: number
+  last_message_id: number
+}
+
+/** Resumen de mensajes sin leer del lado (HU-S13-04 CA-03, T-S13-08). */
+export interface UnreadSummary {
+  conversations: number
+  items: UnreadConversation[]
+}
+
+const isCount = (value: unknown): value is number => typeof value === 'number' && Number.isSafeInteger(value) && value >= 0
+const isId = (value: unknown): value is number => isCount(value) && value > 0
+
+function unreadConversation(value: unknown): UnreadConversation {
+  if (!isObject(value) || !isId(value.id) || typeof value.counterpart_name !== 'string' || typeof value.opportunity_title !== 'string' ||
+      !isCount(value.unread_count) || !isId(value.last_message_id)) throw new ApiError(502)
+  return {
+    id: value.id, counterpart_name: value.counterpart_name, opportunity_title: value.opportunity_title,
+    unread_count: value.unread_count, last_message_id: value.last_message_id,
+  }
+}
+
+export async function getUnreadSummary(side: LinkageSide, signal?: AbortSignal): Promise<UnreadSummary> {
   const prefix = side === 'COMPANY' ? '/api/linkage-requests' : '/api/institution/linkage-requests'
   const response = await request(`${prefix}/unread-summary`, { signal })
   if (!isObject(response) || !isObject(response.data)) throw new ApiError(502)
-  const { conversations } = response.data
-  if (typeof conversations !== 'number' || !Number.isSafeInteger(conversations) || conversations < 0) throw new ApiError(502)
-  return conversations
+  const { conversations, items = [] } = response.data
+  if (!isCount(conversations) || !Array.isArray(items)) throw new ApiError(502)
+  return { conversations, items: items.map(unreadConversation) }
 }
+
+/** Ruta de la conversación de una solicitud en el lado de la cuenta. */
+export const chatPath = (side: LinkageSide, id: number) =>
+  side === 'COMPANY' ? `/linkage-requests/${id}/chat` : `/institution/linkage-requests/${id}/chat`
 
 /** Aviso de que el lado leyó una conversación: el contador del menú se actualiza sin esperar a su siguiente consulta. */
 export const LINKAGE_READ_EVENT = 'linkage-conversation-read'

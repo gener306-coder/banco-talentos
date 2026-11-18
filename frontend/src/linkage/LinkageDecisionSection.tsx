@@ -108,7 +108,6 @@ export function LinkageDecisionSection({ data, onDecided, refresh }: {
                   <dt>Estado final</dt><dd><LinkageStatus status={data.status} /></dd>
                   <dt>Fecha de respuesta</dt><dd>{dateFormat.format(new Date(data.responded_at))}</dd>
                   <dt>Respondió</dt><dd>{data.responded_by?.name ?? 'Sin registro'}</dd>
-                  <dt>Mensaje para la empresa</dt><dd className="opportunity-description">{data.response_message ?? 'Sin mensaje'}</dd>
                 </dl>
               )
               : (
