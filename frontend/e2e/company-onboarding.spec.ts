@@ -60,9 +60,9 @@ test('HU-S14-02 y HU-S14-03: la Secretaría invita solo con el correo → la emp
     await company.getByRole('button', { name: 'Completar más tarde', exact: true }).click()
 
     // CA-04: el inicio recuerda qué falta y dónde encontrarlo.
-    const reminder = company.getByRole('note', { name: 'Completa tu perfil para publicar y vincular' })
-    await expect(reminder).toContainText('Falta: Nombre de la empresa, Nombre del contacto, Correo del contacto')
-    await expect(reminder).toContainText('Después lo encuentras en el menú de tu cuenta, en Mi cuenta, sección Perfil de la empresa.')
+    // T-S14-01: un recordatorio discreto lleva al perfil, donde está el detalle de lo que falta.
+    const reminder = company.getByRole('link', { name: /Completa tu perfil para publicar oportunidades y enviar solicitudes\./ })
+    await expect(reminder).toHaveAttribute('href', '/account#organization')
     await company.reload()
     await expect(company).toHaveURL(/\/$/)
 
@@ -76,6 +76,8 @@ test('HU-S14-02 y HU-S14-03: la Secretaría invita solo con el correo → la emp
 
     const profile = company.getByRole('region', { name: 'Perfil de la empresa' })
     await profile.getByLabel(/Nombre comercial/).fill(tradeName)
+    // Tras posponer, Mi cuenta no precarga el contacto: Soy yo usa los datos de la cuenta.
+    await profile.getByLabel('Soy yo').check()
     await profile.getByLabel(/Tu nombre/).fill('Rosa Garza')
     await profile.getByLabel('Puesto en la empresa (opcional)').fill('Dirección de planta')
     await profile.getByLabel('Estado', { exact: true }).selectOption({ label: 'Tamaulipas' })
@@ -87,7 +89,10 @@ test('HU-S14-02 y HU-S14-03: la Secretaría invita solo con el correo → la emp
     // Con el mínimo, el recordatorio solo pide el resto y la cuenta ya lleva el nombre real.
     await company.goto('/')
     await expect(company.getByRole('heading', { name: 'Hola, Rosa Garza' })).toBeVisible()
-    await expect(company.getByRole('note', { name: 'Tu perfil está incompleto' })).toContainText('Falta: Razón social, RFC, Sector económico.')
+    await expect(company.getByRole('link', { name: /Tu perfil está casi listo: faltan 3 datos\./ })).toBeVisible()
+    await company.goto('/account#organization')
+    await expect(company.getByRole('list', { name: 'Datos pendientes' })).toHaveText(['Razón social', 'RFC', 'Sector económico'].join(''))
+    await company.goto('/')
 
     // Publica y solicita la vinculación.
     await createOpportunity(company, opportunityTitle)

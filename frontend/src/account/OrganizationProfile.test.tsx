@@ -68,7 +68,7 @@ describe('perfil de la empresa en Mi cuenta (CA-01, CA-06)', () => {
     apiMock.mockResolvedValueOnce(Response.json({ data: { ...companyProfile, sector_code: '54', legal_name: 'Golfo Industrial, S.A.', missing: [] } }))
     renderApp('/account#organization')
     const section = await screen.findByRole('region', { name: 'Perfil de la empresa' })
-    expect(within(section).getByRole('note')).toHaveTextContent('las instituciones ven el nombre y el contacto de tu empresa')
+    expect(section).toHaveTextContent('6 de 7 datos del perfil completos')
     expect(within(section).getByLabelText('Razón social')).toHaveValue('Manufacturas del Golfo, S.A. de C.V.')
     expect(within(section).getByLabelText('RFC')).toHaveValue('MGO150320AB1')
     expect(within(section).queryByText('Folio u oficio de validación')).not.toBeInTheDocument()
@@ -101,6 +101,30 @@ describe('perfil de la empresa en Mi cuenta (CA-01, CA-06)', () => {
     fireEvent.click(within(section).getByRole('button', { name: 'Guardar cambios' }))
     await waitFor(() => expect(rfc).toHaveAccessibleDescription(/Ya existe una empresa registrada con ese RFC\./))
     expect(body().rfc).toBe('OTR010101AA1')
+  })
+
+  it('respeta el contacto vaciado: al volver no marca Soy yo ni vuelve a rellenar el nombre y el correo', async () => {
+    const cleared = { ...companyProfile, contact_name: null, contact_email: null, missing: ['contact_name', 'contact_email', 'sector_code'], can_operate: false }
+    apiMock.mockResolvedValueOnce(Response.json({ data: cleared }))
+    const view = renderApp('/account')
+    const section = await screen.findByRole('region', { name: 'Perfil de la empresa' })
+    fireEvent.click(within(section).getByLabelText('Soy yo'))
+    expect(within(section).getByLabelText(/Nombre del contacto/)).toHaveValue('')
+    fireEvent.click(within(section).getByRole('button', { name: 'Guardar cambios' }))
+    await within(section).findByText('Perfil actualizado correctamente.')
+    expect(body()).toMatchObject({ contact_name: null, contact_email: null })
+    expect(within(section).getByLabelText('Soy yo')).not.toBeChecked()
+    expect(within(section).getByLabelText(/Correo de contacto/)).toHaveValue('')
+    view.unmount()
+
+    // Al regresar a Mi cuenta, el contacto sigue vacío y la casilla sin marcar.
+    profile = cleared
+    renderApp('/account')
+    const again = await screen.findByRole('region', { name: 'Perfil de la empresa' })
+    expect(within(again).getByLabelText('Soy yo')).not.toBeChecked()
+    expect(within(again).getByLabelText(/Nombre del contacto/)).toHaveValue('')
+    expect(within(again).getByLabelText(/Correo de contacto/)).toHaveValue('')
+    expect(within(again).getByRole('list', { name: 'Datos pendientes' })).toHaveTextContent('Nombre del contacto')
   })
 
   it('asigna el contacto a otra persona al desmarcar Soy yo, sin tocar el nombre de la cuenta', async () => {
@@ -181,10 +205,10 @@ describe('onboarding /welcome (CA-02, CA-03)', () => {
     fireEvent.click(within(form).getByRole('button', { name: 'Guardar y continuar' }))
 
     // Con el nombre y el correo de la cuenta ya cubre el mínimo: el recordatorio solo pide el resto.
-    const reminder = await screen.findByRole('note', { name: 'Tu perfil está incompleto' })
+    const reminder = await screen.findByRole('link', { name: /Tu perfil está casi listo: faltan 4 datos\./ })
     expect(screen.getByLabelText('Ruta actual')).toHaveTextContent(/^\/$/)
     expect(body()).toMatchObject({ trade_name: 'Taller Norteño', contact_name: 'Rosa Garza', contact_email: 'op@norteno.test', account_name: 'Rosa Garza', rfc: null })
-    expect(reminder).toHaveTextContent('Falta: Razón social, RFC, Sector económico, Ubicación.')
+    expect(reminder).toHaveAttribute('href', '/account#organization')
     expect(screen.getByRole('heading', { name: 'Hola, Rosa Garza' })).toBeInTheDocument()
     // Sin bucles: el inicio ya no regresa al onboarding.
     expect(screen.queryByRole('heading', { name: 'Completa el perfil de tu empresa' })).not.toBeInTheDocument()
@@ -194,11 +218,11 @@ describe('onboarding /welcome (CA-02, CA-03)', () => {
     apiMock.mockResolvedValueOnce(new Response(null, { status: 204 }))
     renderApp('/welcome')
     fireEvent.click(await screen.findByRole('button', { name: 'Completar más tarde' }))
-    const reminder = await screen.findByRole('note', { name: 'Completa tu perfil para publicar y vincular' })
+    const reminder = await screen.findByRole('link', { name: /Completa tu perfil para publicar oportunidades y enviar solicitudes\./ })
     expect(apiMock.mock.calls.map(([path, init]) => [path, init?.method])).toEqual([['/api/organization/profile/postpone', 'POST']])
-    expect(reminder).toHaveTextContent('Falta: Nombre de la empresa, Nombre del contacto, Correo del contacto, Razón social, RFC, Sector económico, Ubicación.')
-    expect(reminder).toHaveTextContent('Después lo encuentras en el menú de tu cuenta, en Mi cuenta, sección Perfil de la empresa.')
-    expect(within(reminder).getByRole('link', { name: /Completar perfil/ })).toHaveAttribute('href', '/account#organization')
+    expect(reminder).toHaveAttribute('href', '/account#organization')
+    // T-S14-01: el inicio no enumera lo que falta; ese detalle está en Mi cuenta.
+    expect(reminder).not.toHaveTextContent(/Razón social|RFC|Falta/)
   })
 
   it('no intercepta los enlaces directos mientras el onboarding está pendiente', async () => {
@@ -216,18 +240,41 @@ describe('onboarding /welcome (CA-02, CA-03)', () => {
 })
 
 describe('recordatorio y mínimo para operar (CA-04, CA-05)', () => {
-  it('con el mínimo cubierto, el recordatorio solo pide completar el resto', async () => {
+  it('con el mínimo cubierto, el inicio muestra un recordatorio discreto de una línea hacia el perfil (T-S14-01)', async () => {
     renderApp('/')
-    const reminder = await screen.findByRole('note', { name: 'Tu perfil está incompleto' })
-    expect(reminder).toHaveTextContent('Ya puedes publicar oportunidades y enviar solicitudes')
-    expect(reminder).toHaveTextContent('Falta: Sector económico.')
+    const reminder = await screen.findByRole('link', { name: /Tu perfil está casi listo: falta 1 dato\./ })
+    expect(reminder).toHaveAttribute('href', '/account#organization')
+    expect(reminder).toHaveTextContent('Completar')
+    expect(screen.queryByRole('note')).not.toBeInTheDocument()
+  })
+
+  it('en Mi cuenta muestra el avance, los datos pendientes y cuáles son necesarios para operar (T-S14-01)', async () => {
+    user = { ...invitedUser, company: { ...invitedUser.company, onboarding: 'done' } }
+    profile = emptyProfile
+    renderApp('/account#organization')
+    const section = await screen.findByRole('region', { name: 'Perfil de la empresa' })
+    expect(section).toHaveTextContent('0 de 7 datos del perfil completos')
+    expect(section).toHaveTextContent('Completa los datos marcados para publicar oportunidades y enviar solicitudes.')
+    const pending = within(section).getByRole('list', { name: 'Datos pendientes' })
+    expect(within(pending).getAllByRole('listitem').map((item) => item.textContent)).toEqual([
+      'Nombre de la empresa (necesario para operar)', 'Nombre del contacto (necesario para operar)', 'Correo del contacto (necesario para operar)',
+      'Razón social', 'RFC', 'Sector económico', 'Ubicación',
+    ])
+  })
+
+  it('con el perfil completo, Mi cuenta solo lo confirma', async () => {
+    profile = { ...companyProfile, sector_code: '54', missing: [] }
+    renderApp('/account')
+    const section = await screen.findByRole('region', { name: 'Perfil de la empresa' })
+    expect(within(section).getByRole('status')).toHaveTextContent('Tu perfil está completo.')
+    expect(within(section).queryByRole('list', { name: 'Datos pendientes' })).not.toBeInTheDocument()
   })
 
   it('con el perfil completo no hay recordatorio', async () => {
     user = { ...companyUser, company: { ...companyUser.company, missing: [] } }
     renderApp('/')
     await screen.findByRole('heading', { name: 'Hola, Lucía Herrera' })
-    expect(screen.queryByRole('note', { name: /perfil/i })).not.toBeInTheDocument()
+    expect(screen.queryByRole('link', { name: /Tu perfil|Completa tu perfil/ })).not.toBeInTheDocument()
   })
 
   it('sin el mínimo, el alta de oportunidades explica qué falta en lugar del formulario', async () => {
@@ -248,6 +295,8 @@ describe('recordatorio y mínimo para operar (CA-04, CA-05)', () => {
     renderApp('/account#organization')
     const section = await screen.findByRole('region', { name: 'Perfil de la empresa' })
     fireEvent.change(within(section).getByLabelText(/Nombre comercial/), { target: { value: 'Taller Norteño' } })
+    // En Mi cuenta un contacto vacío no se precarga: la empresa elige Soy yo para usar sus datos.
+    fireEvent.click(within(section).getByLabelText('Soy yo'))
     fireEvent.change(within(section).getByLabelText(/Tu nombre/), { target: { value: 'Rosa Garza' } })
     fireEvent.change(within(section).getByLabelText('Puesto en la empresa (opcional)'), { target: { value: 'Dirección' } })
     fireEvent.click(within(section).getByRole('button', { name: 'Guardar cambios' }))

@@ -426,8 +426,24 @@ textarea[aria-invalid='true'] { border-color: var(--danger-border); }
 .home-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 0.35rem 0.9rem; margin: 0 0 1.5rem; color: var(--text); font-size: var(--type-base); }
 .home-role { padding: 0.15rem 0.7rem; border-radius: 999px; background: var(--tint); color: var(--accent); font-weight: 600; font-size: var(--type-sm); }
 .home-primary { margin: 0 0 1.75rem; }
-/* HU-S14-03: el recordatorio del perfil dice dónde encontrarlo después, en un tamaño menor. */
-.profile-reminder-path { font-size: var(--type-sm); }
+/*
+ * T-S14-01: recordatorio discreto del perfil de la empresa. Una línea con el avance y un enlace; el detalle vive en
+ * Mi cuenta. Es toda una zona tocable de 44 px, sin borde lateral ni ícono de alerta.
+ */
+.profile-nudge { display: inline-flex; align-items: center; gap: 0.65rem; max-width: 100%; min-height: 2.75rem; margin: 0 0 1.25rem;
+  padding: 0.45rem 0.6rem 0.45rem 0.9rem; border: 1px solid var(--border); border-radius: 999px; background: var(--surface);
+  color: var(--text); font-size: var(--type-sm); text-decoration: none; transition: border-color 160ms ease, background-color 160ms ease; }
+@media (hover: hover) { .profile-nudge:hover { border-color: var(--accent); background: var(--tint); } }
+.profile-nudge-text { min-width: 0; }
+.profile-nudge-action { display: inline-flex; align-items: center; gap: 0.15rem; flex: none; color: var(--accent); font-weight: 600; }
+.profile-nudge-action svg { width: 1rem; height: 1rem; }
+/* Barra de avance del perfil (decorativa): la usan el recordatorio y Mi cuenta. */
+.profile-meter { position: relative; flex: none; width: 2.75rem; height: 0.35rem; border-radius: 999px; background: var(--border); overflow: hidden; }
+.profile-meter-fill { position: absolute; inset: 0 auto 0 0; border-radius: inherit; background: var(--accent); }
+@media (max-width: 600px) {
+  .profile-nudge { display: flex; border-radius: 14px; }
+  .profile-nudge-text { flex: 1 1 auto; }
+}
 /* Enlace con aspecto de botón principal (T-S12-02): radio, padding y borde de button. */
 .home-action { display: inline-flex; align-items: center; gap: 0.45rem; padding: 0.8rem 1rem; border: 1px solid var(--accent); border-radius: 10px; background: var(--accent-fill);
   color: var(--on-accent); font-weight: 600; text-decoration: none; transition: transform 150ms ease-out, background-color 150ms ease-out; }

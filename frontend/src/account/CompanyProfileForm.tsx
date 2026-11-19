@@ -37,10 +37,15 @@ function Needed() {
  * parcial y solo valida el formato de lo capturado. Con «Soy yo», el contacto para vinculación es la persona de la
  * sesión: se precarga con su nombre y correo (sin el nombre provisional) y el nombre corrige también el de la cuenta.
  */
-export function CompanyProfileForm({ profile, submitLabel, pendingLabel, secondary, onSaved }: {
+export function CompanyProfileForm({ profile, submitLabel, pendingLabel, secondary, suggestSelf = false, onSaved }: {
   profile: CompanyProfile
   submitLabel: string
   pendingLabel: string
+  /**
+   * Solo en el onboarding: con el contacto vacío, propone a la persona de la sesión («Soy yo» marcado y sus datos
+   * precargados). En Mi cuenta, un contacto vacío es una decisión de la empresa y se respeta tal cual.
+   */
+  suggestSelf?: boolean
   /** Acción secundaria junto al botón principal (por ejemplo, «Completar más tarde»). */
   secondary?: ReactNode
   onSaved: (profile: CompanyProfile) => void
@@ -49,11 +54,13 @@ export function CompanyProfileForm({ profile, submitLabel, pendingLabel, seconda
   const accountEmail = user?.email ?? ''
   // M3: el nombre provisional de una invitada es su correo; no se propone como nombre de nadie.
   const accountName = user && user.name !== user.email ? user.name : ''
-  const [self, setSelf] = useState(() => (profile.contact_name === null && profile.contact_email === null)
+  const emptyContact = profile.contact_name === null && profile.contact_email === null
+  // «Soy yo» refleja el contacto guardado: es la persona de la sesión si su correo es el de la cuenta.
+  const [self, setSelf] = useState(() => (suggestSelf && emptyContact)
     || (profile.contact_email !== null && profile.contact_email.toLowerCase() === accountEmail.toLowerCase()))
   const [values, setValues] = useState<Values>(() => {
     const initial = valuesOf(profile)
-    if (profile.contact_name === null && profile.contact_email === null) return { ...initial, contact_name: accountName, contact_email: accountEmail }
+    if (suggestSelf && emptyContact) return { ...initial, contact_name: accountName, contact_email: accountEmail }
     return initial
   })
   const [localErrors, setLocalErrors] = useState<Partial<Record<Field, string>>>({})
@@ -105,6 +112,8 @@ export function CompanyProfileForm({ profile, submitLabel, pendingLabel, seconda
     void mutation.submit(() => updateOrganizationProfile(input), (updated) => {
       if (updated.type !== 'company') return
       setValues(valuesOf(updated))
+      // Tras guardar, la casilla sigue al contacto guardado (p. ej. vaciarlo la desmarca).
+      setSelf(updated.contact_email !== null && updated.contact_email.toLowerCase() === accountEmail.toLowerCase())
       setNotice('Perfil actualizado correctamente.')
       // La sesión refleja el nombre de la empresa, lo que falta y el nombre de la cuenta sin volver a cargarse.
       if (user?.company) {

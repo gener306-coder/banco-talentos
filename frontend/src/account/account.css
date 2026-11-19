@@ -20,6 +20,18 @@
 .account-contact { margin: 0; padding: 0; border: 0; min-width: 0; }
 .account-contact legend { margin-bottom: 0.6rem; padding: 0; font-weight: 600; }
 .account-profile-form .institution-success { margin: 0; }
+/* Al llegar por #organization, el título no queda bajo el encabezado fijo. */
+.account-organization { scroll-margin-top: 6.5rem; }
+/* T-S14-01: avance del perfil en Mi cuenta, con los datos pendientes como fichas. */
+.profile-progress { margin: 0 0 1rem; padding: 0.85rem 1rem; border: 1px solid var(--border); border-radius: 12px; background: var(--surface-muted); font-size: var(--type-sm); }
+.profile-progress p { margin: 0; }
+.profile-progress.complete { color: var(--success-text); background: var(--success-surface); border-color: transparent; }
+.profile-progress-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 0.4rem 1rem; }
+.profile-progress-head .profile-meter { width: 7rem; }
+.profile-progress .profile-progress-hint { margin-top: 0.35rem; }
+.profile-gaps { display: flex; flex-wrap: wrap; gap: 0.4rem; margin: 0.7rem 0 0; padding: 0; list-style: none; }
+.profile-gaps li { padding: 0.15rem 0.6rem; border: 1px solid var(--border); border-radius: 999px; background: var(--surface); color: var(--text); font-size: var(--type-xs); }
+.profile-gaps li.operating { border-color: color-mix(in srgb, var(--accent) 35%, transparent); background: var(--tint); color: var(--accent); font-weight: 600; }
 /* HU-S14-03: onboarding de la empresa, sin navegación de regreso. */
 .welcome-lead { margin: 0 0 1rem; font-size: var(--type-base); }
 .account-contact > .field-help { margin: -0.3rem 0 0.7rem; }

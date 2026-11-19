@@ -8,6 +8,7 @@ import { Callout } from '../ui/Callout'
 import { PendingLabel } from '../ui/forms'
 import { LoadingState } from '../ui/StateMessage'
 import { CompanyProfileForm } from './CompanyProfileForm'
+import { ProfileProgress } from './ProfileProgress'
 import { getOrganizationProfile, updateOrganizationProfile } from './organizationApi'
 import type { InstitutionProfile } from './organizationApi'
 
@@ -104,15 +105,14 @@ export function OrganizationProfileSection() {
   const title = data?.type === 'company' ? 'Perfil de la empresa' : data ? 'Perfil de la institución' : 'Perfil de la organización'
 
   return (
-    <section className="student-section" id="organization" aria-labelledby="account-organization-title">
+    <section className="student-section account-organization" id="organization" aria-labelledby="account-organization-title">
       <h3 id="account-organization-title">{title}</h3>
       {loading && !data ? <LoadingState label="Cargando el perfil…" variant="details" />
         : failure ? <InstitutionRequestError failure={failure} retry={refresh} />
         : data?.type === 'company' ? (
           <div className="content-enter">
-            <Callout tone="info">
-              <p>Mantén tus datos al día: las instituciones ven el nombre y el contacto de tu empresa en cada solicitud.</p>
-            </Callout>
+            {/* T-S14-01: el detalle de lo que falta, que el inicio ya no repite. */}
+            <ProfileProgress missing={data.missing} />
             <CompanyProfileForm profile={data} submitLabel="Guardar cambios" pendingLabel="Guardando cambios…" onSaved={setData} />
           </div>
         )

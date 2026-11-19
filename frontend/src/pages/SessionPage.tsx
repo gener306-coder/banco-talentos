@@ -2,12 +2,12 @@ import { useCallback, useEffect, useId, useState } from 'react'
 import type { CSSProperties, FormEvent, ReactNode } from 'react'
 import { Link, Navigate, useNavigate } from 'react-router'
 import { roleLabels } from '../auth/api'
-import type { CompanyGap, Role, SessionCompany, User } from '../auth/api'
+import type { Role, SessionCompany, User } from '../auth/api'
+import { ProfileMeter } from '../account/ProfileProgress'
 import { useAuth } from '../auth/useAuth'
 import { organizationOf } from '../auth/user'
 import { getDashboard, metricKeys, metricLabels } from '../dashboard/api'
 import { useApiRequest } from '../lib/useApiRequest'
-import { Callout } from '../ui/Callout'
 import { useCountUp } from '../ui/useCountUp'
 import { useReveal } from '../ui/useReveal'
 import { firstViewInSession } from './homeCountUp'
@@ -227,27 +227,20 @@ function HomeIndicators({ role, onSettled }: { role: Role; onSettled: () => void
  * Inicio por rol (tarea transversal del Sprint 4): saludo, acción principal y tarjetas de acceso a las secciones
  * del rol, con sus indicadores (HU-S5-01). La identidad completa y «Cerrar sesión» están en el menú de cuenta del encabezado (ui/AccountMenu).
  */
-/** Lo que falta del perfil, en palabras de la empresa. */
-const gapLabels: Record<CompanyGap, string> = {
-  name: 'Nombre de la empresa', contact_name: 'Nombre del contacto', contact_email: 'Correo del contacto',
-  legal_name: 'Razón social', rfc: 'RFC', sector_code: 'Sector económico', location: 'Ubicación',
-}
-
 /**
- * HU-S14-03 CA-04: mientras falten datos, el inicio de la empresa dice qué falta, lleva al perfil y explica dónde
- * encontrarlo después. Sin el mínimo (M1), avisa que todavía no puede publicar ni solicitar.
+ * T-S14-01: recordatorio discreto del perfil (sustituye al aviso extenso de HU-S14-03 CA-04). Una sola línea con el
+ * avance y un enlace al perfil; el detalle de lo que falta vive en Mi cuenta. Sin el mínimo (M1) dice qué habilita.
  */
-function ProfileReminder({ company }: { company: SessionCompany }) {
+function ProfileNudge({ company }: { company: SessionCompany }) {
+  const text = company.canOperate
+    ? `Tu perfil está casi listo: ${company.missing.length === 1 ? 'falta 1 dato' : `faltan ${company.missing.length} datos`}.`
+    : 'Completa tu perfil para publicar oportunidades y enviar solicitudes.'
   return (
-    <Callout tone="pending" label={company.canOperate ? 'Tu perfil está incompleto' : 'Completa tu perfil para publicar y vincular'}
-      action={<Link className="pill-link" to="/account#organization">Completar perfil<ChevronRightIcon /></Link>}>
-      <p><strong>{company.canOperate ? 'Tu perfil está incompleto.' : 'Completa tu perfil para publicar y vincular.'}</strong>{' '}
-        {company.canOperate
-          ? 'Ya puedes publicar oportunidades y enviar solicitudes; completar el resto ayuda a las instituciones a conocer tu empresa.'
-          : 'Mientras tanto puedes explorar el talento, pero aún no publicar oportunidades ni enviar solicitudes.'}</p>
-      <p>Falta: {company.missing.map((gap) => gapLabels[gap]).join(', ')}.</p>
-      <p className="profile-reminder-path">Después lo encuentras en el menú de tu cuenta, en Mi cuenta, sección Perfil de la empresa.</p>
-    </Callout>
+    <Link className="profile-nudge" to="/account#organization">
+      <ProfileMeter missing={company.missing} />
+      <span className="profile-nudge-text">{text}</span>
+      <span className="profile-nudge-action">Completar<ChevronRightIcon /></span>
+    </Link>
   )
 }
 
@@ -278,7 +271,7 @@ export function SessionPage() {
         </p>
       </div>
 
-      {user.company && user.company.missing.length > 0 && <ProfileReminder company={user.company} />}
+      {user.company && user.company.missing.length > 0 && <ProfileNudge company={user.company} />}
 
       {home?.primary && (
         <div className="home-primary">

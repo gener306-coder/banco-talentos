@@ -40,7 +40,7 @@ export function WelcomePage() {
         : profile.failure ? <InstitutionRequestError failure={profile.failure} retry={profile.refresh} page />
         : profile.data?.type === 'company' && (
           <div className="content-enter">
-            <CompanyProfileForm profile={profile.data} submitLabel="Guardar y continuar" pendingLabel="Guardando…" onSaved={() => undefined}
+            <CompanyProfileForm profile={profile.data} submitLabel="Guardar y continuar" pendingLabel="Guardando…" suggestSelf onSaved={() => undefined}
               secondary={(
                 <button type="button" className="secondary" disabled={postpone.pending} onClick={later}>
                   <PendingLabel pending={postpone.pending} label="Completar más tarde" pendingLabel="Un momento…" />
