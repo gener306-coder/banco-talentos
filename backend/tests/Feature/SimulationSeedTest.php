@@ -26,7 +26,10 @@ it('loads a small consistent dataset with demo accounts that can sign in', funct
     expect(DB::table('institutions')->count())->toBe(2)
         ->and(DB::table('institutions')->where('is_active', false)->count())->toBe(1)
         ->and(DB::table('students')->count())->toBeGreaterThan(20)
-        ->and(DB::table('companies')->count())->toBe(4)
+        // Más las tres invitadas sin perfil de HU-S14-02, que no reciben oportunidades.
+        ->and(DB::table('companies')->count())->toBe(7)
+        ->and(DB::table('companies')->whereNull('legal_name')->count())->toBe(3)
+        ->and(DB::table('opportunities')->join('companies', 'companies.id', '=', 'opportunities.company_id')->whereNull('companies.legal_name')->count())->toBe(0)
         ->and(DB::table('opportunities')->count())->toBe(8)
         ->and(DB::table('student_identities')->count())->toBe(DB::table('students')->count());
 

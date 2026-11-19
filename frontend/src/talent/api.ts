@@ -49,8 +49,8 @@ export interface TalentCard {
   institution: string
   stateCode: string
   municipality: string | null
-  /** Múltiplo de 5; 0 significa «a menos de 5 km». */
-  distanceKm: number
+  /** Múltiplo de 5; 0 significa «a menos de 5 km». Null sin origen: la empresa aún no captura su ubicación (HU-S14-02). */
+  distanceKm: number | null
   skills: { name: string; kind: SkillKind }[]
   languages: { languageCode: string; level: number }[]
   verifiedCertifications: number
@@ -79,7 +79,7 @@ function card(data: unknown): TalentCard {
   if (!isObject(data) || !isText(data.public_id) || !UUID.test(data.public_id) || !isOptionalText(data.headline) ||
       !isText(data.program) || !isPeriodType(data.period_type) || !isPositiveInt(data.period_number) ||
       !isText(data.institution) || !isStateCode(data.state_code) || !isOptionalText(data.municipality) ||
-      typeof data.distance_km !== 'number' || !Number.isSafeInteger(data.distance_km) || data.distance_km < 0 ||
+      (data.distance_km !== null && (typeof data.distance_km !== 'number' || !Number.isSafeInteger(data.distance_km) || data.distance_km < 0)) ||
       !Array.isArray(data.skills) || !Array.isArray(data.languages) ||
       typeof data.verified_certifications !== 'number' || typeof data.dual_available !== 'boolean' ||
       typeof data.can_relocate !== 'boolean') throw new ApiError(502)
@@ -87,7 +87,7 @@ function card(data: unknown): TalentCard {
   return {
     publicId: data.public_id, headline: data.headline, program: data.program, periodType: data.period_type,
     periodNumber: data.period_number, institution: data.institution, stateCode: data.state_code, municipality: data.municipality,
-    distanceKm: data.distance_km,
+    distanceKm: data.distance_km as number | null,
     skills: data.skills.map((skill: unknown) => {
       if (!isObject(skill) || !isText(skill.name) || !isSkillKind(skill.kind)) throw new ApiError(502)
       return { name: skill.name, kind: skill.kind }

@@ -12,7 +12,8 @@ const linkageMock = vi.fn<typeof fetch>()
 const sentMock = vi.fn<typeof fetch>()
 const sentPage = (items: unknown[]) => Response.json({ data: items, meta: { current_page: 1, last_page: 1, total: items.length, per_page: 20 } })
 let options: unknown[]
-const user = { id: 9, name: 'Reclutadora', email: 'rh@manugolfo.test', role: 'COMPANY', institution: null, company: { id: 3, name: 'ManuGolfo' } }
+const companyUser = { id: 9, name: 'Reclutadora', email: 'rh@manugolfo.test', role: 'COMPANY', institution: null, company: { id: 3, name: 'ManuGolfo', missing: [] as string[] } }
+let user: typeof companyUser = companyUser
 const publicId = '3f2c1b9e-8a7d-4c6b-9e5f-1a2b3c4d5e6f'
 const profile = {
   public_id: publicId, headline: 'Analista de datos', program: 'Ingeniería', period_type: 'semester', period_number: 6,
@@ -31,6 +32,7 @@ function Location() {
 const posts = () => linkageMock.mock.calls.filter(([, init]) => init?.method === 'POST')
 
 beforeEach(() => {
+  user = companyUser
   options = [{ id: 12, title: 'Automatización de línea', program: 'Mecatrónica', municipality: 'Reynosa' }, { id: 13, title: 'Calidad', program: 'Industrial', municipality: null }]
   linkageMock.mockReset()
   sentMock.mockReset()
@@ -83,6 +85,23 @@ describe('solicitud de vinculación HU-S5-04', () => {
     expect(JSON.parse(posts()[0][1]?.body as string)).toEqual({ student_public_id: publicId, opportunity_id: 12, message: 'Nos interesa su perfil.' })
     expect(select).toHaveValue('')
     expect(within(sheet).getByLabelText('Mensaje para la institución (opcional)')).toHaveValue('')
+  })
+
+  it('sin el mínimo del perfil no ofrece enviar y lleva a completarlo (HU-S14-03 CA-05)', async () => {
+    user = { ...companyUser, company: { id: 3, name: 'ManuGolfo', missing: ['contact_email'] } }
+    const sheet = await openSheet()
+    const notice = within(sheet).getByRole('note', { name: 'Perfil de la empresa incompleto' })
+    expect(notice).toHaveTextContent('Completa el nombre de tu empresa y el nombre y correo del contacto')
+    expect(within(notice).getByRole('link', { name: /Completar perfil/ })).toHaveAttribute('href', '/account#organization')
+    expect(within(sheet).queryByRole('button', { name: 'Enviar solicitud' })).not.toBeInTheDocument()
+  })
+
+  it('muestra el aviso del perfil si el servidor lo rechaza por el mínimo (HU-S14-03 CA-05)', async () => {
+    linkageMock.mockResolvedValueOnce(Response.json({ message: 'x', code: 'COMPANY_PROFILE_INCOMPLETE', missing: ['contact_email'] }, { status: 422 }))
+    const sheet = await openSheet()
+    fireEvent.change(await within(sheet).findByLabelText('Oportunidad'), { target: { value: '12' } })
+    fireEvent.click(within(sheet).getByRole('button', { name: 'Enviar solicitud' }))
+    expect(await within(sheet).findByRole('note', { name: 'Perfil de la empresa incompleto' })).toBeInTheDocument()
   })
 
   it('sin oportunidades activas ofrece registrar una (CA-06)', async () => {

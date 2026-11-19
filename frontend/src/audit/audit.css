@@ -1,0 +1,7 @@
+/* Bitácora (HU-S14-04): los campos que cambiaron, debajo del recurso. Solo tokens semánticos. */
+@layer components {
+.audit-table td:first-child { white-space: nowrap; }
+/* Con la lista de campos, el recurso necesita ancho: en el celular la tabla se desplaza en lugar de estirar las filas. */
+.audit-table td:last-child { min-width: 17rem; }
+.audit-fields { display: block; margin-top: 0.15rem; font-size: var(--type-sm); color: var(--text); overflow-wrap: anywhere; }
+}

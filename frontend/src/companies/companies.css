@@ -5,4 +5,9 @@
 .company-form legend { margin-bottom: 0.6rem; font-size: var(--type-base); font-weight: 600; color: var(--accent); }
 .company-form select { width: 100%; margin-bottom: 0.6rem; }
 .company-details { max-width: var(--content-readable); }
+/* HU-S14-02: la invitada sin nombre se reconoce por el correo de su cuenta, debajo del nombre. */
+.company-account-email { display: block; margin-top: 0.15rem; font-size: var(--type-xs); font-weight: 400; color: var(--text); overflow-wrap: anywhere; }
+/* Un dato que la empresa aún no captura: en cursiva, sin color nuevo. */
+.company-pending-value { font-style: italic; font-weight: 400; }
+.company-invite input:not([type='radio']) { width: 100%; }
 }

@@ -135,6 +135,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       expireSession,
       signIn: (email, password) => mutate(() => login(email, password), false),
       signOut: () => mutate(logout, true),
+      updateUser: (user) => setSession((previous) => previous.user ? { ...previous, user } : previous),
     }}>
       {children}
     </AuthContext.Provider>

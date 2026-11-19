@@ -11,14 +11,39 @@ export const roleLabels = {
 
 export type Role = keyof typeof roleLabels
 
+/** HU-S14-02: claves de lo que le falta al perfil de la empresa, sin valores. */
+export type CompanyGap = 'name' | 'contact_name' | 'contact_email' | 'legal_name' | 'rfc' | 'sector_code' | 'location'
+const COMPANY_GAPS: readonly string[] = ['name', 'contact_name', 'contact_email', 'legal_name', 'rfc', 'sector_code', 'location']
+export const isCompanyGap = (value: unknown): value is CompanyGap => typeof value === 'string' && COMPANY_GAPS.includes(value)
+
+/** HU-S14-03 (M1): lo mínimo para publicar oportunidades y enviar solicitudes. */
+export const OPERATING_MINIMUM: readonly CompanyGap[] = ['name', 'contact_name', 'contact_email']
+
+export interface SessionCompany {
+  id: number
+  name: string | null
+  missing: CompanyGap[]
+  /** El onboarding termina al guardar o posponer el perfil, o si ya está completo. */
+  onboarding: 'pending' | 'done'
+  canOperate: boolean
+}
+
+/** La empresa de la sesión con lo que falta: deriva si ya puede operar (M1). */
+export function sessionCompany(id: number, name: string | null, missing: CompanyGap[], onboarding: SessionCompany['onboarding']): SessionCompany {
+  return { id, name, missing, onboarding, canOperate: !missing.some((gap) => OPERATING_MINIMUM.includes(gap)) }
+}
+
 export interface User {
   id: number
   name: string
   email: string
   role: Role
   institution: { id: number; name: string } | null
-  /** Empresa vinculada a una cuenta COMPANY (HU-S4-03 CA-05): solo su nombre visible. */
-  company: { id: number; name: string } | null
+  /**
+   * Empresa vinculada a una cuenta COMPANY (HU-S4-03 CA-05): solo su nombre visible, null mientras la empresa
+   * invitada no capture ninguno (HU-S14-02).
+   */
+  company: SessionCompany | null
 }
 
 function sessionUser(data: unknown): User {
@@ -41,7 +66,7 @@ function sessionUser(data: unknown): User {
     throw new ApiError(502)
   }
 
-  const organization = (key: 'institution' | 'company'): { id: number; name: string } | null => {
+  const organization = (key: 'institution'): { id: number; name: string } | null => {
     if (!(key in user)) return null
     const linked: unknown = (user as Record<string, unknown>)[key]
     if (linked === null || linked === undefined) return null
@@ -51,9 +76,22 @@ function sessionUser(data: unknown): User {
     return { id: linked.id, name: linked.name }
   }
 
+  // HU-S14-02: la empresa invitada puede no tener nombre todavía.
+  const company = (): User['company'] => {
+    if (!('company' in user) || user.company === null || user.company === undefined) return null
+    const linked: unknown = user.company
+    if (typeof linked !== 'object' || linked === null || !('id' in linked) || typeof linked.id !== 'number' ||
+        !Number.isSafeInteger(linked.id) || linked.id <= 0 ||
+        !('name' in linked) || (linked.name !== null && typeof linked.name !== 'string')) throw new ApiError(502)
+    if (!('missing' in linked) || !Array.isArray(linked.missing) || !linked.missing.every(isCompanyGap)) throw new ApiError(502)
+    const onboarding = 'onboarding' in linked ? linked.onboarding : 'done'
+    if (onboarding !== 'pending' && onboarding !== 'done') throw new ApiError(502)
+    return sessionCompany(linked.id, linked.name as string | null, linked.missing as CompanyGap[], onboarding)
+  }
+
   return {
     id: user.id, name: user.name, email: user.email, role: user.role as Role,
-    institution: organization('institution'), company: organization('company'),
+    institution: organization('institution'), company: company(),
   }
 }
 
@@ -108,3 +146,25 @@ export function setInitialPassword(input: InitialPasswordInput): Promise<void> {
 export function resetPassword(input: InitialPasswordInput): Promise<void> {
   return submitNewPassword('/api/institution-accounts/password-reset', input)
 }
+
+/** Datos de la cuenta propia (HU-S14-01): solo el nombre. Devuelve la identidad actualizada de la sesión. */
+export async function updateAccount(name: string): Promise<User> {
+  if (!csrfToken()) await request('/sanctum/csrf-cookie')
+  return sessionUser(await request('/api/me', { method: 'PATCH', body: JSON.stringify({ name }) }))
+}
+
+export interface PasswordChangeInput {
+  current_password: string
+  password: string
+  password_confirmation: string
+}
+
+/** Cambio de la contraseña propia (HU-S14-01): la sesión actual sigue abierta; las demás se cierran. */
+export async function changePassword(input: PasswordChangeInput): Promise<void> {
+  if (!csrfToken()) await request('/sanctum/csrf-cookie')
+  await request('/api/me/password', {
+    method: 'PUT',
+    body: JSON.stringify({ current_password: input.current_password, password: input.password, password_confirmation: input.password_confirmation }),
+  })
+}
+

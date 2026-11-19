@@ -1,6 +1,6 @@
 import { useCallback } from 'react'
 import { Link, useLocation, useParams } from 'react-router'
-import { sectorName } from '../companies/catalogs'
+import { NO_SECTOR, NOT_CAPTURED, sectorName } from '../companies/catalogs'
 import { InstitutionRequestError, InstitutionStatus } from '../institutions/InstitutionLayout'
 import { useApiRequest } from '../lib/useApiRequest'
 import { SkillTags } from '../opportunities/OpportunityLayout'
@@ -108,14 +108,16 @@ function Detail({ data, onDecided, refresh }: {
         <h3 id="linkage-company-title">Empresa y contacto del programa dual</h3>
         <p>Una vez aceptada la solicitud, coordina la vinculación en la conversación de esta página o con este contacto.</p>
         <dl className="student-identity">
-          <dt>Razón social</dt><dd>{company.legal_name}</dd>
+          <dt>Razón social</dt><dd>{company.legal_name ?? NOT_CAPTURED}</dd>
           {company.trade_name && <><dt>Nombre comercial</dt><dd>{company.trade_name}</dd></>}
-          <dt>Sector</dt><dd>{sectorName(company.sector_code)}</dd>
-          <dt>Ubicación</dt><dd>{[company.municipality, stateName(company.state_code)].filter(Boolean).join(', ')}</dd>
-          <dt>Contacto</dt><dd>{company.contact_name}</dd>
+          <dt>Sector</dt><dd>{company.sector_code ? sectorName(company.sector_code) : NO_SECTOR}</dd>
+          <dt>Ubicación</dt><dd>{company.state_code ? [company.municipality, stateName(company.state_code)].filter(Boolean).join(', ') : NOT_CAPTURED}</dd>
+          <dt>Contacto</dt><dd>{company.contact_name ?? NOT_CAPTURED}</dd>
           {company.contact_position && <><dt>Puesto o departamento</dt><dd>{company.contact_position}</dd></>}
           {/* T-S12-06: el correo queda visible y seleccionable; su ícono ofrece copiarlo, webmail o la app del sistema. */}
-          <dt>Correo</dt><dd><span className="cell-meta">{company.contact_email}<span className="cell-actions"><EmailMenu email={company.contact_email} /></span></span></dd>
+          <dt>Correo</dt><dd>{company.contact_email
+            ? <span className="cell-meta">{company.contact_email}<span className="cell-actions"><EmailMenu email={company.contact_email} /></span></span>
+            : NOT_CAPTURED}</dd>
           <dt>Teléfono</dt><dd>{company.contact_phone ? <a href={`tel:${company.contact_phone.replace(/[^\d+]/g, '')}`}>{company.contact_phone}</a> : 'Sin teléfono'}</dd>
         </dl>
       </section>

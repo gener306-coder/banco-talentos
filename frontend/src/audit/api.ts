@@ -16,7 +16,25 @@ export const AUDIT_EVENT_TYPES = [
   { value: 'opportunity_created', label: 'Oportunidad registrada' },
   { value: 'linkage_requested', label: 'Vinculación solicitada' },
   { value: 'linkage_responded', label: 'Vinculación respondida' },
+  // HU-S14-04: cambios de cuentas y organizaciones (account_audit_events).
+  { value: 'company_invited', label: 'Empresa invitada' },
+  { value: 'organization_profile_updated', label: 'Perfil de organización actualizado' },
+  { value: 'account_updated', label: 'Cuenta actualizada' },
+  { value: 'password_changed', label: 'Contraseña cambiada' },
 ] as const
+
+/** Etiqueta legible de un campo que cambió; uno desconocido no expone su nombre técnico. */
+const FIELD_LABELS: Record<string, string> = {
+  trade_name: 'Nombre comercial', legal_name: 'Razón social', rfc: 'RFC', sector_code: 'Sector económico',
+  state_code: 'Estado', municipality_code: 'Municipio', contact_name: 'Nombre del contacto', contact_position: 'Puesto del contacto',
+  contact_email: 'Correo del contacto', contact_phone: 'Teléfono del contacto', validation_reference: 'Folio de validación', cct: 'Clave de Centro de Trabajo',
+}
+
+export function fieldLabel(field: string, subject: ChangeSubject): string {
+  // `name` es el nombre de la cuenta o el nombre oficial de la institución, según el sujeto.
+  if (field === 'name') return subject === 'institution' ? 'Nombre oficial' : 'Nombre'
+  return Object.hasOwn(FIELD_LABELS, field) ? FIELD_LABELS[field] : 'Otro dato'
+}
 
 export type AuditEventType = (typeof AUDIT_EVENT_TYPES)[number]['value']
 
@@ -24,13 +42,17 @@ export const auditEventLabel = (type: AuditEventType) => AUDIT_EVENT_TYPES.find(
 
 interface Actor { id: number; name: string; role: Role }
 interface LinkageResource { id: number; status: LinkageStatus; institution: string; company: string }
+export type ChangeSubject = 'user' | 'company' | 'institution'
+/** HU-S14-04: la cuenta, empresa o institución afectada y solo los nombres de los campos que cambiaron. */
+export interface ChangeResource { subjectType: ChangeSubject; id: number; name: string; role: Role | null; fields: string[] }
 
 /** Evento con solo los campos públicos del contrato (CA-03). */
 export type AuditEvent = { occurred_at: string; actor: Actor } & (
   | { type: 'account_created'; resource: { id: number; name: string; email: string; role: Role } }
-  | { type: 'company_registered'; resource: { id: number; legal_name: string } }
+  | { type: 'company_registered'; resource: { id: number; name: string } }
   | { type: 'opportunity_created'; resource: { id: number; title: string } }
   | { type: 'linkage_requested' | 'linkage_responded'; resource: LinkageResource }
+  | { type: 'company_invited' | 'organization_profile_updated' | 'account_updated' | 'password_changed'; resource: ChangeResource }
 )
 
 export interface AuditEventPage {
@@ -63,8 +85,9 @@ function event(value: unknown): AuditEvent {
       if (!isString(resource.name) || !isString(resource.email) || !isRole(resource.role)) break
       return { ...base, type: value.type, resource: { id, name: resource.name, email: resource.email, role: resource.role } }
     case 'company_registered':
-      if (!isString(resource.legal_name)) break
-      return { ...base, type: value.type, resource: { id, legal_name: resource.legal_name } }
+      // HU-S14-02: el nombre visible, o «Empresa sin nombre» si la invitada aún no lo captura.
+      if (!isString(resource.name)) break
+      return { ...base, type: value.type, resource: { id, name: resource.name } }
     case 'opportunity_created':
       if (!isString(resource.title)) break
       return { ...base, type: value.type, resource: { id, title: resource.title } }
@@ -72,6 +95,18 @@ function event(value: unknown): AuditEvent {
     case 'linkage_responded':
       if (!isStatus(resource.status) || !isString(resource.institution) || !isString(resource.company)) break
       return { ...base, type: value.type, resource: { id, status: resource.status, institution: resource.institution, company: resource.company } }
+    case 'company_invited':
+    case 'organization_profile_updated':
+    case 'account_updated':
+    case 'password_changed': {
+      const subject = resource.subject_type
+      if ((subject !== 'user' && subject !== 'company' && subject !== 'institution') || !isString(resource.name) ||
+          (subject === 'user' && !isRole(resource.role)) || !Array.isArray(resource.fields) || !resource.fields.every(isString)) break
+      return {
+        ...base, type: value.type,
+        resource: { subjectType: subject, id, name: resource.name, role: subject === 'user' ? resource.role as Role : null, fields: resource.fields as string[] },
+      }
+    }
   }
   throw new ApiError(502)
 }

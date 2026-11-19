@@ -10,7 +10,7 @@ let unreadConversations = 0
 const apiMock = vi.fn<typeof fetch>()
 const skillsMock = vi.fn<typeof fetch>()
 let user: Record<string, unknown>
-const companyUser = { id: 9, name: 'Reclutadora', email: 'rh@manugolfo.test', role: 'COMPANY', institution: null, company: { id: 3, name: 'ManuGolfo' } }
+const companyUser = { id: 9, name: 'Reclutadora', email: 'rh@manugolfo.test', role: 'COMPANY', institution: null, company: { id: 3, name: 'ManuGolfo', missing: [] } }
 const defaults = { state_code: '28', municipality_code: '28032', municipality: 'Reynosa' }
 const summary = {
   id: 12, title: 'Automatización de línea', program: 'Ingeniería Mecatrónica', state_code: '28', municipality_code: '28032',

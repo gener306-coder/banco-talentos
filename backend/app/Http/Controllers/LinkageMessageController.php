@@ -146,7 +146,7 @@ class LinkageMessageController extends Controller
                 'id' => $linkage->id,
                 'counterpart_name' => $party === LinkageParty::COMPANY
                     ? $linkage->institution->name
-                    : ($linkage->company->trade_name ?? $linkage->company->legal_name),
+                    : $linkage->company->label(),
                 'opportunity_title' => $linkage->opportunity->title,
                 'unread_count' => (int) $linkage->unread_count,
                 'last_message_id' => (int) $linkage->last_unread_id,
@@ -197,7 +197,7 @@ class LinkageMessageController extends Controller
             'id' => $message->id,
             'sender_party' => $message->sender_party->value,
             'sender_name' => $message->sender_party === LinkageParty::COMPANY
-                ? ($linkage->company->trade_name ?? $linkage->company->legal_name)
+                ? $linkage->company->label()
                 : $linkage->institution->name,
             'is_own' => $own,
             'account_name' => $own ? $message->sender->name : null,

@@ -1,4 +1,6 @@
 import { useState } from 'react'
+import { ProfileIncompleteNotice } from '../account/ProfileIncompleteNotice'
+import { useAuth } from '../auth/useAuth'
 import type { ReactNode } from 'react'
 import type { FormEvent } from 'react'
 import { Link } from 'react-router'
@@ -41,6 +43,9 @@ export function LinkageRequestForm({ publicId, options, availability, onSent }: 
   const items: readonly OpportunityAvailability[] = availability ?? (options.data ?? []).map((option) => ({ option, blockedBy: null }))
   const allBlocked = items.length > 0 && items.every((item) => item.blockedBy !== null)
   const mutation = useApiMutation(linkageMessages)
+  // HU-S14-03 CA-05 (M1): sin el mínimo del perfil no se ofrece enviar; el aviso lleva a completarlo.
+  const { user } = useAuth()
+  const canOperate = user?.company?.canOperate ?? true
   const [opportunityId, setOpportunityId] = useState('')
   const [message, setMessage] = useState('')
   const [localErrors, setLocalErrors] = useState<Partial<Record<Field, string>>>({})
@@ -78,7 +83,8 @@ export function LinkageRequestForm({ publicId, options, availability, onSent }: 
     <section className="linkage-request" aria-labelledby="linkage-request-title">
       <h3 id="linkage-request-title">Solicitar vinculación</h3>
       <p>La solicitud llega directamente a la institución del alumno, que decidirá si la acepta. Tu empresa no recibirá sus datos personales.</p>
-      {options.loading ? <LoadingState label="Cargando tus oportunidades…" variant="details" />
+      {!canOperate ? <ProfileIncompleteNotice />
+        : options.loading ? <LoadingState label="Cargando tus oportunidades…" variant="details" />
         : options.failure ? <InstitutionRequestError failure={options.failure} retry={options.refresh} />
         : options.data && options.data.length === 0
           ? (
@@ -97,7 +103,8 @@ export function LinkageRequestForm({ publicId, options, availability, onSent }: 
         : options.data && (
           <form onSubmit={(event) => { void submit(event) }} aria-busy={mutation.pending} noValidate>
             {sent && <p className="institution-success" role="status">{sent}</p>}
-            {mutation.failure && mutation.failure.status !== 422 && <InstitutionRequestError failure={mutation.failure} />}
+            {mutation.failure?.profileIncomplete ? <ProfileIncompleteNotice />
+              : mutation.failure && mutation.failure.status !== 422 && <InstitutionRequestError failure={mutation.failure} />}
             <fieldset disabled={mutation.pending}>
               <legend className="visually-hidden">Datos de la solicitud</legend>
               <label htmlFor="linkage-opportunity_id">Oportunidad</label>

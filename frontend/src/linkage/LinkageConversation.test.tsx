@@ -11,7 +11,7 @@ import type { IntroMessage, LinkageMessage, LinkageSide } from './conversationAp
 // reglas de estado y auto-scroll.
 const auth: AuthState = {
   status: 'ready', user: null, message: null, pending: false,
-  restore: async () => undefined, expireSession: () => undefined, signIn: async () => undefined, signOut: async () => undefined,
+  restore: async () => undefined, expireSession: () => undefined, signIn: async () => undefined, signOut: async () => undefined, updateUser: () => undefined,
 }
 const fetchMock = vi.fn<typeof fetch>()
 let thread: LinkageMessage[]

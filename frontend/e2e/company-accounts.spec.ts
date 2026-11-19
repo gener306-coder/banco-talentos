@@ -3,24 +3,14 @@ import { expect, test } from '@playwright/test'
 import type { Page } from '@playwright/test'
 import { ADMIN_STATE, NO_SESSION } from './support/admin'
 import { linkFromMail } from './support/mailpit'
+import { registerCompany as registerCompanyWithProfile } from './support/company'
 import { newSecretarySession, signInWithSetupLink } from './support/secretary'
 
 test.use({ storageState: ADMIN_STATE })
 
-/** La Secretaría registra una empresa mínima y queda en su detalle. */
-async function registerCompany(page: Page, legalName: string) {
-  await page.goto('/companies/new')
-  await page.getByLabel('Razón social', { exact: true }).fill(legalName)
-  await page.getByLabel('RFC', { exact: true }).fill(`CTA010101${randomBytes(3).toString('hex').slice(0, 3).toUpperCase()}`)
-  await page.getByLabel('Sector económico (SCIAN)').selectOption('54')
-  await page.getByLabel('Estado', { exact: true }).selectOption({ label: 'Nuevo León' })
-  await page.getByRole('combobox', { name: 'Municipio' }).fill('monterrey')
-  await page.getByRole('option', { name: 'Monterrey', exact: true }).click()
-  await page.getByLabel('Nombre del contacto', { exact: true }).fill('Responsable dual')
-  await page.getByLabel('Correo del contacto', { exact: true }).fill(`dual-${randomBytes(4).toString('hex')}@example.test`)
-  await page.getByRole('button', { name: 'Registrar empresa', exact: true }).click()
-  await expect(page.getByRole('status').filter({ hasText: /^Empresa registrada\. Enviamos a / })).toBeVisible()
-}
+/** La Secretaría invita una empresa y completa su perfil; queda en su detalle. */
+const registerCompany = (page: Page, legalName: string) =>
+  registerCompanyWithProfile(page, { legalName, rfc: `CTA010101${randomBytes(3).toString('hex').slice(0, 3).toUpperCase()}`, state: 'Nuevo León', municipalityQuery: 'monterrey', municipalityOption: 'Monterrey' })
 
 test('HU-S4-03: la Secretaría crea la cuenta de una empresa → la titular entra → inactivar la empresa la deja fuera', async ({ page, browser, baseURL }) => {
   const { context: secretaryContext, page: secretary } = await newSecretarySession(page, browser, baseURL, 'cuentas-empresa-se')

@@ -1,0 +1,51 @@
+/* Mi cuenta (HU-S14-01): ancho de lectura, nombre editable en su sitio y hoja para la contraseña. Solo tokens semánticos. */
+@layer components {
+.account-page { max-width: var(--content-readable); margin-inline: auto; }
+.account-name-form { margin: 0 0 1rem; }
+.account-name-form label { display: block; margin-bottom: 0.3rem; }
+.account-inline { display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: stretch; }
+.account-inline input { flex: 1 1 14rem; margin: 0; }
+.account-inline button { flex: none; margin: 0; }
+.account-name-form .institution-success { margin: 0.6rem 0 0; }
+.account-hint { display: block; margin-top: 0.2rem; color: var(--text); font-size: var(--type-xs); }
+.account-password-form { display: grid; gap: 0.2rem; max-width: none; }
+.account-password-form label { margin-top: 0.6rem; }
+.account-password-form button[type='submit'] { justify-self: start; margin-top: 1rem; }
+/* HU-S14-02: perfil de la organización; dos columnas en escritorio y una en el celular. */
+.account-profile-form { display: grid; gap: 0.9rem; max-width: none; margin-top: 1rem; }
+.account-field label { display: block; margin-bottom: 0.3rem; }
+.account-field input, .account-field select { width: 100%; margin: 0; }
+.account-field .field-error { margin: 0.3rem 0 0; }
+.account-fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.9rem 1rem; }
+.account-contact { margin: 0; padding: 0; border: 0; min-width: 0; }
+.account-contact legend { margin-bottom: 0.6rem; padding: 0; font-weight: 600; }
+.account-profile-form .institution-success { margin: 0; }
+/* Al llegar por #organization, el título no queda bajo el encabezado fijo. */
+.account-organization { scroll-margin-top: 6.5rem; }
+/* T-S14-01: avance del perfil en Mi cuenta, con los datos pendientes como fichas. */
+.profile-progress { margin: 0 0 1rem; padding: 0.85rem 1rem; border: 1px solid var(--border); border-radius: 12px; background: var(--surface-muted); font-size: var(--type-sm); }
+.profile-progress p { margin: 0; }
+.profile-progress.complete { color: var(--success-text); background: var(--success-surface); border-color: transparent; }
+.profile-progress-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 0.4rem 1rem; }
+.profile-progress-head .profile-meter { width: 7rem; }
+.profile-progress .profile-progress-hint { margin-top: 0.35rem; }
+.profile-gaps { display: flex; flex-wrap: wrap; gap: 0.4rem; margin: 0.7rem 0 0; padding: 0; list-style: none; }
+.profile-gaps li { padding: 0.15rem 0.6rem; border: 1px solid var(--border); border-radius: 999px; background: var(--surface); color: var(--text); font-size: var(--type-xs); }
+.profile-gaps li.operating { border-color: color-mix(in srgb, var(--accent) 35%, transparent); background: var(--tint); color: var(--accent); font-weight: 600; }
+/* HU-S14-03: onboarding de la empresa, sin navegación de regreso. */
+.welcome-lead { margin: 0 0 1rem; font-size: var(--type-base); }
+.account-contact > .field-help { margin: -0.3rem 0 0.7rem; }
+/* HU-S14-03: guía de lo necesario para operar (M1), sin color nuevo ni bloqueo. */
+.profile-needed { display: inline-block; margin-left: 0.35rem; padding: 0.05rem 0.5rem; border-radius: 999px; background: var(--tint); color: var(--accent); font-size: var(--type-xs); font-weight: 600; white-space: nowrap; }
+.profile-self { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 0.1rem 0.5rem; align-items: center; margin-bottom: 0.9rem; }
+.profile-self input { width: 1.15rem; height: 1.15rem; margin: 0; }
+.profile-self .field-help { grid-column: 2; margin: 0; }
+.profile-actions { display: flex; flex-wrap: wrap; gap: 0.6rem; align-items: center; }
+.profile-actions button { margin: 0; }
+@media (max-width: 600px) {
+  .account-fields { grid-template-columns: minmax(0, 1fr); }
+  .account-inline button, .account-password-form button[type='submit'] { width: 100%; min-height: 2.75rem; }
+  .profile-actions { flex-direction: column; align-items: stretch; }
+  .profile-actions button { width: 100%; min-height: 2.75rem; }
+}
+}

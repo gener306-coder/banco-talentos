@@ -13,13 +13,16 @@ export class ApiError extends Error {
   readonly status: number
   readonly errors: ValidationErrors
   readonly code?: AccessErrorCode
+  /** HU-S14-03 (M1): la empresa aún no tiene el mínimo para publicar oportunidades ni enviar solicitudes. */
+  readonly profileIncomplete: boolean
 
-  constructor(status: number, errors: ValidationErrors = {}, code?: AccessErrorCode) {
+  constructor(status: number, errors: ValidationErrors = {}, code?: AccessErrorCode, profileIncomplete = false) {
     super(status === 0 ? 'No pudimos conectar con el servidor.' : `Error HTTP ${status}`)
     this.name = 'ApiError'
     this.status = status
     this.errors = errors
     this.code = code
+    this.profileIncomplete = profileIncomplete
   }
 }
 
@@ -37,12 +40,14 @@ export function csrfToken(): string | undefined {
 async function responseError(response: Response): Promise<ApiError> {
   let errors: ValidationErrors = {}
   let code: AccessErrorCode | undefined
+  let profileIncomplete = false
   try {
     const body: unknown = await response.json()
     if (typeof body === 'object' && body !== null) {
       if ('code' in body && typeof body.code === 'string' && Object.hasOwn(accessErrorMessages, body.code)) {
         code = body.code as AccessErrorCode
       }
+      profileIncomplete = response.status === 422 && 'code' in body && body.code === 'COMPANY_PROFILE_INCOMPLETE'
       if (response.status === 422 && 'errors' in body && typeof body.errors === 'object' &&
           body.errors !== null && !Array.isArray(body.errors)) {
         errors = Object.fromEntries(Object.entries(body.errors).filter((entry): entry is [string, string[]] =>
@@ -53,7 +58,7 @@ async function responseError(response: Response): Promise<ApiError> {
   } catch {
     // Un cuerpo vacío o inválido conserva el código HTTP original.
   }
-  return new ApiError(response.status, errors, code)
+  return new ApiError(response.status, errors, code, profileIncomplete)
 }
 
 export async function request(path: string, options: RequestInit = {}): Promise<unknown> {

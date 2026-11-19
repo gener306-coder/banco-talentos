@@ -39,7 +39,7 @@ class ReportController extends Controller
             $item['received_requests'], $item['accepted_requests'],
         ], $this->byInstitution());
         $sectors = array_map(fn (array $item): array => [
-            $item['sector_code'], EconomicSector::from($item['sector_code'])->label(), $item['active_companies'],
+            $item['sector_code'] ?? '', $item['sector_code'] === null ? 'Sin sector asignado' : EconomicSector::from($item['sector_code'])->label(), $item['active_companies'],
             $item['active_opportunities'], $item['accepted_requests'],
         ], $this->bySector());
 
@@ -129,6 +129,16 @@ class ReportController extends Controller
                 'active_companies' => (int) $companies[$sector->value],
                 'active_opportunities' => (int) ($opportunities[$sector->value] ?? 0),
                 'accepted_requests' => (int) ($accepted[$sector->value] ?? 0),
+            ];
+        }
+        // HU-S14-02 (D2): las empresas sin sector se agrupan al final como «Sin sector asignado»; los totales no las pierden.
+        // pluck() con una llave nula la guarda como cadena vacía.
+        if ($companies->has('')) {
+            $sectors[] = [
+                'sector_code' => null,
+                'active_companies' => (int) $companies[''],
+                'active_opportunities' => (int) ($opportunities[''] ?? 0),
+                'accepted_requests' => (int) ($accepted[''] ?? 0),
             ];
         }
 

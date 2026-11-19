@@ -13,7 +13,7 @@ const events = [
   { type: 'linkage_responded', occurred_at: '2026-10-06T16:00:00Z', actor: { id: 7, name: 'Coordinación Dual', role: 'INSTITUTION' }, resource: linkage },
   { type: 'linkage_requested', occurred_at: '2026-10-05T16:00:00Z', actor: { id: 5, name: 'Reclutadora', role: 'COMPANY' }, resource: { ...linkage, status: 'PENDIENTE_INSTITUCION' } },
   { type: 'opportunity_created', occurred_at: '2026-10-04T16:00:00Z', actor: { id: 5, name: 'Reclutadora', role: 'COMPANY' }, resource: { id: 12, title: 'Tableros de producción' } },
-  { type: 'company_registered', occurred_at: '2026-10-02T16:00:00Z', actor: secretaryActor, resource: { id: 3, legal_name: 'Manufacturas del Golfo, S.A. de C.V.' } },
+  { type: 'company_registered', occurred_at: '2026-10-02T16:00:00Z', actor: secretaryActor, resource: { id: 3, name: 'Manufacturas del Golfo, S.A. de C.V.' } },
   { type: 'account_created', occurred_at: '2026-10-01T16:00:00Z', actor: { id: 1, name: 'Administración', role: 'ADMIN' }, resource: { id: 2, name: 'Analista Económica', email: 'analista@economia.test', role: 'SECRETARY' } },
 ]
 const page = (items: unknown[], meta = {}) => Response.json({ data: items, meta: { current_page: 1, last_page: 1, total: items.length, per_page: 30, ...meta } })
@@ -44,7 +44,7 @@ describe('bitácora HU-S7-03', () => {
   it.each([
     { id: 2, name: 'Analista', email: 'analista@economia.test', role: 'SECRETARY', institution: null, company: null },
     { id: 3, name: 'Coordinación', email: 'dual@ut.test', role: 'INSTITUTION', institution: { id: 2, name: 'UT' }, company: null },
-    { id: 9, name: 'Reclutadora', email: 'rh@empresa.test', role: 'COMPANY', institution: null, company: { id: 3, name: 'ManuGolfo' } },
+    { id: 9, name: 'Reclutadora', email: 'rh@empresa.test', role: 'COMPANY', institution: null, company: { id: 3, name: 'ManuGolfo', missing: [] } },
   ])('niega la vista a $role sin consultar la bitácora (CA-01)', async (account) => {
     user = account
     const view = renderApp()
@@ -98,13 +98,75 @@ describe('bitácora HU-S7-03', () => {
   })
 
   it('rechaza un evento fuera de contrato y descarta campos ajenos', async () => {
-    apiMock.mockResolvedValueOnce(page([{ ...events[4], type: 'password_changed' }]))
+    apiMock.mockResolvedValueOnce(page([{ ...events[4], type: 'password_reset' }]))
       .mockResolvedValueOnce(page([{ ...events[1], resource: { ...events[1].resource, student: 'Ximena Zaragoza' }, token: 'secreto' }]))
     renderApp()
     expect(await screen.findByText('No pudimos cargar la información')).toBeInTheDocument()
     fireEvent.click(screen.getByRole('button', { name: 'Reintentar' }))
     await screen.findByRole('table', { name: 'Eventos de la bitácora' })
     expect(screen.queryByText(/Ximena|secreto/)).not.toBeInTheDocument()
+  })
+})
+
+describe('cambios de cuentas y organizaciones HU-S14-04', () => {
+  const changes = [
+    { type: 'organization_profile_updated', occurred_at: '2026-11-19T10:04:00Z', actor: { id: 1, name: 'Administración', role: 'ADMIN' },
+      resource: { subject_type: 'institution', id: 4, name: 'UT del Golfo', fields: ['name', 'contact_email'] } },
+    { type: 'organization_profile_updated', occurred_at: '2026-11-19T10:03:00Z', actor: { id: 9, name: 'Lucía Herrera', role: 'COMPANY' },
+      resource: { subject_type: 'company', id: 3, name: 'ManuGolfo', fields: ['trade_name', 'contact_position', 'sector_code', 'campo_nuevo'] } },
+    { type: 'password_changed', occurred_at: '2026-11-19T10:02:00Z', actor: { id: 9, name: 'Lucía Herrera', role: 'COMPANY' },
+      resource: { subject_type: 'user', id: 9, name: 'Lucía Herrera', role: 'COMPANY', fields: [] } },
+    { type: 'password_changed', occurred_at: '2026-11-19T09:02:00Z', actor: { id: 9, name: 'Lucía Herrera', role: 'COMPANY' },
+      resource: { subject_type: 'user', id: 9, name: 'Lucía Herrera', role: 'COMPANY', fields: [] } },
+    { type: 'account_updated', occurred_at: '2026-11-19T10:01:00Z', actor: { id: 9, name: 'Lucía Herrera', role: 'COMPANY' },
+      resource: { subject_type: 'user', id: 9, name: 'Lucía Herrera', role: 'COMPANY', fields: ['name'] } },
+    { type: 'company_invited', occurred_at: '2026-11-19T10:00:00Z', actor: secretaryActor,
+      resource: { subject_type: 'company', id: 7, name: 'Empresa sin nombre', fields: [] } },
+  ]
+
+  it('muestra los eventos nuevos con el sujeto y los campos que cambiaron en palabras, sin valores', async () => {
+    apiMock.mockResolvedValueOnce(page(changes))
+    renderApp()
+    const table = await screen.findByRole('table', { name: 'Eventos de la bitácora' })
+    const rows = within(table).getAllByRole('row').slice(1)
+    expect(rows.map((row) => within(row).getByRole('rowheader').textContent)).toEqual([
+      'Perfil de organización actualizado', 'Perfil de organización actualizado', 'Contraseña cambiada', 'Contraseña cambiada', 'Cuenta actualizada', 'Empresa invitada',
+    ])
+    expect(rows[0]).toHaveTextContent('Institución: UT del Golfo')
+    expect(rows[0]).toHaveTextContent('Cambió: Nombre oficial, Correo del contacto')
+    expect(rows[1]).toHaveTextContent('Empresa: ManuGolfo')
+    // Un campo sin etiqueta no expone su nombre técnico.
+    expect(rows[1]).toHaveTextContent('Cambió: Nombre comercial, Puesto del contacto, Sector económico, Otro dato')
+    expect(rows[1]).not.toHaveTextContent('campo_nuevo')
+    expect(rows[2]).toHaveTextContent('Cuenta de Empresa: Lucía Herrera')
+    expect(rows[2]).not.toHaveTextContent('Cambió')
+    expect(rows[4]).toHaveTextContent('Cambió: Nombre')
+    expect(rows[5]).toHaveTextContent('Empresa: Empresa sin nombre')
+    expect(rows[5]).toHaveTextContent('Analista EconómicaSecretaría de Economía')
+  })
+
+  it('ofrece filtrar por los cuatro tipos nuevos', async () => {
+    apiMock.mockResolvedValueOnce(page(changes)).mockResolvedValueOnce(page(changes.slice(2, 4)))
+    renderApp()
+    await screen.findByRole('table', { name: 'Eventos de la bitácora' })
+    const filter = screen.getByLabelText('Tipo de evento')
+    expect(within(filter).getAllByRole('option').map((option) => option.textContent)).toEqual([
+      'Todos los eventos', 'Cuenta creada', 'Empresa registrada', 'Oportunidad registrada', 'Vinculación solicitada', 'Vinculación respondida',
+      'Empresa invitada', 'Perfil de organización actualizado', 'Cuenta actualizada', 'Contraseña cambiada',
+    ])
+    fireEvent.change(filter, { target: { value: 'password_changed' } })
+    await waitFor(() => expect(apiMock.mock.calls[1][0]).toBe('/api/audit-events?page=1&type=password_changed'))
+  })
+
+  it('descarta datos ajenos al contrato y rechaza un sujeto desconocido', async () => {
+    apiMock.mockResolvedValueOnce(page([{ ...changes[1], resource: { ...changes[1].resource, values: { rfc: 'MGO150320AB1' }, contact_email: 'secreto@x.test' } }]))
+      .mockResolvedValueOnce(page([{ ...changes[1], resource: { ...changes[1].resource, subject_type: 'student' } }]))
+    const view = renderApp()
+    await screen.findByRole('table', { name: 'Eventos de la bitácora' })
+    expect(screen.queryByText(/MGO150320AB1|secreto@x\.test/)).not.toBeInTheDocument()
+    view.unmount()
+    renderApp()
+    expect(await screen.findByText('No pudimos cargar la información')).toBeInTheDocument()
   })
 })
 

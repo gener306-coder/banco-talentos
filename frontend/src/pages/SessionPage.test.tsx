@@ -58,7 +58,7 @@ describe('inicio por rol (tarea transversal del Sprint 4)', () => {
     ['ADMIN', {}, 'Administración', 'Administrador', null, ['Nueva institución', '/institutions/new'], [['Instituciones', '/institutions'], ['Cuentas de la Secretaría', '/secretary-accounts'], ['Reporte ejecutivo', '/reports'], ['Bitácora', '/audit-events'], ['Historias del Dual', '/promocion']]],
     ['SECRETARY', {}, 'Secretaría de Economía', 'Secretaría de Economía', null, ['Registrar empresa', '/companies/new'], [['Empresas', '/companies'], ['Cuentas de la Secretaría', '/secretary-accounts'], ['Reporte ejecutivo', '/reports'], ['Historias del Dual', '/promocion']]],
     ['INSTITUTION', { institution: { id: 7, name: 'Instituto Dual' } }, 'Institución', 'Institución', 'Instituto Dual', ['Registrar alumno', '/students'], [['Alumnos', '/students'], ['Solicitudes de vinculación', '/institution/linkage-requests'], ['Historias del Dual', '/institution/videos']]],
-    ['COMPANY', { company: { id: 3, name: 'ManuGolfo' } }, 'Empresa', 'Empresa', 'ManuGolfo', null, [['Buscar talento', '/talent'], ['Oportunidades Duales', '/opportunities'], ['Solicitudes de vinculación', '/linkage-requests']]],
+    ['COMPANY', { company: { id: 3, name: 'ManuGolfo', missing: [] } }, 'Empresa', 'Empresa', 'ManuGolfo', null, [['Buscar talento', '/talent'], ['Oportunidades Duales', '/opportunities'], ['Solicitudes de vinculación', '/linkage-requests']]],
   ] as const)('%s ve su saludo, su acción principal y sus secciones', async (role, organization, navLabel, roleLabel, orgName, primary, sections) => {
     user = { ...base, role, ...organization }
     renderApp()
@@ -95,7 +95,7 @@ describe('inicio por rol (tarea transversal del Sprint 4)', () => {
       pyhton: [{ id: 2, name: 'Python', kind: 'technical', match: 'fuzzy' }],
     }
     beforeEach(() => {
-      user = { ...base, role: 'COMPANY', company: { id: 3, name: 'ManuGolfo' } }
+      user = { ...base, role: 'COMPANY', company: { id: 3, name: 'ManuGolfo', missing: [] } }
       apiMock.mockImplementation(async (path) => {
         if (typeof path === 'string' && path.startsWith('/api/skills?')) {
           return Response.json({ data: catalog[new URLSearchParams(path.split('?')[1]).get('q')?.toLowerCase() ?? ''] ?? [] })
@@ -165,7 +165,7 @@ describe('indicadores del inicio (HU-S5-01 CA-07)', () => {
       [['Empresas activas', '1,250'], ['Empresas inactivas', '7'], ['Cuentas de la Secretaría pendientes', '2'], ['Oportunidades activas', '2,400'], ['Vinculaciones aceptadas', '15']]],
     ['INSTITUTION', { institution: { id: 7, name: 'Instituto Dual' } }, { active_students: 40, searchable_students: 25, missing_data_students: 0, pending_linkage_requests: 0 },
       [['Alumnos activos', '40'], ['Visibles en el buscador', '25'], ['Datos faltantes', '0'], ['Solicitudes pendientes', '0']]],
-    ['COMPANY', { company: { id: 3, name: 'ManuGolfo' } }, { available_talent_profiles: 318, active_opportunities: 4, pending_linkage_requests: 6 },
+    ['COMPANY', { company: { id: 3, name: 'ManuGolfo', missing: [] } }, { available_talent_profiles: 318, active_opportunities: 4, pending_linkage_requests: 6 },
       [['Perfiles disponibles', '318'], ['Oportunidades activas', '4'], ['Solicitudes pendientes', '6']]],
   ] as const)('%s ve sus contadores', async (role, organization, metrics, expected) => {
     user = { ...base, role, ...organization }
@@ -270,6 +270,14 @@ describe('menú de cuenta', () => {
     expect(trigger).toHaveFocus()
   })
 
+  it('con el nombre provisional de una invitada no repite el correo (M3 de HU-S14-02)', async () => {
+    user = { ...base, name: 'operador@nueva.test', email: 'operador@nueva.test', role: 'COMPANY', company: { id: 3, name: null, missing: ['name'] } }
+    renderApp()
+    fireEvent.click(await screen.findByRole('button', { name: 'Cuenta de operador@nueva.test' }))
+    const panel = screen.getByRole('region', { name: 'Cuenta' })
+    expect(within(panel).getAllByText('operador@nueva.test')).toHaveLength(1)
+  })
+
   it('elige el tema desde el menú y lo recuerda (modo oscuro)', async () => {
     localStorage.clear()
     renderApp()
@@ -325,7 +333,7 @@ describe('menú de cuenta', () => {
 
 describe('inicio dinámico T-S12-11', () => {
   const metrics = { available_talent_profiles: 318, active_opportunities: 4, pending_linkage_requests: 6 }
-  const company = { company: { id: 3, name: 'ManuGolfo' } }
+  const company = { company: { id: 3, name: 'ManuGolfo', missing: [] } }
   const stat = async (label: string) => {
     const region = await screen.findByRole('region', { name: 'Indicadores' })
     return within(region).getByText(label).nextElementSibling as HTMLElement

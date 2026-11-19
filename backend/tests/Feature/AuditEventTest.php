@@ -136,7 +136,8 @@ it('lists every traceable event newest first with only public fields (CA-02, CA-
             'resource' => ['id' => $recruiter->id, 'name' => 'Reclutadora', 'email' => 'rh@manugolfo.test', 'role' => 'COMPANY']],
         ['type' => 'company_registered', 'occurred_at' => '2026-10-02T10:00:00.000000Z',
             'actor' => ['id' => $secretary->id, 'name' => 'Analista Económica', 'role' => 'SECRETARY'],
-            'resource' => ['id' => $company->id, 'legal_name' => 'Manufacturas del Golfo, S.A. de C.V.']],
+            // HU-S14-02: el nombre visible de la empresa (comercial o razón social).
+            'resource' => ['id' => $company->id, 'name' => 'ManuGolfo']],
         ['type' => 'account_created', 'occurred_at' => '2026-10-01T10:00:00.000000Z',
             'actor' => ['id' => $admin->id, 'name' => 'Administración General', 'role' => 'ADMIN'],
             'resource' => ['id' => $secretary->id, 'name' => 'Analista Económica', 'email' => 'analista@economia.test', 'role' => 'SECRETARY']],
@@ -175,7 +176,7 @@ it('rejects an unknown event type (CA-02)', function (string $query) {
     $this->loginWithCookies(auditAdmin())->assertOk();
 
     auditEvents($this, $query)->assertUnprocessable();
-})->with(['?type=password_changed', '?type=ACCOUNT_CREATED', '?type[]=account_created', '?page=0']);
+})->with(['?type=password_reset', '?type=ACCOUNT_CREATED', '?type[]=account_created', '?page=0']);
 
 it('paginates 30 events per page, newest first (CA-02)', function () {
     $admin = auditAdmin();

@@ -15,13 +15,13 @@ const fetchMock = vi.fn<typeof fetch>()
 let items: UnreadConversation[]
 let hidden: boolean
 let shown: { title: string; options: NotificationOptions; instance: { onclick: (() => void) | null; close: () => void } }[]
-const company = { id: 9, name: 'Reclutadora', email: 'rh@manugolfo.test', role: 'COMPANY', institution: null, company: { id: 3, name: 'ManuGolfo' } } as User
+const company = { id: 9, name: 'Reclutadora', email: 'rh@manugolfo.test', role: 'COMPANY', institution: null, company: { id: 3, name: 'ManuGolfo', missing: [], onboarding: 'done', canOperate: true } } as User
 const institution = { id: 2, name: 'Coordinación', email: 'dual@ut.test', role: 'INSTITUTION', institution: { id: 1, name: 'UT del Golfo' }, company: null } as User
 const conversation = (id: number, last: number, unread = 1): UnreadConversation =>
   ({ id, counterpart_name: 'UT del Golfo', opportunity_title: 'Tableros de producción', unread_count: unread, last_message_id: last })
 const auth = (user: User | null): AuthState => ({
   status: 'ready', user, message: null, pending: false,
-  restore: async () => undefined, expireSession: () => undefined, signIn: async () => undefined, signOut: async () => undefined,
+  restore: async () => undefined, expireSession: () => undefined, signIn: async () => undefined, signOut: async () => undefined, updateUser: () => undefined,
 })
 
 class FakeNotification {

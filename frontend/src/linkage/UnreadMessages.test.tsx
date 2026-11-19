@@ -16,7 +16,7 @@ const apiMock = vi.fn<typeof fetch>()
 let user: Record<string, unknown>
 let unreadConversations: number
 let hidden: boolean
-const companyUser = { id: 9, name: 'Reclutadora', email: 'rh@manugolfo.test', role: 'COMPANY', institution: null, company: { id: 3, name: 'ManuGolfo' } }
+const companyUser = { id: 9, name: 'Reclutadora', email: 'rh@manugolfo.test', role: 'COMPANY', institution: null, company: { id: 3, name: 'ManuGolfo', missing: [] } }
 const institutionUser = { id: 2, name: 'Coordinación', email: 'dual@ut.test', role: 'INSTITUTION', institution: { id: 1, name: 'UT del Golfo' }, company: null }
 const page = (items: unknown[]) => Response.json({ data: items, meta: { current_page: 1, last_page: 1, total: items.length, per_page: 20 } })
 const sent = (id: number, title: string, unread: number) => ({
@@ -90,8 +90,8 @@ describe('aviso del menú (CA-03)', () => {
   describe('actualización', () => {
     function renderBadge() {
       const auth: AuthState = {
-        status: 'ready', user: companyUser as User, message: null, pending: false,
-        restore: async () => undefined, expireSession: () => undefined, signIn: async () => undefined, signOut: async () => undefined,
+        status: 'ready', user: { ...companyUser, company: { ...companyUser.company, onboarding: 'done', canOperate: true } } as User, message: null, pending: false,
+        restore: async () => undefined, expireSession: () => undefined, signIn: async () => undefined, signOut: async () => undefined, updateUser: () => undefined,
       }
       // T-S13-08: el contador lee la consulta única del proveedor montado en el shell con sesión.
       return render(

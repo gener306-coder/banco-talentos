@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Controllers\Concerns\RequiresOperableCompany;
 use App\Http\Requests\OpportunityRequest;
 use App\Http\Requests\UpdateOpportunityStatusRequest;
 use App\Models\Municipality;
@@ -20,6 +21,8 @@ use Illuminate\Support\Facades\DB;
  */
 class OpportunityController extends Controller
 {
+    use RequiresOperableCompany;
+
     private const PER_PAGE = 20;
 
     /** Habilidades que muestra el listado; el detalle las muestra todas. */
@@ -57,7 +60,8 @@ class OpportunityController extends Controller
         $company = $request->user()->company()->with('municipality:code,name')->firstOrFail();
 
         return response()->json(['data' => [
-            'state_code' => $company->state_code->value,
+            // HU-S14-02: sin ubicación de la empresa, el alta empieza vacía.
+            'state_code' => $company->state_code?->value,
             'municipality_code' => $company->municipality_code,
             'municipality' => $company->municipality?->name,
         ]])->header('Cache-Control', 'no-store, private');
@@ -118,7 +122,13 @@ class OpportunityController extends Controller
     {
         $record = $this->owned($request, $opportunity);
         $record->is_active = $request->validated('is_active');
-        $record->save();
+        DB::transaction(function () use ($record): void {
+            // HU-S14-03 (M1): reactivar publica de nuevo; inactivar siempre se permite.
+            if ($record->is_active) {
+                $this->ensureOperableCompany($record->company_id);
+            }
+            $record->save();
+        });
 
         return $this->detail($record);
     }
@@ -153,6 +163,8 @@ class OpportunityController extends Controller
         $skills = SkillCatalog::normalize($validated['skills'] ?? []);
 
         DB::transaction(function () use ($opportunity, $skills): void {
+            // HU-S14-03 (M1): crear o editar una oportunidad la publica con el nombre y el contacto de la empresa.
+            $this->ensureOperableCompany($opportunity->company_id);
             $opportunity->save();
             $ids = SkillCatalog::ids($skills);
             DB::table('opportunity_skills')->where('opportunity_id', $opportunity->id)->delete();

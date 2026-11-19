@@ -40,6 +40,8 @@ import { GALLERY_VIEWERS } from './videos/galleryApi'
 import { InstitutionVideosPage } from './videos/InstitutionVideosPage'
 import { PromotionalVideosPage } from './videos/PromotionalVideosPage'
 import { AccountMenu } from './ui/AccountMenu'
+import { AccountPage } from './account/AccountPage'
+import { WelcomePage } from './onboarding/WelcomePage'
 import { LinkageNotifier } from './linkage/LinkageNotifier'
 import { UnreadSummaryProvider } from './linkage/UnreadSummaryProvider'
 import { BrandLogo } from './ui/BrandLogo'
@@ -75,6 +77,12 @@ function AuthRoutes() {
       <Route path="/login" element={<LoginPage />} />
       <Route element={<ProtectedRoute />}>
         <Route path="/" element={<SessionPage />} />
+        {/* HU-S14-01: Mi cuenta, para todos los roles. */}
+        <Route path="/account" element={<AccountPage />} />
+      </Route>
+      {/* HU-S14-03: onboarding de la empresa invitada. */}
+      <Route element={<ProtectedRoute role="COMPANY" deniedMessage="Solo las empresas completan este perfil." />}>
+        <Route path="/welcome" element={<WelcomePage />} />
       </Route>
       <Route element={<ProtectedRoute role="ADMIN" />}>
         <Route path="/institutions" element={<InstitutionsPage />} />

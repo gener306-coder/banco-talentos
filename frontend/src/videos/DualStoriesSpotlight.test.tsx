@@ -10,7 +10,7 @@ const story = (id: number, title: string) => ({
 })
 const three = [story(1, 'Primera'), story(2, 'Segunda'), story(3, 'Tercera')]
 const pageOf = (data: unknown[]) => Response.json({ data, meta: { current_page: 1, last_page: 1, total: data.length, per_page: 12 } })
-const company = { id: 8, name: 'Recursos Humanos', email: 'rh@example.test', role: 'COMPANY', company: { id: 3, name: 'ManuGolfo' } }
+const company = { id: 8, name: 'Recursos Humanos', email: 'rh@example.test', role: 'COMPANY', company: { id: 3, name: 'ManuGolfo', missing: [] } }
 const fetchMock = vi.fn<typeof fetch>()
 const galleryMock = vi.fn<() => Promise<Response>>()
 const HEADING = 'Alumnos que ya vivieron el Dual en una empresa'

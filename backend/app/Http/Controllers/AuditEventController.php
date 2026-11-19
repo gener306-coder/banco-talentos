@@ -4,7 +4,9 @@ namespace App\Http\Controllers;
 
 use App\Enums\AuditEventType;
 use App\Http\Requests\ListAuditEventsRequest;
+use App\Models\AccountAuditEvent;
 use App\Models\Company;
+use App\Models\Institution;
 use App\Models\LinkageRequest;
 use App\Models\Opportunity;
 use App\Models\User;
@@ -16,8 +18,9 @@ use Illuminate\Support\Facades\DB;
 
 /**
  * Bitácora de trazabilidad para ADMIN (HU-S7-03). Une en una sola consulta paginada las columnas de autoría que ya
- * registra el sistema y describe cada evento con una lista explícita de campos públicos: nunca contraseñas, tokens,
- * hashes, NSS ni la identidad del alumno.
+ * registra el sistema y, desde HU-S14-04, los eventos de account_audit_events. Describe cada evento con una lista
+ * explícita de campos públicos: nunca contraseñas, tokens, hashes, NSS, la identidad del alumno ni los valores de los
+ * campos que cambiaron (solo sus nombres).
  */
 class AuditEventController extends Controller
 {
@@ -31,6 +34,9 @@ class AuditEventController extends Controller
         'linkage_requested' => ['linkage_requests', 'requested_by', 'created_at'],
         'linkage_responded' => ['linkage_requests', 'responded_by', 'responded_at'],
     ];
+
+    /** HU-S14-04: eventos de la tabla inmutable; su subject_id en la unión es el id del evento. */
+    private const ACCOUNT_EVENTS = ['account_updated', 'password_changed', 'organization_profile_updated', 'company_invited'];
 
     /** CA-02: de la más reciente a la más antigua, de 30 en 30, con filtro opcional por tipo. */
     public function index(ListAuditEventsRequest $request): JsonResponse
@@ -65,6 +71,11 @@ class AuditEventController extends Controller
 
     private function source(string $type): Builder
     {
+        if (in_array($type, self::ACCOUNT_EVENTS, true)) {
+            return DB::table('account_audit_events')
+                ->selectRaw('event::text AS type, created_at AS occurred_at, actor_id, id AS subject_id')
+                ->where('event', $type);
+        }
         [$table, $actor, $date] = self::SOURCES[$type];
 
         return DB::table($table)
@@ -81,14 +92,31 @@ class AuditEventController extends Controller
 
         $actors = User::query()->whereIn('id', $events->pluck('actor_id')->unique())->get(['id', 'name', 'role'])->keyBy('id');
         $accounts = User::query()->whereIn('id', $ids('account_created'))->get(['id', 'name', 'email', 'role'])->keyBy('id');
-        $companies = Company::query()->whereIn('id', $ids('company_registered'))->get(['id', 'legal_name'])->keyBy('id');
+        $companies = Company::query()->whereIn('id', $ids('company_registered'))->get(['id', 'legal_name', 'trade_name'])->keyBy('id');
         $opportunities = Opportunity::query()->whereIn('id', $ids('opportunity_created'))->get(['id', 'title'])->keyBy('id');
+        $changes = AccountAuditEvent::query()->whereIn('id', $ids(...self::ACCOUNT_EVENTS))
+            ->get(['id', 'subject_type', 'subject_id', 'changed_fields'])->keyBy('id');
+        $subjects = fn (string $type) => $changes->where('subject_type', $type)->pluck('subject_id')->unique()->values();
+        $changedUsers = User::query()->whereIn('id', $subjects('user'))->get(['id', 'name', 'role'])->keyBy('id');
+        $changedCompanies = Company::query()->whereIn('id', $subjects('company'))->get(['id', 'legal_name', 'trade_name'])->keyBy('id');
+        $changedInstitutions = Institution::query()->whereIn('id', $subjects('institution'))->get(['id', 'name'])->keyBy('id');
         $linkages = LinkageRequest::query()->whereIn('id', $ids('linkage_requested', 'linkage_responded'))
             ->with(['institution:id,name', 'company:id,legal_name,trade_name'])
             ->get(['id', 'status', 'institution_id', 'company_id'])
             ->keyBy('id');
 
-        return $events->map(function (object $event) use ($actors, $accounts, $companies, $opportunities, $linkages): array {
+        $change = function (AccountAuditEvent $change) use ($changedUsers, $changedCompanies, $changedInstitutions): array {
+            $subject = match ($change->subject_type) {
+                'user' => ['name' => $changedUsers[$change->subject_id]->name, 'role' => $changedUsers[$change->subject_id]->role->value],
+                'company' => ['name' => $changedCompanies[$change->subject_id]->label()],
+                default => ['name' => $changedInstitutions[$change->subject_id]->name],
+            };
+
+            // Solo los nombres de los campos, en su orden; nunca sus valores.
+            return ['subject_type' => $change->subject_type, 'id' => $change->subject_id, ...$subject, 'fields' => array_values($change->changed_fields ?? [])];
+        };
+
+        return $events->map(function (object $event) use ($actors, $accounts, $companies, $opportunities, $linkages, $changes, $change): array {
             $actor = $actors[$event->actor_id];
 
             return [
@@ -97,8 +125,9 @@ class AuditEventController extends Controller
                 'actor' => ['id' => $actor->id, 'name' => $actor->name, 'role' => $actor->role->value],
                 'resource' => match ($event->type) {
                     'account_created' => $this->account($accounts[$event->subject_id]),
-                    'company_registered' => ['id' => $event->subject_id, 'legal_name' => $companies[$event->subject_id]->legal_name],
+                    'company_registered' => ['id' => $event->subject_id, 'name' => $companies[$event->subject_id]->label()],
                     'opportunity_created' => ['id' => $event->subject_id, 'title' => $opportunities[$event->subject_id]->title],
+                    'account_updated', 'password_changed', 'organization_profile_updated', 'company_invited' => $change($changes[$event->subject_id]),
                     default => $this->linkage($linkages[$event->subject_id]),
                 },
             ];
@@ -117,7 +146,7 @@ class AuditEventController extends Controller
             'id' => $linkage->id,
             'status' => $linkage->status->value,
             'institution' => $linkage->institution->name,
-            'company' => $linkage->company->trade_name ?? $linkage->company->legal_name,
+            'company' => $linkage->company->label(),
         ];
     }
 }

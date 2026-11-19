@@ -22,7 +22,27 @@ export async function openCompanySession(
 /** Genera un RFC de persona moral válido con homoclave aleatoria. */
 export const randomCompanyRfc = () => `EMP010101${randomBytes(3).toString('hex').slice(0, 3).toUpperCase()}`
 
-/** Registra una empresa desde la vista de la Secretaría (/companies/new) y queda en su detalle. */
+/**
+ * Invita a una empresa desde la vista de la Secretaría (/companies/new, HU-S14-02) solo con el correo de su cuenta y
+ * queda en su detalle. Devuelve el correo invitado.
+ */
+export async function inviteCompany(page: Page, options: { email?: string; tradeName?: string; personName?: string } = {}) {
+  const email = options.email ?? `invitada-${randomBytes(6).toString('hex')}@example.test`
+  await page.goto('/companies/new')
+  await page.getByLabel('Correo de la cuenta', { exact: true }).fill(email)
+  if (options.tradeName) await page.getByLabel('Nombre de la empresa (opcional)').fill(options.tradeName)
+  if (options.personName) await page.getByLabel('Nombre de la persona (opcional)').fill(options.personName)
+  const created = page.waitForResponse((response) => response.url().endsWith('/api/companies') && response.request().method() === 'POST')
+  await page.getByRole('button', { name: 'Enviar invitación', exact: true }).click()
+  expect((await created).status()).toBe(201)
+  await expect(page.getByRole('status').filter({ hasText: /^Invitación enviada\. / })).toBeVisible()
+  return email
+}
+
+/**
+ * Invita a una empresa y la Secretaría completa su perfil desde la edición (M4 de HU-S14-02), para los escenarios que
+ * necesitan una empresa con todos sus datos. Queda en su detalle.
+ */
 export async function registerCompany(
   page: Page,
   options: {
@@ -40,7 +60,8 @@ export async function registerCompany(
   const municipalityQuery = options.municipalityQuery ?? 'reynosa'
   const municipalityOption = options.municipalityOption ?? 'Reynosa'
 
-  await page.goto('/companies/new')
+  const email = await inviteCompany(page, { email: `dual-${suffix}@example.test`, personName: 'Contacto E2E' })
+  await page.getByRole('link', { name: 'Editar empresa', exact: true }).click()
   await page.getByLabel('Razón social', { exact: true }).fill(legalName)
   await page.getByLabel('RFC', { exact: true }).fill(companyRfc.toLowerCase())
   await page.getByLabel('Sector económico (SCIAN)').selectOption('31-33')
@@ -48,14 +69,12 @@ export async function registerCompany(
   await page.getByRole('combobox', { name: 'Municipio' }).fill(municipalityQuery)
   await page.getByRole('option', { name: municipalityOption, exact: true }).click()
   await page.getByLabel('Nombre del contacto', { exact: true }).fill('Contacto E2E')
-  await page.getByLabel('Correo del contacto', { exact: true }).fill(`dual-${suffix}@example.test`)
+  await page.getByLabel('Puesto o departamento del contacto', { exact: true }).fill('Recursos Humanos')
+  await page.getByLabel('Correo del contacto', { exact: true }).fill(email)
+  await page.getByRole('button', { name: 'Guardar cambios', exact: true }).click()
+  await expect(page.getByText('Empresa actualizada correctamente.', { exact: true })).toBeVisible()
 
-  const created = page.waitForResponse((response) => response.url().endsWith('/api/companies') && response.request().method() === 'POST')
-  await page.getByRole('button', { name: 'Registrar empresa', exact: true }).click()
-  expect((await created).status()).toBe(201)
-  await expect(page.getByRole('status').filter({ hasText: /^Empresa registrada\. Enviamos a / })).toBeVisible()
-
-  return { legalName, rfc: companyRfc }
+  return { legalName, rfc: companyRfc, email }
 }
 
 /** Desde el detalle de una empresa, crea una cuenta con enlace de configuración manual y devuelve el enlace. */

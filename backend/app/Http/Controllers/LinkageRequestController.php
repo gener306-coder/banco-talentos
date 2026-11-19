@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Enums\LinkageParty;
 use App\Enums\LinkageRequestStatus;
+use App\Http\Controllers\Concerns\RequiresOperableCompany;
 use App\Http\Requests\ListLinkageRequestsRequest;
 use App\Http\Requests\StoreLinkageRequestRequest;
 use App\Models\LinkageRequest;
@@ -24,6 +25,8 @@ use Illuminate\Validation\ValidationException;
  */
 class LinkageRequestController extends Controller
 {
+    use RequiresOperableCompany;
+
     private const DUPLICATE = 'Ya enviaste una solicitud para este perfil en esa oportunidad.';
 
     /** T-S12-07: la institución ya respondió esa pareja de perfil y oportunidad; la empresa puede usar otra oportunidad. */
@@ -121,6 +124,8 @@ class LinkageRequestController extends Controller
 
         try {
             $linkage = DB::transaction(function () use ($user, $validated): LinkageRequest {
+                // HU-S14-03 (M1): la institución debe saber quién la busca y cómo responderle.
+                $this->ensureOperableCompany($user->company_id);
                 // CA-03: el mismo universo del buscador (HU-S4-05); fuera de él, el perfil «no existe».
                 $student = Student::query()
                     ->join('institutions', 'institutions.id', '=', 'students.institution_id')

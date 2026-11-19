@@ -33,8 +33,17 @@ class CompanyFactory extends Factory
     {
         // El punto lo deriva siempre el servidor del municipio, igual que en la API.
         return $this->afterMaking(function (Company $company): void {
-            $company->location = Municipality::locationOf($company->municipality_code);
+            $company->location = $company->municipality_code === null ? null : Municipality::locationOf($company->municipality_code);
         });
+    }
+
+    /** HU-S14-02: empresa recién invitada por la Secretaría, sin ningún dato del perfil. */
+    public function invited(): static
+    {
+        return $this->state(fn (): array => [
+            'legal_name' => null, 'trade_name' => null, 'rfc' => null, 'sector_code' => null, 'state_code' => null,
+            'municipality_code' => null, 'contact_name' => null, 'contact_position' => null, 'contact_email' => null,
+        ]);
     }
 
     public function inactive(): static

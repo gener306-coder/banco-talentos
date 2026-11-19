@@ -379,6 +379,8 @@ final class SimulationDataset
                 'validation_reference' => $this->chance(0.5) ? sprintf('SE-2026-%04d', $i) : null,
                 'is_active' => $active,
                 'registered_by' => $registeredBy,
+                // Empresas con su perfil capturado: su onboarding ya terminó (HU-S14-02).
+                'onboarding_dismissed_at' => $created,
                 'created_at' => $created,
                 'updated_at' => $created,
             ]])[0];
@@ -397,8 +399,35 @@ final class SimulationDataset
         DB::table('companies')->where('id', $first)->update(['is_active' => true]);
         $companies[$first]['active'] = true;
         $this->report('Empresas', count($companies));
+        $this->createInvitedCompanies($secretaries);
 
         return $companies;
+    }
+
+    /**
+     * HU-S14-02: tres empresas recién invitadas, sin perfil ni oportunidades, para probar el alta ligera: dos con el
+     * acceso pendiente (una con nombre de referencia) y una que ya entró y pospuso su perfil. No entran al reparto de
+     * oportunidades ni de solicitudes.
+     */
+    private function createInvitedCompanies(array $secretaries): void
+    {
+        $invitations = [
+            ['invitada1', 'Taller Norteño', null, true],
+            ['invitada2', null, null, true],
+            ['invitada3', null, $this->now->subDays(2), false],
+        ];
+        foreach ($invitations as [$local, $reference, $postponed, $pending]) {
+            $registeredBy = $this->pick($secretaries);
+            $created = $this->now->subDays($this->random->getInt(3, 10));
+            $id = $this->insertReturning('companies', [[
+                'trade_name' => $reference, 'is_active' => true, 'registered_by' => $registeredBy,
+                'onboarding_dismissed_at' => $postponed, 'created_at' => $created, 'updated_at' => $created,
+            ]])[0];
+            // M3: sin nombre de la persona, la cuenta guarda su correo como nombre provisional.
+            $this->insertUsers([$this->user($local.'@'.self::DOMAIN, $local, 'COMPANY', $created,
+                ['company_id' => $id, 'created_by' => $registeredBy, 'password_setup_required' => $pending])]);
+        }
+        $this->report('Empresas invitadas', count($invitations));
     }
 
     /** @return array<int, array{company: int, program: string, created: CarbonImmutable}> oportunidades activas de empresas activas */

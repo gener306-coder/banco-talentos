@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useId, useState } from 'react'
 import type { CSSProperties, FormEvent, ReactNode } from 'react'
-import { Link, useNavigate } from 'react-router'
+import { Link, Navigate, useNavigate } from 'react-router'
 import { roleLabels } from '../auth/api'
-import type { Role, User } from '../auth/api'
+import type { Role, SessionCompany, User } from '../auth/api'
+import { ProfileMeter } from '../account/ProfileProgress'
 import { useAuth } from '../auth/useAuth'
 import { organizationOf } from '../auth/user'
 import { getDashboard, metricKeys, metricLabels } from '../dashboard/api'
@@ -226,6 +227,23 @@ function HomeIndicators({ role, onSettled }: { role: Role; onSettled: () => void
  * Inicio por rol (tarea transversal del Sprint 4): saludo, acción principal y tarjetas de acceso a las secciones
  * del rol, con sus indicadores (HU-S5-01). La identidad completa y «Cerrar sesión» están en el menú de cuenta del encabezado (ui/AccountMenu).
  */
+/**
+ * T-S14-01: recordatorio discreto del perfil (sustituye al aviso extenso de HU-S14-03 CA-04). Una sola línea con el
+ * avance y un enlace al perfil; el detalle de lo que falta vive en Mi cuenta. Sin el mínimo (M1) dice qué habilita.
+ */
+function ProfileNudge({ company }: { company: SessionCompany }) {
+  const text = company.canOperate
+    ? `Tu perfil está casi listo: ${company.missing.length === 1 ? 'falta 1 dato' : `faltan ${company.missing.length} datos`}.`
+    : 'Completa tu perfil para publicar oportunidades y enviar solicitudes.'
+  return (
+    <Link className="profile-nudge" to="/account#organization">
+      <ProfileMeter missing={company.missing} />
+      <span className="profile-nudge-text">{text}</span>
+      <span className="profile-nudge-action">Completar<ChevronRightIcon /></span>
+    </Link>
+  )
+}
+
 export function SessionPage() {
   const { user } = useAuth()
   const titleId = useId()
@@ -238,6 +256,8 @@ export function SessionPage() {
   const company = user?.role === 'COMPANY'
   const [cards, reveal] = useReveal<HTMLUListElement>(indicatorsReady && (!company || spotlightReady))
   if (!user) return null
+  // HU-S14-03 CA-02: solo el inicio lleva al onboarding pendiente; los enlaces directos no se interceptan.
+  if (user.company?.onboarding === 'pending') return <Navigate to="/welcome" replace />
   const home = homeFor(user)
   const organization = organizationOf(user)
 
@@ -250,6 +270,8 @@ export function SessionPage() {
           {organization && <span>{organization}</span>}
         </p>
       </div>
+
+      {user.company && user.company.missing.length > 0 && <ProfileNudge company={user.company} />}
 
       {home?.primary && (
         <div className="home-primary">
