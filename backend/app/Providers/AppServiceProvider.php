@@ -60,6 +60,9 @@ class AppServiceProvider extends ServiceProvider
         );
         RateLimiter::for('account-password', fn (Request $request) => Limit::perMinute(5)->by('account-password:'.$request->user()->id)
         );
+        // HU-S14-02: el perfil de la organización, por cuenta.
+        RateLimiter::for('organization-profile', fn (Request $request) => Limit::perMinute(10)->by('organization-profile:'.$request->user()->id)
+        );
 
         // HU-S13-01: la conversación es entre personas; el límite frena el envío automatizado.
         RateLimiter::for('linkage-messages', fn (Request $request) => Limit::perMinute(30)->by('linkage-messages:'.$request->user()->id)

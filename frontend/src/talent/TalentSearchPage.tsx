@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import type { FormEvent } from 'react'
 import { Link, useLocation, useSearchParams } from 'react-router'
 import { InstitutionRequestError } from '../institutions/InstitutionLayout'
+import { useAuth } from '../auth/useAuth'
 import { useApiRequest } from '../lib/useApiRequest'
 import { MAX_PERIOD, MEXICAN_STATES } from '../students/catalogs'
 import { CV_LANGUAGES, displayName, LANGUAGE_LEVELS } from '../students/cvCatalogs'
@@ -44,6 +45,9 @@ export function TalentSearchPage() {
   useEffect(() => {
     if (legacySkill && !params.has('skills[]')) setParams(talentViewParams({ ...emptyFilters, skills: [legacySkill] }, 1), { replace: true })
   }, [legacySkill, params, setParams])
+  // HU-S14-02 CA-05: una empresa invitada sin ubicación no tiene desde dónde medir la distancia.
+  const { user } = useAuth()
+  const companyLocated = !user?.company?.missing.includes('location')
   const [draft, setDraft] = useState<TalentFilters>(applied)
   const [pickerKey, setPickerKey] = useState(0)
   const [originMode, setOriginMode] = useState<'company' | 'other'>(applied.originMunicipalityCode ? 'other' : 'company')
@@ -59,7 +63,10 @@ export function TalentSearchPage() {
   }
   const show = (filters: TalentFilters, nextPage: number) => setParams(talentViewParams(filters, nextPage), { replace: true })
   const setPage = (nextPage: number) => show(applied, nextPage)
-  const load = useCallback((signal: AbortSignal) => searchTalent(applied, page, signal), [applied, page])
+  // Un enlace guardado con radio pero sin origen no llega al servidor: sin ubicación de la empresa, el radio se omite.
+  const load = useCallback((signal: AbortSignal) => searchTalent(
+    !companyLocated && !applied.originMunicipalityCode ? { ...applied, radiusKm: '' } : applied, page, signal,
+  ), [applied, page, companyLocated])
   const { data, loading, failure, refresh } = useApiRequest(load, talentMessages)
   const narrow = useMediaQuery(NARROW_QUERY)
   const [filtersOpen, setFiltersOpen] = useState(false)
@@ -70,7 +77,12 @@ export function TalentSearchPage() {
   }
 
   // Filtros tal como se enviarían: un idioma sin nivel se busca desde A1 y el origen depende del modo elegido.
-  const effective: TalentFilters = { ...draft, minLevel: draft.language ? draft.minLevel || '1' : '', originMunicipalityCode: originMode === 'other' ? draft.originMunicipalityCode : '' }
+  const origin = originMode === 'other' ? draft.originMunicipalityCode : ''
+  // Sin municipio de origen ni ubicación de la empresa, el radio no se ofrece ni se envía.
+  const radiusAvailable = companyLocated || origin !== ''
+  const effective: TalentFilters = {
+    ...draft, minLevel: draft.language ? draft.minLevel || '1' : '', originMunicipalityCode: origin, radiusKm: radiusAvailable ? draft.radiusKm : '',
+  }
   // T-S11-01 CA-05: hay cambios en el panel que la lista de resultados todavía no refleja.
   const pending = searchParams(effective, 1).toString() !== searchParams(applied, 1).toString()
 
@@ -161,16 +173,22 @@ export function TalentSearchPage() {
           {MEXICAN_STATES.map((state) => <option key={state.code} value={state.code}>{state.name}</option>)}
         </select>
         <label htmlFor="talent-radius">Distancia máxima</label>
-        <select id="talent-radius" value={draft.radiusKm} onChange={(event) => set('radiusKm', event.target.value)}>
+        {!radiusAvailable && (
+          <p className="field-help" id="talent-radius-help">
+            Para filtrar por distancia, elige otro municipio de origen o completa la ubicación de tu empresa en <Link to="/account">Mi cuenta</Link>.
+          </p>
+        )}
+        <select id="talent-radius" value={radiusAvailable ? draft.radiusKm : ''} disabled={!radiusAvailable}
+          aria-describedby={radiusAvailable ? undefined : 'talent-radius-help'} onChange={(event) => set('radiusKm', event.target.value)}>
           <option value="">Sin límite</option>
           {RADII_KM.map((km) => <option key={km} value={km}>{km} km</option>)}
         </select>
         <fieldset className="choice-group">
           <legend>Medir la distancia desde</legend>
           <div>
-            <input id="talent-origin-company" type="radio" name="talent-origin" checked={originMode === 'company'}
+            <input id="talent-origin-company" type="radio" name="talent-origin" checked={originMode === 'company'} disabled={!companyLocated}
               onChange={() => { setOriginMode('company'); setOriginError(null) }} />
-            <label htmlFor="talent-origin-company">El municipio de mi empresa</label>
+            <label htmlFor="talent-origin-company">{companyLocated ? 'El municipio de mi empresa' : 'El municipio de mi empresa (sin capturar)'}</label>
           </div>
           <div>
             <input id="talent-origin-other" type="radio" name="talent-origin" checked={originMode === 'other'} onChange={() => setOriginMode('other')} />

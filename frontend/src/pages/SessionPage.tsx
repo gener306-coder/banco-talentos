@@ -7,6 +7,7 @@ import { useAuth } from '../auth/useAuth'
 import { organizationOf } from '../auth/user'
 import { getDashboard, metricKeys, metricLabels } from '../dashboard/api'
 import { useApiRequest } from '../lib/useApiRequest'
+import { Callout } from '../ui/Callout'
 import { useCountUp } from '../ui/useCountUp'
 import { useReveal } from '../ui/useReveal'
 import { firstViewInSession } from './homeCountUp'
@@ -250,6 +251,14 @@ export function SessionPage() {
           {organization && <span>{organization}</span>}
         </p>
       </div>
+
+      {/* HU-S14-02 (D2): mientras la empresa no tenga sector, el inicio le recuerda establecerlo en su perfil. */}
+      {user.company?.missing.includes('sector_code') && (
+        <Callout tone="pending" label="Sector económico pendiente"
+          action={<Link className="pill-link" to="/account">Establecer sector<ChevronRightIcon /></Link>}>
+          <p>Tu empresa aún no tiene <strong>sector económico</strong>. Establécelo en tu perfil para que aparezca en los reportes del programa.</p>
+        </Callout>
+      )}
 
       {home?.primary && (
         <div className="home-primary">

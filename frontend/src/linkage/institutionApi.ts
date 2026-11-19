@@ -57,13 +57,14 @@ export interface ReceivedLinkagePage {
 export interface ReceivedLinkageDetail extends ReceivedLinkage {
   message: string | null
   company: ReceivedLinkage['company'] & {
-    legal_name: string
+    /** HU-S14-02: una empresa puede vaciar estos datos después de vincular; la vista lo tolera. */
+    legal_name: string | null
     trade_name: string | null
-    sector_code: string
-    state_code: string
-    contact_name: string
+    sector_code: string | null
+    state_code: string | null
+    contact_name: string | null
     contact_position: string | null
-    contact_email: string
+    contact_email: string | null
     contact_phone: string | null
   }
   opportunity: ReceivedLinkage['opportunity'] & {
@@ -137,8 +138,9 @@ function detail(data: unknown): ReceivedLinkageDetail {
   if (!isObject(data) || !isOptionalText(data.message) || !isOptionalText(data.responded_at) || !isOptionalText(data.response_message) ||
       (data.responded_by !== null && (!isObject(data.responded_by) || !isText(data.responded_by.name)))) return invalid()
   const { company, opportunity, student: person } = data
-  if (!isObject(company) || !isText(company.legal_name) || !isOptionalText(company.trade_name) || !isText(company.sector_code) ||
-      !isStateCode(company.state_code) || !isText(company.contact_name) || !isOptionalText(company.contact_position) || !isText(company.contact_email) || !isOptionalText(company.contact_phone)) return invalid()
+  if (!isObject(company) || !isOptionalText(company.legal_name) || !isOptionalText(company.trade_name) || !isOptionalText(company.sector_code) ||
+      (company.state_code !== null && !isStateCode(company.state_code)) || !isOptionalText(company.contact_name) || !isOptionalText(company.contact_position) ||
+      !isOptionalText(company.contact_email) || !isOptionalText(company.contact_phone)) return invalid()
   if (!isObject(opportunity) || !isPeriodType(opportunity.period_type) || !isPositiveInt(opportunity.period_number) ||
       typeof opportunity.can_relocate !== 'boolean' || !isStateCode(opportunity.state_code) || !isOptionalText(opportunity.municipality) ||
       !isText(opportunity.description) || !Array.isArray(opportunity.skills) ||
@@ -154,7 +156,7 @@ function detail(data: unknown): ReceivedLinkageDetail {
     message: data.message,
     company: {
       ...base.company, legal_name: company.legal_name, trade_name: company.trade_name, sector_code: company.sector_code,
-      state_code: company.state_code, contact_name: company.contact_name, contact_position: company.contact_position, contact_email: company.contact_email, contact_phone: company.contact_phone,
+      state_code: company.state_code as string | null, contact_name: company.contact_name, contact_position: company.contact_position, contact_email: company.contact_email, contact_phone: company.contact_phone,
     },
     opportunity: {
       ...base.opportunity, period_type: opportunity.period_type, period_number: opportunity.period_number, can_relocate: opportunity.can_relocate,

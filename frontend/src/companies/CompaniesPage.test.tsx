@@ -11,12 +11,19 @@ const accountsMock = vi.fn<typeof fetch>()
 let user: Record<string, unknown>
 const secretary = { id: 2, name: 'Analista', email: 'analista@economia.test', role: 'SECRETARY', institution: null }
 const summary = {
-  id: 5, legal_name: 'Manufacturas del Golfo', trade_name: 'ManuGolfo', rfc: 'MGO150320AB1', sector_code: '31-33',
-  state_code: '28', municipality_code: '28032', municipality: 'Reynosa', is_active: true,
+  id: 5, name: 'ManuGolfo', legal_name: 'Manufacturas del Golfo', trade_name: 'ManuGolfo', rfc: 'MGO150320AB1', sector_code: '31-33',
+  state_code: '28', municipality_code: '28032', municipality: 'Reynosa', is_active: true, account_email: 'dual@manugolfo.test', profile_status: 'complete',
 }
 const company = {
   ...summary, contact_name: 'Lucía Herrera', contact_position: 'Recursos Humanos', contact_email: 'dual@manugolfo.test', contact_phone: '899 123 4567',
-  validation_reference: 'SE/2026/0141', registered_by: { id: 2, name: 'Analista' }, created_at: '2026-10-22T10:00:00Z',
+  validation_reference: 'SE/2026/0141', missing: [], registered_by: { id: 2, name: 'Analista' }, created_at: '2026-10-22T10:00:00Z',
+}
+// HU-S14-02: empresa recién invitada, sin ningún dato del perfil.
+const invited = {
+  ...company, id: 7, name: null, legal_name: null, trade_name: null, rfc: null, sector_code: null, state_code: null, municipality_code: null,
+  municipality: null, contact_name: null, contact_position: null, contact_email: null, contact_phone: null, validation_reference: null,
+  account_email: 'operador@nueva.test', profile_status: 'pending_access',
+  missing: ['name', 'contact_name', 'contact_position', 'contact_email', 'legal_name', 'rfc', 'sector_code', 'location'],
 }
 const page = (companies: unknown[]) => Response.json({ data: companies, meta: { current_page: 1, last_page: 1, total: companies.length } })
 
@@ -55,19 +62,9 @@ beforeEach(() => {
 })
 afterEach(() => vi.unstubAllGlobals())
 
-async function fillCompany(form: HTMLElement) {
-  fireEvent.change(within(form).getByLabelText('Razón social'), { target: { value: ' Manufacturas del Golfo ' } })
-  fireEvent.change(within(form).getByLabelText('RFC'), { target: { value: 'mgo150320ab1' } })
-  fireEvent.change(within(form).getByLabelText('Sector económico (SCIAN)'), { target: { value: '31-33' } })
-  fireEvent.change(within(form).getByLabelText('Estado'), { target: { value: '28' } })
-  const municipality = within(form).getByRole('combobox', { name: 'Municipio' })
-  await waitFor(() => expect(municipality).toBeEnabled())
-  fireEvent.focus(municipality)
-  fireEvent.change(municipality, { target: { value: 'reyn' } })
-  fireEvent.mouseDown(await within(form).findByRole('option', { name: 'Reynosa' }))
-  fireEvent.change(within(form).getByLabelText('Nombre del contacto'), { target: { value: 'Lucía Herrera' } })
-  fireEvent.change(within(form).getByLabelText('Puesto o departamento del contacto (opcional)'), { target: { value: 'Recursos Humanos' } })
-  fireEvent.change(within(form).getByLabelText('Correo del contacto'), { target: { value: 'dual@manugolfo.test' } })
+function invite(form: HTMLElement) {
+  fireEvent.change(within(form).getByLabelText('Correo de la cuenta'), { target: { value: ' operador@nueva.test ' } })
+  fireEvent.change(within(form).getByLabelText('Nombre de la persona (opcional)'), { target: { value: 'Lucía Herrera' } })
 }
 
 describe('empresas HU-S4-02', () => {
@@ -82,14 +79,23 @@ describe('empresas HU-S4-02', () => {
     expect(apiMock).not.toHaveBeenCalled()
   })
 
-  it('lista las empresas y busca por razón social, nombre comercial o RFC (CA-08)', async () => {
-    apiMock.mockResolvedValueOnce(page([summary, { ...summary, id: 6, legal_name: 'Zeta', trade_name: null, rfc: 'ZET010101AA1', municipality_code: '28041', municipality: 'Victoria', is_active: false }]))
+  it('lista las empresas con su perfil y busca por nombre, RFC o correo de la cuenta (CA-08, HU-S14-02 CA-03)', async () => {
+    apiMock.mockResolvedValueOnce(page([summary, { ...summary, id: 6, name: 'Zeta', legal_name: 'Zeta', trade_name: null, rfc: 'ZET010101AA1', municipality_code: '28041', municipality: 'Victoria', is_active: false, profile_status: 'incomplete' }, invited]))
       .mockResolvedValueOnce(page([]))
     renderApp('/companies')
     const table = await screen.findByRole('table', { name: 'Empresas registradas' })
     expect(within(table).getByText('MGO150320AB1')).toBeInTheDocument()
     expect(within(table).getByText('Reynosa')).toBeInTheDocument()
     expect(within(table).getByText('INACTIVA')).toBeInTheDocument()
+    expect(within(table).getByText('Perfil completo')).toBeInTheDocument()
+    expect(within(table).getByText('Perfil incompleto')).toBeInTheDocument()
+    // La invitada sin nombre se reconoce por el correo de su cuenta.
+    const row = within(table).getByText('operador@nueva.test').closest('tr') as HTMLElement
+    expect(row).toHaveTextContent('Empresa sin nombre')
+    expect(row).toHaveTextContent('Acceso pendiente')
+    expect(within(row).getAllByText('Sin capturar')).toHaveLength(2)
+    expect(within(row).getByRole('link', { name: 'Ver detalle de Empresa sin nombre' })).toHaveAttribute('href', '/companies/7')
+    expect(screen.getByRole('link', { name: 'Invitar empresa' })).toHaveAttribute('href', '/companies/new')
 
     fireEvent.change(screen.getByLabelText('Buscar empresa'), { target: { value: '  inexistente ' } })
     fireEvent.click(screen.getByRole('button', { name: 'Buscar' }))
@@ -97,77 +103,94 @@ describe('empresas HU-S4-02', () => {
     expect(apiMock.mock.calls[1][0]).toBe('/api/companies?page=1&q=inexistente')
   })
 
-  it('registra una empresa con el municipio del catálogo y abre su detalle (CA-02, CA-05)', async () => {
-    apiMock.mockResolvedValueOnce(Response.json({ data: company, setup_delivery: 'sent' }, { status: 201 })).mockResolvedValueOnce(Response.json({ data: company }))
+  it('invita a una empresa solo con el correo de la cuenta y abre su detalle sin perfil (HU-S14-02 CA-01)', async () => {
+    apiMock.mockResolvedValueOnce(Response.json({ data: invited, setup_delivery: 'sent' }, { status: 201 })).mockResolvedValueOnce(Response.json({ data: invited }))
     renderApp('/companies/new')
-    const form = (await screen.findByRole('button', { name: 'Registrar empresa' })).closest('form') as HTMLElement
-    await fillCompany(form)
-    fireEvent.click(within(form).getByRole('button', { name: 'Registrar empresa' }))
+    expect(await screen.findByRole('heading', { name: 'Invitar empresa' })).toBeInTheDocument()
+    const form = screen.getByRole('button', { name: 'Enviar invitación' }).closest('form') as HTMLElement
+    // Solo tres campos: el perfil lo captura la empresa.
+    expect(within(form).queryByLabelText(/Razón social|RFC|Sector|Municipio/)).not.toBeInTheDocument()
+    expect(within(form).getByLabelText('Nombre de la empresa (opcional)')).toHaveAccessibleDescription('Solo como referencia; la empresa podrá cambiarlo.')
+    invite(form)
+    fireEvent.click(within(form).getByRole('button', { name: 'Enviar invitación' }))
 
-    // T-S8-12: el registro crea la cuenta del contacto y le envía el enlace.
-    expect(await screen.findByText(`Empresa registrada. Enviamos a ${company.contact_email} el enlace para establecer su contraseña.`)).toHaveAttribute('role', 'status')
-    expect(screen.getByLabelText('Ruta actual').textContent).toBe('/companies/5')
-    expect(JSON.parse(writes('POST')[0][1]?.body as string)).toEqual({
-      legal_name: 'Manufacturas del Golfo', trade_name: null, rfc: 'MGO150320AB1', sector_code: '31-33', state_code: '28',
-      municipality_code: '28032', contact_name: 'Lucía Herrera', contact_position: 'Recursos Humanos', contact_email: 'dual@manugolfo.test', contact_phone: null, validation_reference: null,
-      delivery_method: 'email',
-    })
+    expect(await screen.findByText('Invitación enviada. operador@nueva.test recibirá el enlace para crear su contraseña y completar el perfil de su empresa.')).toHaveAttribute('role', 'status')
+    expect(screen.getByLabelText('Ruta actual').textContent).toBe('/companies/7')
+    expect(JSON.parse(writes('POST')[0][1]?.body as string)).toEqual({ email: 'operador@nueva.test', trade_name: null, person_name: 'Lucía Herrera', delivery_method: 'email' })
+    // El detalle de la invitada muestra lo que aún no captura.
+    const details = document.querySelector('.company-details') as HTMLElement
+    expect(details).toHaveTextContent('Empresa sin nombre')
+    expect(details).toHaveTextContent('Acceso pendiente')
+    expect(details).toHaveTextContent('Sin sector asignado')
+    expect(within(details).getAllByText('Sin capturar').length).toBeGreaterThanOrEqual(4)
   })
 
-  it('con la entrega manual muestra el enlace del contacto para copiarlo, sin salir del registro (T-S8-12)', async () => {
-    const link = 'http://localhost:5173/set-initial-password?email=dual%40manugolfo.test&token=abc'
-    apiMock.mockResolvedValueOnce(Response.json({ data: company, setup_delivery: 'manual', setup_url: link }, { status: 201 }))
+  it('con la entrega manual muestra el enlace para copiarlo, sin salir de la invitación (T-S8-12)', async () => {
+    const link = 'http://localhost:5173/set-initial-password?email=operador%40nueva.test&token=abc'
+    apiMock.mockResolvedValueOnce(Response.json({ data: invited, setup_delivery: 'manual', setup_url: link }, { status: 201 }))
     renderApp('/companies/new')
-    const form = (await screen.findByRole('button', { name: 'Registrar empresa' })).closest('form') as HTMLElement
-    await fillCompany(form)
+    const form = (await screen.findByRole('button', { name: 'Enviar invitación' })).closest('form') as HTMLElement
+    invite(form)
     fireEvent.click(within(form).getByRole('radio', { name: /Generar un enlace para compartirlo/ }))
-    expect(within(form).getByLabelText('Correo del contacto')).toHaveAccessibleDescription('Será el correo con el que inicie sesión. Recibirás un enlace para compartírselo.')
-    fireEvent.click(within(form).getByRole('button', { name: 'Registrar empresa' }))
+    expect(within(form).getByLabelText('Correo de la cuenta')).toHaveAccessibleDescription('Será el correo con el que inicie sesión. Recibirás un enlace para compartírselo.')
+    fireEvent.click(within(form).getByRole('button', { name: 'Enviar invitación' }))
 
-    expect(await screen.findByText(`Empresa registrada. Copia el enlace y compártelo con ${company.contact_name} para que establezca su contraseña.`)).toHaveAttribute('role', 'status')
+    expect(await screen.findByText('Invitación lista. Copia el enlace y compártelo con operador@nueva.test para que cree su contraseña y complete el perfil de su empresa.')).toHaveAttribute('role', 'status')
     expect(screen.getByLabelText('Enlace de configuración')).toHaveValue(link)
-    expect(screen.getByRole('link', { name: 'Ver la empresa' })).toHaveAttribute('href', '/companies/5')
+    expect(screen.getByRole('link', { name: 'Ver la empresa' })).toHaveAttribute('href', '/companies/7')
     expect(screen.getByLabelText('Ruta actual').textContent).toBe('/companies/new')
     expect(JSON.stringify(window.history.state)).not.toContain('token=abc')
     expect(JSON.parse(writes('POST')[0][1]?.body as string)).toMatchObject({ delivery_method: 'manual' })
   })
 
   it('avisa que hay que reenviar el enlace si no se pudo enviar (T-S8-12)', async () => {
-    apiMock.mockResolvedValueOnce(Response.json({ data: company, setup_delivery: 'pending' }, { status: 201 })).mockResolvedValueOnce(Response.json({ data: company }))
+    apiMock.mockResolvedValueOnce(Response.json({ data: invited, setup_delivery: 'pending' }, { status: 201 })).mockResolvedValueOnce(Response.json({ data: invited }))
     renderApp('/companies/new')
-    const form = (await screen.findByRole('button', { name: 'Registrar empresa' })).closest('form') as HTMLElement
-    await fillCompany(form)
-    fireEvent.click(within(form).getByRole('button', { name: 'Registrar empresa' }))
-    expect(await screen.findByText('Empresa registrada, pero no pudimos enviar el enlace. Usa “Reenviar enlace”.')).toHaveAttribute('role', 'status')
+    const form = (await screen.findByRole('button', { name: 'Enviar invitación' })).closest('form') as HTMLElement
+    invite(form)
+    fireEvent.click(within(form).getByRole('button', { name: 'Enviar invitación' }))
+    expect(await screen.findByText('Empresa invitada, pero no pudimos enviar el enlace. Usa “Reenviar enlace”.')).toHaveAttribute('role', 'status')
   })
 
-  it('valida en línea y no envía con errores (CA-03, CA-09)', async () => {
+  it('pide el correo, valida su formato y muestra junto al campo el correo repetido que rechaza el servidor', async () => {
+    apiMock.mockResolvedValueOnce(Response.json({ errors: { email: ['El correo ya está registrado en otra cuenta.'] } }, { status: 422 }))
     renderApp('/companies/new')
-    const form = (await screen.findByRole('button', { name: 'Registrar empresa' })).closest('form') as HTMLElement
+    const form = (await screen.findByRole('button', { name: 'Enviar invitación' })).closest('form') as HTMLElement
+    const email = within(form).getByLabelText('Correo de la cuenta')
+    fireEvent.click(within(form).getByRole('button', { name: 'Enviar invitación' }))
+    expect(email).toHaveAccessibleDescription(/El correo de la cuenta es obligatorio\./)
+    fireEvent.change(email, { target: { value: 'no-es-correo' } })
+    fireEvent.blur(email)
+    expect(email).toHaveAccessibleDescription(/Ingresa un correo/)
+    fireEvent.click(within(form).getByRole('button', { name: 'Enviar invitación' }))
+    expect(writes('POST')).toHaveLength(0)
+
+    invite(form)
+    fireEvent.click(within(form).getByRole('button', { name: 'Enviar invitación' }))
+    await waitFor(() => expect(email).toHaveAccessibleDescription(/El correo ya está registrado en otra cuenta\./))
+  })
+
+  it('edita el perfil de una invitada con todo opcional y valida solo lo capturado (M4)', async () => {
+    apiMock.mockResolvedValueOnce(Response.json({ data: invited })).mockResolvedValueOnce(Response.json({ data: invited }))
+    renderApp('/companies/7/edit')
+    const form = (await screen.findByRole('button', { name: 'Guardar cambios' })).closest('form') as HTMLElement
     const rfc = within(form).getByLabelText('RFC')
     fireEvent.change(rfc, { target: { value: 'XAXX010101000' } })
     fireEvent.blur(rfc)
     expect(rfc).toHaveAccessibleDescription(/El RFC no es válido/)
-    const phone = within(form).getByLabelText('Teléfono del contacto (opcional)')
-    fireEvent.change(phone, { target: { value: '123' } })
-    fireEvent.blur(phone)
-    expect(phone).toHaveAccessibleDescription(/entre 10 y 15 dígitos/)
+    fireEvent.change(within(form).getByLabelText('Estado'), { target: { value: '28' } })
+    fireEvent.click(within(form).getByRole('button', { name: 'Guardar cambios' }))
+    expect(within(form).getByRole('combobox', { name: 'Municipio' })).toHaveAccessibleDescription(/Elige el municipio del estado\./)
+    expect(writes('PUT')).toHaveLength(0)
 
-    fireEvent.click(within(form).getByRole('button', { name: 'Registrar empresa' }))
-    expect(within(form).getByLabelText('Razón social')).toHaveAccessibleDescription('La razón social es obligatoria.')
-    expect(within(form).getByLabelText('Sector económico (SCIAN)')).toHaveAccessibleDescription('El sector económico es obligatorio.')
-    expect(within(form).getByLabelText('Estado')).toHaveAccessibleDescription('El estado es obligatorio.')
-    expect(within(form).getByLabelText('Nombre del contacto')).toHaveAccessibleDescription('El nombre del contacto es obligatorio.')
-    expect(writes('POST')).toHaveLength(0)
-  })
-
-  it('muestra junto al campo el RFC repetido que rechaza el servidor (CA-03)', async () => {
-    apiMock.mockResolvedValueOnce(Response.json({ errors: { rfc: ['Ya existe una empresa registrada con ese RFC.'] } }, { status: 422 }))
-    renderApp('/companies/new')
-    const form = (await screen.findByRole('button', { name: 'Registrar empresa' })).closest('form') as HTMLElement
-    await fillCompany(form)
-    fireEvent.click(within(form).getByRole('button', { name: 'Registrar empresa' }))
-    await waitFor(() => expect(within(form).getByLabelText('RFC')).toHaveAccessibleDescription(/Ya existe una empresa registrada con ese RFC\./))
+    fireEvent.change(rfc, { target: { value: '' } })
+    fireEvent.change(within(form).getByLabelText('Estado'), { target: { value: '' } })
+    fireEvent.click(within(form).getByRole('button', { name: 'Guardar cambios' }))
+    await waitFor(() => expect(writes('PUT')).toHaveLength(1))
+    expect(JSON.parse(writes('PUT')[0][1]?.body as string)).toEqual({
+      legal_name: null, trade_name: null, rfc: null, sector_code: null, state_code: null, municipality_code: null,
+      contact_name: null, contact_position: null, contact_email: null, contact_phone: null, validation_reference: null,
+    })
   })
 
   it('muestra el detalle con el registrante y edita la empresa conservando su municipio', async () => {

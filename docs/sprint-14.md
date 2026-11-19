@@ -1,21 +1,21 @@
-# Sprint 14 — Mi cuenta y perfil de la organización
+# Sprint 14 — Mi cuenta y empresas autogestionadas
 
 Sprint vigente desde el 18 de noviembre de 2026. Sprint anterior: [sprint-13.md](sprint-13.md) (histórico).
 
 **Objetivo del Sprint:** dar autonomía operativa sin perder control ni trazabilidad.
 - Cada persona gestiona su cuenta: nombre y contraseña.
-- Empresas e instituciones mantienen sus datos operativos (nombre comercial, ubicación, contacto y, una sola vez, el sector).
-- Los datos legales y oficiales siguen bajo Administración y la Secretaría.
+- La Secretaría invita a las empresas con lo mínimo y cada empresa captura y mantiene todo su perfil (cambio de alcance del 19 de noviembre).
+- Las instituciones mantienen el contacto de su programa dual; su nombre oficial y su CCT siguen bajo Administración.
 - Todo cambio queda en una bitácora inmutable.
 
-**Story Points:** 18 (HU-S14-01 a HU-S14-03).
+**Story Points:** 26 (HU-S14-01 a HU-S14-04).
 
 **Rama:** `feat/s14-account-profile`.
 
 ## Decisiones del responsable y el Arquitecto (18 de noviembre de 2026)
 
 - **D1.** Entran las tres historias: Mi cuenta, Perfil de la organización y Trazabilidad.
-- **D2. El sector SCIAN se establece una sola vez:**
+- **D2. El sector SCIAN se establece una sola vez** (sustituida el 19 de noviembre por M1 a M4):
   - en el alta y la edición de empresas de la Secretaría, `sector_code` pasa a ser **opcional** (nullable en la base de datos), con el texto de ayuda «Si lo dejas vacío, la empresa podrá establecerlo desde su perfil»;
   - en `/account` (lado `COMPANY`), si el sector está vacío, la empresa lo elige del catálogo SCIAN con el aviso de que, una vez guardado, solo la Secretaría podrá cambiarlo, y lo confirma con `ConfirmDialog`;
   - una vez establecido, queda en solo lectura para la empresa: el backend responde `422` si ya tiene valor y usa `lockForUpdate` para evitar carreras;
@@ -26,17 +26,34 @@ Sprint vigente desde el 18 de noviembre de 2026. Sprint anterior: [sprint-13.md]
 - **D4.** La ubicación de las instituciones queda **fuera de alcance**: no existe en el esquema.
 - **D5.** El correo de acceso queda en **solo lectura** en esta fase.
 - **D6.** Cambiar la contraseña **cierra las demás sesiones** abiertas de la cuenta y envía un correo de aviso por la cola existente.
-- **D7.** El nombre comercial de la empresa es **editable**, con bitácora y aviso por correo en cola a las cuentas activas de `SECRETARY`. El aviso solo se envía cuando el valor cambia de verdad.
+- **D7** (sustituida el 19 de noviembre por M2). El nombre comercial de la empresa es **editable**, con bitácora y aviso por correo en cola a las cuentas activas de `SECRETARY`. El aviso solo se envía cuando el valor cambia de verdad.
 - **D8.** La bitácora nueva registra **también** las ediciones de `ADMIN` y `SECRETARY` sobre empresas, instituciones y cuentas.
 - **D9.** Una sola vista `/account` («Mi cuenta») con secciones separadas: Mi cuenta para todos los roles y Perfil de la organización para `COMPANY` e `INSTITUTION`.
 - **D10.** `ADMIN` y `SECRETARY` también tienen acceso a `/account`, con su nombre y su contraseña.
+
+## Cambio de alcance del 19 de noviembre de 2026
+
+El responsable y el Arquitecto simplifican el alta de empresas y delegan la captura completa a cada empresa. **D2 (sector de un solo establecimiento) y D7 (aviso a la Secretaría por cambio de nombre comercial) quedan sustituidas** por:
+
+- **M1. Mínimo para operar:** nombre visible de la empresa (comercial o razón social) y nombre, puesto y correo del contacto. Se exige antes de publicar una oportunidad o enviar una solicitud de vinculación; `/talent` se explora libre desde el primer acceso.
+- **M2. Sin aviso por correo a la Secretaría:** los cambios del perfil solo quedan en la bitácora.
+- **M3. Nombre de la persona:** si la Secretaría no lo captura al invitar, la cuenta guarda el correo como nombre provisional; el onboarding lo detecta y pide el nombre real.
+- **M4. Edición de la Secretaría:** conserva la edición del perfil completo, con todos los campos opcionales. El folio de validación (`validation_reference`) es exclusivo de la Secretaría y nunca se expone a la empresa.
+
+Ajustes del mismo día:
+- El onboarding guarda en parcial: solo valida el formato de lo capturado; «Necesario para operar» es una guía visual, no un bloqueo.
+- El onboarding se considera terminado si la empresa lo guardó o pospuso, o si su perfil ya está completo; `/welcome` terminado redirige a `/`.
+- Sin ubicación de la empresa ni municipio de origen, la búsqueda de talento no ofrece el radio (y el servidor responde `422` si llega).
+- El menú de cuenta no repite el correo cuando el nombre es el provisional.
+
+La regla de CLAUDE.md no cambia: la Secretaría sigue gestionando las empresas que valida y sus cuentas.
 
 ## Precisiones técnicas
 
 - **Bitácora general e inmutable:** tabla `account_audit_events` con:
   - `id`;
   - `actor_id`, la cuenta que hizo el cambio;
-  - `event`: `account_updated`, `password_changed`, `profile_updated` o `sector_established`, con CHECK;
+  - `event`: `account_updated`, `password_changed`, `organization_profile_updated` o `company_invited`, con CHECK. Un solo evento para el perfil, que lista los campos que cambiaron;
   - `subject_type`, que acepta solo `user`, `company` o `institution`, con CHECK;
   - `subject_id`;
   - `changed_fields`, la lista de **nombres** de campos;
@@ -62,8 +79,11 @@ Sprint vigente desde el 18 de noviembre de 2026. Sprint anterior: [sprint-13.md]
 ## Orden de implementación
 
 1. **HU-S14-01** Mi cuenta: nombre y contraseña.
-2. **HU-S14-02** Perfil de la organización.
-3. **HU-S14-03** Trazabilidad de cambios en la bitácora.
+2. **HU-S14-02** Alta ligera de empresas por invitación y perfil opcional.
+3. **HU-S14-03** Perfil autogestionado y onboarding de la empresa.
+4. **HU-S14-04** Trazabilidad de cambios en la bitácora.
+
+Cada historia termina con su reporte y una revisión del responsable antes de iniciar la siguiente.
 
 ## Fuera de alcance
 
@@ -109,52 +129,53 @@ Sprint vigente desde el 18 de noviembre de 2026. Sprint anterior: [sprint-13.md]
   - Pest: acceso por rol y CSRF; lista explícita de campos; contraseña actual incorrecta; política; igual a la actual; sesiones borradas y `remember_token` rotado; tokens invalidados; correo encolado; throttle; inmutabilidad de la bitácora;
   - Vitest: el enlace del menú, la vista y la `Sheet`.
 
-## HU-S14-02 — Perfil de la organización
+## HU-S14-02 — Alta ligera de empresas por invitación y perfil opcional
 
-**Estado:** Pendiente.  
+**Estado:** Implementada (19 de noviembre de 2026), sin commit y pendiente de revisión. Pest con 1609 pruebas en verde; Vitest con 1170 en verde y las 3 fallas conocidas de descarga.  
+**Diseño técnico y verificación:** `docs/HU-S14-02.md`  
 **Story Points:** 8  
-**Rol:** `COMPANY`, `INSTITUTION` (edición); `SECRETARY` (sector opcional en su módulo)
+**Rol:** `SECRETARY` (invitación y edición); todos los consumidores de datos de empresa
 
 ### Historia de usuario
 
-**COMO** empresa o institución  
-**QUIERO** mantener mis datos operativos desde mi cuenta  
-**PARA** que la información que ven las demás organizaciones esté al día sin pedirlo a la Secretaría o a Administración.
+**COMO** Secretaría de Economía  
+**QUIERO** invitar a una empresa solo con el correo de su cuenta  
+**PARA** darle acceso de inmediato y que ella capture su propio perfil.
 
 ### Criterios de aceptación
 
-- **CA-01.** `GET` y `PUT /api/organization/profile` resuelven la organización desde la sesión. Datos según el lado:
+- **CA-01.** «Invitar empresa» (`POST /api/companies`) pide el **correo de la cuenta** (obligatorio, único) y, opcionales, un **nombre de referencia** de la empresa (se guarda como nombre comercial) y el **nombre de la persona** (sin él, la cuenta guarda el correo como nombre provisional, M3). Crea la empresa sin perfil y su cuenta `COMPANY` en una transacción y entrega el enlace de contraseña por correo o manual, como hoy. Registra `company_invited` en `account_audit_events`.
+- **CA-02.** En `companies`, el perfil completo pasa a ser opcional en la base de datos: razón social, RFC, sector, estado, municipio, punto, nombre y correo del contacto. La ubicación es completa o ninguna (CHECK) y ningún texto se guarda vacío. El RFC, si llega, conserva formato y unicidad; vacío se normaliza a `null`. Se agrega `onboarding_dismissed_at` (las empresas existentes ya lo traen fijado).
+- **CA-03.** La lista de empresas muestra el nombre visible o «Empresa sin nombre» con el correo de su cuenta, un estado («Acceso pendiente», «Perfil incompleto», «Perfil completo») y busca también por el correo de la cuenta. El detalle muestra «Sin capturar» en los campos vacíos. La edición de la Secretaría (M4) acepta todos los campos vacíos, con estado y municipio juntos.
+- **CA-04.** Ningún consumidor falla con una empresa sin perfil: inicio, sesión, bandejas, detalle y CSV de la institución, chat, correo de mensajes, bitácora, reporte ejecutivo y su CSV (vacíos agrupados), precarga de la ubicación de oportunidades y búsqueda de talento.
+- **CA-05.** Búsqueda de talento sin ubicación de la empresa ni municipio de origen: ordena por actualización reciente sin distancia; el filtro de radio se deshabilita y explica qué falta; el servidor responde `422` si llega `radius_km` sin origen.
+- **CA-06.** Se retira el aviso por correo a la Secretaría por cambio de nombre comercial (M2).
+- **CA-07.** Pruebas: Pest de la invitación, la edición opcional, el RFC, los CHECK y cada consumidor con una empresa vacía; Vitest de la invitación, la lista, el detalle y el radio sin origen.
 
-  | | Empresa | Institución |
-  |---|---|---|
-  | **Solo lectura** | Razón social y RFC; el sector, una vez establecido | Nombre oficial y CCT |
-  | **Editable** | Nombre comercial; estado y municipio del catálogo INEGI; nombre, puesto, correo y teléfono del contacto | Nombre, puesto, correo y teléfono del responsable del programa dual |
+## HU-S14-03 — Perfil autogestionado y onboarding de la empresa
 
-  Un campo fuera de la lista responde `422`.
-- **CA-02.** **Sector (D2):**
-  - `sector_code` es nullable en la base de datos y opcional en el formulario de la Secretaría, con su texto de ayuda;
-  - la empresa lo establece una sola vez, tras un `ConfirmDialog`;
-  - con el sector ya establecido, la petición responde `422`, verificado con `lockForUpdate`;
-  - la Secretaría puede asignarlo y corregirlo siempre;
-  - el reporte por sector agrupa los vacíos como «Sin sector asignado» y los totales no pierden empresas;
-  - las vistas que muestran el sector toleran el vacío;
-  - el inicio de la empresa sin sector muestra un `Callout` con enlace a `/account`.
-- **CA-03.** El cambio se refleja en lo que consume estos datos: bandejas, chat, avisos, correo de mensajes, detalle de la solicitud, CSV y el menú de cuenta.
-- **CA-04.** Cuando el nombre comercial cambia de valor (no al guardar el mismo), se encola un aviso por correo a las cuentas activas de `SECRETARY`.
-- **CA-05.** Cada guardado inserta en `account_audit_events`:
-  - `profile_updated`, con los nombres de los campos que cambiaron;
-  - `sector_established`, cuando la empresa fija su sector.
+**Estado:** Pendiente.  
+**Story Points:** 8  
+**Rol:** `COMPANY` (perfil completo); `INSTITUTION` (contacto, sin cambios de alcance)
 
-  Si nada cambió, no se inserta ningún evento.
-- **CA-06.** La interfaz de `/account` añade la sección «Perfil de la empresa» o «Perfil de la institución»:
-  - los datos de solo lectura, con un `Callout` que explica a quién pedir un cambio;
-  - el formulario editable, con `MunicipalityCombobox` en la empresa, `PendingLabel` y los errores junto a cada campo;
-  - funciona a 1440 y a 390 px.
-- **CA-07.** Pruebas:
-  - Pest: anti-IDOR (ids ignorados o rechazados); campos protegidos; validaciones; sector una sola vez con su carrera; reporte con «Sin sector asignado»; aviso de nombre comercial solo si cambia; throttle; bitácora sin valores;
-  - Vitest y E2E: una empresa cambia su contacto y la institución lo ve en el detalle de la solicitud.
+### Historia de usuario
 
-## HU-S14-03 — Trazabilidad de cambios en la bitácora
+**COMO** empresa invitada  
+**QUIERO** completar mi perfil al entrar por primera vez, o más tarde, y mantenerlo desde mi cuenta  
+**PARA** presentarme ante las instituciones y empezar a vincular sin depender de la Secretaría.
+
+### Criterios de aceptación
+
+- **CA-01.** `GET` y `PUT /api/organization/profile` resuelven la organización desde la sesión. La empresa edita todo su perfil (nombre comercial, razón social, RFC, sector, ubicación y contacto), incluido el sector las veces que quiera; nunca `validation_reference`, `is_active` ni `registered_by` (`422` por nombre). La institución edita solo su contacto; su nombre oficial y su CCT quedan en solo lectura.
+- **CA-02.** El primer acceso de una empresa con el perfil incompleto y sin posponer lleva a `/welcome` («Completa el perfil de tu empresa»): guardado parcial sin campos obligatorios, «Completar más tarde» (`POST /api/organization/profile/postpone`) y sin bucles de redirección. Con el onboarding terminado, `/welcome` redirige a `/`.
+- **CA-03.** El contacto para vinculación se precarga con el nombre y el correo de la cuenta («Soy yo»); si el nombre es el provisional, se pide el real y actualiza `users.name` en la misma transacción. Se puede asignar a otra persona.
+- **CA-04.** Mientras falten datos, el inicio muestra un `Callout` con lo que falta, «Completar perfil» hacia `/account` y la ruta en texto para encontrarlo después.
+- **CA-05.** Mínimo para operar (M1): publicar una oportunidad o enviar una solicitud sin él responde `422` (`COMPANY_PROFILE_INCOMPLETE`) y la interfaz lo explica con un enlace a `/account`.
+- **CA-06.** `/account` reúne Mi cuenta y el perfil de la organización con el mismo formulario del onboarding; responsive a 1440 y 390 px.
+- **CA-07.** Cada guardado registra `organization_profile_updated` con los nombres de los campos que cambiaron (y `account_updated` si cambió el nombre de la cuenta); sin cambios, no registra nada.
+- **CA-08.** Pruebas: Pest (anti-IDOR, campos internos, onboarding, posponer, M1, bitácora sin valores, sin correos), Vitest (onboarding, recordatorio, bloqueo) y E2E (invitación, onboarding, posponer, bloqueo, completar y publicar).
+
+## HU-S14-04 — Trazabilidad de cambios en la bitácora
 
 **Estado:** Pendiente.  
 **Story Points:** 5  

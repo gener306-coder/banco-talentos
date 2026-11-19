@@ -9,6 +9,7 @@ import { PendingLabel } from '../ui/forms'
 import { EyeIcon, EyeOffIcon, LockIcon } from '../ui/icons'
 import { NavBackLink } from '../ui/NavBackLink'
 import { Sheet } from '../ui/Sheet'
+import { OrganizationProfileSection } from './OrganizationProfileSection'
 import './account.css'
 
 const accountMessages: FailureMessages = {
@@ -159,6 +160,8 @@ export function AccountPage() {
             {organization && <><dt>Organización</dt><dd>{organization}</dd></>}
           </dl>
         </section>
+        {/* HU-S14-02: el perfil de la organización, solo para empresas e instituciones. */}
+        {(user.role === 'COMPANY' || user.role === 'INSTITUTION') && <OrganizationProfileSection />}
         <section className="student-section" aria-labelledby="account-security-title">
           <h3 id="account-security-title">Seguridad</h3>
           <p>Cambia tu contraseña cuando lo necesites. Te pediremos la actual para confirmar que eres tú.</p>

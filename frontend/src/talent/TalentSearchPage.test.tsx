@@ -8,7 +8,7 @@ const fetchMock = vi.fn<typeof fetch>()
 let unreadConversations = 0
 const talentMock = vi.fn<typeof fetch>()
 let user: Record<string, unknown>
-const companyUser = { id: 7, name: 'Talento', email: 'talento@empresa.test', role: 'COMPANY', institution: null, company: { id: 3, name: 'ManuGolfo' } }
+const companyUser = { id: 7, name: 'Talento', email: 'talento@empresa.test', role: 'COMPANY', institution: null, company: { id: 3, name: 'ManuGolfo', missing: [] } }
 const publicId = '3f2c1b9e-8a7d-4c6b-9e5f-1a2b3c4d5e6f'
 const card = {
   public_id: publicId, headline: 'Analista de datos', program: 'Ingeniería Mecatrónica', period_type: 'semester', period_number: 6,
@@ -235,6 +235,37 @@ describe('buscador de talento HU-S4-05', () => {
     fireEvent.click(within(form).getByLabelText('El municipio de mi empresa'))
     fireEvent.click(within(form).getByRole('button', { name: 'Aplicar filtros' }))
     await waitFor(() => expect(lastQuery().has('origin_municipality_code')).toBe(false))
+  })
+
+  it('sin ubicación de la empresa no ofrece el radio hasta elegir otro municipio y omite la distancia (HU-S14-02 CA-05)', async () => {
+    user = { ...companyUser, company: { id: 3, name: null, missing: ['name', 'location'] } }
+    talentMock.mockResolvedValue(page([{ ...card, distance_km: null }]))
+    // Un enlace guardado con radio pero sin origen no llega al servidor con el radio.
+    renderApp('/talent?radius_km=50')
+    const article = await screen.findByRole('article', { name: 'Analista de datos' })
+    expect(article).toHaveTextContent('Matamoros, Tamaulipas')
+    expect(article).not.toHaveTextContent(/km/)
+    expect(lastQuery().has('radius_km')).toBe(false)
+
+    const form = screen.getByRole('search', { name: 'Filtros de búsqueda' })
+    const radius = within(form).getByLabelText('Distancia máxima')
+    expect(radius).toBeDisabled()
+    expect(radius).toHaveAccessibleDescription('Para filtrar por distancia, elige otro municipio de origen o completa la ubicación de tu empresa en Mi cuenta.')
+    expect(within(form).getByRole('link', { name: 'Mi cuenta' })).toHaveAttribute('href', '/account')
+    expect(within(form).getByLabelText('El municipio de mi empresa (sin capturar)')).toBeDisabled()
+
+    fireEvent.click(within(form).getByLabelText('Otro municipio'))
+    fireEvent.change(within(form).getByLabelText('Estado de origen'), { target: { value: '28' } })
+    const municipality = within(form).getByRole('combobox', { name: 'Municipio de origen' })
+    await waitFor(() => expect(municipality).toBeEnabled())
+    fireEvent.focus(municipality)
+    fireEvent.change(municipality, { target: { value: 'vict' } })
+    fireEvent.mouseDown(await within(form).findByRole('option', { name: 'Victoria' }))
+    expect(radius).toBeEnabled()
+    fireEvent.change(radius, { target: { value: '25' } })
+    fireEvent.click(within(form).getByRole('button', { name: 'Aplicar filtros' }))
+    await waitFor(() => expect(lastQuery().get('origin_municipality_code')).toBe('28041'))
+    expect(lastQuery().get('radius_km')).toBe('25')
   })
 
   it('pagina los resultados de 20 en 20 (CA-09)', async () => {

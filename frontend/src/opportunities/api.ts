@@ -138,10 +138,12 @@ export async function getOpportunity(id: string, signal?: AbortSignal): Promise<
   return detail(await request(opportunityPath(id), { signal }))
 }
 
-export async function getOpportunityDefaults(signal?: AbortSignal): Promise<OpportunityDefaults> {
+/** Ubicación de la empresa para precargar el alta; null si la empresa invitada aún no la captura (HU-S14-02). */
+export async function getOpportunityDefaults(signal?: AbortSignal): Promise<OpportunityDefaults | null> {
   const response = await request('/api/opportunities/defaults', { signal })
   if (!isObject(response) || !isObject(response.data)) throw new ApiError(502)
   const data = response.data
+  if (data.state_code === null && data.municipality_code === null) return null
   if (!isStateCode(data.state_code) || !isMunicipalityCode(data.municipality_code) || !isOptionalText(data.municipality)) throw new ApiError(502)
   return { state_code: data.state_code, municipality_code: data.municipality_code, municipality: data.municipality }
 }

@@ -13,7 +13,7 @@ export function TalentFacts({ card }: { card: TalentCard }) {
     <dl className="talent-facts">
       <div><dt>Formación</dt><dd>{card.program} · {periodLabel(card.periodType, card.periodNumber)}</dd></div>
       <div><dt>Institución</dt><dd>{card.institution}</dd></div>
-      <div><dt>Ubicación</dt><dd>{place} · {distanceLabel(card.distanceKm)}</dd></div>
+      <div><dt>Ubicación</dt><dd>{card.distanceKm === null ? place : `${place} · ${distanceLabel(card.distanceKm)}`}</dd></div>
       <div><dt>Disponibilidad</dt><dd>
         {card.dualAvailable ? 'Disponible para el programa dual' : 'Sin disponibilidad dual por ahora'}
         {' · '}{card.canRelocate ? 'Puede reubicarse' : 'No puede reubicarse'}

@@ -13,7 +13,7 @@ const events = [
   { type: 'linkage_responded', occurred_at: '2026-10-06T16:00:00Z', actor: { id: 7, name: 'Coordinación Dual', role: 'INSTITUTION' }, resource: linkage },
   { type: 'linkage_requested', occurred_at: '2026-10-05T16:00:00Z', actor: { id: 5, name: 'Reclutadora', role: 'COMPANY' }, resource: { ...linkage, status: 'PENDIENTE_INSTITUCION' } },
   { type: 'opportunity_created', occurred_at: '2026-10-04T16:00:00Z', actor: { id: 5, name: 'Reclutadora', role: 'COMPANY' }, resource: { id: 12, title: 'Tableros de producción' } },
-  { type: 'company_registered', occurred_at: '2026-10-02T16:00:00Z', actor: secretaryActor, resource: { id: 3, legal_name: 'Manufacturas del Golfo, S.A. de C.V.' } },
+  { type: 'company_registered', occurred_at: '2026-10-02T16:00:00Z', actor: secretaryActor, resource: { id: 3, name: 'Manufacturas del Golfo, S.A. de C.V.' } },
   { type: 'account_created', occurred_at: '2026-10-01T16:00:00Z', actor: { id: 1, name: 'Administración', role: 'ADMIN' }, resource: { id: 2, name: 'Analista Económica', email: 'analista@economia.test', role: 'SECRETARY' } },
 ]
 const page = (items: unknown[], meta = {}) => Response.json({ data: items, meta: { current_page: 1, last_page: 1, total: items.length, per_page: 30, ...meta } })
@@ -44,7 +44,7 @@ describe('bitácora HU-S7-03', () => {
   it.each([
     { id: 2, name: 'Analista', email: 'analista@economia.test', role: 'SECRETARY', institution: null, company: null },
     { id: 3, name: 'Coordinación', email: 'dual@ut.test', role: 'INSTITUTION', institution: { id: 2, name: 'UT' }, company: null },
-    { id: 9, name: 'Reclutadora', email: 'rh@empresa.test', role: 'COMPANY', institution: null, company: { id: 3, name: 'ManuGolfo' } },
+    { id: 9, name: 'Reclutadora', email: 'rh@empresa.test', role: 'COMPANY', institution: null, company: { id: 3, name: 'ManuGolfo', missing: [] } },
   ])('niega la vista a $role sin consultar la bitácora (CA-01)', async (account) => {
     user = account
     const view = renderApp()

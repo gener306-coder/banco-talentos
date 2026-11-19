@@ -8,42 +8,35 @@ import { MunicipalityCombobox } from '../students/MunicipalityCombobox'
 import { PendingLabel } from '../ui/forms'
 import { emailErrorOnBlur, INVALID_EMAIL } from '../ui/validation'
 import type { Company, CompanyInput } from './api'
-import type { DeliveryMethod } from '../institutions/api'
-import { DeliveryMethodField } from '../institutions/SetupLinkDelivery'
+import type { SectorCode } from './catalogs'
 import { ECONOMIC_SECTORS, INVALID_PHONE, INVALID_RFC, isSectorCode, isValidPhone, isValidRfc, normalizeRfc } from './catalogs'
 
 type Field = keyof CompanyInput
 type Values = Record<Field, string>
 
-const emptyValues: Values = {
-  legal_name: '', trade_name: '', rfc: '', sector_code: '', state_code: '', municipality_code: '',
-  contact_name: '', contact_position: '', contact_email: '', contact_phone: '', validation_reference: '',
-}
-
 const valuesOf = (company: Company): Values => ({
-  legal_name: company.legal_name, trade_name: company.trade_name ?? '', rfc: company.rfc, sector_code: company.sector_code,
-  state_code: company.state_code, municipality_code: company.municipality_code, contact_name: company.contact_name,
-  contact_position: company.contact_position ?? '', contact_email: company.contact_email, contact_phone: company.contact_phone ?? '', validation_reference: company.validation_reference ?? '',
+  legal_name: company.legal_name ?? '', trade_name: company.trade_name ?? '', rfc: company.rfc ?? '', sector_code: company.sector_code ?? '',
+  state_code: company.state_code ?? '', municipality_code: company.municipality_code ?? '', contact_name: company.contact_name ?? '',
+  contact_position: company.contact_position ?? '', contact_email: company.contact_email ?? '', contact_phone: company.contact_phone ?? '',
+  validation_reference: company.validation_reference ?? '',
 })
 
 interface CompanyFormProps {
-  company?: Company
+  company: Company
   submitLabel: string
   cancelTo: string
   pending: boolean
   failure: ApiFailure | null
-  /** Al registrar (T-S8-12) también llega cómo entregar el enlace a la cuenta del contacto. */
-  onSubmit: (input: CompanyInput, deliveryMethod: DeliveryMethod) => Promise<void>
+  onSubmit: (input: CompanyInput) => Promise<void>
 }
 
 /**
- * Alta y edición de una empresa validada (HU-S4-02 CA-02 a CA-05, CA-09). Sin domicilio ni documentos: el municipio
- * del catálogo INEGI basta para ubicarla.
+ * Edición de una empresa por la Secretaría (HU-S4-02 CA-02 a CA-05, CA-09; M4 de HU-S14-02). Todo el perfil es
+ * opcional: la empresa lo captura y la Secretaría corrige. Solo se valida el formato de lo capturado y que la
+ * ubicación tenga estado y municipio juntos. Sin domicilio ni documentos.
  */
 export function CompanyForm({ company, submitLabel, cancelTo, pending, failure, onSubmit }: CompanyFormProps) {
-  const [values, setValues] = useState<Values>(() => company ? valuesOf(company) : emptyValues)
-  const creating = company === undefined
-  const [method, setMethod] = useState<DeliveryMethod>('email')
+  const [values, setValues] = useState<Values>(() => valuesOf(company))
   const [localErrors, setLocalErrors] = useState<Partial<Record<Field, string[]>>>({})
   const [municipalityTyped, setMunicipalityTyped] = useState(false)
   const errors: Partial<Record<string, string[]>> = { ...failure?.errors, ...localErrors }
@@ -94,24 +87,19 @@ export function CompanyForm({ company, submitLabel, cancelTo, pending, failure, 
     const optional = (field: Field) => text(field) || null
     const rfc = normalizeRfc(values.rfc)
     const found: Partial<Record<Field, string[]>> = {}
-    if (!text('legal_name')) found.legal_name = ['La razón social es obligatoria.']
-    if (!rfc) found.rfc = ['El RFC es obligatorio.']
-    else if (!isValidRfc(rfc)) found.rfc = [INVALID_RFC]
-    if (!values.sector_code) found.sector_code = ['El sector económico es obligatorio.']
-    if (!values.state_code) found.state_code = ['El estado es obligatorio.']
-    if (!values.municipality_code) found.municipality_code = [municipalityTyped ? 'Elige un municipio de la lista.' : 'El municipio es obligatorio.']
-    if (!text('contact_name')) found.contact_name = ['El nombre del contacto es obligatorio.']
-    if (!text('contact_email')) found.contact_email = ['El correo del contacto es obligatorio.']
-    else if (localErrors.contact_email?.[0] === INVALID_EMAIL) found.contact_email = [INVALID_EMAIL]
+    if (rfc && !isValidRfc(rfc)) found.rfc = [INVALID_RFC]
+    // La ubicación es completa o ninguna.
+    if (values.state_code && !values.municipality_code) found.municipality_code = [municipalityTyped ? 'Elige un municipio de la lista.' : 'Elige el municipio del estado.']
+    if (text('contact_email') && localErrors.contact_email?.[0] === INVALID_EMAIL) found.contact_email = [INVALID_EMAIL]
     if (text('contact_phone') && !isValidPhone(text('contact_phone'))) found.contact_phone = [INVALID_PHONE]
     setLocalErrors(found)
-    if (Object.keys(found).length || !isSectorCode(values.sector_code)) return
+    if (Object.keys(found).length || (values.sector_code !== '' && !isSectorCode(values.sector_code))) return
 
     await onSubmit({
-      legal_name: text('legal_name'), trade_name: optional('trade_name'), rfc, sector_code: values.sector_code,
-      state_code: values.state_code, municipality_code: values.municipality_code, contact_name: text('contact_name'),
-      contact_position: optional('contact_position'), contact_email: text('contact_email'), contact_phone: optional('contact_phone'), validation_reference: optional('validation_reference'),
-    }, method)
+      legal_name: optional('legal_name'), trade_name: optional('trade_name'), rfc: rfc || null, sector_code: values.sector_code === '' ? null : values.sector_code as SectorCode,
+      state_code: values.state_code || null, municipality_code: values.municipality_code || null, contact_name: optional('contact_name'),
+      contact_position: optional('contact_position'), contact_email: optional('contact_email'), contact_phone: optional('contact_phone'), validation_reference: optional('validation_reference'),
+    })
   }
 
   const errorId = (field: Field) => `company-${field}-error`
@@ -133,23 +121,23 @@ export function CompanyForm({ company, submitLabel, cancelTo, pending, failure, 
 
   return (
     <>
-      <p>Los campos marcados como opcionales pueden quedar vacíos. No se pide domicilio ni documentos: la evidencia de la validación queda en los expedientes de la Secretaría.</p>
+      <p>Todos los datos son opcionales: la empresa los captura desde su perfil y aquí puedes corregirlos. No se pide domicilio ni documentos: la evidencia de la validación queda en los expedientes de la Secretaría.</p>
       {failure && failure.status !== 422 && <InstitutionRequestError failure={failure} />}
       <form className="company-form" onSubmit={(event) => { void submit(event) }} aria-busy={pending} noValidate>
         <fieldset disabled={pending}>
           <legend>Identificación</legend>
-          {input('legal_name', 'Razón social', { maxLength: 200, autoComplete: 'organization', required: true })}
-          {input('trade_name', 'Nombre comercial (opcional)', { maxLength: 150 })}
-          {input('rfc', 'RFC', { maxLength: 13, required: true, help: '12 caracteres para persona moral o 13 para persona física.', onBlur: checkRfc })}
+          {input('legal_name', 'Razón social', { maxLength: 200, autoComplete: 'organization' })}
+          {input('trade_name', 'Nombre comercial', { maxLength: 150 })}
+          {input('rfc', 'RFC', { maxLength: 13, help: '12 caracteres para persona moral o 13 para persona física.', onBlur: checkRfc })}
           <label htmlFor="company-sector_code">Sector económico (SCIAN)</label>
-          <select id="company-sector_code" name="sector_code" required value={values.sector_code}
+          <select id="company-sector_code" name="sector_code" value={values.sector_code}
             aria-invalid={Boolean(errors.sector_code?.length)} aria-describedby={describedBy('sector_code')}
             onChange={(event) => set('sector_code', event.target.value)}>
-            <option value="">Selecciona…</option>
+            <option value="">Sin sector asignado</option>
             {ECONOMIC_SECTORS.map((sector) => <option key={sector.code} value={sector.code}>{sector.code} · {sector.name}</option>)}
           </select>
           {fieldError('sector_code')}
-          {input('validation_reference', 'Folio u oficio de validación (opcional)', { maxLength: 60 })}
+          {input('validation_reference', 'Folio u oficio de validación', { maxLength: 60, help: 'Solo lo ve la Secretaría.' })}
         </fieldset>
 
         <fieldset disabled={pending}>
@@ -158,7 +146,7 @@ export function CompanyForm({ company, submitLabel, cancelTo, pending, failure, 
           <div className="field-row">
             <div>
               <label htmlFor="company-state_code">Estado</label>
-              <select id="company-state_code" name="state_code" required value={values.state_code}
+              <select id="company-state_code" name="state_code" value={values.state_code}
                 aria-invalid={Boolean(errors.state_code?.length)} aria-describedby={describedBy('state_code')}
                 onChange={(event) => {
                   // Cambiar de estado limpia el municipio.
@@ -166,7 +154,7 @@ export function CompanyForm({ company, submitLabel, cancelTo, pending, failure, 
                   setMunicipalityTyped(false)
                   set('state_code', event.target.value)
                 }}>
-                <option value="">Selecciona…</option>
+                <option value="">Sin ubicación</option>
                 {MEXICAN_STATES.map((state) => <option key={state.code} value={state.code}>{state.name}</option>)}
               </select>
               {fieldError('state_code')}
@@ -175,7 +163,7 @@ export function CompanyForm({ company, submitLabel, cancelTo, pending, failure, 
               <label htmlFor="company-municipality_code">Municipio</label>
               <MunicipalityCombobox key={values.state_code} id="company-municipality_code" state={values.state_code}
                 code={values.municipality_code}
-                initialName={company && values.state_code === company.state_code && values.municipality_code === company.municipality_code ? company.municipality ?? '' : ''}
+                initialName={values.state_code === company.state_code && values.municipality_code === company.municipality_code ? company.municipality ?? '' : ''}
                 invalid={Boolean(errors.municipality_code?.length)} describedBy={describedBy('municipality_code')} disabled={pending}
                 onSelect={(municipality) => {
                   setMunicipalityTyped(municipality === null)
@@ -188,24 +176,14 @@ export function CompanyForm({ company, submitLabel, cancelTo, pending, failure, 
 
         <fieldset disabled={pending}>
           <legend>Contacto del programa dual</legend>
-          {input('contact_name', 'Nombre del contacto', { maxLength: 120, autoComplete: 'name', required: true })}
-          {input('contact_position', 'Puesto o departamento del contacto (opcional)', { maxLength: 120, autoComplete: 'organization-title' })}
+          {input('contact_name', 'Nombre del contacto', { maxLength: 120, autoComplete: 'name' })}
+          {input('contact_position', 'Puesto o departamento del contacto', { maxLength: 120, autoComplete: 'organization-title' })}
           {input('contact_email', 'Correo del contacto', {
-            maxLength: 254, type: 'email', autoComplete: 'email', required: true, onBlur: checkEmail,
-            // T-S8-12: el correo del contacto es también el de inicio de sesión de su cuenta.
-            help: !creating ? 'Cambiarlo no modifica el correo con el que la cuenta inicia sesión.'
-              : method === 'email' ? 'Le enviaremos un enlace para establecer su contraseña y entrar al Banco de Talentos.'
-              : 'Será el correo con el que inicie sesión. Recibirás un enlace para compartírselo.',
+            maxLength: 254, type: 'email', autoComplete: 'email', onBlur: checkEmail,
+            help: 'Cambiarlo no modifica el correo con el que la cuenta inicia sesión.',
           })}
-          {input('contact_phone', 'Teléfono del contacto (opcional)', { maxLength: 20, type: 'tel', autoComplete: 'tel', onBlur: checkPhone })}
+          {input('contact_phone', 'Teléfono del contacto', { maxLength: 20, type: 'tel', autoComplete: 'tel', onBlur: checkPhone })}
         </fieldset>
-
-        {creating && (
-          <>
-            <DeliveryMethodField idPrefix="company" value={method} disabled={pending} onChange={setMethod} />
-            {errors.delivery_method?.length ? <p className="field-error">{errors.delivery_method.join(' ')}</p> : null}
-          </>
-        )}
 
         <div className="actions">
           <button type="submit" disabled={pending}><PendingLabel pending={pending} label={submitLabel} pendingLabel="Guardando…" /></button>

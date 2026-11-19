@@ -28,7 +28,7 @@ interface LinkageResource { id: number; status: LinkageStatus; institution: stri
 /** Evento con solo los campos públicos del contrato (CA-03). */
 export type AuditEvent = { occurred_at: string; actor: Actor } & (
   | { type: 'account_created'; resource: { id: number; name: string; email: string; role: Role } }
-  | { type: 'company_registered'; resource: { id: number; legal_name: string } }
+  | { type: 'company_registered'; resource: { id: number; name: string } }
   | { type: 'opportunity_created'; resource: { id: number; title: string } }
   | { type: 'linkage_requested' | 'linkage_responded'; resource: LinkageResource }
 )
@@ -63,8 +63,9 @@ function event(value: unknown): AuditEvent {
       if (!isString(resource.name) || !isString(resource.email) || !isRole(resource.role)) break
       return { ...base, type: value.type, resource: { id, name: resource.name, email: resource.email, role: resource.role } }
     case 'company_registered':
-      if (!isString(resource.legal_name)) break
-      return { ...base, type: value.type, resource: { id, legal_name: resource.legal_name } }
+      // HU-S14-02: el nombre visible, o «Empresa sin nombre» si la invitada aún no lo captura.
+      if (!isString(resource.name)) break
+      return { ...base, type: value.type, resource: { id, name: resource.name } }
     case 'opportunity_created':
       if (!isString(resource.title)) break
       return { ...base, type: value.type, resource: { id, title: resource.title } }

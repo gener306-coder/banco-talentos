@@ -81,7 +81,7 @@ class AuditEventController extends Controller
 
         $actors = User::query()->whereIn('id', $events->pluck('actor_id')->unique())->get(['id', 'name', 'role'])->keyBy('id');
         $accounts = User::query()->whereIn('id', $ids('account_created'))->get(['id', 'name', 'email', 'role'])->keyBy('id');
-        $companies = Company::query()->whereIn('id', $ids('company_registered'))->get(['id', 'legal_name'])->keyBy('id');
+        $companies = Company::query()->whereIn('id', $ids('company_registered'))->get(['id', 'legal_name', 'trade_name'])->keyBy('id');
         $opportunities = Opportunity::query()->whereIn('id', $ids('opportunity_created'))->get(['id', 'title'])->keyBy('id');
         $linkages = LinkageRequest::query()->whereIn('id', $ids('linkage_requested', 'linkage_responded'))
             ->with(['institution:id,name', 'company:id,legal_name,trade_name'])
@@ -97,7 +97,7 @@ class AuditEventController extends Controller
                 'actor' => ['id' => $actor->id, 'name' => $actor->name, 'role' => $actor->role->value],
                 'resource' => match ($event->type) {
                     'account_created' => $this->account($accounts[$event->subject_id]),
-                    'company_registered' => ['id' => $event->subject_id, 'legal_name' => $companies[$event->subject_id]->legal_name],
+                    'company_registered' => ['id' => $event->subject_id, 'name' => $companies[$event->subject_id]->label()],
                     'opportunity_created' => ['id' => $event->subject_id, 'title' => $opportunities[$event->subject_id]->title],
                     default => $this->linkage($linkages[$event->subject_id]),
                 },
@@ -117,7 +117,7 @@ class AuditEventController extends Controller
             'id' => $linkage->id,
             'status' => $linkage->status->value,
             'institution' => $linkage->institution->name,
-            'company' => $linkage->company->trade_name ?? $linkage->company->legal_name,
+            'company' => $linkage->company->label(),
         ];
     }
 }

@@ -120,8 +120,13 @@ describe('contraseña inicial e institución en la sesión', () => {
   })
 
   it('conserva únicamente el identificador y nombre de la empresa vinculada (HU-S4-03 CA-05)', async () => {
-    fetchMock.mockResolvedValueOnce(Response.json({ user: { ...user, role: 'COMPANY', company: { id: 5, name: 'ManuGolfo', rfc: 'omitido' } } }))
-    await expect(currentUser()).resolves.toEqual({ ...user, role: 'COMPANY', company: { id: 5, name: 'ManuGolfo' } })
+    fetchMock.mockResolvedValueOnce(Response.json({ user: { ...user, role: 'COMPANY', company: { id: 5, name: 'ManuGolfo', missing: ['rfc'], rfc: 'omitido' } } }))
+    await expect(currentUser()).resolves.toEqual({ ...user, role: 'COMPANY', company: { id: 5, name: 'ManuGolfo', missing: ['rfc'] } })
+    // HU-S14-02: la empresa invitada aún sin nombre.
+    fetchMock.mockResolvedValueOnce(Response.json({ user: { ...user, role: 'COMPANY', company: { id: 5, name: null, missing: ['name', 'location'] } } }))
+    await expect(currentUser()).resolves.toEqual({ ...user, role: 'COMPANY', company: { id: 5, name: null, missing: ['name', 'location'] } })
+    fetchMock.mockResolvedValueOnce(Response.json({ user: { ...user, role: 'COMPANY', company: { id: 5, name: 'ManuGolfo', missing: ['otro'] } } }))
+    await expect(currentUser()).rejects.toMatchObject({ status: 502 })
     fetchMock.mockResolvedValueOnce(Response.json({ user: { ...user, role: 'COMPANY', company: { id: '5', name: 'ManuGolfo' } } }))
     await expect(currentUser()).rejects.toMatchObject({ status: 502 })
   })

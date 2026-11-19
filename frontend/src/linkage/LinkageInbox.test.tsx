@@ -10,7 +10,7 @@ const fetchMock = vi.fn<typeof fetch>()
 const apiMock = vi.fn<typeof fetch>()
 let user: Record<string, unknown>
 let summary: { conversations: number; items: unknown[] }
-const companyUser = { id: 9, name: 'Reclutadora', email: 'rh@manugolfo.test', role: 'COMPANY', institution: null, company: { id: 3, name: 'ManuGolfo' } }
+const companyUser = { id: 9, name: 'Reclutadora', email: 'rh@manugolfo.test', role: 'COMPANY', institution: null, company: { id: 3, name: 'ManuGolfo', missing: [] } }
 const institutionUser = { id: 2, name: 'Coordinación', email: 'dual@ut.test', role: 'INSTITUTION', institution: { id: 1, name: 'UT del Golfo' }, company: null }
 const sent = {
   id: 41, status: 'ACEPTADA', created_at: '2026-10-28T10:00:00Z', message: null, opportunity: { id: 12, title: 'Tableros de producción' },

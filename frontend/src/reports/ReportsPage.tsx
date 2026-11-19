@@ -1,6 +1,6 @@
 import { useCallback } from 'react'
 import { Link } from 'react-router'
-import { sectorName } from '../companies/catalogs'
+import { NO_SECTOR, sectorName } from '../companies/catalogs'
 import { InstitutionRequestError, InstitutionStatus } from '../institutions/InstitutionLayout'
 import { LINKAGE_STATUSES } from '../linkage/api'
 import { LinkageStatus } from '../linkage/LinkageStatus'
@@ -109,8 +109,10 @@ function SectorParticipation({ items }: { items: DualProgramReport['by_sector'] 
                 </thead>
                 <tbody>
                   {items.map((item) => (
-                    <tr key={item.sector_code}>
-                      <th scope="row"><span className="report-sector-code">{item.sector_code}</span> {sectorName(item.sector_code)}</th>
+                    <tr key={item.sector_code ?? 'sin-sector'}>
+                      <th scope="row">{item.sector_code
+                        ? <><span className="report-sector-code">{item.sector_code}</span> {sectorName(item.sector_code)}</>
+                        : NO_SECTOR}</th>
                       <td>{count.format(item.active_companies)}</td>
                       <td>{count.format(item.active_opportunities)}</td>
                       <td>{count.format(item.accepted_requests)}</td>

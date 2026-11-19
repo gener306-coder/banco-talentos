@@ -11,9 +11,14 @@ import { useRowNavigation } from '../ui/useRowNavigation'
 import { useTableMemory } from '../ui/useTableMemory'
 import { rowIndex } from '../ui/tableMotion'
 import { companyMessages, listCompanies } from './api'
+import { UNNAMED_COMPANY } from './catalogs'
 import { CompanyLayout } from './CompanyLayout'
+import { CompanyProfileStatus } from './CompanyProfileStatus'
 
-/** Listado de empresas activas e inactivas con búsqueda por razón social, nombre comercial o RFC (HU-S4-02 CA-08). */
+/**
+ * Listado de empresas activas e inactivas con búsqueda por razón social, nombre comercial, RFC o correo de la cuenta
+ * (HU-S4-02 CA-08, HU-S14-02 CA-03). La invitada sin nombre se identifica por el correo de su cuenta.
+ */
 export function CompaniesPage() {
   // T-S12-05: la búsqueda y la página viven en la URL para que el regreso desde el detalle recupere la misma vista.
   const list = useListParams()
@@ -40,12 +45,12 @@ export function CompaniesPage() {
     <CompanyLayout title="Empresas">
       <div className="institution-toolbar">
         <p>Empresas validadas por la Secretaría de Economía para participar en el Banco de Talentos.</p>
-        <Link className="institution-button" to="/companies/new"><PlusIcon />Nueva empresa</Link>
+        <Link className="institution-button" to="/companies/new"><PlusIcon />Invitar empresa</Link>
       </div>
       <form className="table-search" role="search" onSubmit={search}>
         <div className="table-search-field">
           <label htmlFor="company-search">Buscar empresa</label>
-          <input id="company-search" type="search" maxLength={200} value={draft} placeholder="Razón social, nombre comercial o RFC"
+          <input id="company-search" type="search" maxLength={200} value={draft} placeholder="Nombre, RFC o correo de la cuenta"
             onChange={(event) => setDraft(event.target.value)} />
         </div>
         <button type="submit" className="secondary"><SearchIcon /><span className="table-search-button-text">Buscar</span></button>
@@ -55,10 +60,10 @@ export function CompaniesPage() {
         : data && data.companies.length === 0
           ? query
             ? <StateMessage kind="empty" icon={<SearchIcon />} title="Ninguna empresa coincide con la búsqueda."
-              description={<>No hay empresas cuya razón social, nombre comercial o RFC contenga <strong>{query}</strong>.</>} />
+              description={<>No hay empresas cuyo nombre, RFC o correo de cuenta contenga <strong>{query}</strong>.</>} />
             : <StateMessage kind="empty" icon={<BuildingIcon />} title="No hay empresas registradas."
-              description="Registra la primera empresa validada para que pueda participar en el Banco de Talentos."
-              action={<Link className="institution-button" to="/companies/new"><PlusIcon />Registrar la primera empresa</Link>} />
+              description="Invita a la primera empresa con el correo de quien gestionará su cuenta."
+              action={<Link className="institution-button" to="/companies/new"><PlusIcon />Invitar la primera empresa</Link>} />
         : data && (
           <>
             <div className={`table-card${refreshing ? ' is-refreshing' : ''}`}>
@@ -67,18 +72,23 @@ export function CompaniesPage() {
               <div className="institution-table-wrapper" ref={tableMemory} aria-busy={refreshing} role="region" aria-label="Listado de empresas" tabIndex={0}>
                 <table className="institution-table has-actions">
                   <caption className="visually-hidden">Empresas registradas</caption>
-                  <thead><tr><th scope="col">Razón social</th><th scope="col">RFC</th><th scope="col">Municipio</th><th scope="col">Estado</th><th scope="col"><span className="visually-hidden">Detalle</span></th></tr></thead>
+                  <thead><tr><th scope="col">Empresa</th><th scope="col">RFC</th><th scope="col">Municipio</th><th scope="col">Perfil</th><th scope="col">Estado</th><th scope="col"><span className="visually-hidden">Detalle</span></th></tr></thead>
                   <tbody key={location.search} className="rows-enter">
                     {data.companies.map((company, index) => {
                       const href = `/companies/${company.id}`
                       const back = backState('Volver a empresas', location)
+                      const name = company.name ?? UNNAMED_COMPANY
                       return (
                         <tr key={company.id} data-href={href} style={rowIndex(index)} onClick={(event) => openRow(event, href, back)}>
-                          <th scope="row">{company.legal_name}{company.trade_name && <span className="option-meta"> · {company.trade_name}</span>}</th>
-                          <td>{company.rfc}</td>
-                          <td>{company.municipality ?? company.municipality_code}</td>
+                          <th scope="row">
+                            <span className={company.name ? undefined : 'company-pending-value'}>{name}</span>
+                            {company.account_email && <span className="company-account-email">{company.account_email}</span>}
+                          </th>
+                          <td>{company.rfc ?? <span className="company-pending-value">Sin capturar</span>}</td>
+                          <td>{company.municipality ?? <span className="company-pending-value">Sin capturar</span>}</td>
+                          <td><CompanyProfileStatus status={company.profile_status} /></td>
                           <td><InstitutionStatus active={company.is_active} /></td>
-                          <td><Link className="row-link row-open" to={href} state={back} aria-label={`Ver detalle de ${company.legal_name}`} title="Ver detalle"><ChevronRightIcon /></Link></td>
+                          <td><Link className="row-link row-open" to={href} state={back} aria-label={`Ver detalle de ${name}`} title="Ver detalle"><ChevronRightIcon /></Link></td>
                         </tr>
                       )
                     })}

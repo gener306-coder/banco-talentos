@@ -31,6 +31,18 @@ export const isSectorCode = (value: unknown): value is SectorCode => ECONOMIC_SE
 
 export const sectorName = (code: string): string => ECONOMIC_SECTORS.find((sector) => sector.code === code)?.name ?? code
 
+/** HU-S14-02: una empresa invitada puede no tener sector todavía; la empresa o la Secretaría lo capturan. */
+export const NO_SECTOR = 'Sin sector asignado'
+
+/** HU-S14-02: nombre de respaldo en las vistas de la Secretaría para una empresa que aún no captura ninguno. */
+export const UNNAMED_COMPANY = 'Empresa sin nombre'
+
+/** HU-S14-02: un dato del perfil que la empresa aún no captura. */
+export const NOT_CAPTURED = 'Sin capturar'
+
+/** Sector con su código, o «Sin sector asignado» si aún no se estableció. */
+export const sectorLabel = (code: string | null): string => code ? `${code} · ${sectorName(code)}` : NO_SECTOR
+
 const RFC_PATTERN = /^([A-ZÑ&]{3,4})(\d{2})(\d{2})(\d{2})([A-Z\d]{3})$/u
 const GENERIC_RFCS = ['XAXX010101000', 'XEXX010101000']
 export const INVALID_RFC = 'El RFC no es válido: 12 caracteres para persona moral o 13 para persona física.'

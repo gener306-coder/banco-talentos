@@ -87,7 +87,7 @@ class InstitutionLinkageRequestController extends Controller
                 $linkage->student->identity->second_surname,
                 $linkage->student->identity->given_names,
                 $linkage->student->program,
-                $linkage->company->trade_name ?? $linkage->company->legal_name,
+                $linkage->company->label(),
                 $linkage->company->contact_name,
                 $linkage->company->contact_position,
                 $linkage->company->contact_email,
@@ -172,8 +172,8 @@ class InstitutionLinkageRequestController extends Controller
                 ...$item['company'],
                 'legal_name' => $company->legal_name,
                 'trade_name' => $company->trade_name,
-                'sector_code' => $company->sector_code->value,
-                'state_code' => $company->state_code->value,
+                'sector_code' => $company->sector_code?->value,
+                'state_code' => $company->state_code?->value,
                 'contact_name' => $company->contact_name,
                 'contact_position' => $company->contact_position,
                 'contact_email' => $company->contact_email,
@@ -269,7 +269,7 @@ class InstitutionLinkageRequestController extends Controller
 
     private function companySummary(Company $company): array
     {
-        return ['name' => $company->trade_name ?? $company->legal_name, 'municipality' => $company->municipality?->name];
+        return ['name' => $company->label(), 'municipality' => $company->municipality?->name];
     }
 
     private function studentSummary(Student $student): array

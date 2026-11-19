@@ -8,11 +8,15 @@ import { useBackLink } from '../ui/backLink'
 import { ConfirmDialog } from '../ui/ConfirmDialog'
 import { LoadingState } from '../ui/StateMessage'
 import { companyMessages, getCompany, setCompanyStatus } from './api'
-import { sectorName } from './catalogs'
+import { NOT_CAPTURED, NO_SECTOR, sectorLabel, UNNAMED_COMPANY } from './catalogs'
 import { CompanyAccountsSection } from './CompanyAccountsSection'
 import { CompanyLayout } from './CompanyLayout'
+import { CompanyProfileStatus } from './CompanyProfileStatus'
 
 const dateFormat = new Intl.DateTimeFormat('es-MX', { dateStyle: 'long' })
+
+/** HU-S14-02 CA-03: un dato que la empresa aún no captura se ve como tal, no como un hueco. */
+const value = (text: string | null | undefined) => text || <span className="company-pending-value">{NOT_CAPTURED}</span>
 
 function CompanyDetail({ id }: { id: string }) {
   const load = useCallback((signal: AbortSignal) => getCompany(id, signal), [id])
@@ -54,13 +58,16 @@ function CompanyDetail({ id }: { id: string }) {
             {notice && <p className="institution-success" role="status">{notice}</p>}
             {mutation.failure && <InstitutionRequestError failure={mutation.failure} />}
             <dl className="company-details">
-              <dt>Razón social</dt><dd>{data.legal_name}</dd>
-              {data.trade_name && <><dt>Nombre comercial</dt><dd>{data.trade_name}</dd></>}
-              <dt>RFC</dt><dd>{data.rfc}</dd>
-              <dt>Sector económico</dt><dd>{data.sector_code} · {sectorName(data.sector_code)}</dd>
-              <dt>Ubicación</dt><dd>{data.municipality ?? data.municipality_code}, {stateName(data.state_code)}</dd>
+              <dt>Empresa</dt><dd>{data.name ?? <span className="company-pending-value">{UNNAMED_COMPANY}</span>}</dd>
+              <dt>Perfil</dt><dd><CompanyProfileStatus status={data.profile_status} /></dd>
+              <dt>Correo de la cuenta</dt><dd>{value(data.account_email)}</dd>
+              <dt>Razón social</dt><dd>{value(data.legal_name)}</dd>
+              <dt>Nombre comercial</dt><dd>{value(data.trade_name)}</dd>
+              <dt>RFC</dt><dd>{value(data.rfc)}</dd>
+              <dt>Sector económico</dt><dd>{data.sector_code ? sectorLabel(data.sector_code) : <span className="company-pending-value">{NO_SECTOR}</span>}</dd>
+              <dt>Ubicación</dt><dd>{data.state_code ? `${data.municipality ?? data.municipality_code}, ${stateName(data.state_code)}` : value(null)}</dd>
               <dt>Contacto del programa dual</dt>
-              <dd>{[data.contact_name, data.contact_position, data.contact_email, data.contact_phone].filter(Boolean).join(' · ')}</dd>
+              <dd>{value([data.contact_name, data.contact_position, data.contact_email, data.contact_phone].filter(Boolean).join(' · '))}</dd>
               {data.validation_reference && <><dt>Folio u oficio de validación</dt><dd>{data.validation_reference}</dd></>}
               <dt>Registrada por</dt><dd>{data.registered_by.name}, el {dateFormat.format(new Date(data.created_at))}</dd>
               <dt>Estado</dt><dd><InstitutionStatus active={data.is_active} /></dd>

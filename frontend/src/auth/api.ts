@@ -11,14 +11,22 @@ export const roleLabels = {
 
 export type Role = keyof typeof roleLabels
 
+/** HU-S14-02: claves de lo que le falta al perfil de la empresa, sin valores. */
+export type CompanyGap = 'name' | 'contact_name' | 'contact_position' | 'contact_email' | 'legal_name' | 'rfc' | 'sector_code' | 'location'
+const COMPANY_GAPS: readonly string[] = ['name', 'contact_name', 'contact_position', 'contact_email', 'legal_name', 'rfc', 'sector_code', 'location']
+const isCompanyGap = (value: unknown): value is CompanyGap => typeof value === 'string' && COMPANY_GAPS.includes(value)
+
 export interface User {
   id: number
   name: string
   email: string
   role: Role
   institution: { id: number; name: string } | null
-  /** Empresa vinculada a una cuenta COMPANY (HU-S4-03 CA-05): solo su nombre visible. */
-  company: { id: number; name: string } | null
+  /**
+   * Empresa vinculada a una cuenta COMPANY (HU-S4-03 CA-05): solo su nombre visible, null mientras la empresa
+   * invitada no capture ninguno (HU-S14-02).
+   */
+  company: { id: number; name: string | null; missing: CompanyGap[] } | null
 }
 
 function sessionUser(data: unknown): User {
@@ -41,7 +49,7 @@ function sessionUser(data: unknown): User {
     throw new ApiError(502)
   }
 
-  const organization = (key: 'institution' | 'company'): { id: number; name: string } | null => {
+  const organization = (key: 'institution'): { id: number; name: string } | null => {
     if (!(key in user)) return null
     const linked: unknown = (user as Record<string, unknown>)[key]
     if (linked === null || linked === undefined) return null
@@ -51,9 +59,20 @@ function sessionUser(data: unknown): User {
     return { id: linked.id, name: linked.name }
   }
 
+  // HU-S14-02: la empresa invitada puede no tener nombre todavía.
+  const company = (): User['company'] => {
+    if (!('company' in user) || user.company === null || user.company === undefined) return null
+    const linked: unknown = user.company
+    if (typeof linked !== 'object' || linked === null || !('id' in linked) || typeof linked.id !== 'number' ||
+        !Number.isSafeInteger(linked.id) || linked.id <= 0 ||
+        !('name' in linked) || (linked.name !== null && typeof linked.name !== 'string')) throw new ApiError(502)
+    if (!('missing' in linked) || !Array.isArray(linked.missing) || !linked.missing.every(isCompanyGap)) throw new ApiError(502)
+    return { id: linked.id, name: linked.name as string | null, missing: linked.missing as CompanyGap[] }
+  }
+
   return {
     id: user.id, name: user.name, email: user.email, role: user.role as Role,
-    institution: organization('institution'), company: organization('company'),
+    institution: organization('institution'), company: company(),
   }
 }
 

@@ -15,6 +15,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
 
 /**
  * Buscador de talento anónimo para las empresas (HU-S4-05), vista exploratoria sin «Contactar».
@@ -43,6 +44,10 @@ class TalentController extends Controller
     {
         $filters = $request->validated();
         $origin = $filters['origin_municipality_code'] ?? $this->companyMunicipality($request);
+        // HU-S14-02 CA-05: sin ubicación de la empresa ni municipio de origen no hay desde dónde medir el radio.
+        if ($origin === null && isset($filters['radius_km'])) {
+            throw ValidationException::withMessages(['radius_km' => ['Elige un municipio de origen para filtrar por distancia.']]);
+        }
         $query = $this->universe($origin);
 
         if (! $this->applyFilters($query, $filters, $request, $origin)) {
@@ -50,7 +55,8 @@ class TalentController extends Controller
         }
 
         // CA-09: más cercanos primero y, a igual distancia, los perfiles actualizados más recientemente. El texto
-        // libre solo filtra: la similitud no interviene en el orden (HU-S11-03 CA-04).
+        // libre solo filtra: la similitud no interviene en el orden (HU-S11-03 CA-04). Sin origen, todas las
+        // distancias son null y manda la actualización más reciente.
         $query->orderBy('distance_m')->orderByDesc('students.updated_at')->orderBy('students.id');
         $page = filled($filters['q'] ?? null) ? $this->paginateWithTextThreshold($query) : $query->paginate(self::PER_PAGE);
 
@@ -92,9 +98,10 @@ class TalentController extends Controller
 
     /**
      * Origen por defecto del radio: el municipio de la empresa de la cuenta. Una cuenta COMPANY sin empresa solo
-     * puede existir en una base local anterior a HU-S4-03 (restricción NOT VALID): no busca.
+     * puede existir en una base local anterior a HU-S4-03 (restricción NOT VALID): no busca. Una empresa invitada
+     * que aún no captura su ubicación no tiene origen (HU-S14-02): null.
      */
-    private function companyMunicipality(Request $request): string
+    private function companyMunicipality(Request $request): ?string
     {
         $company = $request->user()->company;
         abort_if($company === null, 403);
@@ -106,14 +113,18 @@ class TalentController extends Controller
      * Universo buscable (CA-02): alumno ACTIVO, de una institución activa y con el expediente público capturado.
      * La distancia se mide en metros (geography) desde la cabecera del municipio de origen.
      */
-    private function universe(string $origin): Builder
+    private function universe(?string $origin): Builder
     {
+        $distance = $origin === null
+            ? ['NULL::double precision AS distance_m', []]
+            : ['ST_Distance(students.location, (SELECT location FROM municipalities WHERE code = ?)) AS distance_m', [$origin]];
+
         return Student::query()
             ->join('institutions', 'institutions.id', '=', 'students.institution_id')
             ->where('institutions.is_active', true)
             ->searchable()
             ->select('students.*')
-            ->selectRaw('ST_Distance(students.location, (SELECT location FROM municipalities WHERE code = ?)) AS distance_m', [$origin])
+            ->selectRaw(...$distance)
             ->withCount(['certifications as verified_certifications_count' => fn ($query) => $query->whereNotNull('verified_at')])
             ->with([
                 'institution:id,name',
@@ -130,7 +141,7 @@ class TalentController extends Controller
      * Cada habilidad pedida se resuelve por slug o alias exacto (HU-S11-02): las que nombra un mismo término se
      * combinan con OR («bd» son dos habilidades) y los términos entre sí con AND.
      */
-    private function applyFilters(Builder $query, array $filters, Request $request, string $origin): bool
+    private function applyFilters(Builder $query, array $filters, Request $request, ?string $origin): bool
     {
         $slugs = collect($filters['skills'] ?? [])->map(fn (string $name) => CatalogSlug::from($name))->filter()->unique();
         foreach (SkillCatalog::resolve($slugs->values()) as $skillIds) {
@@ -220,7 +231,7 @@ class TalentController extends Controller
             'institution' => $student->institution->name,
             'state_code' => $student->state_code->value,
             'municipality' => $student->municipality?->name,
-            'distance_km' => self::roundedDistance((float) $student->distance_m),
+            'distance_km' => $student->distance_m === null ? null : self::roundedDistance((float) $student->distance_m),
             'skills' => $student->skills->take(self::CARD_SKILLS)->map(fn (Skill $skill): array => ['name' => $skill->name, 'kind' => $skill->kind->value])->values(),
             'languages' => $student->languages->map(fn (StudentLanguage $language): array => ['language_code' => $language->language_code, 'level' => $language->level])->values(),
             'verified_certifications' => (int) $student->verified_certifications_count,

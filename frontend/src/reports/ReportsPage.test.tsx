@@ -47,7 +47,7 @@ describe('reporte ejecutivo HU-S7-01', () => {
 
   it.each([
     { id: 3, name: 'Coordinación', email: 'dual@ut.test', role: 'INSTITUTION', institution: { id: 2, name: 'UT' }, company: null },
-    { id: 9, name: 'Reclutadora', email: 'rh@empresa.test', role: 'COMPANY', institution: null, company: { id: 3, name: 'ManuGolfo' } },
+    { id: 9, name: 'Reclutadora', email: 'rh@empresa.test', role: 'COMPANY', institution: null, company: { id: 3, name: 'ManuGolfo', missing: [] } },
   ])('niega la vista a $role sin consultar el reporte (CA-01)', async (account) => {
     user = account
     const view = renderApp()

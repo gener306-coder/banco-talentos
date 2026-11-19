@@ -76,7 +76,7 @@ describe('bandeja institucional HU-S6-01', () => {
     expect(await screen.findByRole('link', { name: 'Solicitudes de vinculación' })).toHaveAttribute('href', '/institution/linkage-requests')
     view.unmount()
 
-    user = { id: 9, name: 'Reclutadora', email: 'rh@manugolfo.test', role: 'COMPANY', institution: null, company: { id: 3, name: 'ManuGolfo' } }
+    user = { id: 9, name: 'Reclutadora', email: 'rh@manugolfo.test', role: 'COMPANY', institution: null, company: { id: 3, name: 'ManuGolfo', missing: [] } }
     renderApp('/institution/linkage-requests/41')
     expect(await screen.findByRole('alert')).toHaveTextContent('No tienes permiso para consultar solicitudes de vinculación.')
     expect(apiMock).not.toHaveBeenCalled()

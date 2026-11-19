@@ -7,8 +7,12 @@ import App from '../App'
 const fetchMock = vi.fn<typeof fetch>()
 const apiMock = vi.fn<typeof fetch>()
 let user: Record<string, unknown>
-const companyUser = { id: 9, name: 'Reclutadora', email: 'rh@manugolfo.test', role: 'COMPANY', institution: null, company: { id: 3, name: 'ManuGolfo' } }
+const companyUser = { id: 9, name: 'Reclutadora', email: 'rh@manugolfo.test', role: 'COMPANY', institution: null, company: { id: 3, name: 'ManuGolfo', missing: [] } }
 const adminUser = { id: 1, name: 'Administración', email: 'admin@bt.test', role: 'ADMIN', institution: null, company: null }
+const companyProfile = {
+  type: 'company', name: 'ManuGolfo', legal_name: 'Manufacturas del Golfo, S.A. de C.V.', rfc: 'MGO150320AB1', sector_code: '54', trade_name: 'ManuGolfo',
+  state_code: '28', municipality_code: '28041', municipality: 'Tampico', contact_name: 'Lucía Herrera', contact_position: null, contact_email: 'dual@manugolfo.test', contact_phone: null,
+}
 const writes = () => apiMock.mock.calls.filter(([, init]) => init?.method && init.method !== 'GET')
 
 function Location() {
@@ -22,6 +26,8 @@ beforeEach(() => {
   fetchMock.mockImplementation(async (path, init) => {
     if (path === '/api/me' && (!init?.method || init.method === 'GET')) return Response.json({ user })
     if (typeof path === 'string' && path.endsWith('/unread-summary')) return Response.json({ data: { conversations: 0, items: [] } })
+    if (path === '/api/organization/profile' && (!init?.method || init.method === 'GET')) return Response.json({ data: companyProfile })
+    if (typeof path === 'string' && path.startsWith('/api/catalogs/')) return Response.json({ data: [{ code: '28041', name: 'Tampico' }] })
     if (path === '/api/dashboard' || (typeof path === 'string' && path.startsWith('/api/promotional-videos'))) return new Promise<Response>(() => undefined)
     if (path === '/sanctum/csrf-cookie') {
       document.cookie = 'XSRF-TOKEN=csrf; Path=/'

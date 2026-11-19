@@ -136,7 +136,8 @@ it('lists every traceable event newest first with only public fields (CA-02, CA-
             'resource' => ['id' => $recruiter->id, 'name' => 'Reclutadora', 'email' => 'rh@manugolfo.test', 'role' => 'COMPANY']],
         ['type' => 'company_registered', 'occurred_at' => '2026-10-02T10:00:00.000000Z',
             'actor' => ['id' => $secretary->id, 'name' => 'Analista Económica', 'role' => 'SECRETARY'],
-            'resource' => ['id' => $company->id, 'legal_name' => 'Manufacturas del Golfo, S.A. de C.V.']],
+            // HU-S14-02: el nombre visible de la empresa (comercial o razón social).
+            'resource' => ['id' => $company->id, 'name' => 'ManuGolfo']],
         ['type' => 'account_created', 'occurred_at' => '2026-10-01T10:00:00.000000Z',
             'actor' => ['id' => $admin->id, 'name' => 'Administración General', 'role' => 'ADMIN'],
             'resource' => ['id' => $secretary->id, 'name' => 'Analista Económica', 'email' => 'analista@economia.test', 'role' => 'SECRETARY']],

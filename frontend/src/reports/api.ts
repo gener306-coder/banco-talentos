@@ -24,7 +24,8 @@ export interface InstitutionParticipation {
 }
 
 export interface SectorParticipation {
-  sector_code: SectorCode
+  /** null: empresas sin sector asignado (HU-S14-02, D2). */
+  sector_code: SectorCode | null
   active_companies: number
   active_opportunities: number
   accepted_requests: number
@@ -61,8 +62,8 @@ function institution(item: unknown): InstitutionParticipation {
 }
 
 function sector(item: unknown): SectorParticipation {
-  if (!isObject(item) || !isSectorCode(item.sector_code)) throw new ApiError(502)
-  return { sector_code: item.sector_code, ...counts(item, SECTOR_COUNTS) }
+  if (!isObject(item) || (item.sector_code !== null && !isSectorCode(item.sector_code))) throw new ApiError(502)
+  return { sector_code: item.sector_code as SectorCode | null, ...counts(item, SECTOR_COUNTS) }
 }
 
 export async function getDualProgramReport(signal?: AbortSignal): Promise<DualProgramReport> {

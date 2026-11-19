@@ -57,7 +57,8 @@ class OpportunityController extends Controller
         $company = $request->user()->company()->with('municipality:code,name')->firstOrFail();
 
         return response()->json(['data' => [
-            'state_code' => $company->state_code->value,
+            // HU-S14-02: sin ubicación de la empresa, el alta empieza vacía.
+            'state_code' => $company->state_code?->value,
             'municipality_code' => $company->municipality_code,
             'municipality' => $company->municipality?->name,
         ]])->header('Cache-Control', 'no-store, private');

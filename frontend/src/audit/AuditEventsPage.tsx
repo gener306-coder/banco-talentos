@@ -21,7 +21,7 @@ function describe(event: AuditEvent): string {
     case 'account_created':
       return `Cuenta de ${roleLabels[event.resource.role]}: ${event.resource.name} (${event.resource.email})`
     case 'company_registered':
-      return `Empresa: ${event.resource.legal_name}`
+      return `Empresa: ${event.resource.name}`
     case 'opportunity_created':
       return `Oportunidad: ${event.resource.title}`
     case 'linkage_requested':

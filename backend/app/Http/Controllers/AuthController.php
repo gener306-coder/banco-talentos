@@ -72,7 +72,10 @@ class AuthController extends Controller
             // Empresa vinculada (HU-S4-03 CA-05): solo su nombre visible, sin datos internos de validación.
             'company' => $user->company ? [
                 'id' => $user->company->id,
-                'name' => $user->company->trade_name ?? $user->company->legal_name,
+                // HU-S14-02: null mientras la empresa invitada no capture su nombre.
+                'name' => $user->company->displayName(),
+                // HU-S14-02: claves de lo que falta del perfil (sin valores); la interfaz decide qué recordar o habilitar.
+                'missing' => $user->company->missing(),
             ] : null,
         ];
 

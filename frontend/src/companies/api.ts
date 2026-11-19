@@ -14,39 +14,63 @@ export const companyMessages: FailureMessages = {
   404: 'La empresa no existe.',
 }
 
-/** Datos que captura la Secretaría (HU-S4-02 CA-02). Los opcionales viajan como `null` si están vacíos. */
+/**
+ * Datos del perfil que la Secretaría puede corregir (HU-S4-02, M4 de HU-S14-02). Desde HU-S14-02 todos son opcionales:
+ * la empresa los captura desde su perfil y viajan como `null` si están vacíos.
+ */
 export interface CompanyInput {
-  legal_name: string
+  legal_name: string | null
   trade_name: string | null
-  rfc: string
-  sector_code: SectorCode
-  state_code: string
-  municipality_code: string
-  contact_name: string
+  rfc: string | null
+  sector_code: SectorCode | null
+  state_code: string | null
+  municipality_code: string | null
+  contact_name: string | null
   contact_position: string | null
-  contact_email: string
+  contact_email: string | null
   contact_phone: string | null
   validation_reference: string | null
 }
+
+/** HU-S14-02 CA-01: la invitación solo pide el correo de la cuenta; los nombres son de referencia. */
+export interface CompanyInvitation {
+  email: string
+  trade_name: string | null
+  person_name: string | null
+}
+
+/** Acceso pendiente: ninguna cuenta ha creado su contraseña; incompleto: falta algún dato del perfil. */
+export type CompanyProfileStatus = 'pending_access' | 'incomplete' | 'complete'
+const PROFILE_STATUSES: readonly CompanyProfileStatus[] = ['pending_access', 'incomplete', 'complete']
+
+/** Claves de lo que falta del perfil, en el orden del servidor. */
+export type CompanyProfileGap = 'name' | 'contact_name' | 'contact_position' | 'contact_email' | 'legal_name' | 'rfc' | 'sector_code' | 'location'
+const PROFILE_GAPS: readonly CompanyProfileGap[] = ['name', 'contact_name', 'contact_position', 'contact_email', 'legal_name', 'rfc', 'sector_code', 'location']
 
 export interface CompanySummary {
   id: number
-  legal_name: string
+  /** Nombre visible (comercial o razón social); null mientras la empresa no capture ninguno. */
+  name: string | null
+  legal_name: string | null
   trade_name: string | null
-  rfc: string
-  sector_code: SectorCode
-  state_code: string
-  municipality_code: string
+  rfc: string | null
+  sector_code: SectorCode | null
+  state_code: string | null
+  municipality_code: string | null
   municipality: string | null
   is_active: boolean
+  /** Correo de su primera cuenta: identifica a la invitada sin nombre. */
+  account_email: string | null
+  profile_status: CompanyProfileStatus
 }
 
 export interface Company extends CompanySummary {
-  contact_name: string
+  contact_name: string | null
   contact_position: string | null
-  contact_email: string
+  contact_email: string | null
   contact_phone: string | null
   validation_reference: string | null
+  missing: CompanyProfileGap[]
   registered_by: { id: number; name: string }
   created_at: string
 }
@@ -61,22 +85,27 @@ export interface CompanyPage {
 const isText = (value: unknown): value is string => typeof value === 'string'
 const isOptionalText = (value: unknown): value is string | null => value === null || isText(value)
 const isPositiveInt = (value: unknown): value is number => typeof value === 'number' && Number.isSafeInteger(value) && value > 0
+const isOptionalMunicipality = (value: unknown): value is string | null => value === null || (isText(value) && /^\d{5}$/.test(value))
 
 function summary(data: unknown): CompanySummary {
   if (typeof data !== 'object' || data === null ||
       !('id' in data) || !isPositiveInt(data.id) ||
-      !('legal_name' in data) || !isText(data.legal_name) ||
+      !('name' in data) || !isOptionalText(data.name) ||
+      !('legal_name' in data) || !isOptionalText(data.legal_name) ||
       !('trade_name' in data) || !isOptionalText(data.trade_name) ||
-      !('rfc' in data) || !isText(data.rfc) ||
-      !('sector_code' in data) || !isSectorCode(data.sector_code) ||
-      !('state_code' in data) || !isStateCode(data.state_code) ||
-      !('municipality_code' in data) || !isText(data.municipality_code) || !/^\d{5}$/.test(data.municipality_code) ||
+      !('rfc' in data) || !isOptionalText(data.rfc) ||
+      !('sector_code' in data) || (data.sector_code !== null && !isSectorCode(data.sector_code)) ||
+      !('state_code' in data) || (data.state_code !== null && !isStateCode(data.state_code)) ||
+      !('municipality_code' in data) || !isOptionalMunicipality(data.municipality_code) ||
       !('municipality' in data) || !isOptionalText(data.municipality) ||
-      !('is_active' in data) || typeof data.is_active !== 'boolean') throw new ApiError(502)
+      !('is_active' in data) || typeof data.is_active !== 'boolean' ||
+      !('account_email' in data) || !isOptionalText(data.account_email) ||
+      !('profile_status' in data) || !PROFILE_STATUSES.includes(data.profile_status as CompanyProfileStatus)) throw new ApiError(502)
   // Solo se conservan los campos del contrato.
   return {
-    id: data.id, legal_name: data.legal_name, trade_name: data.trade_name, rfc: data.rfc, sector_code: data.sector_code,
-    state_code: data.state_code, municipality_code: data.municipality_code, municipality: data.municipality, is_active: data.is_active,
+    id: data.id, name: data.name, legal_name: data.legal_name, trade_name: data.trade_name, rfc: data.rfc, sector_code: data.sector_code as SectorCode | null,
+    state_code: data.state_code as string | null, municipality_code: data.municipality_code, municipality: data.municipality, is_active: data.is_active,
+    account_email: data.account_email, profile_status: data.profile_status as CompanyProfileStatus,
   }
 }
 
@@ -84,19 +113,20 @@ function detail(response: unknown): Company {
   if (typeof response !== 'object' || response === null || !('data' in response)) throw new ApiError(502)
   const data = response.data
   if (typeof data !== 'object' || data === null ||
-      !('contact_name' in data) || !isText(data.contact_name) ||
+      !('contact_name' in data) || !isOptionalText(data.contact_name) ||
       !('contact_position' in data) || !isOptionalText(data.contact_position) ||
-      !('contact_email' in data) || !isText(data.contact_email) ||
+      !('contact_email' in data) || !isOptionalText(data.contact_email) ||
       !('contact_phone' in data) || !isOptionalText(data.contact_phone) ||
       !('validation_reference' in data) || !isOptionalText(data.validation_reference) ||
+      !('missing' in data) || !Array.isArray(data.missing) || !data.missing.every((gap) => PROFILE_GAPS.includes(gap as CompanyProfileGap)) ||
       !('registered_by' in data) || typeof data.registered_by !== 'object' || data.registered_by === null ||
       !('id' in data.registered_by) || !isPositiveInt(data.registered_by.id) ||
       !('name' in data.registered_by) || !isText(data.registered_by.name) ||
       !('created_at' in data) || !isText(data.created_at)) throw new ApiError(502)
   return {
     ...summary(data), contact_name: data.contact_name, contact_position: data.contact_position, contact_email: data.contact_email, contact_phone: data.contact_phone,
-    validation_reference: data.validation_reference, registered_by: { id: data.registered_by.id, name: data.registered_by.name },
-    created_at: data.created_at,
+    validation_reference: data.validation_reference, missing: data.missing as CompanyProfileGap[],
+    registered_by: { id: data.registered_by.id, name: data.registered_by.name }, created_at: data.created_at,
   }
 }
 
@@ -133,13 +163,16 @@ export interface CreatedCompany {
 }
 
 /**
- * Registra la empresa y la cuenta de su contacto (T-S8-12). Con correo, el enlace nunca vuelve; con la entrega manual
- * se valida como en «Cuentas de la empresa» y solo vive en la memoria de quien lo pidió.
+ * Invita a la empresa y crea la cuenta de su operador (HU-S14-02 CA-01). Con correo, el enlace nunca vuelve; con la
+ * entrega manual se valida como en «Cuentas de la empresa» y solo vive en la memoria de quien lo pidió.
  */
-export async function createCompany(input: CompanyInput, deliveryMethod: DeliveryMethod = 'email'): Promise<CreatedCompany> {
+export async function inviteCompany(input: CompanyInvitation, deliveryMethod: DeliveryMethod = 'email'): Promise<CreatedCompany> {
   // CSRF antes de cada escritura; el envío no se repite automáticamente ante fallos de red.
   await request('/sanctum/csrf-cookie')
-  const response = await request('/api/companies', { method: 'POST', body: JSON.stringify({ ...fields(input), delivery_method: deliveryMethod }) })
+  const response = await request('/api/companies', {
+    method: 'POST',
+    body: JSON.stringify({ email: input.email, trade_name: input.trade_name, person_name: input.person_name, delivery_method: deliveryMethod }),
+  })
   const delivery = setupDelivery(response, true)!
   const setupLink = manualSetupLink(response, delivery)
   return { company: detail(response), setupDelivery: delivery, ...(setupLink ? { setupLink } : {}) }

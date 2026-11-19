@@ -12,7 +12,7 @@ const linkageMock = vi.fn<typeof fetch>()
 const sentMock = vi.fn<typeof fetch>()
 const sentPage = (items: unknown[]) => Response.json({ data: items, meta: { current_page: 1, last_page: 1, total: items.length, per_page: 20 } })
 let options: unknown[]
-const user = { id: 9, name: 'Reclutadora', email: 'rh@manugolfo.test', role: 'COMPANY', institution: null, company: { id: 3, name: 'ManuGolfo' } }
+const user = { id: 9, name: 'Reclutadora', email: 'rh@manugolfo.test', role: 'COMPANY', institution: null, company: { id: 3, name: 'ManuGolfo', missing: [] } }
 const publicId = '3f2c1b9e-8a7d-4c6b-9e5f-1a2b3c4d5e6f'
 const profile = {
   public_id: publicId, headline: 'Analista de datos', program: 'Ingeniería', period_type: 'semester', period_number: 6,

@@ -17,9 +17,11 @@ class AccountAuditEvent extends Model
 
     public const PASSWORD_CHANGED = 'password_changed';
 
-    public const PROFILE_UPDATED = 'profile_updated';
+    /** HU-S14-02: cambios del perfil de una empresa o institución (sector_code incluido cuando se establece). */
+    public const ORGANIZATION_PROFILE_UPDATED = 'organization_profile_updated';
 
-    public const SECTOR_ESTABLISHED = 'sector_established';
+    /** HU-S14-02: la Secretaría invitó a una empresa (alta ligera con la cuenta de su operador). */
+    public const COMPANY_INVITED = 'company_invited';
 
     protected $fillable = [];
 

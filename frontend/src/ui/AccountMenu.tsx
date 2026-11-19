@@ -64,7 +64,8 @@ export function AccountMenu() {
       {open && (
         <div className="account-panel" id={panelId} role="region" aria-label="Cuenta">
           <p className="account-name">{user.name}</p>
-          <p className="account-detail">{user.email}</p>
+          {/* M3 (HU-S14-02): con el nombre provisional, el nombre ya es el correo; no se repite. */}
+          {user.name !== user.email && <p className="account-detail">{user.email}</p>}
           <p className="account-detail">{roleLabels[user.role]}{organization && ` · ${organization}`}</p>
           {/* HU-S14-01: Mi cuenta, para todos los roles; «Cerrar sesión» queda al final como acción terminal. */}
           <Link className="account-link" to="/account" onClick={() => setOpen(false)}><UserIcon />Mi cuenta</Link>
