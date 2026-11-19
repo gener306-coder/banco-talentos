@@ -55,6 +55,12 @@ class AppServiceProvider extends ServiceProvider
         RateLimiter::for('linkage-requests', fn (Request $request) => Limit::perMinute(20)->by('linkage-requests:'.$request->user()->id)
         );
 
+        // HU-S14-01: el nombre propio cambia poco; la contraseña, aún menos, y su límite frena la adivinación de la actual.
+        RateLimiter::for('account-update', fn (Request $request) => Limit::perMinute(10)->by('account-update:'.$request->user()->id)
+        );
+        RateLimiter::for('account-password', fn (Request $request) => Limit::perMinute(5)->by('account-password:'.$request->user()->id)
+        );
+
         // HU-S13-01: la conversación es entre personas; el límite frena el envío automatizado.
         RateLimiter::for('linkage-messages', fn (Request $request) => Limit::perMinute(30)->by('linkage-messages:'.$request->user()->id)
         );

@@ -1,0 +1,17 @@
+/* Mi cuenta (HU-S14-01): ancho de lectura, nombre editable en su sitio y hoja para la contraseña. Solo tokens semánticos. */
+@layer components {
+.account-page { max-width: var(--content-readable); margin-inline: auto; }
+.account-name-form { margin: 0 0 1rem; }
+.account-name-form label { display: block; margin-bottom: 0.3rem; }
+.account-inline { display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: stretch; }
+.account-inline input { flex: 1 1 14rem; margin: 0; }
+.account-inline button { flex: none; margin: 0; }
+.account-name-form .institution-success { margin: 0.6rem 0 0; }
+.account-hint { display: block; margin-top: 0.2rem; color: var(--text); font-size: var(--type-xs); }
+.account-password-form { display: grid; gap: 0.2rem; max-width: none; }
+.account-password-form label { margin-top: 0.6rem; }
+.account-password-form button[type='submit'] { justify-self: start; margin-top: 1rem; }
+@media (max-width: 600px) {
+  .account-inline button, .account-password-form button[type='submit'] { width: 100%; min-height: 2.75rem; }
+}
+}

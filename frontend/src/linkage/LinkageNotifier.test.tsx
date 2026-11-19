@@ -21,7 +21,7 @@ const conversation = (id: number, last: number, unread = 1): UnreadConversation 
   ({ id, counterpart_name: 'UT del Golfo', opportunity_title: 'Tableros de producción', unread_count: unread, last_message_id: last })
 const auth = (user: User | null): AuthState => ({
   status: 'ready', user, message: null, pending: false,
-  restore: async () => undefined, expireSession: () => undefined, signIn: async () => undefined, signOut: async () => undefined,
+  restore: async () => undefined, expireSession: () => undefined, signIn: async () => undefined, signOut: async () => undefined, updateUser: () => undefined,
 })
 
 class FakeNotification {

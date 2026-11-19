@@ -75,7 +75,8 @@ Sprint vigente desde el 18 de noviembre de 2026. Sprint anterior: [sprint-13.md]
 
 ## HU-S14-01 — Mi cuenta: nombre y contraseña
 
-**Estado:** Pendiente.  
+**Estado:** Completada (18 de noviembre de 2026). Pest con 17 pruebas en `tests/Feature/AccountTest.php` y Vitest con 5 en `src/account/AccountPage.test.tsx`.  
+**Diseño técnico y verificación:** `docs/HU-S14-01.md`  
 **Story Points:** 5  
 **Rol:** todos (`ADMIN`, `SECRETARY`, `INSTITUTION`, `COMPANY`)
 

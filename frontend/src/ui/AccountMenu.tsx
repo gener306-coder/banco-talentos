@@ -1,9 +1,10 @@
 import { PendingLabel } from './forms'
 import { useEffect, useId, useRef, useState } from 'react'
-import { useLocation } from 'react-router'
+import { Link, useLocation } from 'react-router'
 import { roleLabels } from '../auth/api'
 import { useAuth } from '../auth/useAuth'
 import { initialsOf, organizationOf } from '../auth/user'
+import { UserIcon } from './icons'
 import { useThemePreference } from './theme'
 import type { ThemePreference } from './theme'
 
@@ -65,6 +66,8 @@ export function AccountMenu() {
           <p className="account-name">{user.name}</p>
           <p className="account-detail">{user.email}</p>
           <p className="account-detail">{roleLabels[user.role]}{organization && ` · ${organization}`}</p>
+          {/* HU-S14-01: Mi cuenta, para todos los roles; «Cerrar sesión» queda al final como acción terminal. */}
+          <Link className="account-link" to="/account" onClick={() => setOpen(false)}><UserIcon />Mi cuenta</Link>
           <fieldset className="choice-group inline account-theme">
             <legend>Tema</legend>
             {THEMES.map((option) => (

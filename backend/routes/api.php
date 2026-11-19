@@ -1,6 +1,7 @@
 <?php
 
 use App\Enums\UserRole;
+use App\Http\Controllers\AccountController;
 use App\Http\Controllers\AuditEventController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\CompanyAccountController;
@@ -30,6 +31,12 @@ use Illuminate\Support\Facades\Route;
 
 Route::get('/me', [AuthController::class, 'me'])
     ->middleware(['auth:sanctum', 'active', 'role:'.implode(',', UserRole::values())]);
+
+// Mi cuenta (HU-S14-01): nombre y contraseña de la persona de la sesión, para todos los roles.
+Route::middleware(['auth:sanctum', 'active', 'role:'.implode(',', UserRole::values())])->group(function (): void {
+    Route::patch('/me', [AccountController::class, 'update'])->middleware('throttle:account-update');
+    Route::put('/me/password', [AccountController::class, 'password'])->middleware('throttle:account-password');
+});
 
 // Indicadores del inicio por rol (HU-S5-01): solo los de la cuenta y la organización de la sesión.
 Route::get('/dashboard', DashboardController::class)

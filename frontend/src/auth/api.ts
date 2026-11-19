@@ -108,3 +108,25 @@ export function setInitialPassword(input: InitialPasswordInput): Promise<void> {
 export function resetPassword(input: InitialPasswordInput): Promise<void> {
   return submitNewPassword('/api/institution-accounts/password-reset', input)
 }
+
+/** Datos de la cuenta propia (HU-S14-01): solo el nombre. Devuelve la identidad actualizada de la sesión. */
+export async function updateAccount(name: string): Promise<User> {
+  if (!csrfToken()) await request('/sanctum/csrf-cookie')
+  return sessionUser(await request('/api/me', { method: 'PATCH', body: JSON.stringify({ name }) }))
+}
+
+export interface PasswordChangeInput {
+  current_password: string
+  password: string
+  password_confirmation: string
+}
+
+/** Cambio de la contraseña propia (HU-S14-01): la sesión actual sigue abierta; las demás se cierran. */
+export async function changePassword(input: PasswordChangeInput): Promise<void> {
+  if (!csrfToken()) await request('/sanctum/csrf-cookie')
+  await request('/api/me/password', {
+    method: 'PUT',
+    body: JSON.stringify({ current_password: input.current_password, password: input.password, password_confirmation: input.password_confirmation }),
+  })
+}
+

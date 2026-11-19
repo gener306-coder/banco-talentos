@@ -91,7 +91,7 @@ describe('aviso del menú (CA-03)', () => {
     function renderBadge() {
       const auth: AuthState = {
         status: 'ready', user: companyUser as User, message: null, pending: false,
-        restore: async () => undefined, expireSession: () => undefined, signIn: async () => undefined, signOut: async () => undefined,
+        restore: async () => undefined, expireSession: () => undefined, signIn: async () => undefined, signOut: async () => undefined, updateUser: () => undefined,
       }
       // T-S13-08: el contador lee la consulta única del proveedor montado en el shell con sesión.
       return render(
