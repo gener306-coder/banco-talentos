@@ -1,3 +1,4 @@
+import { PendingLabel } from './forms'
 import { useEffect, useId, useRef, useState } from 'react'
 import { useLocation } from 'react-router'
 import { roleLabels } from '../auth/api'
@@ -76,7 +77,7 @@ export function AccountMenu() {
           </fieldset>
           {message && <p className="notice" role="alert">{message}</p>}
           <button type="button" className="secondary" disabled={pending} onClick={() => { void signOut() }}>
-            {pending ? 'Cerrando sesión…' : 'Cerrar sesión'}
+            <PendingLabel pending={pending} label="Cerrar sesión" pendingLabel="Cerrando sesión…" />
           </button>
         </div>
       )}

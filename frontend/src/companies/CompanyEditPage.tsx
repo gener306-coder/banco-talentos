@@ -1,8 +1,7 @@
 import { useCallback } from 'react'
-import { Link, useNavigate, useParams } from 'react-router'
+import { useNavigate, useParams } from 'react-router'
 import { InstitutionRequestError } from '../institutions/InstitutionLayout'
 import { useApiMutation, useApiRequest } from '../lib/useApiRequest'
-import { ChevronLeftIcon } from '../ui/icons'
 import { LoadingState } from '../ui/StateMessage'
 import { companyMessages, getCompany, updateCompany } from './api'
 import { CompanyForm } from './CompanyForm'
@@ -15,7 +14,7 @@ function CompanyEdit({ id }: { id: string }) {
   const mutation = useApiMutation(companyMessages)
 
   return (
-    <CompanyLayout title="Editar empresa">
+    <CompanyLayout title="Editar empresa" back={{ to: `/companies/${id}`, label: 'Volver a la empresa' }}>
       {loading ? <LoadingState label="Cargando empresa…" variant="details" />
         : failure ? <InstitutionRequestError failure={failure} retry={refresh} page />
         : data && (
@@ -25,7 +24,6 @@ function CompanyEdit({ id }: { id: string }) {
               void navigate(`/companies/${company.id}`, { replace: true, state: { notice: 'Empresa actualizada correctamente.' } })
             })} />
         )}
-      <p className="institution-back"><Link className="plain" to="/companies"><ChevronLeftIcon />Volver a empresas</Link></p>
     </CompanyLayout>
   )
 }

@@ -1,3 +1,4 @@
+import { PendingLabel } from './ui/forms'
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import type { RefObject } from 'react'
 import { Navigate, Route, Routes, useLocation } from 'react-router'
@@ -61,7 +62,7 @@ function AuthRoutes() {
           <button type="button" disabled={pending} onClick={() => { void restore() }}>Reintentar</button>
           {status === 'forbidden' && (
             <button type="button" className="secondary" disabled={pending} onClick={() => { void signOut() }}>
-              {pending ? 'Cerrando sesión…' : 'Cerrar sesión'}
+              <PendingLabel pending={pending} label="Cerrar sesión" pendingLabel="Cerrando sesión…" />
             </button>
           )}
         </div>

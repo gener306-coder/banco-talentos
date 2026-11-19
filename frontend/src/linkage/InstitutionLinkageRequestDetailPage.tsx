@@ -11,7 +11,7 @@ import { StudentStatus } from '../students/StudentStatus'
 import { backState, useBackLink, useContextualBack } from '../ui/backLink'
 import { Callout } from '../ui/Callout'
 import { EmailMenu } from '../ui/EmailMenu'
-import { ChevronLeftIcon, ChevronRightIcon, MessageIcon } from '../ui/icons'
+import { ChevronRightIcon, MessageIcon } from '../ui/icons'
 import { LoadingState } from '../ui/StateMessage'
 import { getReceivedLinkage, institutionLinkageMessages } from './institutionApi'
 import type { ReceivedLinkageDetail } from './institutionApi'
@@ -130,15 +130,12 @@ function InstitutionLinkageRequestDetail({ id }: { id: string }) {
   const { data, loading, failure, refresh, setData } = useApiRequest(load, institutionLinkageMessages)
   // T-S12-05: regresa a la bandeja con el filtro y la página de origen.
   const back = useBackLink({ to: '/institution/linkage-requests', label: 'Volver a solicitudes' })
-  // T-S13-07: abierta desde otro flujo (la conversación, la bandeja), el regreso toma el lugar de «Inicio».
-  const contextual = useContextualBack()
 
   return (
-    <InstitutionLinkageLayout title="Detalle de solicitud" back={contextual}>
+    <InstitutionLinkageLayout title="Detalle de solicitud" back={back}>
       {loading ? <LoadingState label="Cargando solicitud…" variant="details" />
         : failure ? <InstitutionRequestError failure={failure} retry={refresh} page notFoundTitle="No encontramos esta solicitud" />
-        : data && <Detail data={data} onDecided={setData} refresh={refresh} />}
-      {!contextual && <p className="institution-back"><Link className="plain" to={back.to} state={back.state}><ChevronLeftIcon />{back.label}</Link></p>}
+        : data && <div className="content-enter"><Detail data={data} onDecided={setData} refresh={refresh} /></div>}
     </InstitutionLinkageLayout>
   )
 }

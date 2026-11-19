@@ -1,9 +1,11 @@
 import { useCallback } from 'react'
-import { Link } from 'react-router'
+import { Link, useLocation } from 'react-router'
 import { roleLabels } from '../auth/api'
 import { InstitutionRequestError } from '../institutions/InstitutionLayout'
 import { useApiRequest } from '../lib/useApiRequest'
 import { ChevronLeftIcon, ChevronRightIcon, SearchIcon } from '../ui/icons'
+import { useTableMemory } from '../ui/useTableMemory'
+import { rowIndex } from '../ui/tableMotion'
 import { LoadingState, StateMessage } from '../ui/StateMessage'
 import { useListParams } from '../ui/useListParams'
 import { AUDIT_EVENT_TYPES, auditEventLabel, auditMessages, listAuditEvents } from './api'
@@ -40,7 +42,11 @@ export function AuditEventsPage() {
   const type: AuditEventType | '' = AUDIT_EVENT_TYPES.find((item) => item.value === typeParam)?.value ?? ''
   const { page, setPage } = list
   const load = useCallback((signal: AbortSignal) => listAuditEvents({ page, type }, signal), [page, type])
-  const { data, loading, failure, refresh } = useApiRequest(load, auditMessages)
+  const { data, loading, failure, refresh, pending } = useApiRequest(load, auditMessages)
+  // T-S13-18: con un resultado a la vista, una consulta nueva lo atenúa en lugar de desmontarlo.
+  const refreshing = pending && data !== null
+  const tableMemory = useTableMemory(page)
+  const location = useLocation()
 
   return (
     <section className="card institutions" aria-labelledby="audit-events-title">
@@ -58,7 +64,7 @@ export function AuditEventsPage() {
           </select>
         </div>
       </form>
-      {loading ? <LoadingState label="Cargando bitácora…" variant="table" />
+      {loading && !data ? <LoadingState label="Cargando bitácora…" variant="table" />
         : failure ? <InstitutionRequestError failure={failure} retry={refresh} page />
         : data && data.items.length === 0
           ? <StateMessage kind="empty" icon={<SearchIcon />}
@@ -66,14 +72,16 @@ export function AuditEventsPage() {
             description={type ? 'Elige otro tipo o revisa todos los eventos.' : 'Aparecerán aquí cuando se creen cuentas, empresas, oportunidades o solicitudes.'} />
         : data && (
           <>
-            <div className="table-card">
-              <div className="institution-table-wrapper" role="region" aria-label="Listado de eventos" tabIndex={0}>
+            <div className={`table-card${refreshing ? ' is-refreshing' : ''}`}>
+              {/* T-S13-18: al filtrar o paginar, la tabla anterior se queda atenuada mientras llega la nueva. */}
+              {refreshing && <p className="visually-hidden" role="status">Actualizando resultados…</p>}
+              <div className="institution-table-wrapper" ref={tableMemory} aria-busy={refreshing} role="region" aria-label="Listado de eventos" tabIndex={0}>
                 <table className="institution-table">
                   <caption className="visually-hidden">Eventos de la bitácora</caption>
                   <thead><tr><th scope="col">Fecha</th><th scope="col">Evento</th><th scope="col">Realizó</th><th scope="col">Recurso</th></tr></thead>
-                  <tbody>
-                    {data.items.map((event) => (
-                      <tr key={`${event.type}-${event.resource.id}`}>
+                  <tbody key={location.search} className="rows-enter">
+                    {data.items.map((event, index) => (
+                      <tr key={`${event.type}-${event.resource.id}`} style={rowIndex(index)}>
                         <td><time dateTime={event.occurred_at}>{dateFormat.format(new Date(event.occurred_at))}</time></td>
                         <th scope="row">{auditEventLabel(event.type)}</th>
                         <td>

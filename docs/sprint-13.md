@@ -45,6 +45,7 @@ Sprint vigente desde el 17 de noviembre de 2026. Sprint anterior: [sprint-12.md]
 13. **T-S13-13** Movimiento y estados de las tablas (aprobada por el responsable el 18 de noviembre de 2026, misma rama).
 14. **T-S13-14** Detalle de la solicitud sin duplicados (pedida por el responsable el 18 de noviembre de 2026, misma rama).
 15. **T-S13-15** Barra lateral momentánea, navegación del detalle y botones táctiles de la fila (pedida por el responsable el 18 de noviembre de 2026, misma rama).
+16. **T-S13-16 a T-S13-19** Afinaciones finales: tablas con flecha, navegación sin duplicados, movimiento y estados donde faltaban, auditoría visual (aprobadas por el responsable el 18 de noviembre de 2026, rama `chore/s13-final-polish`).
 
 ## Fuera de alcance
 
@@ -576,4 +577,70 @@ Se reprodujo en Chromium a 390 px con el modo móvil, con la API simulada desde 
 - **CA-01.** Al filtrar, buscar o recargar, la tabla no muestra una barra de desplazamiento vertical momentánea.
 - **CA-02.** El detalle de la solicitud de la empresa no ofrece «Buscar talento».
 - **CA-03.** En pantallas táctiles, los botones de chat, correo, teléfono y detalle de la fila miden al menos 44 px, con fondo visible y separación entre ellos.
+
+## T-S13-16 a T-S13-19 — Afinaciones finales (auditoría general)
+
+**Estado:** Completadas (18 de noviembre de 2026), sin commit.  
+**Origen:** el responsable pidió llevar a toda la aplicación los principios aplicados en las bandejas, como últimas afinaciones:
+- sin columna Acciones cuando solo sirve para ver el detalle;
+- persistencia al ir y volver;
+- sin navegación repetida;
+- revisar y completar movimiento, estados, tamaños y posiciones.
+
+Se registran como tareas técnicas del Sprint 13, no como un Sprint nuevo: son ajustes de presentación transversales, sin historias ni backend.  
+**Rama:** `chore/s13-final-polish`.
+
+### T-S13-16 — Tablas con la flecha en lugar de «Acciones»
+
+- **Dónde:** instituciones, empresas, alumnos y oportunidades. Su columna «Acciones» solo tenía «Ver detalle».
+- **Cómo queda:** la columna pasa a ser la flecha `.row-open` de T-S13-10:
+  - encabezado visualmente oculto «Detalle»;
+  - 2.25 rem en escritorio y 44 px en pantallas táctiles;
+  - conserva el nombre accesible «Ver detalle de …».
+- **La fila completa** sigue abriendo el detalle.
+- **`.row-open` se mueve a `ui/ui.css`**, para que todas las tablas la compartan.
+- **Las tablas de cuentas** (Secretaría y empresa) conservan su columna, porque tienen acciones reales: reenviar el enlace e inactivar.
+
+### T-S13-17 — Navegación sin duplicados
+
+- **Un solo regreso, arriba.** Los layouts de instituciones, empresas, oportunidades y la bandeja de la institución reciben `back` y muestran solo `NavBackLink`:
+  - los listados, «‹ Inicio»;
+  - el detalle, «‹ Volver a {sección}», con el regreso contextual si lo hay;
+  - la edición, «‹ Volver a la institución» (la empresa o la oportunidad);
+  - el alta, «‹ Volver a {sección}».
+- **Lo que se quita:**
+  - el enlace de cada sección a sí misma;
+  - el segundo regreso al final de diez pantallas (`.institution-back`);
+  - en el detalle de la solicitud de la empresa, «Solicitudes de vinculación». El regreso único lleva a la bandeja o, si se llegó desde ella, a la conversación.
+- **Bandejas sin enlaces a otras secciones:** se quitan «Buscar talento» (empresa) y «Alumnos» (institución), que ya están en el inicio y el menú. «Buscar talento» sigue como acción del vacío de la bandeja de la empresa, donde sí es el siguiente paso.
+
+### T-S13-18 — Movimiento y estados donde faltaban
+
+- **Plantilla de tabla de T-S13-12/13** en la bitácora, las cuentas de la Secretaría y las cuentas de la empresa:
+  - recarga atenuada con barra de progreso y `aria-busy`;
+  - entrada escalonada de las filas;
+  - subida al inicio de la tabla al cambiar de página.
+- **Botones con espera:** siete botones solo cambiaban el texto mientras esperaban (Inactivar, Activar o Reactivar, Aceptar solicitud y Cerrar sesión). Ahora usan `PendingLabel`, con su spinner, como los formularios.
+- **Detalles que entran suave:** el contenido cargado de los detalles (institución, empresa, oportunidad, alumno, perfil de talento y las dos solicitudes) entra con `content-enter` (opacidad, 4 px, 280 ms con `--spring`) en lugar de reemplazar el esqueleto de golpe. Con movimiento reducido no hay animación.
+
+### T-S13-19 — Auditoría visual
+
+- **Cómo se revisó:** con Chromium a 1440 y a 390 px, y la API simulada. Pantallas: instituciones (listado, detalle y edición), empresas (listado y detalle), alumnos, oportunidades (listado y detalle) y bitácora.
+- **Resultado en las 18 vistas:**
+  - ningún desbordamiento horizontal (`scrollWidth` igual al ancho de la ventana);
+  - un solo regreso arriba y ninguno al final;
+  - ningún control de menos de 32 px en el contenido.
+- **Corrección: buscadores del celular** (`.table-search`, `ui/ui.css`). Cada control ocupaba su fila y «Buscar» una fila entera; en Alumnos, la barra empujaba la tabla unos 300 px. Ahora:
+  - el campo y «Buscar», solo con el ícono y de 44 px pero con el mismo nombre accesible, comparten la primera fila;
+  - los filtros van de dos en dos debajo, ocupando el ancho;
+  - sin campo de búsqueda (como en la bitácora), el filtro ocupa todo el ancho.
+  
+  En Alumnos, la barra pasa de unos 300 px a unos 150 px.
+
+### Criterios de aceptación
+
+- **CA-01.** Ninguna tabla tiene una columna «Acciones» que solo sirva para ver el detalle; la flecha conserva su nombre accesible.
+- **CA-02.** Cada pantalla tiene un solo regreso, arriba, y ningún enlace a sí misma ni a secciones ajenas a su tarea.
+- **CA-03.** La bitácora y las tablas de cuentas recargan sin saltos y animan sus filas; los botones de estado muestran su spinner; los detalles entran suave.
+- **CA-04.** A 390 px, los buscadores no ocupan una fila por control y ninguna vista auditada se desborda.
 

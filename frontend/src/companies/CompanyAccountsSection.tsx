@@ -6,6 +6,8 @@ import { InstitutionRequestError } from '../institutions/InstitutionLayout'
 import { useApiRequest } from '../lib/useApiRequest'
 import { MailIcon, PlusIcon } from '../ui/icons'
 import { Sheet } from '../ui/Sheet'
+import { useTableMemory } from '../ui/useTableMemory'
+import { rowIndex } from '../ui/tableMotion'
 import { LoadingState } from '../ui/StateMessage'
 import { companyMessages, createCompanyAccount, listCompanyAccounts, resendCompanyAccountSetup } from './api'
 
@@ -18,7 +20,10 @@ const statusLabels: Record<SetupAccountStatus, string> = { active: 'ACTIVA', pen
  */
 export function CompanyAccountsSection({ companyId, active }: { companyId: number; active: boolean }) {
   const load = useCallback((signal: AbortSignal) => listCompanyAccounts(companyId, signal), [companyId])
-  const { data, loading, failure, refresh, setData } = useApiRequest(load, companyMessages)
+  const { data, loading, failure, refresh, setData, pending } = useApiRequest(load, companyMessages)
+  // T-S13-18: con un resultado a la vista, una consulta nueva lo atenúa en lugar de desmontarlo.
+  const refreshing = pending && data !== null
+  const tableMemory = useTableMemory()
   const access = useAccountAccess({
     statusPath: (account) => `/api/companies/${companyId}/accounts/${account.id}/status`,
     resetPath: `/api/companies/${companyId}/accounts/password-reset/start`,
@@ -43,19 +48,21 @@ export function CompanyAccountsSection({ companyId, active }: { companyId: numbe
         )
         : <p className="notice">Activa la empresa para crear cuentas, reenviar enlaces o gestionar el acceso de sus cuentas. Mientras esté inactiva, sus cuentas no pueden iniciar sesión.</p>}
       {access.feedback}
-      {loading ? <LoadingState label="Cargando cuentas…" variant="table" />
+      {loading && !data ? <LoadingState label="Cargando cuentas…" variant="table" />
         : failure ? <InstitutionRequestError failure={failure} retry={refresh} />
         : data && (data.length === 0
           ? <p className="notice-muted">La empresa aún no tiene cuentas.</p>
           : (
-            <div className="table-card">
-              <div className="institution-table-wrapper" role="region" aria-label="Listado de cuentas de la empresa" tabIndex={0}>
+            <div className={`table-card${refreshing ? ' is-refreshing' : ''}`}>
+              {/* T-S13-18: al filtrar o paginar, la tabla anterior se queda atenuada mientras llega la nueva. */}
+              {refreshing && <p className="visually-hidden" role="status">Actualizando resultados…</p>}
+              <div className="institution-table-wrapper" ref={tableMemory} aria-busy={refreshing} role="region" aria-label="Listado de cuentas de la empresa" tabIndex={0}>
                 <table className="institution-table has-actions">
                   <caption className="visually-hidden">Cuentas de la empresa</caption>
                   <thead><tr><th scope="col">Nombre</th><th scope="col">Correo de acceso</th><th scope="col">Estado</th><th scope="col">Acciones</th></tr></thead>
-                  <tbody>
-                    {data.map((account) => (
-                      <tr key={account.id}>
+                  <tbody className="rows-enter">
+                    {data.map((account, index) => (
+                      <tr key={account.id} style={rowIndex(index)}>
                         <th scope="row">{account.name}</th>
                         <td>{account.email}</td>
                         <td><span className={`institution-status ${account.status}`}>{statusLabels[account.status]}</span></td>

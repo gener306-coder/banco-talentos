@@ -70,7 +70,6 @@ export function LinkageRequestsPage() {
     <section className="card institutions" aria-labelledby="linkage-requests-title">
       <nav className="institution-navigation" aria-label="Navegación de solicitudes">
         <Link className="plain" to="/" aria-label="Volver al inicio"><ChevronLeftIcon />Inicio</Link>
-        <Link className="plain" to="/talent">Buscar talento</Link>
       </nav>
       <h2 id="linkage-requests-title">Solicitudes de vinculación</h2>
       <p>Solicitudes que tu empresa envió a las instituciones educativas. Las aceptadas se coordinan en la conversación de su detalle o con el contacto de cada institución.</p>

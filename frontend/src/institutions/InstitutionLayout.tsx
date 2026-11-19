@@ -1,18 +1,20 @@
 import type { ReactNode } from 'react'
-import { Link, useLocation } from 'react-router'
-import { AlertIcon, ChevronLeftIcon, SearchIcon } from '../ui/icons'
+import { AlertIcon, SearchIcon } from '../ui/icons'
+import type { BackTarget } from '../ui/backLink'
+import { NavBackLink } from '../ui/NavBackLink'
 import { StateMessage } from '../ui/StateMessage'
 import type { InstitutionFailure } from './useInstitutionRequest'
 import './institutions.css'
 
-export function InstitutionLayout({ title, children }: { title: string, children: ReactNode }) {
-  const { pathname } = useLocation()
+/**
+ * T-S13-17: un solo regreso, arriba. El listado vuelve al inicio; el detalle, la edición y el alta, a donde
+ * corresponde (`back`), sin repetir un enlace a la propia sección ni otro regreso al final de la página.
+ */
+export function InstitutionLayout({ title, back, children }: { title: string; back?: BackTarget; children: ReactNode }) {
   return (
     <section className="card institutions" aria-labelledby="institutions-title">
       <nav className="institution-navigation" aria-label="Navegación de instituciones">
-        {/* El nombre accesible conserva «Volver al inicio»; el texto visible es el del destino. */}
-        <Link className="plain" to="/" aria-label="Volver al inicio"><ChevronLeftIcon />Inicio</Link>
-        <Link className="plain" to="/institutions" aria-current={pathname === '/institutions' ? 'page' : undefined}>Instituciones</Link>
+        <NavBackLink back={back} />
       </nav>
       <h2 id="institutions-title">{title}</h2>
       {children}

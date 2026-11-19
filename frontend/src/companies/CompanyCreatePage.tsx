@@ -16,7 +16,7 @@ export function CompanyCreatePage() {
 
   if (shared) {
     return (
-      <CompanyLayout title="Nueva empresa">
+      <CompanyLayout title="Nueva empresa" back={{ to: '/companies', label: 'Volver a empresas' }}>
         <p className="institution-success" role="status">
           Empresa registrada. Copia el enlace y compártelo con {shared.company.contact_name} para que establezca su contraseña.
         </p>
@@ -29,7 +29,7 @@ export function CompanyCreatePage() {
   }
 
   return (
-    <CompanyLayout title="Nueva empresa">
+    <CompanyLayout title="Nueva empresa" back={{ to: '/companies', label: 'Volver a empresas' }}>
       <p>La empresa se registrará en estado ACTIVA, junto con la cuenta de su contacto.</p>
       <CompanyForm pending={pending} failure={failure} submitLabel="Registrar empresa" cancelTo="/companies"
         onSubmit={(input, method) => submit(() => createCompany(input, method), ({ company, setupDelivery, setupLink }) => {

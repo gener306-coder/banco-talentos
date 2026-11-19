@@ -12,7 +12,7 @@ export function OpportunityCreatePage() {
   const defaults = useApiRequest(getOpportunityDefaults, opportunityMessages)
 
   return (
-    <OpportunityLayout title="Nueva oportunidad">
+    <OpportunityLayout title="Nueva oportunidad" back={{ to: '/opportunities', label: 'Volver a oportunidades' }}>
       <p>La oportunidad se registrará en estado ACTIVA.</p>
       {defaults.loading ? <LoadingState label="Preparando el formulario…" variant="details" />
         : (

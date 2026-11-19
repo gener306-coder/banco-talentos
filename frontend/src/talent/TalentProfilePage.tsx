@@ -51,7 +51,7 @@ function TalentProfile({ publicId }: { publicId: string }) {
       {loading ? <LoadingState label="Cargando perfil…" variant="details" />
         : failure ? <InstitutionRequestError failure={failure} retry={refresh} page />
         : data && (
-          <>
+          <div className="content-enter">
             <h2 id="talent-profile-title">{data.headline ?? 'Perfil sin titular'}</h2>
             <p className="privacy-note">Perfil anónimo: la identidad del alumno y sus datos de contacto los resguarda su institución.</p>
             {sent.data && sent.data.items.length > 0 && (
@@ -125,7 +125,7 @@ function TalentProfile({ publicId }: { publicId: string }) {
             <Sheet open={requesting} onClose={() => setRequesting(false)} labelledBy="linkage-request-title">
               {requested && <LinkageRequestForm publicId={publicId} options={options} availability={availability?.items ?? null} onSent={() => { void sent.refresh() }} />}
             </Sheet>
-          </>
+          </div>
         )}
     </section>
   )

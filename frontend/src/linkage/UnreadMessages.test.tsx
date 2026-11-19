@@ -71,12 +71,12 @@ describe('aviso del menú (CA-03)', () => {
     expect(summaries()).toContain('/api/linkage-requests/unread-summary')
   })
 
-  it('usa el resumen de la institución en su inicio y en la navegación de su bandeja', async () => {
+  it('usa el resumen de la institución en su inicio', async () => {
     user = institutionUser
     unreadConversations = 1
     apiMock.mockResolvedValue(page([]))
-    render(<MemoryRouter initialEntries={['/institution/linkage-requests']}><App /></MemoryRouter>)
-    expect(await screen.findByRole('link', { name: 'Solicitudes de vinculación, 1 conversación con mensajes sin leer' })).toHaveAttribute('aria-current', 'page')
+    render(<MemoryRouter initialEntries={['/']}><App /></MemoryRouter>)
+    expect(await screen.findByRole('link', { name: 'Solicitudes de vinculación, 1 conversación con mensajes sin leer' })).toHaveAttribute('href', '/institution/linkage-requests')
     expect(summaries().every((path) => path === '/api/institution/linkage-requests/unread-summary')).toBe(true)
   })
 

@@ -1,3 +1,4 @@
+import { PendingLabel } from '../ui/forms'
 import { useCallback, useRef, useState } from 'react'
 import { Link, useLocation, useParams } from 'react-router'
 import { InstitutionRequestError, InstitutionStatus } from '../institutions/InstitutionLayout'
@@ -5,7 +6,6 @@ import { useApiMutation, useApiRequest } from '../lib/useApiRequest'
 import { stateName } from '../students/catalogs'
 import { useBackLink } from '../ui/backLink'
 import { ConfirmDialog } from '../ui/ConfirmDialog'
-import { ChevronLeftIcon } from '../ui/icons'
 import { LoadingState } from '../ui/StateMessage'
 import { companyMessages, getCompany, setCompanyStatus } from './api'
 import { sectorName } from './catalogs'
@@ -46,11 +46,11 @@ function CompanyDetail({ id }: { id: string }) {
   }
 
   return (
-    <CompanyLayout title="Detalle de empresa">
+    <CompanyLayout title="Detalle de empresa" back={back}>
       {loading ? <LoadingState label="Cargando empresa…" variant="details" />
         : failure ? <InstitutionRequestError failure={failure} retry={refresh} page />
         : data && (
-          <>
+          <div className="content-enter">
             {notice && <p className="institution-success" role="status">{notice}</p>}
             {mutation.failure && <InstitutionRequestError failure={mutation.failure} />}
             <dl className="company-details">
@@ -68,17 +68,16 @@ function CompanyDetail({ id }: { id: string }) {
             <div className="actions" aria-busy={mutation.pending}>
               <Link className="institution-button secondary" to={`/companies/${data.id}/edit`}>Editar empresa</Link>
               <button type="button" ref={statusButton} disabled={mutation.pending} onClick={requestStatusChange}>
-                {mutation.pending ? 'Guardando estado…' : data.is_active ? 'Inactivar empresa' : 'Activar empresa'}
+                <PendingLabel pending={mutation.pending} label={data.is_active ? 'Inactivar empresa' : 'Activar empresa'} pendingLabel="Guardando estado…" />
               </button>
             </div>
             <CompanyAccountsSection companyId={data.id} active={data.is_active} />
-          </>
+          </div>
         )}
       <ConfirmDialog open={confirming} origin={statusButton}
         title="¿Inactivar la empresa?"
         description="Sus cuentas no podrán iniciar sesión y las sesiones abiertas se cerrarán. No se borra ningún dato y podrás reactivarla después."
         confirmLabel="Inactivar" onConfirm={() => { void changeStatus() }} onCancel={() => setConfirming(false)} />
-      <p className="institution-back"><Link className="plain" to={back.to} state={back.state}><ChevronLeftIcon />{back.label}</Link></p>
     </CompanyLayout>
   )
 }

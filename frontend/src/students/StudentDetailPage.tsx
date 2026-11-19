@@ -1,3 +1,4 @@
+import { PendingLabel } from '../ui/forms'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link, useLocation, useParams } from 'react-router'
 import { InstitutionRequestError } from '../institutions/InstitutionLayout'
@@ -78,7 +79,7 @@ function StudentDetailView({ id }: { id: string }) {
       {loading ? <><h2 id="student-title">Alumno</h2><LoadingState label="Cargando alumno…" variant="details" /></>
         : failure ? <><h2 id="student-title">Alumno</h2><InstitutionRequestError failure={failure} retry={refresh} page /></>
         : data && (
-          <>
+          <div className="content-enter">
             <h2 id="student-title">{fullName(data)}</h2>
             {data.missing_data.length > 0 && (
               <Callout tone="pending">
@@ -123,7 +124,7 @@ function StudentDetailView({ id }: { id: string }) {
               <div className="actions" aria-busy={mutation.pending}>
                 <button type="button" ref={statusButton} className={data.is_active ? 'secondary' : undefined}
                   disabled={mutation.pending} onClick={requestStatusChange}>
-                  {mutation.pending ? 'Guardando estado…' : data.is_active ? 'Inactivar alumno' : 'Reactivar alumno'}
+                  <PendingLabel pending={mutation.pending} label={data.is_active ? 'Inactivar alumno' : 'Reactivar alumno'} pendingLabel="Guardando estado…" />
                 </button>
               </div>
               {statusNotice && <p className="institution-success" role="status">{statusNotice}</p>}
@@ -132,7 +133,7 @@ function StudentDetailView({ id }: { id: string }) {
             <Sheet open={correcting} onClose={close} labelledBy="student-form-title">
               <StudentForm key={openings} student={data} onUpdated={(student) => { setData(student); setNotice('Identidad actualizada correctamente.'); setCorrecting(false) }} />
             </Sheet>
-          </>
+          </div>
         )}
       <ConfirmDialog open={confirming} origin={statusButton}
         title="¿Inactivar al alumno?"

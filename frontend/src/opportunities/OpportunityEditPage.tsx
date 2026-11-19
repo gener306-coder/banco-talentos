@@ -1,8 +1,7 @@
 import { useCallback } from 'react'
-import { Link, useNavigate, useParams } from 'react-router'
+import { useNavigate, useParams } from 'react-router'
 import { InstitutionRequestError } from '../institutions/InstitutionLayout'
 import { useApiMutation, useApiRequest } from '../lib/useApiRequest'
-import { ChevronLeftIcon } from '../ui/icons'
 import { LoadingState } from '../ui/StateMessage'
 import { getOpportunity, opportunityMessages, updateOpportunity } from './api'
 import { OpportunityForm } from './OpportunityForm'
@@ -15,7 +14,7 @@ function OpportunityEdit({ id }: { id: string }) {
   const mutation = useApiMutation(opportunityMessages)
 
   return (
-    <OpportunityLayout title="Editar oportunidad">
+    <OpportunityLayout title="Editar oportunidad" back={{ to: `/opportunities/${id}`, label: 'Volver a la oportunidad' }}>
       {loading ? <LoadingState label="Cargando oportunidad…" variant="details" />
         : failure ? <InstitutionRequestError failure={failure} retry={refresh} page notFoundTitle="No encontramos esta oportunidad" />
         : data && (
@@ -25,7 +24,6 @@ function OpportunityEdit({ id }: { id: string }) {
               void navigate(`/opportunities/${opportunity.id}`, { replace: true, state: { notice: 'Oportunidad actualizada correctamente.' } })
             })} />
         )}
-      <p className="institution-back"><Link className="plain" to="/opportunities"><ChevronLeftIcon />Volver a oportunidades</Link></p>
     </OpportunityLayout>
   )
 }

@@ -299,11 +299,13 @@ describe('búsqueda y filtro del padrón HU-S8-01', () => {
     apiMock.mockResolvedValue(Response.json({ data: [row(3, 'A-003', 'María', 'López', 'García')], meta: meta(1) }))
     const view = renderApp()
     const table = await screen.findByRole('table', { name: 'Alumnos registrados' })
-    expect(within(table).getByRole('columnheader', { name: 'Acciones' })).toBeInTheDocument()
+    // T-S13-16: sin columna «Acciones»; la flecha de la última columna es el control accesible del detalle.
+    expect(within(table).queryByRole('columnheader', { name: 'Acciones' })).not.toBeInTheDocument()
     const studentRow = within(table).getByRole('row', { name: /López García/ })
     expect(within(studentRow).queryByRole('link', { name: 'López García' })).not.toBeInTheDocument()
     const link = within(studentRow).getByRole('link', { name: 'Ver detalle de López García, María' })
     expect(link).toHaveAttribute('href', '/students/3')
+    expect(link).toHaveClass('row-open')
 
     fireEvent.click(within(studentRow).getByText('María'))
     expect(screen.getByLabelText('Ruta actual').textContent).toBe('/students/3')

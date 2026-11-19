@@ -196,7 +196,9 @@ describe('consulta de instituciones', () => {
     expect(await screen.findByRole('alert')).toHaveTextContent('La institución no existe.')
     expect(screen.queryByRole('textbox')).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: /Guardar cambios|Inactivar institución|Activar institución/ })).not.toBeInTheDocument()
-    expect(screen.getByRole('link', { name: 'Volver a instituciones' })).toHaveAttribute('href', '/institutions')
+    // T-S13-17: un solo regreso, arriba: la edición vuelve a su institución; el detalle, al listado.
+    const back = path.endsWith('/edit') ? { name: 'Volver a la institución', href: '/institutions/27' } : { name: 'Volver a instituciones', href: '/institutions' }
+    expect(screen.getByRole('link', { name: back.name })).toHaveAttribute('href', back.href)
   })
 
   it('presenta acceso denegado de la API sin inventar un listado vacío', async () => {
@@ -476,6 +478,9 @@ describe('activación e inactivación sin eliminación', () => {
     await waitFor(() => expect(writes()).toHaveLength(1))
     expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument()
     expect(submit).toBeDisabled()
+    // T-S13-18: mientras guarda, el botón muestra el spinner y su texto de espera, como los formularios.
+    expect(submit).toHaveTextContent('Guardando estado…')
+    expect(submit.querySelector('.spinner')).not.toBeNull()
     expect(screen.getByText('ACTIVA')).toBeInTheDocument()
     expect(screen.queryByText('INACTIVA')).not.toBeInTheDocument()
     expect(screen.queryByText('Institución inactivada correctamente.')).not.toBeInTheDocument()
@@ -588,6 +593,7 @@ describe('estados y navegación del listado (apple-design)', () => {
     renderApp()
     const nav = await screen.findByRole('navigation', { name: 'Navegación de instituciones' })
     expect(within(nav).getByRole('link', { name: 'Volver al inicio' })).toHaveTextContent('Inicio')
-    expect(within(nav).getByRole('link', { name: 'Instituciones' })).toHaveAttribute('aria-current', 'page')
+    // T-S13-17: el listado no repite un enlace a sí mismo; el único regreso es el del inicio.
+    expect(within(nav).getAllByRole('link')).toHaveLength(1)
   })
 })
