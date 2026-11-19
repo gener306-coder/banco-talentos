@@ -84,7 +84,11 @@ test('HU-S14-02 y HU-S14-03: la Secretaría invita solo con el correo → la emp
     await profile.getByRole('combobox', { name: 'Municipio' }).fill('reynosa')
     await profile.getByRole('option', { name: 'Reynosa', exact: true }).click()
     await profile.getByRole('button', { name: 'Guardar cambios', exact: true }).click()
-    await expect(profile.getByRole('status')).toHaveText('Perfil actualizado correctamente.')
+    // T-S14-03: con datos faltantes, la tarjeta llegó abierta en edición; al guardar vuelve a la ficha de lectura.
+    // T-S14-04: la confirmación sale en el aviso breve (Snackbar), fuera de la tarjeta.
+    await expect(company.locator('.snackbar')).toContainText('Perfil actualizado.')
+    await expect(profile.getByRole('button', { name: 'Editar' })).toBeVisible()
+    await expect(profile).toContainText(tradeName)
 
     // Con el mínimo, el recordatorio solo pide el resto y la cuenta ya lleva el nombre real.
     await company.goto('/')

@@ -145,6 +145,8 @@ describe.each(themes)('contraste en el tema %s', (_name, theme) => {
     ['--text', '--surface', 4.5],
     ['--text', '--surface-muted', 4.5],
     ['--text-strong', '--surface', 4.5],
+    ['--text-muted', '--surface', 4.5],
+    ['--text-muted', '--surface-muted', 4.5],
     ['--accent', '--surface', 4.5],
     ['--accent', '--surface-muted', 4.5],
     ['--accent-hover', '--surface', 4.5],

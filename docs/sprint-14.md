@@ -233,3 +233,47 @@ Cada historia termina con su reporte y una revisión del responsable antes de in
 - **Corrección:** la sugerencia de «Soy yo» con los datos precargados queda solo para el onboarding (`/welcome`, prop `suggestSelf`). En Mi cuenta, la casilla refleja el contacto guardado: se marca solo si su correo es el de la cuenta, también después de guardar. Un contacto vacío se respeta y la empresa puede marcar «Soy yo» para usar sus datos.
 - **Pruebas:** regresión en Vitest (vaciar, guardar y volver sin que se rellene ni se marque) y la E2E del onboarding ajustada.
 
+### T-S14-03 — Rediseño de Mi cuenta: perfil de lectura primero
+
+**Estado:** Implementada (19 de noviembre de 2026) en `chore/ui-polish-account-profile`, sin commit. Solicitada por el responsable. Solo frontend: sin cambios de backend ni de contratos.
+
+- **`UserAvatar` (`ui/UserAvatar.tsx`):** iniciales con el tinte de la marca y un anillo de 1 px, en tamaño `sm` para el menú de cuenta y `lg` (72 px) para Mi cuenta. Acepta `src` para una foto futura y es decorativo: el nombre siempre está escrito.
+- **Tarjeta de identidad:**
+  - avatar, nombre como `h2` y el lápiz «Editar nombre», que edita en su sitio (Enter guarda, Escape o «Cancelar» salen y el foco vuelve al lápiz);
+  - rol y organización, y el correo en tono secundario;
+  - con el nombre provisional muestra «Agrega tu nombre» en lugar de repetir el correo.
+- **Acceso y seguridad:** filas con filete al estilo de Ajustes.
+  - Correo de acceso, con a quién pedir el cambio.
+  - Contraseña oculta, con la nota de que cambiarla cierra las demás sesiones y «Cambiar contraseña», que abre la hoja existente.
+- **Perfil de la empresa o de la institución:**
+  - ficha de lectura en dos columnas (una en el celular), agrupada en Datos generales, Ubicación y Contacto, con «Sin capturar» en lo vacío;
+  - insignia «Perfil completo» o «Perfil incompleto» para la empresa;
+  - «Editar» pasa la misma tarjeta al formulario existente, con «Guardar cambios» y «Cancelar»; al guardar vuelve a la lectura con una confirmación discreta;
+  - la institución muestra sus datos oficiales en un bloque de solo lectura;
+  - al llegar por `/account#organization` con datos faltantes, la empresa entra directo a la edición, con el avance a la vista y desplazamiento suave.
+- **`ADMIN` y `SECRETARY`:** solo identidad y acceso.
+- **El nombre es `h2`:** la página ya tiene un `h1` en el encabezado general, así que el nombre ocupa el nivel del título de la vista.
+- **Pruebas:** Vitest (avatar, nombre provisional, edición del nombre con Enter, Escape y Cancelar, lectura y edición de la empresa y la institución, apertura automática, vista sin organización) y la E2E del onboarding ajustada. Revisión visual a 1440 y 390 px en claro y oscuro.
+
+### T-S14-04 — Auditoría y refinamiento visual de Mi cuenta
+
+**Estado:** Implementada (19 de noviembre de 2026) en `chore/ui-polish-account-profile`, sin commit. Solicitada por el responsable sobre T-S14-03. Solo frontend.
+
+- **Avisos de confirmación:** `ui/Snackbar.tsx` y `ui/useSnackbar.tsx` sustituyen a los textos sueltos dentro de las tarjetas para «Nombre actualizado.», «Perfil actualizado.» y el cambio de contraseña.
+  - Superficie invertida centrada abajo, respetando el área segura.
+  - Entrada con el resorte del sistema y solo aparición con movimiento reducido.
+  - `role="status"`, cierre manual de 44 px en el celular y pausa mientras el puntero o el foco están encima.
+- **Carga:** `LoadingState` suma la variante `facts`, un esqueleto con la forma de la ficha (grupos y pares etiqueta-valor en dos columnas) en lugar del genérico.
+- **Avance del perfil:** la barra vuelve a la cabecera de la tarjeta de la empresa (`ProfileScore`) con «N de 7 datos», o la insignia verde «Perfil completo». El detalle de abajo (`ProfileProgress compact`) dice qué falta sin repetir la cuenta.
+- **Estados vacíos:**
+  - una empresa sin ningún dato ve «Tu empresa aún no tiene perfil» con «Completar perfil», y no una ficha llena de «Sin capturar»; sin la lista de pendientes ni un «Editar» duplicado;
+  - un grupo sin datos (ubicación o contacto) se resume en una línea.
+- **Tipografía y jerarquía:**
+  - nuevo token `--text-muted` (claro `#6b6a70`, 5.3:1; oscuro `#a9a6ae`, 7:1), definido en los dos temas, verificado en `tokens.test` y documentado en `identidad-visual.md`, porque en claro `--text` y `--text-strong` coinciden;
+  - etiquetas en `--type-sm` atenuado, valores en `--type-base` con peso 500, encabezados de grupo en `--type-xs` en mayúsculas espaciadas y títulos de tarjeta en peso 600;
+  - las filas de seguridad usan la misma escala que la ficha.
+- **Disposición:** la cabecera de cada tarjeta agrupa el título y su estado, y deja «Editar» fijo arriba a la derecha en cualquier ancho. El lápiz se separa del nombre.
+- **Transiciones:** el cambio entre lectura y edición del nombre y de la tarjeta entra con `content-enter`, sin movimiento con movimiento reducido. Los controles conservan la presión, el foco y el cursor del sistema.
+- **Pruebas:** Vitest del esqueleto, el avance en la cabecera, el estado vacío, el grupo vacío y el cierre del aviso; los avisos se verifican en el `Snackbar`. Revisión visual a 1440 y 390 px en claro y oscuro.
+- **E2E:** la spec del onboarding busca la confirmación en el aviso. En `talent-search.spec.ts`, la medición del ancho a 390 px usa `expect.poll`: medía justo después de cambiar el tamaño de la ventana y una vez falló con 435 px. Un desborde real sigue fallando.
+

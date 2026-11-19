@@ -89,7 +89,7 @@ input:focus-visible, select:focus-visible, textarea:focus-visible { border-color
   :is(.institution-table, .data-table) tbody tr[data-href]:hover:not(:has(:is(a, button):hover)) .row-link .icon { transform: translateX(2px); }
   .data-table th a:hover { color: var(--accent); }
   .home-action:hover { background: var(--accent-fill-hover); }
-  .account-trigger:hover:not(:disabled) { background: var(--tint-hover); }
+  .account-trigger:hover:not(:disabled) .user-avatar { background: var(--tint-hover); }
         input:hover:not(:focus):not(:disabled), select:hover:not(:focus):not(:disabled), textarea:hover:not(:focus):not(:disabled) { border-color: var(--text); }
 }
 
@@ -106,6 +106,13 @@ input:focus-visible, select:focus-visible, textarea:focus-visible { border-color
 .skeleton-details .bone:nth-child(even) { width: 80%; margin-bottom: 0.5rem; }
 .bone { display: block; height: 0.85rem; border-radius: 6px; background: linear-gradient(90deg, var(--border) 25%, var(--surface-muted) 40%, var(--border) 60%); background-size: 300% 100%; animation: shimmer 1.4s ease-in-out infinite; }
 .bone.pill { height: 1.3rem; border-radius: 999px; }
+.skeleton-facts { display: grid; gap: 1.25rem; padding: 0.25rem 0; }
+.skeleton-facts-group { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.9rem 1.5rem; padding-top: 0.9rem; border-top: 1px solid var(--border); }
+.skeleton-facts-group .bone.heading { grid-column: 1 / -1; width: 7rem; height: 0.7rem; }
+.skeleton-fact { display: grid; gap: 0.4rem; }
+.skeleton-fact .bone { width: 70%; }
+.skeleton-fact .bone.label { width: 40%; height: 0.65rem; }
+@media (max-width: 600px) { .skeleton-facts-group { grid-template-columns: minmax(0, 1fr); } }
 @keyframes shimmer { from { background-position: 100% 0; } to { background-position: 0 0; } }
 .state-message { display: grid; justify-items: center; text-align: center; gap: 0.45rem; padding: 2.2rem 1rem; }
 .state-message h3 { margin: 0.4rem 0 0; font-size: var(--type-lg); }
@@ -505,9 +512,17 @@ textarea[aria-invalid='true'] { border-color: var(--danger-border); }
 
 /* Menú de cuenta del encabezado: el panel solo existe mientras está abierto. */
 .account-menu { position: relative; flex-shrink: 0; }
+/* T-S14-03: el botón del menú solo contiene el avatar; el avatar lleva el color y su estado abierto. */
 .account-trigger { display: grid; place-items: center; width: var(--icon-button-md); height: var(--icon-button-md); padding: 0; border: 0; border-radius: 50%;
-  background: var(--tint); color: var(--accent); font-size: var(--type-sm); font-weight: 700; }
-.account-trigger[aria-expanded='true'] { background: var(--accent-fill); color: var(--on-accent); }
+  background: transparent; }
+.account-trigger[aria-expanded='true'] .user-avatar { background: var(--accent-fill); color: var(--on-accent); box-shadow: none; }
+/* Avatar de la persona (ui/UserAvatar): iniciales con el tinte de la marca y un anillo de 1 px, listo para una foto. */
+.user-avatar { display: grid; place-items: center; flex: none; overflow: hidden; border-radius: 50%; background: var(--tint); color: var(--accent);
+  font-weight: 700; letter-spacing: 0.02em; line-height: 1; user-select: none;
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 22%, transparent); transition: background-color 160ms ease; }
+.user-avatar img { width: 100%; height: 100%; object-fit: cover; }
+.user-avatar.sm { width: var(--icon-button-md); height: var(--icon-button-md); font-size: var(--type-sm); }
+.user-avatar.lg { width: 4.5rem; height: 4.5rem; font-size: var(--type-xl); }
 .account-panel { position: absolute; right: 0; top: calc(100% + 0.5rem); z-index: 20; width: min(18rem, calc(100vw - 2rem)); padding: 1rem;
   display: grid; gap: 0.3rem; background: var(--surface); border: 1px solid var(--border); border-radius: 14px;
   box-shadow: 0 12px 28px color-mix(in srgb, var(--shadow) 14%, transparent); animation: materialize var(--spring-duration) var(--spring) both; }
@@ -596,6 +611,24 @@ textarea[aria-invalid='true'] { border-color: var(--danger-border); }
   animation: materialize var(--spring-duration) var(--spring) both; pointer-events: none; }
 .cell-toast.failed { border-radius: 10px; }
 @media (prefers-reduced-motion: reduce) { .email-menu, .cell-toast { animation: fade-in 160ms ease both; } }
+/*
+ * Aviso de confirmación (T-S14-04, ui/Snackbar): superficie invertida, centrado abajo y por encima del área segura en
+ * el celular. Entra con el resorte del sistema; con movimiento reducido solo aparece.
+ */
+.snackbar { position: fixed; left: 50%; bottom: calc(1.25rem + env(safe-area-inset-bottom)); z-index: 40; display: flex; align-items: center; gap: 0.55rem;
+  width: max-content; max-width: min(28rem, calc(100vw - 2rem)); padding: 0.55rem 0.45rem 0.55rem 0.95rem; border-radius: 14px;
+  background: var(--inverse-surface); color: var(--on-inverse); font-size: var(--type-sm); font-weight: 600;
+  box-shadow: 0 10px 30px color-mix(in srgb, var(--shadow) 22%, transparent); transform: translateX(-50%);
+  animation: snackbar-in var(--spring-duration) var(--spring) both; }
+.snackbar .icon { flex: none; width: 1.05rem; height: 1.05rem; }
+.snackbar-text { min-width: 0; overflow-wrap: anywhere; }
+.snackbar-close { display: grid; place-items: center; flex: none; width: 2rem; height: 2rem; margin: 0; padding: 0; border: 0; border-radius: 50%;
+  background: transparent; color: inherit; opacity: 0.85; }
+.snackbar-close:focus-visible { outline-color: var(--on-inverse); outline-offset: 0; }
+@keyframes snackbar-in { from { opacity: 0; transform: translate(-50%, 0.75rem) scale(0.98); } to { opacity: 1; transform: translateX(-50%); } }
+@media (hover: hover) { .snackbar-close:hover { opacity: 1; background: color-mix(in srgb, var(--on-inverse) 14%, transparent); } }
+@media (prefers-reduced-motion: reduce) { .snackbar { animation: fade-in 160ms ease both; } }
+@media (max-width: 600px) { .snackbar-close { width: 2.75rem; height: 2.75rem; } }
 @media (prefers-contrast: more) { .email-menu { border-color: var(--border-strong); } }
 }
 

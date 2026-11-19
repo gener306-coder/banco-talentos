@@ -3,8 +3,9 @@ import { useEffect, useId, useRef, useState } from 'react'
 import { Link, useLocation } from 'react-router'
 import { roleLabels } from '../auth/api'
 import { useAuth } from '../auth/useAuth'
-import { initialsOf, organizationOf } from '../auth/user'
+import { organizationOf } from '../auth/user'
 import { UserIcon } from './icons'
+import { UserAvatar } from './UserAvatar'
 import { useThemePreference } from './theme'
 import type { ThemePreference } from './theme'
 
@@ -59,7 +60,7 @@ export function AccountMenu() {
     <div className="account-menu" ref={root}>
       <button ref={trigger} type="button" className="account-trigger" aria-label={`Cuenta de ${user.name}`}
         aria-expanded={open} aria-controls={open ? panelId : undefined} onClick={() => setOpen((value) => !value)}>
-        <span aria-hidden="true">{initialsOf(user.name)}</span>
+        <UserAvatar name={user.name} size="sm" />
       </button>
       {open && (
         <div className="account-panel" id={panelId} role="region" aria-label="Cuenta">

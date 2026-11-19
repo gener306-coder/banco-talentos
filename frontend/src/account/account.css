@@ -1,18 +1,75 @@
-/* Mi cuenta (HU-S14-01): ancho de lectura, nombre editable en su sitio y hoja para la contraseña. Solo tokens semánticos. */
+/* Mi cuenta (HU-S14-01, rediseño T-S14-03): perfil de lectura primero, tarjetas con filete de 1 px. Solo tokens semánticos. */
 @layer components {
 .account-page { max-width: var(--content-readable); margin-inline: auto; }
-.account-name-form { margin: 0 0 1rem; }
-.account-name-form label { display: block; margin-bottom: 0.3rem; }
-.account-inline { display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: stretch; }
-.account-inline input { flex: 1 1 14rem; margin: 0; }
-.account-inline button { flex: none; margin: 0; }
-.account-name-form .institution-success { margin: 0.6rem 0 0; }
-.account-hint { display: block; margin-top: 0.2rem; color: var(--text); font-size: var(--type-xs); }
+.account-stack { display: grid; gap: 1rem; }
+.account-card { padding: 1.25rem 1.5rem; border: 1px solid var(--border); border-radius: 16px; background: var(--surface); min-width: 0; }
+.account-card-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 0.75rem; margin-bottom: 1rem; }
+/* El título y su estado se acomodan entre sí; «Editar» se queda arriba a la derecha en cualquier ancho. */
+.account-card-title { display: flex; flex-wrap: wrap; align-items: center; gap: 0.35rem 0.75rem; flex: 1; min-width: 0; }
+.account-card-head h3 { margin: 0; font-size: var(--type-lg); font-weight: 600; color: var(--text-strong); line-height: 1.3; }
+.account-card-edit { display: inline-flex; align-items: center; gap: 0.35rem; flex: none; margin: 0; padding: 0.4rem 0.85rem; font-size: var(--type-sm); }
+.account-card-edit .icon { width: 0.95rem; height: 0.95rem; }
+/* Avance del perfil en la cabecera: barra y conteo, o la insignia verde de perfil completo. */
+.profile-score { display: inline-flex; align-items: center; gap: 0.5rem; color: var(--text-muted); font-size: var(--type-xs); font-weight: 600; white-space: nowrap; }
+.profile-score .profile-meter { width: 4rem; }
+.profile-score.complete { padding: 0.15rem 0.6rem; border-radius: 999px; background: var(--success-surface); color: var(--success-text); }
+
+/* Tarjeta de identidad: avatar, nombre con su lápiz, rol y correo. */
+.account-identity { display: flex; align-items: center; gap: 1.25rem; }
+.account-identity-body { flex: 1; min-width: 0; }
+.account-identity-body p { margin: 0; overflow-wrap: anywhere; }
+.account-name-row { display: flex; align-items: center; gap: 0.6rem; min-width: 0; }
+.account-name-title { margin: 0; font-size: var(--type-2xl); line-height: 1.15; overflow-wrap: anywhere; }
+.account-name-title.is-empty { color: var(--text-muted); font-weight: 400; }
+.account-edit { display: grid; place-items: center; flex: none; width: 2.25rem; height: 2.25rem; margin: 0; padding: 0; border: 0; border-radius: 50%;
+  background: transparent; color: var(--text); }
+.account-edit:focus-visible { background: var(--fill); }
+.account-identity-body .account-role { margin-top: 0.35rem; font-size: var(--type-base); font-weight: 500; color: var(--text-strong); }
+.account-email { margin-top: 0.1rem; color: var(--text-muted); font-size: var(--type-sm); }
+.account-name-edit { display: grid; gap: 0.5rem; margin: 0 0 0.3rem; }
+.account-name-edit input { width: 100%; margin: 0; font-size: var(--type-lg); }
+.account-name-actions { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+.account-name-actions button { margin: 0; }
+
+/* Acceso y seguridad: filas al estilo de Ajustes, separadas por un filete. */
+.account-rows { margin: 0; border-top: 1px solid var(--border); }
+.account-row { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 0.6rem 1rem; padding: 0.9rem 0; border-bottom: 1px solid var(--border); }
+.account-row:last-child { border-bottom: 0; padding-bottom: 0; }
+.account-row-main { flex: 1 1 16rem; min-width: 0; }
+.account-row-main p { margin: 0; overflow-wrap: anywhere; }
+.account-row-label { font-size: var(--type-sm); color: var(--text-muted); }
+.account-row-main .account-row-value { margin-top: 0.1rem; color: var(--text-strong); font-weight: 500; }
+.account-row-note { color: var(--text-muted); font-size: var(--type-xs); }
+.account-row-main .account-row-note { margin-top: 0.2rem; }
+.account-dots { letter-spacing: 0.18em; }
+.account-row-action { flex: none; margin: 0; }
+
+/* Ficha de lectura del perfil de la organización: grupos con subtítulo y retícula de dos columnas. */
+.profile-group { padding-top: 0.9rem; border-top: 1px solid var(--border); }
+.profile-group + .profile-group { margin-top: 1rem; }
+.profile-group h4 { margin: 0 0 0.7rem; font-size: var(--type-xs); font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase; color: var(--text-muted); }
+.profile-facts { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.9rem 1.5rem; margin: 0; }
+.profile-fact { min-width: 0; }
+.profile-fact dt { font-size: var(--type-sm); color: var(--text-muted); }
+.profile-fact dd { margin: 0.1rem 0 0; color: var(--text-strong); font-weight: 500; overflow-wrap: anywhere; }
+.profile-fact-empty { color: var(--text-muted); font-size: var(--type-sm); font-weight: 400; }
+.profile-group-empty { margin: 0; color: var(--text-muted); font-size: var(--type-sm); }
+/* Perfil sin ningún dato: estado vacío con la siguiente acción. */
+.profile-empty { display: flex; flex-wrap: wrap; align-items: center; gap: 0.9rem 1rem; padding: 1.1rem; border: 1px dashed var(--border-strong); border-radius: 14px; }
+.profile-empty > div { flex: 1 1 16rem; min-width: 0; }
+.profile-empty p { margin: 0; }
+.profile-empty-icon { display: grid; place-items: center; flex: none; width: 2.75rem; height: 2.75rem; border-radius: 50%; background: var(--tint); color: var(--accent); }
+.profile-empty-icon .icon { width: 1.3rem; height: 1.3rem; }
+.profile-empty-title { font-weight: 600; color: var(--text-strong); }
+.profile-empty-text { margin-top: 0.2rem; color: var(--text-muted); font-size: var(--type-sm); }
+.profile-empty button { flex: none; margin: 0; }
+.profile-official { margin: 0 0 1rem; padding: 0.9rem 1rem; border-radius: 12px; background: var(--surface-muted); }
+.profile-official .account-row-note { margin: 0.6rem 0 0; }
 .account-password-form { display: grid; gap: 0.2rem; max-width: none; }
 .account-password-form label { margin-top: 0.6rem; }
 .account-password-form button[type='submit'] { justify-self: start; margin-top: 1rem; }
 /* HU-S14-02: perfil de la organización; dos columnas en escritorio y una en el celular. */
-.account-profile-form { display: grid; gap: 0.9rem; max-width: none; margin-top: 1rem; }
+.account-profile-form { display: grid; gap: 0.9rem; max-width: none; margin-top: 0.25rem; }
 .account-field label { display: block; margin-bottom: 0.3rem; }
 .account-field input, .account-field select { width: 100%; margin: 0; }
 .account-field .field-error { margin: 0.3rem 0 0; }
@@ -25,6 +82,8 @@
 /* T-S14-01: avance del perfil en Mi cuenta, con los datos pendientes como fichas. */
 .profile-progress { margin: 0 0 1rem; padding: 0.85rem 1rem; border: 1px solid var(--border); border-radius: 12px; background: var(--surface-muted); font-size: var(--type-sm); }
 .profile-progress p { margin: 0; }
+.profile-progress.compact { padding: 0.75rem 0.9rem; }
+.profile-progress.compact .profile-progress-hint { margin-top: 0; }
 .profile-progress.complete { color: var(--success-text); background: var(--success-surface); border-color: transparent; }
 .profile-progress-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 0.4rem 1rem; }
 .profile-progress-head .profile-meter { width: 7rem; }
@@ -42,9 +101,21 @@
 .profile-self .field-help { grid-column: 2; margin: 0; }
 .profile-actions { display: flex; flex-wrap: wrap; gap: 0.6rem; align-items: center; }
 .profile-actions button { margin: 0; }
+@media (hover: hover) {
+  .account-edit:hover { background: var(--fill); color: var(--accent); }
+}
 @media (max-width: 600px) {
+  .account-card { padding: 1.1rem 1rem; }
+  .account-identity { flex-direction: column; align-items: flex-start; gap: 0.9rem; }
+  .account-identity-body { width: 100%; }
+  .account-name-title { font-size: var(--type-xl); }
+  .account-edit { width: 2.75rem; height: 2.75rem; }
+  .account-row-action, .account-name-actions button { width: 100%; min-height: 2.75rem; }
+  .profile-facts { grid-template-columns: minmax(0, 1fr); }
+  .profile-empty button { width: 100%; min-height: 2.75rem; }
+  .account-card-edit { min-height: 2.75rem; }
   .account-fields { grid-template-columns: minmax(0, 1fr); }
-  .account-inline button, .account-password-form button[type='submit'] { width: 100%; min-height: 2.75rem; }
+  .account-password-form button[type='submit'] { width: 100%; min-height: 2.75rem; }
   .profile-actions { flex-direction: column; align-items: stretch; }
   .profile-actions button { width: 100%; min-height: 2.75rem; }
 }

@@ -109,6 +109,7 @@ Tokens añadidos con el modo oscuro. En el tema claro son alias de los anteriore
 | Token | Valor claro | Función |
 |---|---|---|
 | `--text-strong` | `--color-brand-neutral` | Texto de máximo contraste del encabezado («Educación Dual») |
+| `--text-muted` | `#6b6a70` | Texto secundario: notas, etiquetas de datos y valores sin capturar (T-S14-04). 5.3:1 sobre `--surface` |
 | `--accent-fill` / `--accent-fill-hover` | `--color-brand-primary` / `-hover` | Relleno de las acciones primarias (botones, «Nueva …», menú de cuenta abierto) |
 | `--logo-plate` / `--logo-plate-padding` | `transparent` / `0` | Pastilla de los logotipos |
 
@@ -149,6 +150,7 @@ Todo token nuevo debe definirse también en el bloque oscuro y cumplir el contra
 | `--surface` / `--surface-muted` | `#211f24` / `#17161a` | — |
 | `--text` | `#e6e4e8` | 12.9:1 sobre surface, 14.3:1 sobre muted |
 | `--text-strong` | `#fff` | 16.9:1 sobre el encabezado |
+| `--text-muted` | `#a9a6ae` | Texto secundario; 7:1 sobre `--surface` oscura |
 | `--border` / `--border-strong` | `#3a3840` / `#8a8790` | borde de campos 4.6:1 (≥ 3:1) |
 | `--accent` / `--accent-hover` | `#e07a8a` / `#ea97a3` | 5.7:1 / 7.4:1 sobre surface |
 | `--accent-fill` / `--accent-fill-hover` | vino `#991B30` / `#7A1626` | blanco encima 8.2:1 / 10.7:1 |

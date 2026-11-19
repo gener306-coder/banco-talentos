@@ -8,7 +8,8 @@ export const SKELETON_DELAY_MS = 300
  * Carga: anuncia el texto de inmediato a lectores de pantalla y muestra el esqueleto
  * solo si la espera supera SKELETON_DELAY_MS.
  */
-export function LoadingState({ label, variant }: { label: string; variant: 'table' | 'details' }) {
+/** `facts`: ficha de dos columnas con su subtítulo, la forma de los perfiles de Mi cuenta (T-S14-04). */
+export function LoadingState({ label, variant }: { label: string; variant: 'table' | 'details' | 'facts' }) {
   const [visible, setVisible] = useState(false)
   useEffect(() => {
     const timer = setTimeout(() => setVisible(true), SKELETON_DELAY_MS)
@@ -26,6 +27,15 @@ export function LoadingState({ label, variant }: { label: string; variant: 'tabl
             </div>
           ))}
         </div>
+        : variant === 'facts'
+          ? <div className="skeleton-facts" aria-hidden="true" data-testid="skeleton">
+            {Array.from({ length: 2 }, (_, group) => (
+              <div className="skeleton-facts-group" key={group}>
+                <span className="bone heading" />
+                {Array.from({ length: 4 }, (_, fact) => <span className="skeleton-fact" key={fact}><span className="bone label" /><span className="bone" /></span>)}
+              </div>
+            ))}
+          </div>
         : <div className="skeleton-details" aria-hidden="true" data-testid="skeleton">
           {Array.from({ length: 8 }, (_, bone) => <span className="bone" key={bone} />)}
         </div>)}
