@@ -166,6 +166,10 @@ input:focus-visible, select:focus-visible, textarea:focus-visible { border-color
 .institution-success, .manual-setup-link, .state-message, .field-error, .notice, .copy-status {
   animation: materialize var(--spring-duration) var(--spring) both; }
 @keyframes materialize { from { opacity: 0; transform: scale(0.97); filter: blur(6px); } to { opacity: 1; transform: none; filter: none; } }
+/* T-S13-18: el contenido de un detalle entra suave al terminar de cargar, en lugar de reemplazar el esqueleto de golpe. */
+.content-enter { animation: content-enter 280ms var(--spring) both; }
+@keyframes content-enter { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) { .content-enter { animation: none; } }
 
 /* Diálogo de confirmación con scrim. */
 .modal-layer { position: fixed; inset: 0; z-index: 50; display: grid; place-items: center; padding: 1rem; }
@@ -247,6 +251,13 @@ body.modal-open { overflow: hidden; }
 /* T-S13-15: solo desplazamiento horizontal. Con overflow-x: auto, el eje vertical también pasaba a auto y el ascenso de
    6 px de las filas al entrar (row-enter) desbordaba el contenedor un instante: aparecía una barra lateral y se iba. */
 .data-table-wrapper, .institution-table-wrapper { overflow-y: hidden; }
+/* T-S13-16: la flecha del detalle al final de la fila, en lugar de una columna «Acciones» con solo «Ver detalle». Es el
+   control accesible de la fila (con su nombre «Ver detalle de …»); la fila completa abre lo mismo con el puntero. */
+.row-open { display: inline-grid; place-items: center; width: 2.25rem; height: 2.25rem; border-radius: 50%; color: var(--accent); text-decoration: none; }
+.row-open .icon { width: 1.05rem; height: 1.05rem; transition: transform 150ms ease-out; }
+.row-open:focus-visible { outline: 3px solid var(--focus-ring); outline-offset: 2px; }
+@media (hover: hover) { .row-open:hover { background: var(--tint-hover); } }
+@media (pointer: coarse), (max-width: 600px) { .row-open { width: 2.75rem; height: 2.75rem; } }
 /* T-S13-12: al volver a un listado, la fila que se abrió parpadea dos veces con el tinte de la marca para ubicarla. */
 @keyframes row-return { 0%, 50%, 100% { background-color: transparent; } 25%, 75% { background-color: var(--tint-hover); } }
 :is(.institution-table, .data-table) tbody tr.row-return > * { animation: row-return 1.6s ease-in-out; }
@@ -585,10 +596,21 @@ textarea[aria-invalid='true'] { border-color: var(--danger-border); }
 .table-search button { flex: none; margin: 0; }
 .list-toolbar { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 0.75rem 1rem; margin: 0 0 1rem; }
 .list-toolbar > .table-search, .list-toolbar > .csv-download { margin: 0; }
+/*
+ * T-S13-19: en el celular, el campo y «Buscar» comparten la primera fila y los filtros van de dos en dos debajo, para no
+ * empujar la tabla cientos de píxeles (antes cada control ocupaba su propia fila). Sin campo de búsqueda, el filtro
+ * ocupa todo el ancho.
+ */
 @media (max-width: 40rem) {
-  .table-search > .table-search-field, .table-search > .table-search-filter { flex-basis: 100%; max-width: none; }
-  /* T-S12-08: «Buscar» ocupa todo el ancho, igual que la acción principal de .page-toolbar. */
-  .table-search > button { flex-basis: 100%; }
+  .table-search { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)) auto; gap: 0.5rem; }
+  .table-search > .table-search-field { grid-column: 1 / 3; grid-row: 1; max-width: none; }
+  /* «Buscar» queda como ícono de 44 px junto al campo; su texto sigue siendo su nombre accesible. */
+  .table-search > button { position: relative; grid-column: 3; grid-row: 1; width: 2.75rem; min-height: 2.75rem; padding: 0; }
+  .table-search > button .icon { width: 1.1rem; height: 1.1rem; }
+  .table-search-button-text { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+  .table-search > .table-search-filter { max-width: none; }
+  .table-search > .table-search-filter + .table-search-filter { grid-column: 2 / -1; }
+  .table-search:not(:has(> .table-search-field)) > .table-search-filter { grid-column: 1 / -1; }
 }
 /*
  * Tabla en tarjeta (T-S8-14): la tabla y su paginación comparten una tarjeta con el radio de las del inicio. Encabezado

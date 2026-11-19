@@ -1,3 +1,4 @@
+import { PendingLabel } from '../ui/forms'
 import { useRef, useState } from 'react'
 import { InstitutionRequestError } from '../institutions/InstitutionLayout'
 import { useApiMutation } from '../lib/useApiRequest'
@@ -88,7 +89,7 @@ export function LinkageDecisionSection({ data, onDecided, refresh }: {
                 {messageError && <p className="field-error" id="linkage-response-error">{messageError}</p>}
                 <div className="actions">
                   <button type="button" onClick={(event) => request('ACEPTADA', event.currentTarget)}>
-                    {mutation.pending ? 'Guardando respuesta…' : decisions.ACEPTADA.label}
+                    <PendingLabel pending={mutation.pending} label={decisions.ACEPTADA.label} pendingLabel="Guardando respuesta…" />
                   </button>
                   <button type="button" className="secondary" onClick={(event) => request('RECHAZADA', event.currentTarget)}>
                     {decisions.RECHAZADA.label}

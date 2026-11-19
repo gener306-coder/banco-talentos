@@ -9,12 +9,12 @@ import { NavBackLink } from '../ui/NavBackLink'
 import { Callout } from '../ui/Callout'
 import { ConfirmDialog } from '../ui/ConfirmDialog'
 import { EmailMenu } from '../ui/EmailMenu'
-import { ChevronLeftIcon, ChevronRightIcon, MessageIcon } from '../ui/icons'
+import { ChevronRightIcon, MessageIcon } from '../ui/icons'
 import { LoadingState } from '../ui/StateMessage'
 import { cancelLinkageRequest, getLinkageRequest, linkageDetailMessages } from './api'
 import type { LinkageInboxItem } from './api'
 import { LinkageStatus } from './LinkageStatus'
-import { UnreadBadge, UnreadTag } from './UnreadBadge'
+import { UnreadTag } from './UnreadBadge'
 import '../institutions/institutions.css'
 
 const dateFormat = new Intl.DateTimeFormat('es-MX', { dateStyle: 'long' })
@@ -135,23 +135,17 @@ function LinkageRequestDetail({ id }: { id: string }) {
   const { data, loading, failure, refresh, setData } = useApiRequest(load, linkageDetailMessages)
   // T-S12-05: regresa a la bandeja con el filtro y la página de origen.
   const back = useBackLink({ to: '/linkage-requests', label: 'Volver a solicitudes' })
-  // T-S13-07: abierta desde otro flujo (la conversación, la bandeja), el regreso toma el lugar de «Inicio».
-  const contextual = useContextualBack()
 
   return (
     <section className="card institutions" aria-labelledby="linkage-request-title">
       <nav className="institution-navigation" aria-label="Navegación de solicitudes">
-        <NavBackLink back={contextual} />
-        {/* T-S13-14: si el regreso ya lleva a la bandeja, no se repite su enlace. */}
-        {contextual?.to.split('?')[0] !== '/linkage-requests' && (
-          <Link className="plain" to="/linkage-requests">Solicitudes de vinculación<UnreadBadge side="COMPANY" /></Link>
-        )}
+        {/* T-S13-17: un solo regreso, arriba: a la bandeja de origen, a la conversación o, sin origen, a la bandeja. */}
+        <NavBackLink back={back} />
       </nav>
       <h2 id="linkage-request-title">Detalle de solicitud</h2>
       {loading ? <LoadingState label="Cargando solicitud…" variant="details" />
         : failure ? <InstitutionRequestError failure={failure} retry={refresh} page notFoundTitle="No encontramos esta solicitud" />
-        : data && <Detail data={data} onCancelled={setData} />}
-      {!contextual && <p className="institution-back"><Link className="plain" to={back.to} state={back.state}><ChevronLeftIcon />{back.label}</Link></p>}
+        : data && <div className="content-enter"><Detail data={data} onCancelled={setData} /></div>}
     </section>
   )
 }

@@ -1,10 +1,9 @@
 import { useCallback } from 'react'
-import { Link, useNavigate, useParams } from 'react-router'
+import { useNavigate, useParams } from 'react-router'
 import { getInstitution, updateInstitution } from './api'
 import { InstitutionForm } from './InstitutionForm'
 import { InstitutionLayout, InstitutionRequestError } from './InstitutionLayout'
 import { useInstitutionMutation, useInstitutionRequest } from './useInstitutionRequest'
-import { ChevronLeftIcon } from '../ui/icons'
 import { LoadingState } from '../ui/StateMessage'
 
 function InstitutionEdit({ id }: { id: string }) {
@@ -14,7 +13,7 @@ function InstitutionEdit({ id }: { id: string }) {
   const mutation = useInstitutionMutation()
 
   return (
-    <InstitutionLayout title="Editar institución">
+    <InstitutionLayout title="Editar institución" back={{ to: `/institutions/${id}`, label: 'Volver a la institución' }}>
       {loading ? <LoadingState label="Cargando institución…" variant="details" />
         : failure ? <InstitutionRequestError failure={failure} retry={refresh} page />
         : data && (
@@ -24,7 +23,6 @@ function InstitutionEdit({ id }: { id: string }) {
               void navigate(`/institutions/${institution.id}`, { replace: true, state: { notice: 'Institución actualizada correctamente.' } })
             })} />
         )}
-      <p className="institution-back"><Link className="plain" to="/institutions"><ChevronLeftIcon />Volver a instituciones</Link></p>
     </InstitutionLayout>
   )
 }

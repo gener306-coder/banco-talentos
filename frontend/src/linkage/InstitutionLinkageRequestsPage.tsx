@@ -20,23 +20,17 @@ import { NotificationPrompt } from './NotificationPrompt'
 import { isFiltered, lastMessageLabel, useInboxFilters } from './inboxFilters'
 import { LinkageInboxFilters } from './LinkageInboxFilters'
 import { useLiveRows } from './useLiveInbox'
-import { ConversationLink, UnreadBadge } from './UnreadBadge'
+import { ConversationLink } from './UnreadBadge'
 import '../institutions/institutions.css'
 
 const dateFormat = new Intl.DateTimeFormat('es-MX', { dateStyle: 'medium' })
 
 /** Marco de la bandeja institucional (HU-S6-01) y su detalle. */
 export function InstitutionLinkageLayout({ title, back, children }: { title: string; back?: BackTarget; children: ReactNode }) {
-  const { pathname } = useLocation()
   return (
     <section className="card institutions" aria-labelledby="institution-linkage-title">
       <nav className="institution-navigation" aria-label="Navegación de solicitudes">
         <NavBackLink back={back} />
-        {/* T-S13-14: si el regreso ya lleva a la bandeja, no se repite su enlace. */}
-        {back?.to.split('?')[0] !== '/institution/linkage-requests' && (
-          <Link className="plain" to="/institution/linkage-requests" aria-current={pathname === '/institution/linkage-requests' ? 'page' : undefined}>Solicitudes de vinculación<UnreadBadge side="INSTITUTION" /></Link>
-        )}
-        <Link className="plain" to="/students">Alumnos</Link>
       </nav>
       <h2 id="institution-linkage-title">{title}</h2>
       {children}

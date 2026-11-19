@@ -1,3 +1,4 @@
+import { PendingLabel } from '../ui/forms'
 import { useCallback, useRef, useState } from 'react'
 import { Link, useLocation, useParams } from 'react-router'
 import { InstitutionAccountForm } from './InstitutionAccountForm'
@@ -6,8 +7,9 @@ import { InstitutionAccountSetupLinkForm } from './InstitutionAccountSetupLinkFo
 import { getInstitution, setInstitutionStatus } from './api'
 import { InstitutionLayout, InstitutionRequestError, InstitutionStatus } from './InstitutionLayout'
 import { useInstitutionMutation, useInstitutionRequest } from './useInstitutionRequest'
+import { useBackLink } from '../ui/backLink'
 import { ConfirmDialog } from '../ui/ConfirmDialog'
-import { ChevronLeftIcon, PlusIcon } from '../ui/icons'
+import { PlusIcon } from '../ui/icons'
 import { Sheet } from '../ui/Sheet'
 import { LoadingState } from '../ui/StateMessage'
 
@@ -16,6 +18,8 @@ function InstitutionDetail({ id }: { id: string }) {
   const { data, loading, failure, refresh, setData } = useInstitutionRequest(load)
   const mutation = useInstitutionMutation()
   const location = useLocation()
+  // T-S13-17: un solo regreso, arriba: al listado de origen (con su vista) o, sin él, al listado completo.
+  const back = useBackLink({ to: '/institutions', label: 'Volver a instituciones' })
   const [notice, setNotice] = useState<string | null>(() => {
     const state: unknown = location.state
     return state && typeof state === 'object' && 'notice' in state && typeof state.notice === 'string' ? state.notice : null
@@ -45,11 +49,11 @@ function InstitutionDetail({ id }: { id: string }) {
   }
 
   return (
-    <InstitutionLayout title="Detalle de institución">
+    <InstitutionLayout title="Detalle de institución" back={back}>
       {loading ? <LoadingState label="Cargando institución…" variant="details" />
         : failure ? <InstitutionRequestError failure={failure} retry={refresh} page />
         : data && (
-          <>
+          <div className="content-enter">
             {notice && <p className="institution-success" role="status">{notice}</p>}
             {mutation.failure && <InstitutionRequestError failure={mutation.failure} />}
             <dl className="institution-details">
@@ -64,7 +68,7 @@ function InstitutionDetail({ id }: { id: string }) {
             <div className="actions" aria-busy={mutation.pending}>
               <Link className="institution-button secondary" to={`/institutions/${data.id}/edit`}>Editar institución</Link>
               <button type="button" ref={statusButton} disabled={mutation.pending} onClick={requestStatusChange}>
-                {mutation.pending ? 'Guardando estado…' : data.is_active ? 'Inactivar institución' : 'Activar institución'}
+                <PendingLabel pending={mutation.pending} label={data.is_active ? 'Inactivar institución' : 'Activar institución'} pendingLabel="Guardando estado…" />
               </button>
             </div>
             {data.is_active
@@ -89,13 +93,12 @@ function InstitutionDetail({ id }: { id: string }) {
                 </Sheet>
               </>
               : <p className="notice">Activa la institución para crear una cuenta institucional.</p>}
-          </>
+          </div>
         )}
       <ConfirmDialog open={confirming} origin={statusButton}
         title="¿Inactivar la institución?"
         description="Sus cuentas no podrán iniciar sesión y las sesiones abiertas se cerrarán. Podrás reactivarla después."
         confirmLabel="Inactivar" onConfirm={() => { void changeStatus() }} onCancel={() => setConfirming(false)} />
-      <p className="institution-back"><Link className="plain" to="/institutions"><ChevronLeftIcon />Volver a instituciones</Link></p>
     </InstitutionLayout>
   )
 }

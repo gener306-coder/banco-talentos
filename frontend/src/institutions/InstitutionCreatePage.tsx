@@ -16,7 +16,7 @@ export function InstitutionCreatePage() {
 
   if (shared) {
     return (
-      <InstitutionLayout title="Nueva institución">
+      <InstitutionLayout title="Nueva institución" back={{ to: '/institutions', label: 'Volver a instituciones' }}>
         <p className="institution-success" role="status">
           Institución registrada. Copia el enlace y compártelo con {shared.institution.contact_name} para que establezca su contraseña.
         </p>
@@ -29,7 +29,7 @@ export function InstitutionCreatePage() {
   }
 
   return (
-    <InstitutionLayout title="Nueva institución">
+    <InstitutionLayout title="Nueva institución" back={{ to: '/institutions', label: 'Volver a instituciones' }}>
       <p>La institución se registrará en estado ACTIVA, junto con la cuenta de su persona responsable.</p>
       <InstitutionForm pending={pending} failure={failure} submitLabel="Crear institución" cancelTo="/institutions"
         onSubmit={(input) => submit(() => createInstitution(input), ({ institution, setupDelivery, setupLink }) => {

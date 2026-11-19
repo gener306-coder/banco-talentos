@@ -48,7 +48,7 @@ export function CompaniesPage() {
           <input id="company-search" type="search" maxLength={200} value={draft} placeholder="Razón social, nombre comercial o RFC"
             onChange={(event) => setDraft(event.target.value)} />
         </div>
-        <button type="submit" className="secondary"><SearchIcon />Buscar</button>
+        <button type="submit" className="secondary"><SearchIcon /><span className="table-search-button-text">Buscar</span></button>
       </form>
       {loading && !data ? <LoadingState label="Cargando empresas…" variant="table" />
         : failure ? <InstitutionRequestError failure={failure} retry={refresh} page />
@@ -67,7 +67,7 @@ export function CompaniesPage() {
               <div className="institution-table-wrapper" ref={tableMemory} aria-busy={refreshing} role="region" aria-label="Listado de empresas" tabIndex={0}>
                 <table className="institution-table has-actions">
                   <caption className="visually-hidden">Empresas registradas</caption>
-                  <thead><tr><th scope="col">Razón social</th><th scope="col">RFC</th><th scope="col">Municipio</th><th scope="col">Estado</th><th scope="col">Acciones</th></tr></thead>
+                  <thead><tr><th scope="col">Razón social</th><th scope="col">RFC</th><th scope="col">Municipio</th><th scope="col">Estado</th><th scope="col"><span className="visually-hidden">Detalle</span></th></tr></thead>
                   <tbody key={location.search} className="rows-enter">
                     {data.companies.map((company, index) => {
                       const href = `/companies/${company.id}`
@@ -78,7 +78,7 @@ export function CompaniesPage() {
                           <td>{company.rfc}</td>
                           <td>{company.municipality ?? company.municipality_code}</td>
                           <td><InstitutionStatus active={company.is_active} /></td>
-                          <td><Link className="pill-link row-link" to={href} state={back} aria-label={`Ver detalle de ${company.legal_name}`}>Ver detalle<ChevronRightIcon /></Link></td>
+                          <td><Link className="row-link row-open" to={href} state={back} aria-label={`Ver detalle de ${company.legal_name}`} title="Ver detalle"><ChevronRightIcon /></Link></td>
                         </tr>
                       )
                     })}

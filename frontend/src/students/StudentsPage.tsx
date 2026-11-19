@@ -102,7 +102,7 @@ export function StudentsPage() {
             <option value="missing">Por completar</option>
           </select>
         </div>
-        <button type="submit" className="secondary"><SearchIcon />Buscar</button>
+        <button type="submit" className="secondary"><SearchIcon /><span className="table-search-button-text">Buscar</span></button>
       </form>
       {loading && !data ? <LoadingState label="Cargando alumnos…" variant="table" />
         : failure ? <InstitutionRequestError failure={failure} retry={refresh} page />
@@ -123,7 +123,7 @@ export function StudentsPage() {
             <div className="data-table-wrapper" ref={tableMemory} aria-busy={refreshing} role="region" aria-label="Padrón de alumnos" tabIndex={0}>
               <table className="data-table has-actions">
                 <caption className="visually-hidden">Alumnos registrados</caption>
-                <thead><tr><th scope="col">Matrícula</th><th scope="col">Apellidos</th><th scope="col">Nombre(s)</th><th scope="col">Estado</th><th scope="col">Acciones</th></tr></thead>
+                <thead><tr><th scope="col">Matrícula</th><th scope="col">Apellidos</th><th scope="col">Nombre(s)</th><th scope="col">Estado</th><th scope="col"><span className="visually-hidden">Detalle</span></th></tr></thead>
                 <tbody key={location.search} className="rows-enter">
                   {data.students.map((student, index) => {
                     const href = `/students/${student.id}`
@@ -136,9 +136,7 @@ export function StudentsPage() {
                         <td>{student.given_names}</td>
                         <td><StudentStatus active={student.is_active} /></td>
                         <td>
-                          <Link className="pill-link row-link" to={href} state={back} aria-label={`Ver detalle de ${surnames(student)}, ${student.given_names}`}>
-                            Ver detalle<ChevronRightIcon />
-                          </Link>
+                          <Link className="row-link row-open" to={href} state={back} aria-label={`Ver detalle de ${surnames(student)}, ${student.given_names}`} title="Ver detalle"><ChevronRightIcon /></Link>
                         </td>
                       </tr>
                     )

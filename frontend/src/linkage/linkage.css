@@ -28,16 +28,12 @@
   text-align: left; text-decoration: none; }
 .cell-pill > span { display: -webkit-box; overflow: hidden; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2; overflow-wrap: anywhere; }
 .cell-pill .icon { flex: none; width: 0.85rem; height: 0.85rem; transition: transform 150ms ease-out; }
-.cell-pill:focus-visible, .row-open:focus-visible { outline: 3px solid var(--focus-ring); outline-offset: 2px; }
+.cell-pill:focus-visible { outline: 3px solid var(--focus-ring); outline-offset: 2px; }
 @media (hover: hover) {
   .cell-pill:hover { background: var(--tint-hover); }
   .cell-pill:hover .icon { transform: translateX(2px); }
-  .row-open:hover { background: var(--tint-hover); }
 }
-.row-open { display: inline-grid; place-items: center; width: 2.25rem; height: 2.25rem; border-radius: 50%; color: var(--accent); text-decoration: none; }
-.row-open .icon { width: 1.05rem; height: 1.05rem; }
-/* T-S13-15: en pantallas táctiles, la flecha del detalle también mide 44 px. */
-@media (pointer: coarse), (max-width: 600px) { .row-open { width: 2.75rem; height: 2.75rem; } }
+/* .row-open (la flecha del detalle) vive en ui/ui.css desde T-S13-16: la comparten todas las tablas. */
 /* Cancelar: acción de texto en el tono de peligro, sin subrayado; al pasar el puntero toma su superficie, como una pastilla. */
 .institution-table .cell-cancel { display: inline-flex; align-items: center; gap: 0.3rem; min-height: 0; margin: 0.3rem 0 0 -0.5rem;
   padding: 0.2rem 0.5rem; border: 0; border-radius: 999px; background: none; color: var(--danger-text); font-size: var(--type-xs);

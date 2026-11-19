@@ -353,7 +353,8 @@ describe('bandeja de la institución en la URL (T-S12-05)', () => {
     // T-S13-14: la navegación no repite «Solicitudes de vinculación» cuando el regreso ya lleva a la bandeja.
     const nav = screen.getByRole('navigation', { name: 'Navegación de solicitudes' })
     expect(within(nav).queryByRole('link', { name: /^Solicitudes de vinculación/ })).not.toBeInTheDocument()
-    expect(within(nav).getByRole('link', { name: 'Alumnos' })).toBeInTheDocument()
+    // T-S13-17: sin enlaces a otras secciones; el único regreso es el de la bandeja.
+    expect(within(nav).getAllByRole('link')).toHaveLength(1)
   })
 })
 

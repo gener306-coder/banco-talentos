@@ -110,7 +110,8 @@ describe('bandeja de solicitudes HU-S5-05', () => {
     renderApp()
     expect(await screen.findByText('Aún no has enviado solicitudes.')).toBeInTheDocument()
     // El enlace del estado vacío, además del de la navegación.
-    expect(screen.getAllByRole('link', { name: 'Buscar talento' }).map((link) => link.getAttribute('href'))).toEqual(['/talent', '/talent'])
+    // T-S13-17: «Buscar talento» ya no está en la navegación; queda como la acción del vacío.
+    expect(screen.getAllByRole('link', { name: 'Buscar talento' }).map((link) => link.getAttribute('href'))).toEqual(['/talent'])
   })
 
   it('cancela una pendiente tras confirmarla; cancelar el diálogo no cambia nada (CA-03, CA-05)', async () => {
