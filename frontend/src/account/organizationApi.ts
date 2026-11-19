@@ -1,6 +1,7 @@
 import { ApiError, csrfToken, request } from '../lib/http'
 import { isSectorCode } from '../companies/catalogs'
 import type { SectorCode } from '../companies/catalogs'
+import { isCompanyGap } from '../auth/api'
 import type { CompanyGap } from '../auth/api'
 
 /** Contacto del programa dual: editable por la empresa y por la institución (HU-S14-02). */
@@ -17,12 +18,14 @@ export interface CompanyProfile extends OrganizationContact {
   name: string | null
   legal_name: string | null
   rfc: string | null
-  /** D2: null mientras no se establezca; después solo la Secretaría lo cambia. */
+  /** HU-S14-03: la empresa lo captura y corrige cuando quiera. */
   sector_code: SectorCode | null
   trade_name: string | null
   state_code: string | null
   municipality_code: string | null
   municipality: string | null
+  /** Lo que falta del perfil (sin valores), en el orden del servidor. */
+  missing: CompanyGap[]
 }
 
 export interface InstitutionProfile extends OrganizationContact {
@@ -33,21 +36,15 @@ export interface InstitutionProfile extends OrganizationContact {
 
 export type OrganizationProfile = CompanyProfile | InstitutionProfile
 
-/** Lo que le falta al perfil de la empresa, con las mismas claves y orden que `Company::missing()` del servidor. */
-export function companyGaps(profile: CompanyProfile): CompanyGap[] {
-  const gaps: [CompanyGap, unknown][] = [
-    ['name', profile.name], ['contact_name', profile.contact_name], ['contact_position', profile.contact_position],
-    ['contact_email', profile.contact_email], ['legal_name', profile.legal_name], ['rfc', profile.rfc],
-    ['sector_code', profile.sector_code], ['location', profile.municipality_code],
-  ]
-  return gaps.filter(([, value]) => value === null).map(([gap]) => gap)
-}
-
+/** HU-S14-03: todo el perfil de la empresa es opcional; `account_name` corrige además el nombre de la cuenta. */
 export type CompanyProfileInput = OrganizationContact & {
   trade_name: string | null
+  legal_name: string | null
+  rfc: string | null
+  sector_code: SectorCode | null
   state_code: string | null
   municipality_code: string | null
-  sector_code?: SectorCode
+  account_name?: string | null
 }
 
 const isObject = (value: unknown): value is Record<string, unknown> => typeof value === 'object' && value !== null && !Array.isArray(value)
@@ -64,10 +61,11 @@ function profile(data: unknown): OrganizationProfile {
   }
   if (data.type !== 'company' || !isOptionalText(data.legal_name) || !isOptionalText(data.rfc) || !isOptionalText(data.trade_name) ||
       (data.sector_code !== null && !isSectorCode(data.sector_code)) || !isOptionalText(data.state_code) || !isOptionalText(data.municipality_code) ||
-      !isOptionalText(data.municipality)) throw new ApiError(502)
+      !isOptionalText(data.municipality) || !Array.isArray(data.missing) || !data.missing.every(isCompanyGap)) throw new ApiError(502)
   return {
     type: 'company', name: data.name, legal_name: data.legal_name, rfc: data.rfc, sector_code: data.sector_code as SectorCode | null,
     trade_name: data.trade_name, state_code: data.state_code, municipality_code: data.municipality_code, municipality: data.municipality, ...contact,
+    missing: data.missing as CompanyGap[],
   }
 }
 
@@ -77,10 +75,16 @@ export async function getOrganizationProfile(signal?: AbortSignal): Promise<Orga
   return profile(response.data)
 }
 
-/** Guarda solo los campos editables del lado de la sesión; el sector viaja únicamente al establecerlo (D2). */
+/** Guarda solo los campos editables del lado de la sesión. */
 export async function updateOrganizationProfile(input: CompanyProfileInput | OrganizationContact): Promise<OrganizationProfile> {
   if (!csrfToken()) await request('/sanctum/csrf-cookie')
   const response = await request('/api/organization/profile', { method: 'PUT', body: JSON.stringify(input) })
   if (!isObject(response)) throw new ApiError(502)
   return profile(response.data)
+}
+
+/** HU-S14-03 CA-02: «Completar más tarde» termina el onboarding sin guardar datos. */
+export async function postponeOnboarding(): Promise<void> {
+  if (!csrfToken()) await request('/sanctum/csrf-cookie')
+  await request('/api/organization/profile/postpone', { method: 'POST' })
 }

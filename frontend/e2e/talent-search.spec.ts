@@ -1,48 +1,12 @@
 import { randomBytes } from 'node:crypto'
 import { readFile } from 'node:fs/promises'
 import { expect, test } from '@playwright/test'
-import type { Page } from '@playwright/test'
 import { ADMIN_STATE } from './support/admin'
 import { INSTITUTION_STATE } from './support/institution'
 import { createOpportunity, openCompanySession } from './support/company'
+import { publishStudent } from './support/students'
 
 test.use({ storageState: ADMIN_STATE })
-
-/** La institución registra un alumno en Matamoros con titular y una habilidad única. */
-async function publishStudent(page: Page, data: { surname: string; enrollment: string; headline: string; skill: string }) {
-  await page.goto('/students')
-  await page.getByRole('button', { name: /Registrar (el primer )?alumno/ }).first().click()
-  const register = page.getByRole('dialog', { name: 'Registrar alumno' })
-  await register.getByLabel('Matrícula o control interno', { exact: true }).fill(data.enrollment)
-  await register.getByLabel('Nombre(s)', { exact: true }).fill('Valeria Secreta')
-  await register.getByLabel('Primer apellido', { exact: true }).fill(data.surname)
-  await register.getByRole('button', { name: 'Registrar alumno', exact: true }).click()
-  await expect(register.getByRole('status')).toContainText('Alumno registrado')
-  // HU-S8-02: el detalle del alumno nuevo se abre directamente desde el alta.
-  await register.getByRole('button', { name: 'Completar expediente' }).click()
-
-  const profile = page.getByRole('region', { name: 'Expediente público' })
-  await profile.getByLabel('Carrera o programa educativo').fill('Ingeniería en Datos')
-  await profile.getByLabel('Tipo de periodo').selectOption('semester')
-  await profile.getByLabel('Periodo actual').selectOption('6')
-  await profile.getByLabel('Disponible', { exact: true }).check()
-  await profile.getByLabel('Estado').selectOption({ label: 'Tamaulipas' })
-  await profile.getByRole('combobox', { name: 'Municipio' }).fill('matamoros')
-  await profile.getByRole('option', { name: 'Matamoros', exact: true }).click()
-  await profile.getByRole('group', { name: 'Disponibilidad para reubicarse' }).getByLabel('No', { exact: true }).check()
-  await profile.getByRole('button', { name: 'Guardar expediente' }).click()
-  await expect(profile.getByRole('status')).toHaveText('Expediente guardado correctamente.')
-
-  await page.getByRole('link', { name: 'CV profesional' }).click()
-  await page.getByLabel('Titular', { exact: true }).fill(data.headline)
-  await page.getByRole('button', { name: 'Guardar titular', exact: true }).click()
-  await expect(page.getByText('Titular guardado correctamente.')).toBeVisible()
-  const skill = page.getByRole('combobox', { name: 'Agregar habilidad' })
-  await skill.fill(data.skill)
-  await skill.press('Enter')
-  await page.getByRole('button', { name: 'Guardar habilidades', exact: true }).click()
-  await expect(page.getByText('Habilidades guardadas correctamente.')).toBeVisible()
-}
 
 test('HU-S4-05, HU-S5-04, HU-S5-05, HU-S6-01, HU-S6-02, HU-S6-03, HU-S13-02, HU-S13-03, HU-S13-06 y T-S13-09: una empresa encuentra un perfil anónimo por habilidad y distancia, sin datos personales, solicita la vinculación a su institución, esta la revisa con la identidad del alumno, la empresa la cancela y, al volver a solicitarla, la institución la acepta y ambas conversan', async ({ browser, baseURL }) => {
   // Recorre tres sesiones (institución, empresa e institución); con la máquina cargada rebasa los 30 s por defecto.

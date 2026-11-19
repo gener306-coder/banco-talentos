@@ -19,10 +19,21 @@
 .account-fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.9rem 1rem; }
 .account-contact { margin: 0; padding: 0; border: 0; min-width: 0; }
 .account-contact legend { margin-bottom: 0.6rem; padding: 0; font-weight: 600; }
-.account-profile-form > button[type='submit'] { justify-self: start; }
 .account-profile-form .institution-success { margin: 0; }
+/* HU-S14-03: onboarding de la empresa, sin navegación de regreso. */
+.welcome-lead { margin: 0 0 1rem; font-size: var(--type-base); }
+.account-contact > .field-help { margin: -0.3rem 0 0.7rem; }
+/* HU-S14-03: guía de lo necesario para operar (M1), sin color nuevo ni bloqueo. */
+.profile-needed { display: inline-block; margin-left: 0.35rem; padding: 0.05rem 0.5rem; border-radius: 999px; background: var(--tint); color: var(--accent); font-size: var(--type-xs); font-weight: 600; white-space: nowrap; }
+.profile-self { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 0.1rem 0.5rem; align-items: center; margin-bottom: 0.9rem; }
+.profile-self input { width: 1.15rem; height: 1.15rem; margin: 0; }
+.profile-self .field-help { grid-column: 2; margin: 0; }
+.profile-actions { display: flex; flex-wrap: wrap; gap: 0.6rem; align-items: center; }
+.profile-actions button { margin: 0; }
 @media (max-width: 600px) {
   .account-fields { grid-template-columns: minmax(0, 1fr); }
-  .account-inline button, .account-password-form button[type='submit'], .account-profile-form > button[type='submit'] { width: 100%; min-height: 2.75rem; }
+  .account-inline button, .account-password-form button[type='submit'] { width: 100%; min-height: 2.75rem; }
+  .profile-actions { flex-direction: column; align-items: stretch; }
+  .profile-actions button { width: 100%; min-height: 2.75rem; }
 }
 }

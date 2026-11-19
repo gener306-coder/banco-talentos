@@ -44,6 +44,8 @@ Route::middleware(['auth:sanctum', 'active', 'role:'.UserRole::COMPANY->value.',
     ->group(function (): void {
         Route::get('/organization/profile', [OrganizationProfileController::class, 'show']);
         Route::put('/organization/profile', [OrganizationProfileController::class, 'update']);
+        // HU-S14-03: «Completar más tarde» del onboarding de la empresa.
+        Route::post('/organization/profile/postpone', [OrganizationProfileController::class, 'postpone']);
     });
 
 // Indicadores del inicio por rol (HU-S5-01): solo los de la cuenta y la organización de la sesión.

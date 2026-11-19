@@ -11,13 +11,13 @@ use App\Models\Municipality;
 use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\Response;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Validation\ValidationException;
 
 /**
- * Perfil de la organización de la sesión (HU-S14-02). La organización sale siempre de la sesión (company_id o
- * institution_id); ninguna ruta ni cuerpo acepta un id. Solo cambian los campos de la lista de la FormRequest; el sector
- * de la empresa se establece una sola vez y después solo la Secretaría lo cambia (D2).
+ * Perfil de la organización de la sesión (HU-S14-02, HU-S14-03). La organización sale siempre de la sesión (company_id
+ * o institution_id); ninguna ruta ni cuerpo acepta un id. Solo cambian los campos de la lista de la FormRequest: la
+ * empresa captura todo su perfil y la institución, el contacto de su programa dual.
  */
 class OrganizationProfileController extends Controller
 {
@@ -30,40 +30,51 @@ class OrganizationProfileController extends Controller
     {
         $user = $request->user();
         $data = $request->validated();
+        // Vacío o ausente conserva el nombre de la cuenta (guardado parcial del onboarding).
+        $accountName = $data['account_name'] ?? null;
+        unset($data['account_name']);
 
-        $organization = DB::transaction(function () use ($user, $data): Company|Institution {
-            // La fila se bloquea: dos guardados simultáneos no pueden establecer el sector dos veces.
+        $organization = DB::transaction(function () use ($user, $data, $accountName): Company|Institution {
+            // La fila se bloquea: el guardado y una publicación simultánea (M1) se ordenan.
             $organization = $this->organization($user, lock: true);
-
-            if ($organization instanceof Company) {
-                $sector = $data['sector_code'] ?? null;
-                unset($data['sector_code']);
-                if ($sector !== null && $organization->sector_code?->value !== $sector) {
-                    if ($organization->sector_code !== null) {
-                        throw ValidationException::withMessages([
-                            'sector_code' => 'El sector ya está establecido. Para cambiarlo, escribe a la Secretaría de Economía.',
-                        ]);
-                    }
-                    $organization->sector_code = $sector;
-                }
-            }
-
             $organization->fill($data);
             $changed = array_values(array_diff(array_keys($organization->getDirty()), ['location', 'updated_at']));
-            if ($changed === []) {
-                return $organization;
+            if ($organization instanceof Company) {
+                if ($organization->isDirty('municipality_code')) {
+                    $organization->location = $organization->municipality_code === null ? null : Municipality::locationOf($organization->municipality_code);
+                }
+                // HU-S14-03 CA-02: guardar el perfil, aunque sea en parcial, termina el onboarding.
+                $organization->onboarding_dismissed_at ??= now();
             }
-            if ($organization instanceof Company && $organization->isDirty('municipality_code')) {
-                $organization->location = Municipality::locationOf($organization->municipality_code);
+            if ($organization->isDirty()) {
+                $organization->save();
             }
-            $organization->save();
-            AccountAuditEvent::record($user, AccountAuditEvent::ORGANIZATION_PROFILE_UPDATED, $organization, $changed);
+            if ($changed !== []) {
+                AccountAuditEvent::record($user, AccountAuditEvent::ORGANIZATION_PROFILE_UPDATED, $organization, $changed);
+            }
+
+            // CA-03: con «Soy yo», el nombre del contacto también corrige el de la cuenta (p. ej. el provisional, M3).
+            if ($organization instanceof Company && $accountName !== null && $accountName !== $user->name) {
+                $user->name = $accountName;
+                $user->save();
+                AccountAuditEvent::record($user, AccountAuditEvent::ACCOUNT_UPDATED, $user, ['name']);
+            }
 
             return $organization;
         });
 
         // M2 (HU-S14-02): sin aviso por correo a la Secretaría; los cambios quedan en la bitácora.
         return $this->respond($organization->refresh());
+    }
+
+    /** HU-S14-03 CA-02: «Completar más tarde» termina el onboarding sin guardar datos ni registrar un evento. */
+    public function postpone(Request $request): Response
+    {
+        $user = $request->user();
+        abort_if($user->role !== UserRole::COMPANY, 403, 'Solo las empresas tienen un perfil por completar.');
+        Company::query()->whereKey($user->company_id)->whereNull('onboarding_dismissed_at')->update(['onboarding_dismissed_at' => now()]);
+
+        return response()->noContent()->header('Cache-Control', 'no-store, private');
     }
 
     private function organization(User $user, bool $lock = false): Company|Institution
@@ -98,6 +109,9 @@ class OrganizationProfileController extends Controller
                 'municipality_code' => $organization->municipality_code,
                 'municipality' => $organization->municipality?->name,
                 ...$contact,
+                // HU-S14-03: lo que falta (sin valores) y si ya puede operar (M1), para actualizar la sesión.
+                'missing' => $organization->missing(),
+                'can_operate' => $organization->missing(Company::MINIMUM) === [],
             ]
             : [
                 'type' => 'institution',

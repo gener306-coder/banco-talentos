@@ -38,9 +38,9 @@ class Company extends Model
     public const UNNAMED = 'Empresa sin nombre';
 
     /** M1: lo necesario para publicar oportunidades y enviar solicitudes (el nombre es comercial o razón social). */
-    public const MINIMUM = ['name', 'contact_name', 'contact_position', 'contact_email'];
+    public const MINIMUM = ['name', 'contact_name', 'contact_email'];
 
-    /** Perfil completo: el mínimo más los datos fiscales, el sector y la ubicación. El teléfono sigue opcional. */
+    /** Perfil completo: el mínimo más los datos fiscales, el sector y la ubicación. El puesto y el teléfono siguen opcionales. */
     public const PROFILE = [...self::MINIMUM, 'legal_name', 'rfc', 'sector_code', 'location'];
 
     protected function casts(): array

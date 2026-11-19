@@ -35,7 +35,7 @@ Sprint vigente desde el 18 de noviembre de 2026. Sprint anterior: [sprint-13.md]
 
 El responsable y el Arquitecto simplifican el alta de empresas y delegan la captura completa a cada empresa. **D2 (sector de un solo establecimiento) y D7 (aviso a la Secretaría por cambio de nombre comercial) quedan sustituidas** por:
 
-- **M1. Mínimo para operar:** nombre visible de la empresa (comercial o razón social) y nombre, puesto y correo del contacto. Se exige antes de publicar una oportunidad o enviar una solicitud de vinculación; `/talent` se explora libre desde el primer acceso.
+- **M1. Mínimo para operar:** nombre visible de la empresa (comercial o razón social) y nombre y correo del contacto. El puesto y el teléfono del contacto son opcionales y no cuentan para el perfil completo (ajuste del 19 de noviembre, para no bloquear a las empresas existentes que no los capturaron). Se exige antes de publicar una oportunidad o enviar una solicitud de vinculación; `/talent` se explora libre desde el primer acceso.
 - **M2. Sin aviso por correo a la Secretaría:** los cambios del perfil solo quedan en la bitácora.
 - **M3. Nombre de la persona:** si la Secretaría no lo captura al invitar, la cuenta guarda el correo como nombre provisional; el onboarding lo detecta y pide el nombre real.
 - **M4. Edición de la Secretaría:** conserva la edición del perfil completo, con todos los campos opcionales. El folio de validación (`validation_reference`) es exclusivo de la Secretaría y nunca se expone a la empresa.
@@ -131,7 +131,7 @@ Cada historia termina con su reporte y una revisión del responsable antes de in
 
 ## HU-S14-02 — Alta ligera de empresas por invitación y perfil opcional
 
-**Estado:** Implementada (19 de noviembre de 2026), sin commit y pendiente de revisión. Pest con 1609 pruebas en verde; Vitest con 1170 en verde y las 3 fallas conocidas de descarga.  
+**Estado:** Completada (19 de noviembre de 2026), commit `36681eb`.  
 **Diseño técnico y verificación:** `docs/HU-S14-02.md`  
 **Story Points:** 8  
 **Rol:** `SECRETARY` (invitación y edición); todos los consumidores de datos de empresa
@@ -154,7 +154,8 @@ Cada historia termina con su reporte y una revisión del responsable antes de in
 
 ## HU-S14-03 — Perfil autogestionado y onboarding de la empresa
 
-**Estado:** Pendiente.  
+**Estado:** Completada (19 de noviembre de 2026). Pest, Vitest y Playwright en verde; M1 sin el puesto del contacto.  
+**Diseño técnico y verificación:** `docs/HU-S14-03.md`  
 **Story Points:** 8  
 **Rol:** `COMPANY` (perfil completo); `INSTITUTION` (contacto, sin cambios de alcance)
 
@@ -170,7 +171,7 @@ Cada historia termina con su reporte y una revisión del responsable antes de in
 - **CA-02.** El primer acceso de una empresa con el perfil incompleto y sin posponer lleva a `/welcome` («Completa el perfil de tu empresa»): guardado parcial sin campos obligatorios, «Completar más tarde» (`POST /api/organization/profile/postpone`) y sin bucles de redirección. Con el onboarding terminado, `/welcome` redirige a `/`.
 - **CA-03.** El contacto para vinculación se precarga con el nombre y el correo de la cuenta («Soy yo»); si el nombre es el provisional, se pide el real y actualiza `users.name` en la misma transacción. Se puede asignar a otra persona.
 - **CA-04.** Mientras falten datos, el inicio muestra un `Callout` con lo que falta, «Completar perfil» hacia `/account` y la ruta en texto para encontrarlo después.
-- **CA-05.** Mínimo para operar (M1): publicar una oportunidad o enviar una solicitud sin él responde `422` (`COMPANY_PROFILE_INCOMPLETE`) y la interfaz lo explica con un enlace a `/account`.
+- **CA-05.** Mínimo para operar (M1: nombre visible y nombre y correo del contacto): publicar una oportunidad o enviar una solicitud sin él responde `422` (`COMPANY_PROFILE_INCOMPLETE`) y la interfaz lo explica con un enlace a `/account`.
 - **CA-06.** `/account` reúne Mi cuenta y el perfil de la organización con el mismo formulario del onboarding; responsive a 1440 y 390 px.
 - **CA-07.** Cada guardado registra `organization_profile_updated` con los nombres de los campos que cambiaron (y `account_updated` si cambió el nombre de la cuenta); sin cambios, no registra nada.
 - **CA-08.** Pruebas: Pest (anti-IDOR, campos internos, onboarding, posponer, M1, bitácora sin valores, sin correos), Vitest (onboarding, recordatorio, bloqueo) y E2E (invitación, onboarding, posponer, bloqueo, completar y publicar).

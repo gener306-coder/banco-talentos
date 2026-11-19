@@ -42,7 +42,7 @@ class CompanyFactory extends Factory
     {
         return $this->state(fn (): array => [
             'legal_name' => null, 'trade_name' => null, 'rfc' => null, 'sector_code' => null, 'state_code' => null,
-            'municipality_code' => null, 'contact_name' => null, 'contact_email' => null,
+            'municipality_code' => null, 'contact_name' => null, 'contact_position' => null, 'contact_email' => null,
         ]);
     }
 

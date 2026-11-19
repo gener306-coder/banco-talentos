@@ -32,6 +32,12 @@ function fieldErrors(errors: Record<string, string[]> | undefined, name: string)
 function NameForm({ user }: { user: User }) {
   const { updateUser } = useAuth()
   const [name, setName] = useState(user.name)
+  // HU-S14-03: si el perfil de la empresa corrige el nombre de la cuenta, el campo lo sigue sin remontarse.
+  const [synced, setSynced] = useState(user.name)
+  if (synced !== user.name) {
+    setSynced(user.name)
+    setName(user.name)
+  }
   const [notice, setNotice] = useState<string | null>(null)
   const mutation = useApiMutation(accountMessages)
   const error = fieldErrors(mutation.failure?.errors, 'name') ?? (mutation.failure && !mutation.failure.errors.name ? mutation.failure.message : undefined)

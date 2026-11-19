@@ -8,13 +8,13 @@ const summary = {
 } as const
 const company = {
   ...summary, contact_name: 'Lucía', contact_position: null, contact_email: 'dual@manugolfo.test', contact_phone: null, validation_reference: 'SE/1',
-  missing: ['contact_position'], registered_by: { id: 2, name: 'Analista' }, created_at: '2026-10-22T10:00:00Z',
+  missing: ['sector_code'], registered_by: { id: 2, name: 'Analista' }, created_at: '2026-10-22T10:00:00Z',
 }
 // HU-S14-02: la empresa recién invitada no tiene ningún dato del perfil.
 const invited = {
   ...company, name: null, legal_name: null, trade_name: null, rfc: null, sector_code: null, state_code: null, municipality_code: null, municipality: null,
   contact_name: null, contact_email: null, validation_reference: null, profile_status: 'pending_access',
-  missing: ['name', 'contact_name', 'contact_position', 'contact_email', 'legal_name', 'rfc', 'sector_code', 'location'],
+  missing: ['name', 'contact_name', 'contact_email', 'legal_name', 'rfc', 'sector_code', 'location'],
 }
 const invitation = { email: 'dual@manugolfo.test', trade_name: null, person_name: 'Lucía' }
 const input = {

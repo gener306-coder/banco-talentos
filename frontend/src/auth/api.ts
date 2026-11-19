@@ -12,9 +12,26 @@ export const roleLabels = {
 export type Role = keyof typeof roleLabels
 
 /** HU-S14-02: claves de lo que le falta al perfil de la empresa, sin valores. */
-export type CompanyGap = 'name' | 'contact_name' | 'contact_position' | 'contact_email' | 'legal_name' | 'rfc' | 'sector_code' | 'location'
-const COMPANY_GAPS: readonly string[] = ['name', 'contact_name', 'contact_position', 'contact_email', 'legal_name', 'rfc', 'sector_code', 'location']
-const isCompanyGap = (value: unknown): value is CompanyGap => typeof value === 'string' && COMPANY_GAPS.includes(value)
+export type CompanyGap = 'name' | 'contact_name' | 'contact_email' | 'legal_name' | 'rfc' | 'sector_code' | 'location'
+const COMPANY_GAPS: readonly string[] = ['name', 'contact_name', 'contact_email', 'legal_name', 'rfc', 'sector_code', 'location']
+export const isCompanyGap = (value: unknown): value is CompanyGap => typeof value === 'string' && COMPANY_GAPS.includes(value)
+
+/** HU-S14-03 (M1): lo mínimo para publicar oportunidades y enviar solicitudes. */
+export const OPERATING_MINIMUM: readonly CompanyGap[] = ['name', 'contact_name', 'contact_email']
+
+export interface SessionCompany {
+  id: number
+  name: string | null
+  missing: CompanyGap[]
+  /** El onboarding termina al guardar o posponer el perfil, o si ya está completo. */
+  onboarding: 'pending' | 'done'
+  canOperate: boolean
+}
+
+/** La empresa de la sesión con lo que falta: deriva si ya puede operar (M1). */
+export function sessionCompany(id: number, name: string | null, missing: CompanyGap[], onboarding: SessionCompany['onboarding']): SessionCompany {
+  return { id, name, missing, onboarding, canOperate: !missing.some((gap) => OPERATING_MINIMUM.includes(gap)) }
+}
 
 export interface User {
   id: number
@@ -26,7 +43,7 @@ export interface User {
    * Empresa vinculada a una cuenta COMPANY (HU-S4-03 CA-05): solo su nombre visible, null mientras la empresa
    * invitada no capture ninguno (HU-S14-02).
    */
-  company: { id: number; name: string | null; missing: CompanyGap[] } | null
+  company: SessionCompany | null
 }
 
 function sessionUser(data: unknown): User {
@@ -67,7 +84,9 @@ function sessionUser(data: unknown): User {
         !Number.isSafeInteger(linked.id) || linked.id <= 0 ||
         !('name' in linked) || (linked.name !== null && typeof linked.name !== 'string')) throw new ApiError(502)
     if (!('missing' in linked) || !Array.isArray(linked.missing) || !linked.missing.every(isCompanyGap)) throw new ApiError(502)
-    return { id: linked.id, name: linked.name as string | null, missing: linked.missing as CompanyGap[] }
+    const onboarding = 'onboarding' in linked ? linked.onboarding : 'done'
+    if (onboarding !== 'pending' && onboarding !== 'done') throw new ApiError(502)
+    return sessionCompany(linked.id, linked.name as string | null, linked.missing as CompanyGap[], onboarding)
   }
 
   return {

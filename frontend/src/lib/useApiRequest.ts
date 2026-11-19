@@ -6,7 +6,12 @@ export interface ApiFailure {
   status: number
   message: string
   errors: Record<string, string[]>
+  /** HU-S14-03 (M1): falta el mínimo del perfil de la empresa; la vista enlaza a Mi cuenta. */
+  profileIncomplete?: boolean
 }
+
+/** HU-S14-03 (M1): lo que falta para publicar oportunidades y enviar solicitudes. */
+export const PROFILE_INCOMPLETE_MESSAGE = 'Completa el nombre de tu empresa y el nombre y correo del contacto para publicar oportunidades y enviar solicitudes.'
 
 /** Mensajes por código HTTP propios de cada módulo (por ejemplo, qué significa un 404). Debe ser una constante del módulo. */
 export type FailureMessages = Partial<Record<number, string>>
@@ -33,6 +38,7 @@ function useFailure(overrides: FailureMessages) {
 
     const messages = { ...baseMessages, ...overrides }
 
+    if (error instanceof ApiError && error.profileIncomplete) return { status, message: PROFILE_INCOMPLETE_MESSAGE, errors: {}, profileIncomplete: true }
     return {
       status,
       message: error instanceof ApiError && error.code ? accessErrorMessages[error.code]

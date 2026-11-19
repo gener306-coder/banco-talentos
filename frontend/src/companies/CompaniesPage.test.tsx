@@ -23,7 +23,7 @@ const invited = {
   ...company, id: 7, name: null, legal_name: null, trade_name: null, rfc: null, sector_code: null, state_code: null, municipality_code: null,
   municipality: null, contact_name: null, contact_position: null, contact_email: null, contact_phone: null, validation_reference: null,
   account_email: 'operador@nueva.test', profile_status: 'pending_access',
-  missing: ['name', 'contact_name', 'contact_position', 'contact_email', 'legal_name', 'rfc', 'sector_code', 'location'],
+  missing: ['name', 'contact_name', 'contact_email', 'legal_name', 'rfc', 'sector_code', 'location'],
 }
 const page = (companies: unknown[]) => Response.json({ data: companies, meta: { current_page: 1, last_page: 1, total: companies.length } })
 

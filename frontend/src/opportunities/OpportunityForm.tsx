@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import type { FormEvent, ReactNode } from 'react'
 import { Link } from 'react-router'
+import { ProfileIncompleteNotice } from '../account/ProfileIncompleteNotice'
 import { InstitutionRequestError } from '../institutions/InstitutionLayout'
 import type { ApiFailure } from '../lib/useApiRequest'
 import { isPeriodType, MAX_PERIOD, MEXICAN_STATES, PERIOD_TYPES } from '../students/catalogs'
@@ -133,7 +134,8 @@ export function OpportunityForm({ opportunity, defaults = null, submitLabel, can
   return (
     <>
       <p>Todos los campos son obligatorios salvo las habilidades y el idioma. No incluyas datos de contacto: la vinculación con el alumno se coordina con su institución.</p>
-      {failure && failure.status !== 422 && <InstitutionRequestError failure={failure} />}
+      {/* HU-S14-03 (M1): publicar o editar exige el mínimo del perfil; el servidor lo recuerda si cambió en otra pestaña. */}
+      {failure?.profileIncomplete ? <ProfileIncompleteNotice /> : failure && failure.status !== 422 && <InstitutionRequestError failure={failure} />}
       <form className="opportunity-form" onSubmit={(event) => { void submit(event) }} aria-busy={pending} noValidate>
         <fieldset disabled={pending}>
           <legend>Proyecto</legend>

@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useId, useState } from 'react'
 import type { CSSProperties, FormEvent, ReactNode } from 'react'
-import { Link, useNavigate } from 'react-router'
+import { Link, Navigate, useNavigate } from 'react-router'
 import { roleLabels } from '../auth/api'
-import type { Role, User } from '../auth/api'
+import type { CompanyGap, Role, SessionCompany, User } from '../auth/api'
 import { useAuth } from '../auth/useAuth'
 import { organizationOf } from '../auth/user'
 import { getDashboard, metricKeys, metricLabels } from '../dashboard/api'
@@ -227,6 +227,30 @@ function HomeIndicators({ role, onSettled }: { role: Role; onSettled: () => void
  * Inicio por rol (tarea transversal del Sprint 4): saludo, acción principal y tarjetas de acceso a las secciones
  * del rol, con sus indicadores (HU-S5-01). La identidad completa y «Cerrar sesión» están en el menú de cuenta del encabezado (ui/AccountMenu).
  */
+/** Lo que falta del perfil, en palabras de la empresa. */
+const gapLabels: Record<CompanyGap, string> = {
+  name: 'Nombre de la empresa', contact_name: 'Nombre del contacto', contact_email: 'Correo del contacto',
+  legal_name: 'Razón social', rfc: 'RFC', sector_code: 'Sector económico', location: 'Ubicación',
+}
+
+/**
+ * HU-S14-03 CA-04: mientras falten datos, el inicio de la empresa dice qué falta, lleva al perfil y explica dónde
+ * encontrarlo después. Sin el mínimo (M1), avisa que todavía no puede publicar ni solicitar.
+ */
+function ProfileReminder({ company }: { company: SessionCompany }) {
+  return (
+    <Callout tone="pending" label={company.canOperate ? 'Tu perfil está incompleto' : 'Completa tu perfil para publicar y vincular'}
+      action={<Link className="pill-link" to="/account#organization">Completar perfil<ChevronRightIcon /></Link>}>
+      <p><strong>{company.canOperate ? 'Tu perfil está incompleto.' : 'Completa tu perfil para publicar y vincular.'}</strong>{' '}
+        {company.canOperate
+          ? 'Ya puedes publicar oportunidades y enviar solicitudes; completar el resto ayuda a las instituciones a conocer tu empresa.'
+          : 'Mientras tanto puedes explorar el talento, pero aún no publicar oportunidades ni enviar solicitudes.'}</p>
+      <p>Falta: {company.missing.map((gap) => gapLabels[gap]).join(', ')}.</p>
+      <p className="profile-reminder-path">Después lo encuentras en el menú de tu cuenta, en Mi cuenta, sección Perfil de la empresa.</p>
+    </Callout>
+  )
+}
+
 export function SessionPage() {
   const { user } = useAuth()
   const titleId = useId()
@@ -239,6 +263,8 @@ export function SessionPage() {
   const company = user?.role === 'COMPANY'
   const [cards, reveal] = useReveal<HTMLUListElement>(indicatorsReady && (!company || spotlightReady))
   if (!user) return null
+  // HU-S14-03 CA-02: solo el inicio lleva al onboarding pendiente; los enlaces directos no se interceptan.
+  if (user.company?.onboarding === 'pending') return <Navigate to="/welcome" replace />
   const home = homeFor(user)
   const organization = organizationOf(user)
 
@@ -252,13 +278,7 @@ export function SessionPage() {
         </p>
       </div>
 
-      {/* HU-S14-02 (D2): mientras la empresa no tenga sector, el inicio le recuerda establecerlo en su perfil. */}
-      {user.company?.missing.includes('sector_code') && (
-        <Callout tone="pending" label="Sector económico pendiente"
-          action={<Link className="pill-link" to="/account">Establecer sector<ChevronRightIcon /></Link>}>
-          <p>Tu empresa aún no tiene <strong>sector económico</strong>. Establécelo en tu perfil para que aparezca en los reportes del programa.</p>
-        </Callout>
-      )}
+      {user.company && user.company.missing.length > 0 && <ProfileReminder company={user.company} />}
 
       {home?.primary && (
         <div className="home-primary">

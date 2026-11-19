@@ -14,7 +14,8 @@ use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\RateLimiter;
 use Tests\Support\InteractsWithCookieSessions;
 
-// HU-S14-02: perfil de la organización de la sesión, sector SCIAN de un solo establecimiento (D2) y aviso D7.
+// HU-S14-02 y HU-S14-03: perfil de la organización de la sesión; la empresa captura todo su perfil, su onboarding termina
+// al guardarlo o posponerlo y la institución solo mantiene el contacto de su programa dual.
 uses(RefreshDatabase::class, InteractsWithCookieSessions::class);
 
 beforeEach(function () {
@@ -87,6 +88,7 @@ describe('acceso y aislamiento', function () {
                 'sector_code' => null, 'trade_name' => 'ManuGolfo', 'state_code' => '28', 'municipality_code' => '28041',
                 'municipality' => $this->company->municipality->name, 'contact_name' => 'Responsable del programa dual',
                 'contact_position' => null, 'contact_email' => 'dual@empresa.test', 'contact_phone' => null,
+                'missing' => ['sector_code'], 'can_operate' => true,
             ]]);
     });
 
@@ -106,12 +108,27 @@ describe('acceso y aislamiento', function () {
 });
 
 describe('campos permitidos', function () {
-    it('rejects the company legal data, status and anything outside its list by name', function () {
+    it('lets the company capture its legal data and rejects internal fields and ids by name (HU-S14-03 CA-01)', function () {
         $this->loginWithCookies($this->companyAccount)->assertOk();
         $this->browserRequest('PUT', '/api/organization/profile', companyProfile([
-            'legal_name' => 'Otra, S.A.', 'rfc' => 'XAXX010101000', 'is_active' => false, 'validation_reference' => 'X', 'registered_by' => 1,
-        ]))->assertUnprocessable()->assertJsonValidationErrors(['legal_name', 'rfc', 'is_active', 'validation_reference', 'registered_by']);
-        expect($this->company->refresh()->legal_name)->toBe('Manufacturas del Golfo, S.A. de C.V.');
+            'is_active' => false, 'validation_reference' => 'X', 'registered_by' => 1, 'onboarding_dismissed_at' => null, 'location' => 'POINT(0 0)',
+        ]))->assertUnprocessable()->assertJsonValidationErrors(['is_active', 'validation_reference', 'registered_by', 'onboarding_dismissed_at', 'location']);
+
+        $this->browserRequest('PUT', '/api/organization/profile', companyProfile(['legal_name' => 'Golfo Industrial, S.A. de C.V.', 'rfc' => ' gin150320ab1 ']))->assertOk()
+            ->assertJsonPath('data.legal_name', 'Golfo Industrial, S.A. de C.V.')->assertJsonPath('data.rfc', 'GIN150320AB1');
+    });
+
+    it('saves a partial profile: blanks become null, the location can be cleared and nothing is required', function () {
+        $this->loginWithCookies($this->companyAccount)->assertOk();
+        $this->browserRequest('PUT', '/api/organization/profile', [
+            'trade_name' => '  ', 'legal_name' => '', 'rfc' => '', 'sector_code' => '', 'state_code' => '', 'municipality_code' => '',
+            'contact_name' => '', 'contact_position' => null, 'contact_email' => ' ', 'contact_phone' => '',
+        ])->assertOk()
+            ->assertJsonPath('data.name', null)->assertJsonPath('data.rfc', null)->assertJsonPath('data.state_code', null)->assertJsonPath('data.can_operate', false)
+            ->assertJsonPath('data.missing', ['name', 'contact_name', 'contact_email', 'legal_name', 'rfc', 'sector_code', 'location']);
+        expect(DB::table('companies')->where('id', $this->company->id)->value('location'))->toBeNull();
+        // Un cuerpo vacío no cambia nada.
+        $this->browserRequest('PUT', '/api/organization/profile', [])->assertOk();
     });
 
     it('lets the institution change only its program contact, never its official name or CCT', function () {
@@ -131,44 +148,94 @@ describe('campos permitidos', function () {
         $this->browserRequest('PUT', '/api/organization/profile', companyProfile($changes))->assertUnprocessable()->assertJsonValidationErrors([$field]);
     })->with([
         'correo' => [['contact_email' => 'no-es-correo'], 'contact_email'],
-        'contacto vacío' => [['contact_name' => '  '], 'contact_name'],
         'teléfono' => [['contact_phone' => 'abc'], 'contact_phone'],
         'municipio de otro estado' => [['state_code' => '19'], 'municipality_code'],
+        'estado sin municipio' => [['municipality_code' => ''], 'municipality_code'],
+        'municipio sin estado' => [['state_code' => null], 'state_code'],
         'nombre comercial largo' => [['trade_name' => str_repeat('a', 151)], 'trade_name'],
+        'razón social larga' => [['legal_name' => str_repeat('a', 201)], 'legal_name'],
+        'RFC genérico' => [['rfc' => 'XAXX010101000'], 'rfc'],
         'sector fuera del catálogo' => [['sector_code' => '99'], 'sector_code'],
+        'nombre de la cuenta largo' => [['account_name' => str_repeat('n', 121)], 'account_name'],
     ]);
+
+    it('rejects an RFC that already belongs to another company but keeps its own', function () {
+        Company::factory()->create(['rfc' => 'OTR010101AA1']);
+        $this->loginWithCookies($this->companyAccount)->assertOk();
+        $this->browserRequest('PUT', '/api/organization/profile', companyProfile(['rfc' => 'otr010101aa1']))->assertUnprocessable()
+            ->assertJsonValidationErrors(['rfc' => 'Ya existe una empresa registrada con ese RFC.']);
+        $this->browserRequest('PUT', '/api/organization/profile', companyProfile(['rfc' => $this->company->rfc]))->assertOk();
+    });
 });
 
-describe('sector SCIAN de un solo establecimiento (D2)', function () {
-    it('lets the company set its sector once and then locks it', function () {
+describe('perfil autogestionado y onboarding (HU-S14-03)', function () {
+    it('lets the company change its sector as often as it needs (replaces D2)', function () {
         $this->loginWithCookies($this->companyAccount)->assertOk();
         $this->browserRequest('PUT', '/api/organization/profile', companyProfile(['sector_code' => '31-33']))->assertOk()->assertJsonPath('data.sector_code', '31-33');
-        $event = AccountAuditEvent::query()->sole();
-        expect($event->changed_fields)->toContain('sector_code');
-
-        $this->browserRequest('PUT', '/api/organization/profile', companyProfile(['sector_code' => '54']))->assertUnprocessable()
-            ->assertJsonValidationErrors(['sector_code' => 'El sector ya está establecido. Para cambiarlo, escribe a la Secretaría de Economía.']);
-        // Reenviar el mismo sector no es un cambio.
-        $this->browserRequest('PUT', '/api/organization/profile', companyProfile(['sector_code' => '31-33']))->assertOk();
-        expect($this->company->refresh()->sector_code->value)->toBe('31-33');
+        $this->browserRequest('PUT', '/api/organization/profile', companyProfile(['sector_code' => '54']))->assertOk()->assertJsonPath('data.sector_code', '54');
+        $this->browserRequest('PUT', '/api/organization/profile', companyProfile(['sector_code' => null]))->assertOk()->assertJsonPath('data.sector_code', null);
+        expect(AccountAuditEvent::query()->pluck('changed_fields')->every(fn (array $fields) => in_array('sector_code', $fields, true)))->toBeTrue();
     });
 
-    it('keeps the secretary able to assign or correct it, and the sector optional in its form', function () {
-        $secretary = User::factory()->role(UserRole::SECRETARY)->create();
-        $this->loginWithCookies($secretary)->assertOk();
-        $this->company->update(['sector_code' => '54']);
-        $detail = $this->browserRequest('GET', "/api/companies/{$this->company->id}")->assertOk()->json('data');
-        $payload = collect($detail)->only(['legal_name', 'trade_name', 'rfc', 'state_code', 'municipality_code', 'contact_name', 'contact_position', 'contact_email', 'contact_phone', 'validation_reference'])->all();
+    it('updates the account name with the contact only when it really changes, and keeps it on a blank value', function () {
+        $account = User::factory()->forCompany(Company::factory()->invited()->create())->create(['email' => 'op@invitada.test', 'name' => 'op@invitada.test']);
+        $this->loginWithCookies($account)->assertOk();
 
-        $this->browserRequest('PUT', "/api/companies/{$this->company->id}", [...$payload, 'sector_code' => '31-33'])->assertOk()->assertJsonPath('data.sector_code', '31-33');
-        $this->browserRequest('PUT', "/api/companies/{$this->company->id}", [...$payload, 'sector_code' => null])->assertOk()->assertJsonPath('data.sector_code', null);
+        $this->browserRequest('PUT', '/api/organization/profile', ['contact_name' => 'Lucía Herrera', 'contact_email' => 'op@invitada.test', 'account_name' => ' Lucía Herrera '])->assertOk();
+        expect($account->refresh()->name)->toBe('Lucía Herrera');
+        $events = AccountAuditEvent::query()->orderBy('id')->get();
+        expect($events->pluck('event')->all())->toBe(['organization_profile_updated', 'account_updated'])
+            ->and($events[1]->changed_fields)->toBe(['name'])->and($events[1]->subject_type)->toBe('user');
+
+        foreach (['', null, 'Lucía Herrera'] as $name) {
+            $this->browserRequest('PUT', '/api/organization/profile', ['account_name' => $name])->assertOk();
+        }
+        expect($account->refresh()->name)->toBe('Lucía Herrera')->and(AccountAuditEvent::query()->count())->toBe(2);
+        $this->browserRequest('GET', '/api/me')->assertJsonPath('user.name', 'Lucía Herrera');
     });
 
-    it('announces the missing sector in the session until it is set', function () {
-        $this->loginWithCookies($this->companyAccount)->assertOk()->assertJsonPath('user.company.missing', ['contact_position', 'sector_code']);
-        $this->browserRequest('PUT', '/api/organization/profile', companyProfile(['sector_code' => '54']))->assertOk();
-        // Ese guardado también captura el puesto del contacto: el perfil queda completo.
-        $this->browserRequest('GET', '/api/me')->assertJsonPath('user.company.missing', []);
+    it('never lets the institution rename the account or capture company data', function () {
+        $this->loginWithCookies($this->institutionAccount)->assertOk();
+        $this->browserRequest('PUT', '/api/organization/profile', institutionProfile(['account_name' => 'X', 'legal_name' => 'X', 'rfc' => 'MGO150320AB1']))
+            ->assertUnprocessable()->assertJsonValidationErrors(['account_name', 'legal_name', 'rfc']);
+        // Su contacto sigue siendo obligatorio, como en HU-S14-02.
+        $this->browserRequest('PUT', '/api/organization/profile', institutionProfile(['contact_name' => '']))->assertUnprocessable()->assertJsonValidationErrors(['contact_name']);
+    });
+
+    it('starts the onboarding for an invited company and ends it when the profile is saved, even partially', function () {
+        $account = User::factory()->forCompany($invited = Company::factory()->invited()->create())->create();
+        $this->loginWithCookies($account)->assertOk()
+            ->assertJsonPath('user.company.onboarding', 'pending')->assertJsonPath('user.company.can_operate', false);
+
+        $this->browserRequest('PUT', '/api/organization/profile', ['trade_name' => 'Taller Norteño'])->assertOk();
+        expect($invited->refresh()->onboarding_dismissed_at)->not->toBeNull();
+        $this->browserRequest('GET', '/api/me')->assertJsonPath('user.company.onboarding', 'done')->assertJsonPath('user.company.name', 'Taller Norteño')
+            ->assertJsonPath('user.company.can_operate', false);
+    });
+
+    it('postpones the onboarding once, without saving data nor recording an event', function () {
+        $account = User::factory()->forCompany($invited = Company::factory()->invited()->create())->create();
+        $this->loginWithCookies($account)->assertOk();
+
+        $this->browserRequest('POST', '/api/organization/profile/postpone')->assertNoContent()->assertHeader('Cache-Control', 'no-store, private');
+        $first = $invited->refresh()->onboarding_dismissed_at;
+        $this->travel(5)->minutes();
+        $this->browserRequest('POST', '/api/organization/profile/postpone')->assertNoContent();
+        expect($invited->refresh()->onboarding_dismissed_at->equalTo($first))->toBeTrue()
+            ->and(AccountAuditEvent::query()->count())->toBe(0);
+        $this->browserRequest('GET', '/api/me')->assertJsonPath('user.company.onboarding', 'done')->assertJsonPath('user.company.missing.0', 'name');
+
+        $this->loginWithCookies($this->institutionAccount)->assertOk();
+        $this->browserRequest('POST', '/api/organization/profile/postpone')->assertForbidden();
+        $this->browserRequest('POST', '/api/organization/profile/postpone', csrf: false)->assertStatus(419);
+    });
+
+    it('considers the onboarding done when the profile is already complete', function () {
+        // El puesto del contacto es opcional: sin él, el perfil ya está completo.
+        $complete = Company::factory()->create(['sector_code' => '54']);
+        expect($complete->onboarding_dismissed_at)->toBeNull();
+        $this->loginWithCookies(User::factory()->forCompany($complete)->create())->assertOk()
+            ->assertJsonPath('user.company.onboarding', 'done')->assertJsonPath('user.company.missing', [])->assertJsonPath('user.company.can_operate', true);
     });
 
     it('groups companies without sector in the executive report without losing them in the totals', function () {

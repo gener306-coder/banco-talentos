@@ -426,6 +426,8 @@ textarea[aria-invalid='true'] { border-color: var(--danger-border); }
 .home-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 0.35rem 0.9rem; margin: 0 0 1.5rem; color: var(--text); font-size: var(--type-base); }
 .home-role { padding: 0.15rem 0.7rem; border-radius: 999px; background: var(--tint); color: var(--accent); font-weight: 600; font-size: var(--type-sm); }
 .home-primary { margin: 0 0 1.75rem; }
+/* HU-S14-03: el recordatorio del perfil dice dónde encontrarlo después, en un tamaño menor. */
+.profile-reminder-path { font-size: var(--type-sm); }
 /* Enlace con aspecto de botón principal (T-S12-02): radio, padding y borde de button. */
 .home-action { display: inline-flex; align-items: center; gap: 0.45rem; padding: 0.8rem 1rem; border: 1px solid var(--accent); border-radius: 10px; background: var(--accent-fill);
   color: var(--on-accent); font-weight: 600; text-decoration: none; transition: transform 150ms ease-out, background-color 150ms ease-out; }

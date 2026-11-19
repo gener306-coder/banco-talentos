@@ -12,6 +12,7 @@ const adminUser = { id: 1, name: 'Administración', email: 'admin@bt.test', role
 const companyProfile = {
   type: 'company', name: 'ManuGolfo', legal_name: 'Manufacturas del Golfo, S.A. de C.V.', rfc: 'MGO150320AB1', sector_code: '54', trade_name: 'ManuGolfo',
   state_code: '28', municipality_code: '28041', municipality: 'Tampico', contact_name: 'Lucía Herrera', contact_position: null, contact_email: 'dual@manugolfo.test', contact_phone: null,
+  missing: [],
 }
 const writes = () => apiMock.mock.calls.filter(([, init]) => init?.method && init.method !== 'GET')
 

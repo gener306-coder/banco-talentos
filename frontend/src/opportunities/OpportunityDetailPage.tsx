@@ -1,6 +1,7 @@
 import { PendingLabel } from '../ui/forms'
 import { useCallback, useRef, useState } from 'react'
 import { Link, useLocation, useParams } from 'react-router'
+import { ProfileIncompleteNotice } from '../account/ProfileIncompleteNotice'
 import { InstitutionRequestError, InstitutionStatus } from '../institutions/InstitutionLayout'
 import { useApiMutation, useApiRequest } from '../lib/useApiRequest'
 import { periodLabel, stateName } from '../students/catalogs'
@@ -79,7 +80,8 @@ function OpportunityDetail({ id }: { id: string }) {
                   : 'Está inactiva: conserva toda su información y puedes editarla, pero no podrá elegirse para nuevas solicitudes de vinculación hasta reactivarla.'}
               </p>
               {statusNotice && <p className="institution-success" role="status">{statusNotice}</p>}
-              {mutation.failure && <InstitutionRequestError failure={mutation.failure} />}
+              {/* HU-S14-03 (M1): reactivar exige el mínimo del perfil; el aviso lleva a completarlo. */}
+              {mutation.failure && (mutation.failure.profileIncomplete ? <ProfileIncompleteNotice /> : <InstitutionRequestError failure={mutation.failure} />)}
               <div className="actions" aria-busy={mutation.pending}>
                 <button type="button" ref={statusButton} className={data.is_active ? 'secondary' : undefined}
                   disabled={mutation.pending} onClick={requestStatusChange}>

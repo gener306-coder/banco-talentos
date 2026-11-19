@@ -76,7 +76,7 @@ describe('invitación (HU-S14-02 CA-01)', function () {
             ->assertJsonPath('data.contact_email', null)
             ->assertJsonPath('data.account_email', 'dual@manugolfo.test')
             ->assertJsonPath('data.profile_status', 'pending_access')
-            ->assertJsonPath('data.missing', ['name', 'contact_name', 'contact_position', 'contact_email', 'legal_name', 'rfc', 'sector_code', 'location'])
+            ->assertJsonPath('data.missing', ['name', 'contact_name', 'contact_email', 'legal_name', 'rfc', 'sector_code', 'location'])
             ->assertJsonPath('data.registered_by', ['id' => $this->secretary->id, 'name' => 'Analista SE']);
 
         $company = Company::find($response->json('data.id'));
@@ -284,12 +284,12 @@ describe('edición de la Secretaría con el perfil opcional (HU-S14-02 CA-02, CA
         User::factory()->forCompany($pending)->create(['password_setup_required' => true]);
         $incomplete = Company::factory()->create(['rfc' => null]);
         User::factory()->forCompany($incomplete)->create();
-        $complete = Company::factory()->create(['contact_position' => 'Recursos Humanos']);
+        $complete = Company::factory()->create();
         User::factory()->forCompany($complete)->create();
         signInSecretary($this);
 
         expect($this->browserRequest('GET', "/api/companies/{$pending->id}")->json('data.profile_status'))->toBe('pending_access')
-            ->and($this->browserRequest('GET', "/api/companies/{$incomplete->id}")->json('data.missing'))->toBe(['contact_position', 'rfc'])
+            ->and($this->browserRequest('GET', "/api/companies/{$incomplete->id}")->json('data.missing'))->toBe(['rfc'])
             ->and($this->browserRequest('GET', "/api/companies/{$incomplete->id}")->json('data.profile_status'))->toBe('incomplete')
             ->and($this->browserRequest('GET', "/api/companies/{$complete->id}")->json('data.profile_status'))->toBe('complete');
     });

@@ -140,10 +140,10 @@ it('lets the holder set the password, sign in and see the company name without i
     $this->loginWithCookies($account, ['password' => 'CompanyPassword123!'])->assertOk()
         ->assertJsonPath('user.role', 'COMPANY')
         ->assertJsonPath('user.institution', null)
-        ->assertJsonPath('user.company', ['id' => $this->company->id, 'name' => 'ManuGolfo', 'missing' => ['contact_position']]);
+        ->assertJsonPath('user.company', ['id' => $this->company->id, 'name' => 'ManuGolfo', 'missing' => [], 'onboarding' => 'done', 'can_operate' => true]);
     $me = $this->browserRequest('GET', '/api/me')->assertOk();
     // HU-S14-02: solo se agrega la bandera del sector pendiente, nunca datos fiscales.
-    expect(array_keys($me->json('user.company')))->toBe(['id', 'name', 'missing']);
+    expect(array_keys($me->json('user.company')))->toBe(['id', 'name', 'missing', 'onboarding', 'can_operate']);
     expect($me->getContent())->not->toContain($this->company->rfc);
 });
 

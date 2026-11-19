@@ -6,22 +6,26 @@ use App\Enums\EconomicSector;
 use App\Enums\MexicanState;
 use App\Enums\UserRole;
 use App\Rules\PhoneNumber;
+use App\Rules\Rfc;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\Validator;
 
 /**
- * Perfil de la organización de la sesión (HU-S14-02). Lista explícita de campos por rol: la empresa edita su nombre
- * comercial, ubicación y contacto (y establece su sector una sola vez); la institución, el contacto de su programa dual.
- * Los datos legales u oficiales (razón social, RFC, nombre oficial, CCT), los ids y cualquier otro campo se rechazan por
- * nombre, en lugar de ignorarse.
+ * Perfil de la organización de la sesión (HU-S14-03). Lista explícita de campos por rol:
+ * - la empresa captura y corrige todo su perfil (M1 a M4): todo opcional, solo se valida el formato de lo capturado y
+ *   un texto vacío se guarda como null. `account_name` actualiza además el nombre de la cuenta de la sesión;
+ * - la institución, solo el contacto de su programa dual (su nombre oficial y su CCT los mantiene Administración).
+ * Los ids, el folio de validación, el estado, la autoría y cualquier otro campo se rechazan por nombre.
  */
 class UpdateOrganizationProfileRequest extends FormRequest
 {
     private const CONTACT = ['contact_name', 'contact_position', 'contact_email', 'contact_phone'];
 
-    private const COMPANY = ['trade_name', 'state_code', 'municipality_code', 'sector_code', ...self::CONTACT];
+    private const COMPANY = ['trade_name', 'legal_name', 'rfc', 'sector_code', 'state_code', 'municipality_code', ...self::CONTACT, 'account_name'];
+
+    private const TEXT = ['trade_name', 'legal_name', 'rfc', 'sector_code', 'state_code', 'municipality_code', ...self::CONTACT, 'account_name'];
 
     public function authorize(): bool
     {
@@ -41,41 +45,53 @@ class UpdateOrganizationProfileRequest extends FormRequest
 
     protected function prepareForValidation(): void
     {
-        $trimmed = [];
-        foreach (['trade_name', 'contact_name', 'contact_position', 'contact_phone'] as $field) {
+        // Un texto vacío es un dato no capturado: viaja como null.
+        $clean = [];
+        foreach (self::TEXT as $field) {
             if (is_string($this->input($field))) {
-                $trimmed[$field] = trim($this->input($field)) === '' ? null : trim($this->input($field));
+                $clean[$field] = trim($this->input($field)) === '' ? null : trim($this->input($field));
             }
         }
-        if (is_string($this->input('contact_email'))) {
-            $trimmed['contact_email'] = Str::lower(trim($this->input('contact_email')));
+        if (isset($clean['rfc'])) {
+            $clean['rfc'] = Rfc::normalize($clean['rfc']);
         }
-        $this->merge($trimmed);
+        if (isset($clean['contact_email'])) {
+            $clean['contact_email'] = Str::lower($clean['contact_email']);
+        }
+        $this->merge($clean);
     }
 
     public function rules(): array
     {
-        $contact = [
-            'contact_name' => ['required', 'string', 'max:120'],
-            'contact_position' => ['nullable', 'string', 'max:120'],
-            'contact_email' => ['required', 'string', 'email', 'max:254'],
-            'contact_phone' => ['nullable', 'string', 'max:20', new PhoneNumber],
-        ];
         if (! $this->isCompany()) {
-            return $contact;
+            // HU-S14-02, sin cambios: la institución mantiene su responsable con nombre y correo.
+            return [
+                'contact_name' => ['required', 'string', 'max:120'],
+                'contact_position' => ['nullable', 'string', 'max:120'],
+                'contact_email' => ['required', 'string', 'email', 'max:254'],
+                'contact_phone' => ['nullable', 'string', 'max:20', new PhoneNumber],
+            ];
         }
         $state = $this->input('state_code');
 
         return [
-            ...$contact,
             'trade_name' => ['nullable', 'string', 'max:150'],
-            'state_code' => ['required', 'string', Rule::enum(MexicanState::class)],
+            'legal_name' => ['nullable', 'string', 'max:200'],
+            'rfc' => ['bail', 'nullable', 'string', new Rfc, Rule::unique('companies', 'rfc')->ignore($this->user()->company_id)],
+            // Sin bloqueo: la empresa puede corregir su sector cuando quiera (sustituye a D2).
+            'sector_code' => ['nullable', 'string', Rule::enum(EconomicSector::class)],
+            // La ubicación es completa o ninguna (CHECK companies_location_complete).
+            'state_code' => ['nullable', 'required_with:municipality_code', 'string', Rule::enum(MexicanState::class)],
             'municipality_code' => [
-                'required', 'string', 'regex:/^\d{5}$/',
+                'nullable', 'required_with:state_code', 'string', 'regex:/^\d{5}$/',
                 Rule::exists('municipalities', 'code')->where('state_code', is_string($state) ? $state : ''),
             ],
-            // D2: el servidor solo lo acepta mientras la empresa no tenga sector (ver OrganizationProfileController).
-            'sector_code' => ['nullable', 'string', Rule::enum(EconomicSector::class)],
+            'contact_name' => ['nullable', 'string', 'max:120'],
+            'contact_position' => ['nullable', 'string', 'max:120'],
+            'contact_email' => ['nullable', 'string', 'email', 'max:254'],
+            'contact_phone' => ['nullable', 'string', 'max:20', new PhoneNumber],
+            // Vacío o ausente conserva el nombre actual de la cuenta: un guardado parcial no lo borra.
+            'account_name' => ['nullable', 'string', 'max:120'],
         ];
     }
 
@@ -93,15 +109,19 @@ class UpdateOrganizationProfileRequest extends FormRequest
         return [
             'trade_name.string' => 'El nombre comercial no es válido.',
             'trade_name.max' => 'El nombre comercial no debe superar 150 caracteres.',
-            'state_code.required' => 'El estado es obligatorio.',
+            'legal_name.string' => 'La razón social no es válida.',
+            'legal_name.max' => 'La razón social no debe superar 200 caracteres.',
+            'rfc.string' => 'El RFC no es válido: 12 caracteres para persona moral o 13 para persona física.',
+            'rfc.unique' => 'Ya existe una empresa registrada con ese RFC.',
+            'sector_code.string' => 'El sector económico no es válido.',
+            'sector_code.enum' => 'El sector económico no es válido.',
+            'state_code.required_with' => 'Elige el estado del municipio.',
             'state_code.string' => 'El estado no es válido.',
             'state_code.enum' => 'El estado no es válido.',
-            'municipality_code.required' => 'El municipio es obligatorio.',
+            'municipality_code.required_with' => 'Elige el municipio del estado.',
             'municipality_code.string' => 'El municipio no es válido.',
             'municipality_code.regex' => 'El municipio no es válido.',
             'municipality_code.exists' => 'El municipio no pertenece al estado seleccionado.',
-            'sector_code.string' => 'El sector económico no es válido.',
-            'sector_code.enum' => 'El sector económico no es válido.',
             'contact_name.required' => 'El nombre del contacto es obligatorio.',
             'contact_name.string' => 'El nombre del contacto no es válido.',
             'contact_name.max' => 'El nombre del contacto no debe superar 120 caracteres.',
@@ -113,6 +133,8 @@ class UpdateOrganizationProfileRequest extends FormRequest
             'contact_email.max' => 'El correo del contacto no debe superar 254 caracteres.',
             'contact_phone.string' => 'El teléfono no es válido.',
             'contact_phone.max' => 'El teléfono no debe superar 20 caracteres.',
+            'account_name.string' => 'Tu nombre no es válido.',
+            'account_name.max' => 'Tu nombre no debe superar 120 caracteres.',
         ];
     }
 }

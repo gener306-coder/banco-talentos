@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Exceptions\AccountAccessDenied;
 use App\Http\Requests\LoginRequest;
+use App\Models\Company;
 use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -76,6 +77,9 @@ class AuthController extends Controller
                 'name' => $user->company->displayName(),
                 // HU-S14-02: claves de lo que falta del perfil (sin valores); la interfaz decide qué recordar o habilitar.
                 'missing' => $user->company->missing(),
+                // HU-S14-03: el onboarding termina al guardar o posponer el perfil, o si ya está completo.
+                'onboarding' => $user->company->onboarding_dismissed_at !== null || $user->company->missing() === [] ? 'done' : 'pending',
+                'can_operate' => $user->company->missing(Company::MINIMUM) === [],
             ] : null,
         ];
 

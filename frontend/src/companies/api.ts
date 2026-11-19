@@ -44,8 +44,8 @@ export type CompanyProfileStatus = 'pending_access' | 'incomplete' | 'complete'
 const PROFILE_STATUSES: readonly CompanyProfileStatus[] = ['pending_access', 'incomplete', 'complete']
 
 /** Claves de lo que falta del perfil, en el orden del servidor. */
-export type CompanyProfileGap = 'name' | 'contact_name' | 'contact_position' | 'contact_email' | 'legal_name' | 'rfc' | 'sector_code' | 'location'
-const PROFILE_GAPS: readonly CompanyProfileGap[] = ['name', 'contact_name', 'contact_position', 'contact_email', 'legal_name', 'rfc', 'sector_code', 'location']
+export type CompanyProfileGap = 'name' | 'contact_name' | 'contact_email' | 'legal_name' | 'rfc' | 'sector_code' | 'location'
+const PROFILE_GAPS: readonly CompanyProfileGap[] = ['name', 'contact_name', 'contact_email', 'legal_name', 'rfc', 'sector_code', 'location']
 
 export interface CompanySummary {
   id: number
