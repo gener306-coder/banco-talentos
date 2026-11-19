@@ -6,6 +6,7 @@ use App\Enums\SetupDeliveryMethod;
 use App\Http\Requests\StoreInstitutionRequest;
 use App\Http\Requests\UpdateInstitutionRequest;
 use App\Http\Requests\UpdateInstitutionStatusRequest;
+use App\Models\AccountAuditEvent;
 use App\Models\Institution;
 use App\Services\InitialPasswordLink;
 use App\Services\InstitutionAccounts;
@@ -62,7 +63,13 @@ class InstitutionController extends Controller
     public function update(UpdateInstitutionRequest $request, Institution $institution): JsonResponse
     {
         $institution->fill($request->validated());
-        $this->saveDetails($institution);
+        // HU-S14-04 (D8): la edición de ADMIN queda en la bitácora con los nombres de los campos que cambiaron.
+        $changed = array_values(array_diff(array_keys($institution->getDirty()), ['updated_at']));
+        $this->saveDetails($institution, function () use ($request, $institution, $changed): void {
+            if ($changed !== []) {
+                AccountAuditEvent::record($request->user(), AccountAuditEvent::ORGANIZATION_PROFILE_UPDATED, $institution, $changed);
+            }
+        });
 
         return response()->json(['data' => $institution]);
     }
@@ -75,10 +82,16 @@ class InstitutionController extends Controller
         return response()->json(['data' => $institution]);
     }
 
-    private function saveDetails(Institution $institution): void
+    /** `$after` corre en la misma transacción que el guardado (p. ej. el evento de la bitácora). */
+    private function saveDetails(Institution $institution, ?callable $after = null): void
     {
         try {
-            DB::transaction(fn () => $institution->save());
+            DB::transaction(function () use ($institution, $after): void {
+                $institution->save();
+                if ($after !== null) {
+                    $after();
+                }
+            });
         } catch (UniqueConstraintViolationException $exception) {
             if ($exception->index !== 'institutions_cct_unique') {
                 throw $exception;

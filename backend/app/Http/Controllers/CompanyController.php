@@ -103,7 +103,13 @@ class CompanyController extends Controller
     {
         $record = $this->find($company);
         $record->fill($request->validated());
-        $this->save($record);
+        // HU-S14-04 (D8): la edición de la Secretaría queda en la bitácora con los nombres de los campos que cambiaron.
+        $changed = array_values(array_diff(array_keys($record->getDirty()), ['location', 'updated_at']));
+        $this->save($record, function () use ($request, $record, $changed): void {
+            if ($changed !== []) {
+                AccountAuditEvent::record($request->user(), AccountAuditEvent::ORGANIZATION_PROFILE_UPDATED, $record, $changed);
+            }
+        });
 
         return $this->detail($record->refresh());
     }
@@ -126,7 +132,8 @@ class CompanyController extends Controller
         return $company;
     }
 
-    private function save(Company $company): void
+    /** `$after` corre en la misma transacción que el guardado (p. ej. el evento de la bitácora). */
+    private function save(Company $company, ?callable $after = null): void
     {
         // El punto de la cabecera se guarda en la misma sentencia que el municipio (CA-05); sin municipio, sin punto.
         if ($company->isDirty('municipality_code')) {
@@ -134,7 +141,12 @@ class CompanyController extends Controller
         }
 
         try {
-            DB::transaction(fn () => $company->save());
+            DB::transaction(function () use ($company, $after): void {
+                $company->save();
+                if ($after !== null) {
+                    $after();
+                }
+            });
         } catch (UniqueConstraintViolationException $exception) {
             // Dos altas simultáneas con el mismo RFC: la restricción es la última garantía (CA-03).
             if ($exception->index !== 'companies_rfc_unique') {

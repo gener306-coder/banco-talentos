@@ -178,7 +178,8 @@ Cada historia termina con su reporte y una revisión del responsable antes de in
 
 ## HU-S14-04 — Trazabilidad de cambios en la bitácora
 
-**Estado:** Pendiente.  
+**Estado:** Implementada (19 de noviembre de 2026), sin commit y pendiente de revisión. Pest 1631 en verde, Vitest 1193 en verde más las 3 fallas conocidas de descarga, Playwright 45 de 45.  
+**Diseño técnico y verificación:** `docs/HU-S14-04.md`  
 **Story Points:** 5  
 **Rol:** `ADMIN` (consulta); todos generan eventos
 
@@ -190,7 +191,7 @@ Cada historia termina con su reporte y una revisión del responsable antes de in
 
 ### Criterios de aceptación
 
-- **CA-01.** Las ediciones que `ADMIN` hace de instituciones y cuentas institucionales, y las que `SECRETARY` hace de empresas y sus cuentas, también insertan su evento (D8), con los nombres de los campos que cambiaron.
+- **CA-01.** Las ediciones que `ADMIN` hace de instituciones y las que `SECRETARY` hace de empresas también insertan su evento (D8, alcance confirmado el 19 de noviembre), con los nombres de los campos que cambiaron.
 - **CA-02.** La bitácora (HU-S7-03) incorpora los eventos de `account_audit_events`:
   - con sus tipos y filtro;
   - con la fecha, quién lo hizo y el recurso;
@@ -201,3 +202,34 @@ Cada historia termina con su reporte y una revisión del responsable antes de in
 - **CA-04.** Pruebas:
   - Pest: cada origen inserta su evento; la bitácora lista los eventos nuevos con lista explícita de campos y sin valores; filtro por tipo;
   - Vitest: los tipos nuevos en la vista.
+
+---
+
+## Tareas técnicas
+
+### T-S14-01 — Recordatorio del perfil más discreto
+
+**Estado:** Implementada (19 de noviembre de 2026), sin commit. Solicitada por el responsable tras revisar HU-S14-03: el aviso del inicio era grande e invasivo.
+
+- **Inicio de la empresa:** el `Callout` de HU-S14-03 CA-04 se sustituye por un recordatorio de una sola línea (`ProfileNudge`). Toda la línea es un enlace de 44 px hacia `/account#organization`, con una barra de avance decorativa y uno de dos textos:
+  - «Completa tu perfil para publicar oportunidades y enviar solicitudes.» sin el mínimo M1;
+  - «Tu perfil está casi listo: faltan N datos.» con M1 cubierto.
+
+  Sin ícono de alerta ni borde lateral. Como en las demás vistas, no enumera los detalles.
+- **Mi cuenta, Perfil de la empresa:** recibe el detalle (`ProfileProgress`):
+  - «N de 7 datos del perfil completos» con la barra;
+  - qué habilita completarlos;
+  - las fichas de los datos pendientes, con los necesarios para operar resaltados.
+
+  Con el perfil completo solo lo confirma. Sustituye al `Callout` «Mantén tus datos al día».
+- **Llegada por `#organization`:** el título de la sección ya no queda bajo el encabezado fijo (`scroll-margin-top`).
+- **Pruebas:** Vitest (recordatorio, avance, perfil completo) y la E2E del onboarding ajustadas. Revisión visual a 1440 y 390 px.
+
+### T-S14-02 — Corrección: el contacto vaciado se volvía a rellenar
+
+**Estado:** Implementada (19 de noviembre de 2026), sin commit. Reportada por el responsable.
+
+- **Falla:** al vaciar el nombre y el correo del contacto en Mi cuenta y guardar, el perfil los mostraba como faltantes. Al regresar, el formulario marcaba «Soy yo» y volvía a rellenar los datos de la cuenta, porque trataba cualquier contacto vacío como si fuera la primera captura.
+- **Corrección:** la sugerencia de «Soy yo» con los datos precargados queda solo para el onboarding (`/welcome`, prop `suggestSelf`). En Mi cuenta, la casilla refleja el contacto guardado: se marca solo si su correo es el de la cuenta, también después de guardar. Un contacto vacío se respeta y la empresa puede marcar «Soy yo» para usar sus datos.
+- **Pruebas:** regresión en Vitest (vaciar, guardar y volver sin que se rellene ni se marque) y la E2E del onboarding ajustada.
+

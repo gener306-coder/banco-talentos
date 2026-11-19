@@ -176,7 +176,7 @@ it('rejects an unknown event type (CA-02)', function (string $query) {
     $this->loginWithCookies(auditAdmin())->assertOk();
 
     auditEvents($this, $query)->assertUnprocessable();
-})->with(['?type=password_changed', '?type=ACCOUNT_CREATED', '?type[]=account_created', '?page=0']);
+})->with(['?type=password_reset', '?type=ACCOUNT_CREATED', '?type[]=account_created', '?page=0']);
 
 it('paginates 30 events per page, newest first (CA-02)', function () {
     $admin = auditAdmin();
