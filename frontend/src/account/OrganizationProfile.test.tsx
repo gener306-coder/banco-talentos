@@ -90,9 +90,10 @@ describe('perfil de la empresa en Mi cuenta (CA-01, CA-06)', () => {
     // Al guardar, la tarjeta vuelve a la ficha de lectura con una confirmación discreta.
     await expectSnackbar('Perfil actualizado.')
     expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument()
+    // T-S14-09: el nombre del contacto no cambió, así que no viaja como nombre de la cuenta.
     expect(body()).toEqual({
       trade_name: 'ManuGolfo', legal_name: 'Golfo Industrial, S.A.', rfc: 'MGO150320AB1', sector_code: '54', state_code: '28', municipality_code: '28041',
-      contact_name: 'Lucía Herrera', contact_position: 'Recursos Humanos', contact_email: 'lucia@manugolfo.test', contact_phone: null, account_name: 'Lucía Herrera',
+      contact_name: 'Lucía Herrera', contact_position: 'Recursos Humanos', contact_email: 'lucia@manugolfo.test', contact_phone: null,
     })
     expect(section).toHaveTextContent('54 · Servicios profesionales, científicos y técnicos')
     // El sector sigue editable después de guardarlo.

@@ -1,3 +1,5 @@
+import { TableHead, TableSkeleton } from '../ui/TableSkeleton'
+import type { TableColumn } from '../ui/TableSkeleton'
 import { useCallback, useRef, useState } from 'react'
 import type { ReactNode } from 'react'
 import { Link, useLocation } from 'react-router'
@@ -7,7 +9,7 @@ import { ConfirmDialog } from '../ui/ConfirmDialog'
 import { EmailMenu } from '../ui/EmailMenu'
 import { ChevronLeftIcon, ChevronRightIcon, CloseIcon, PhoneIcon, SearchIcon } from '../ui/icons'
 import { backState } from '../ui/backLink'
-import { LoadingState, StateMessage } from '../ui/StateMessage'
+import { StateMessage } from '../ui/StateMessage'
 import { useListParams } from '../ui/useListParams'
 import { useRowNavigation } from '../ui/useRowNavigation'
 import { useTableMemory } from '../ui/useTableMemory'
@@ -29,6 +31,19 @@ const dateFormat = new Intl.DateTimeFormat('es-MX', { dateStyle: 'medium' })
  * de la solicitud (HU-S13-02) y pastillas al detalle, al perfil anónimo y a la oportunidad (T-S12-04), correo de contacto de la institución y cancelación confirmada de las pendientes. Muestra
  * la fecha de la respuesta institucional (HU-S6-02 CA-04); su mensaje se lee en la conversación (HU-S13-06).
  */
+/** Totales del pie con separador de miles (T-S14-08): «2,369 alumnos». */
+const countFormat = new Intl.NumberFormat('es-MX')
+
+/** Columnas del listado (T-S14-08): las comparten la tabla y su esqueleto. */
+const columns: readonly TableColumn[] = [
+  { label: 'Perfil', role: 'title', bone: 'pill-meta' },
+  { label: 'Oportunidad', role: 'block', bone: 'pill' },
+  { label: 'Institución', role: 'meta', bone: 'text-meta' },
+  { label: 'Enviada', role: 'meta', bone: 'short' },
+  { label: 'Estado', role: 'status', bone: 'status' },
+  { label: 'Detalle', hidden: true, role: 'open', bone: 'open' },
+]
+
 export function LinkageRequestsPage() {
   // T-S12-04 y T-S12-05: el estado y la página viven en la URL, como en la bandeja de la institución, para que el regreso
   // desde el detalle, el perfil o la oportunidad recupere la misma vista. Cambiar el filtro vuelve a la página 1.
@@ -72,7 +87,9 @@ export function LinkageRequestsPage() {
         <Link className="plain" to="/" aria-label="Volver al inicio"><ChevronLeftIcon />Inicio</Link>
       </nav>
       <h2 id="linkage-requests-title">Solicitudes de vinculación</h2>
-      <p>Solicitudes que tu empresa envió a las instituciones educativas. Las aceptadas se coordinan en la conversación de su detalle o con el contacto de cada institución.</p>
+      <div className="page-toolbar">
+        <p>Solicitudes que tu empresa envió a las instituciones educativas. Las aceptadas se coordinan en la conversación de su detalle o con el contacto de cada institución.</p>
+      </div>
       <NotificationPrompt />
       {/* T-S13-09: búsqueda, Estado, Interacción y Orden. Sin filtro aparte por institución: la búsqueda la cubre. */}
       <LinkageInboxFilters idPrefix="linkage" searchLabel="Buscar por institución, oportunidad o perfil"
@@ -80,7 +97,7 @@ export function LinkageRequestsPage() {
         onChange={(changes) => { setNotice(null); list.update(changes) }} onClear={() => { setNotice(null); list.clear() }} />
       {notice && <p className="institution-success" role="status">{notice}</p>}
       {cancelError && <p className="notice" role="alert">{cancelError}</p>}
-      {loading && !data ? <LoadingState label="Cargando solicitudes…" variant="table" />
+      {loading && !data ? <TableSkeleton label="Cargando solicitudes…" columns={columns} tableClass="institution-table has-actions linkage-sent" />
         : failure ? <InstitutionRequestError failure={failure} retry={refresh} page />
         : data && data.items.length === 0
           ? isFiltered(filters)
@@ -98,9 +115,9 @@ export function LinkageRequestsPage() {
               {/* T-S13-13: al buscar, filtrar o paginar, la tabla anterior se queda atenuada mientras llega la nueva. */}
               {refreshing && <p className="visually-hidden" role="status">Actualizando resultados…</p>}
               <div className="institution-table-wrapper" ref={tableMemory} aria-busy={refreshing} role="region" aria-label="Listado de solicitudes" tabIndex={0}>
-                <table className="institution-table has-actions linkage-sent">
+                <table className="institution-table has-actions linkage-sent stack-mobile">
                   <caption className="visually-hidden">Solicitudes de vinculación enviadas</caption>
-                  <thead><tr><th scope="col">Perfil</th><th scope="col">Oportunidad</th><th scope="col">Institución</th><th scope="col">Enviada</th><th scope="col">Estado</th><th scope="col"><span className="visually-hidden">Detalle</span></th></tr></thead>
+                  <TableHead columns={columns} />
                   <tbody key={location.search} className="rows-enter">
                     {data.items.map((item, index) => {
                       const headline = item.profile.headline ?? 'Perfil sin titular'
@@ -112,19 +129,19 @@ export function LinkageRequestsPage() {
                           className={[item.unread_count > 0 && 'has-unread', raised.has(item.id) && 'row-updated'].filter(Boolean).join(' ') || undefined} onClick={(event) => openRow(event, href, back)}>
                           {/* T-S8-15: lo esencial de cada columna; el periodo y el puesto quedan a un paso (perfil y cursor). */}
                           {/* T-S13-10: el perfil y la oportunidad son pastillas en su propia celda (sin columna Acciones). */}
-                          <th scope="row">
+                          <th scope="row" data-cell="title">
                             <Link className="cell-pill" to={`/talent/${item.profile.public_id}`} state={back} aria-label={`Ver perfil: ${headline}`} title={headline}>
                               <span>{headline}</span><ChevronRightIcon />
                             </Link>
                             {item.profile.program && <span className="linkage-meta">{item.profile.program}</span>}
                           </th>
-                          <td>
+                          <td data-cell="block">
                             <Link className="cell-pill" to={`/opportunities/${item.opportunity.id}`} state={back}
                               aria-label={`Ver la oportunidad ${item.opportunity.title}`} title={item.opportunity.title}>
                               <span>{item.opportunity.title}</span><ChevronRightIcon />
                             </Link>
                           </td>
-                          <td>
+                          <td data-cell="meta">
                             {item.institution.name}
                             {/* T-S12-05: el contacto es una acción del dato (la institución), no de la fila: sus íconos van
                                 junto al nombre del responsable, discretos, y la columna Acciones queda para la fila. */}
@@ -145,12 +162,12 @@ export function LinkageRequestsPage() {
                               </span>
                             </span>
                           </td>
-                          <td className="nowrap">
-                            {dateFormat.format(new Date(item.created_at))}
+                          <td className="nowrap" data-cell="meta">
+                            <span className="unit">Enviada el </span>{dateFormat.format(new Date(item.created_at))}
                             {/* T-S13-09: explica por qué la fila está arriba con el orden por actividad. */}
                             {item.last_message_at && <span className="linkage-meta">{lastMessageLabel(item.last_message_at)}</span>}
                           </td>
-                          <td>
+                          <td data-cell="status">
                             <LinkageStatus status={item.status} />
                             {item.responded_at && <span className="linkage-meta">Respondida el {dateFormat.format(new Date(item.responded_at))}</span>}
                             {/* T-S13-10: cancelar es una acción del estado pendiente, discreta bajo él. */}
@@ -160,7 +177,7 @@ export function LinkageRequestsPage() {
                                 onClick={(event) => { origin.current = event.currentTarget; setCancelling(item) }}><CloseIcon />Cancelar solicitud</button>
                             )}
                           </td>
-                          <td>
+                          <td data-cell="open">
                             {/* HU-S13-02: la flecha es el control accesible de la fila, con su mismo destino. */}
                             <Link className="row-link row-open" to={href} state={back} title="Ver detalle"
                               aria-label={`Ver la solicitud de ${headline} para ${item.opportunity.title}`}><ChevronRightIcon /></Link>
@@ -173,7 +190,7 @@ export function LinkageRequestsPage() {
               </div>
               {data.lastPage > 1 && (
                 <div className="pager">
-                  <p>Página {data.page} de {data.lastPage} · {data.total} solicitudes</p>
+                  <p>Página {data.page} de {countFormat.format(data.lastPage)} · {countFormat.format(data.total)} solicitudes</p>
                   <div className="actions">
                     <button type="button" className="secondary" disabled={data.page <= 1} onClick={() => setPage(data.page - 1)}><ChevronLeftIcon />Anterior</button>
                     <button type="button" className="secondary" disabled={data.page >= data.lastPage} onClick={() => setPage(data.page + 1)}>Siguiente<ChevronRightIcon /></button>

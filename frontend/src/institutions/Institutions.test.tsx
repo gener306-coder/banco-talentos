@@ -543,6 +543,11 @@ describe('estados y navegación del listado (apple-design)', () => {
     await act(async () => { response.resolve(Response.json({ data: [institution] })) })
     expect(screen.queryByTestId('skeleton')).not.toBeInTheDocument()
     expect(screen.getByText(institution.name)).toBeInTheDocument()
+    // T-S14-08: en el celular la fila se apila como tarjeta; cada celda declara su papel.
+    const table = screen.getByRole('table')
+    expect(table).toHaveClass('stack-mobile')
+    const cells = [...table.querySelectorAll('tbody tr > *')]
+    expect(cells.map((cell) => cell.getAttribute('data-cell'))).toEqual(['title', 'inline', 'meta', 'status', 'open'])
   })
 
   it('no muestra el esqueleto cuando la respuesta llega antes de 300 ms', async () => {

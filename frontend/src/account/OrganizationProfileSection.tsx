@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useLocation } from 'react-router'
+import { useAuth } from '../auth/useAuth'
 import type { FormEvent, ReactNode } from 'react'
 import { sectorLabel } from '../companies/catalogs'
 import { InstitutionRequestError } from '../institutions/InstitutionLayout'
@@ -171,6 +172,16 @@ export function OrganizationProfileSection({ notify }: { notify: (message: strin
   const [chosen, setChosen] = useState<boolean | null>(null)
   const editing = chosen ?? (hash === '#organization' && data?.type === 'company' && data.missing.length > 0)
   const ready = data !== null
+
+  // T-S14-09: al renombrarse en Tu perfil, el servidor también renombra el contacto si es la misma persona («Soy yo»).
+  // La ficha se vuelve a leer para no mostrar ni editar el nombre anterior.
+  const accountName = useAuth().user?.name
+  const seenName = useRef(accountName)
+  useEffect(() => {
+    if (seenName.current === accountName) return
+    seenName.current = accountName
+    void refresh()
+  }, [accountName, refresh])
 
   useEffect(() => {
     if (!ready || hash !== '#organization') return

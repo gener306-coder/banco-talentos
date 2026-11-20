@@ -1,12 +1,23 @@
+import { TableHead, TableSkeleton } from '../ui/TableSkeleton'
+import type { TableColumn } from '../ui/TableSkeleton'
 import { Link } from 'react-router'
 import { BuildingIcon, ChevronRightIcon, PlusIcon } from '../ui/icons'
-import { LoadingState, StateMessage } from '../ui/StateMessage'
+import { StateMessage } from '../ui/StateMessage'
 import { useRowNavigation } from '../ui/useRowNavigation'
 import { useTableMemory } from '../ui/useTableMemory'
 import { rowIndex } from '../ui/tableMotion'
 import { listInstitutions } from './api'
 import { InstitutionLayout, InstitutionRequestError, InstitutionStatus } from './InstitutionLayout'
 import { useInstitutionRequest } from './useInstitutionRequest'
+
+/** Columnas del listado (T-S14-08): las comparten la tabla y su esqueleto. */
+const columns: readonly TableColumn[] = [
+  { label: 'Nombre', role: 'title', bone: 'text' },
+  { label: 'CCT', role: 'inline', bone: 'mono' },
+  { label: 'Correo de contacto', role: 'meta', bone: 'text' },
+  { label: 'Estado', role: 'status', bone: 'status' },
+  { label: 'Detalle', hidden: true, role: 'open', bone: 'open' },
+]
 
 export function InstitutionsPage() {
   const { data, loading, failure, refresh, pending } = useInstitutionRequest(listInstitutions)
@@ -24,7 +35,7 @@ export function InstitutionsPage() {
         <p>Consulta y administra las instituciones educativas registradas.</p>
         <Link className="institution-button" to="/institutions/new"><PlusIcon />Nueva institución</Link>
       </div>
-      {loading && !data ? <LoadingState label="Cargando instituciones…" variant="table" />
+      {loading && !data ? <TableSkeleton label="Cargando instituciones…" columns={columns} tableClass="institution-table has-actions" />
         : failure ? <InstitutionRequestError failure={failure} retry={refresh} page />
         : data && data.length === 0
           ? <StateMessage kind="empty" icon={<BuildingIcon />} title="No hay instituciones registradas."
@@ -35,19 +46,19 @@ export function InstitutionsPage() {
               {/* T-S13-13: al buscar, filtrar o paginar, la tabla anterior se queda atenuada mientras llega la nueva. */}
               {refreshing && <p className="visually-hidden" role="status">Actualizando resultados…</p>}
             <div className="institution-table-wrapper" ref={tableMemory} aria-busy={refreshing} role="region" aria-label="Listado de instituciones" tabIndex={0}>
-              <table className="institution-table has-actions">
+              <table className="institution-table has-actions stack-mobile">
                 <caption className="visually-hidden">Instituciones registradas</caption>
-                <thead><tr><th scope="col">Nombre</th><th scope="col">CCT</th><th scope="col">Correo de contacto</th><th scope="col">Estado</th><th scope="col"><span className="visually-hidden">Detalle</span></th></tr></thead>
+                <TableHead columns={columns} />
                 <tbody className="rows-enter">
                   {data.map((institution, index) => {
                     const href = `/institutions/${institution.id}`
                     return (
                       <tr key={institution.id} data-href={href} style={rowIndex(index)} onClick={(event) => openRow(event, href)}>
-                        <th scope="row">{institution.name}</th>
-                        <td>{institution.cct}</td>
-                        <td>{institution.contact_email}</td>
-                        <td><InstitutionStatus active={institution.is_active} /></td>
-                        <td><Link className="row-link row-open" to={href} aria-label={`Ver detalle de ${institution.name}`} title="Ver detalle"><ChevronRightIcon /></Link></td>
+                        <th scope="row" data-cell="title">{institution.name}</th>
+                        <td data-cell="inline">{institution.cct}</td>
+                        <td data-cell="meta">{institution.contact_email}</td>
+                        <td data-cell="status"><InstitutionStatus active={institution.is_active} /></td>
+                        <td data-cell="open"><Link className="row-link row-open" to={href} aria-label={`Ver detalle de ${institution.name}`} title="Ver detalle"><ChevronRightIcon /></Link></td>
                       </tr>
                     )
                   })}

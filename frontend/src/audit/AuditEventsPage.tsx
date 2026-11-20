@@ -1,3 +1,5 @@
+import { TableHead, TableSkeleton } from '../ui/TableSkeleton'
+import type { TableColumn } from '../ui/TableSkeleton'
 import { useCallback } from 'react'
 import type { ReactNode } from 'react'
 import { Link, useLocation } from 'react-router'
@@ -7,7 +9,7 @@ import { useApiRequest } from '../lib/useApiRequest'
 import { ChevronLeftIcon, ChevronRightIcon, SearchIcon } from '../ui/icons'
 import { useTableMemory } from '../ui/useTableMemory'
 import { rowIndex } from '../ui/tableMotion'
-import { LoadingState, StateMessage } from '../ui/StateMessage'
+import { StateMessage } from '../ui/StateMessage'
 import { useListParams } from '../ui/useListParams'
 import { AUDIT_EVENT_TYPES, auditEventLabel, auditMessages, fieldLabel, listAuditEvents } from './api'
 import type { AuditEvent, AuditEventType, ChangeResource } from './api'
@@ -61,6 +63,17 @@ function describe(event: AuditEvent): ReactNode {
  * Bitácora de trazabilidad para ADMIN (HU-S7-03 CA-01 a CA-03): altas de cuentas, empresas y oportunidades, y
  * solicitudes de vinculación con su respuesta, de la más reciente a la más antigua, con filtro por tipo.
  */
+/** Totales del pie con separador de miles (T-S14-08): «2,369 alumnos». */
+const countFormat = new Intl.NumberFormat('es-MX')
+
+/** Columnas del listado (T-S14-08): las comparten la tabla y su esqueleto. */
+const columns: readonly TableColumn[] = [
+  { label: 'Fecha', role: 'meta', bone: 'short' },
+  { label: 'Evento', role: 'title', bone: 'text' },
+  { label: 'Realizó', role: 'block', bone: 'text-meta' },
+  { label: 'Recurso', role: 'block', bone: 'text-meta' },
+]
+
 export function AuditEventsPage() {
   // T-S12-05: el tipo y la página viven en la URL; recargar o compartir la vista la conserva.
   const list = useListParams()
@@ -80,7 +93,9 @@ export function AuditEventsPage() {
         <Link className="plain" to="/" aria-label="Volver al inicio"><ChevronLeftIcon />Inicio</Link>
       </nav>
       <h2 id="audit-events-title">Bitácora</h2>
-      <p>Eventos registrados en el Banco de Talentos y la cuenta que los realizó. De los cambios solo se indica qué campos cambiaron, nunca sus valores. No incluye contraseñas ni datos personales de alumnos.</p>
+      <div className="page-toolbar">
+        <p>Eventos registrados en el Banco de Talentos y la cuenta que los realizó. De los cambios solo se indica qué campos cambiaron, nunca sus valores. No incluye contraseñas ni datos personales de alumnos.</p>
+      </div>
       <form className="table-search" role="search" aria-label="Filtrar eventos" onSubmit={(event) => event.preventDefault()}>
         <div className="table-search-filter">
           <label htmlFor="audit-type-filter">Tipo de evento</label>
@@ -90,7 +105,7 @@ export function AuditEventsPage() {
           </select>
         </div>
       </form>
-      {loading && !data ? <LoadingState label="Cargando bitácora…" variant="table" />
+      {loading && !data ? <TableSkeleton label="Cargando bitácora…" columns={columns} tableClass="institution-table audit-table" pager />
         : failure ? <InstitutionRequestError failure={failure} retry={refresh} page />
         : data && data.items.length === 0
           ? <StateMessage kind="empty" icon={<SearchIcon />}
@@ -102,20 +117,20 @@ export function AuditEventsPage() {
               {/* T-S13-18: al filtrar o paginar, la tabla anterior se queda atenuada mientras llega la nueva. */}
               {refreshing && <p className="visually-hidden" role="status">Actualizando resultados…</p>}
               <div className="institution-table-wrapper" ref={tableMemory} aria-busy={refreshing} role="region" aria-label="Listado de eventos" tabIndex={0}>
-                <table className="institution-table audit-table">
+                <table className="institution-table audit-table stack-mobile">
                   <caption className="visually-hidden">Eventos de la bitácora</caption>
-                  <thead><tr><th scope="col">Fecha</th><th scope="col">Evento</th><th scope="col">Realizó</th><th scope="col">Recurso</th></tr></thead>
+                  <TableHead columns={columns} />
                   <tbody key={location.search} className="rows-enter">
                     {data.items.map((event, index) => (
                       // Un mismo recurso puede tener varios eventos del mismo tipo (p. ej. cambios de contraseña).
                       <tr key={`${event.type}-${event.resource.id}-${event.occurred_at}-${index}`} style={rowIndex(index)}>
-                        <td><time dateTime={event.occurred_at}>{dateFormat.format(new Date(event.occurred_at))}</time></td>
-                        <th scope="row">{auditEventLabel(event.type)}</th>
-                        <td>
+                        <td data-cell="meta"><time dateTime={event.occurred_at}>{dateFormat.format(new Date(event.occurred_at))}</time></td>
+                        <th scope="row" data-cell="title">{auditEventLabel(event.type)}</th>
+                        <td data-cell="block">
                           {event.actor.name}
                           <span className="linkage-profile-meta">{roleLabels[event.actor.role]}</span>
                         </td>
-                        <td>{describe(event)}</td>
+                        <td data-cell="block">{describe(event)}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -123,7 +138,7 @@ export function AuditEventsPage() {
               </div>
               {data.lastPage > 1 && (
                 <div className="pager">
-                  <p>Página {data.page} de {data.lastPage} · {data.total} eventos</p>
+                  <p>Página {data.page} de {countFormat.format(data.lastPage)} · {countFormat.format(data.total)} eventos</p>
                   <div className="actions">
                     <button type="button" className="secondary" disabled={data.page <= 1} onClick={() => setPage(data.page - 1)}><ChevronLeftIcon />Anterior</button>
                     <button type="button" className="secondary" disabled={data.page >= data.lastPage} onClick={() => setPage(data.page + 1)}>Siguiente<ChevronRightIcon /></button>

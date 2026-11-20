@@ -4,7 +4,9 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\UpdateAccountRequest;
 use App\Http\Requests\UpdatePasswordRequest;
+use App\Enums\UserRole;
 use App\Models\AccountAuditEvent;
+use App\Models\Company;
 use App\Notifications\PasswordChanged;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -20,7 +22,13 @@ use Illuminate\Support\Str;
  */
 class AccountController extends Controller
 {
-    /** CA-02: solo el nombre. Sin cambios reales no se registra ningún evento. */
+    /**
+     * CA-02: solo el nombre. Sin cambios reales no se registra ningún evento.
+     *
+     * T-S14-09: si la persona es el contacto de su empresa («Soy yo»: el correo del contacto es el de la cuenta), el
+     * contacto se renombra en la misma transacción. Antes quedaba con el nombre anterior y el formulario del perfil lo
+     * devolvía a la cuenta al guardar cualquier otro dato.
+     */
     public function update(UpdateAccountRequest $request, AuthController $auth): JsonResponse
     {
         $user = $request->user();
@@ -30,6 +38,16 @@ class AccountController extends Controller
             DB::transaction(function () use ($user, $name): void {
                 $user->forceFill(['name' => $name])->save();
                 AccountAuditEvent::record($user, AccountAuditEvent::ACCOUNT_UPDATED, $user, ['name']);
+
+                if ($user->role === UserRole::COMPANY && $user->company_id !== null) {
+                    $company = Company::query()->whereKey($user->company_id)->lockForUpdate()->first();
+                    if ($company !== null && $company->contact_email !== null && $company->contact_name !== $name
+                        && mb_strtolower($company->contact_email) === mb_strtolower($user->email)) {
+                        $company->contact_name = $name;
+                        $company->save();
+                        AccountAuditEvent::record($user, AccountAuditEvent::ORGANIZATION_PROFILE_UPDATED, $company, ['contact_name']);
+                    }
+                }
             });
         }
 

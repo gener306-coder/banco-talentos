@@ -94,7 +94,8 @@ input:focus-visible, select:focus-visible, textarea:focus-visible { border-color
 }
 
 /* Navegación de instituciones con botones planos. */
-.institution-navigation { gap: 0.1rem; margin-left: -0.6rem; }
+/* T-S14-08: el mismo margen que .page-navigation; la regla genérica de nav añadía 16 px arriba solo en estas vistas. */
+.institution-navigation { gap: 0.1rem; margin: 0 0 1.4rem -0.6rem; }
 .institution-navigation [aria-current='page'] { color: var(--text); }
 .institution-back { margin-left: -0.6rem; }
 
@@ -238,6 +239,10 @@ body.modal-open { overflow: hidden; }
 .page-navigation { display: flex; gap: 0.1rem; margin: 0 0 1.4rem -0.6rem; }
 .page-toolbar { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1rem; margin-bottom: 1.5rem; }
 .page-toolbar p { margin: 0; max-width: 46ch; }
+/* T-S14-08: la descripción de cada listado, en el tono secundario y con un ancho de lectura cómodo, en todos por igual. */
+:is(.page-toolbar, .institution-toolbar) > p { max-width: 62ch; color: var(--text-muted); }
+/* Segunda línea atenuada bajo el título de una fila (por ejemplo, el programa de una oportunidad). */
+.row-subtitle { display: block; margin-top: 0.15rem; color: var(--text-muted); font-size: var(--type-xs); font-weight: 400; }
 .data-table-wrapper { overflow-x: auto; }
 /*
  * T-S12-03: una tabla más ancha que su tarjeta se desplaza dentro de ella, nunca la página. Una sombra suave en el borde
@@ -475,7 +480,6 @@ textarea[aria-invalid='true'] { border-color: var(--danger-border); }
 .home-stats-skeleton .home-stat { flex-direction: column; gap: 0.65rem; }
 .home-stats-skeleton .bone.value { width: 45%; height: 1.7rem; }
 .home-stats-skeleton .bone.label { width: 75%; height: 0.7rem; }
-.is-waiting .bone { visibility: hidden; }
 .home-stats-failure { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 0.75rem 1rem; padding: 0.9rem 1rem;
   border: 1px dashed var(--border-strong); border-radius: 14px; color: var(--text-muted); font-size: var(--type-sm); }
 .home-stats-failure p { flex: 1 1 18rem; margin: 0; }
@@ -669,7 +673,8 @@ textarea[aria-invalid='true'] { border-color: var(--danger-border); }
  */
 @layer components {
 /* :is(span, div) eleva la especificidad sobre metas de módulo como .linkage-meta, que se cargan después. */
-:is(span, div).cell-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 0.1rem 0.35rem; }
+/* T-S14-08: el texto se parte dentro de su propia caja y los íconos se quedan a su lado, no en una línea aparte. */
+:is(span, div).cell-meta { display: flex; flex-wrap: nowrap; align-items: center; gap: 0.1rem 0.35rem; }
 .cell-actions { display: inline-flex; align-items: center; gap: 0.1rem; vertical-align: middle; }
 .cell-actions :is(a, button) { display: inline-grid; place-items: center; width: var(--icon-button-sm); height: var(--icon-button-sm); margin: 0; padding: 0;
   border: 0; border-radius: 50%; background: transparent; color: var(--accent); transition: background-color 150ms ease-out, transform 100ms ease-out; }
@@ -803,6 +808,78 @@ textarea[aria-invalid='true'] { border-color: var(--danger-border); }
   .table-card :is(.data-table, .institution-table) :is(th, td) { padding: 0.7rem 0.75rem; }
   .table-card .pager { padding: 0.75rem; }
 }
+/*
+ * T-S14-08: esqueleto de un listado a la medida. Cada hueso ocupa el alto de la línea de texto que reemplaza y su ancho
+ * en rem imita el contenido típico de la columna, para que la tabla real llegue con las mismas proporciones.
+ */
+.table-skeleton .bone-line { display: flex; align-items: center; gap: 0.4rem; height: 1.5em; }
+.table-skeleton .bone-line.meta { height: 1.5em; margin-top: 0.15rem; font-size: var(--type-xs); }
+.table-skeleton .bone-line.pill { height: 2rem; }
+.table-skeleton .bone-line:is(.chips, .actions) { flex-wrap: wrap; height: auto; min-height: 1.9rem; }
+.table-skeleton .bone { max-width: 100%; }
+.table-skeleton .bone.v { width: 11rem; }
+.table-skeleton tbody tr:nth-child(3n + 2) .bone.v { width: 8.5rem; }
+.table-skeleton tbody tr:nth-child(3n) .bone.v { width: 13rem; }
+.table-skeleton .bone.meta { width: 6.5rem; height: 0.6rem; }
+.table-skeleton .bone.short { width: 6rem; }
+.table-skeleton .bone.mono { width: 6.5rem; }
+.table-skeleton .bone.pill.v { width: 11rem; height: 1.6rem; }
+.table-skeleton .bone.status { width: 4.75rem; }
+.table-skeleton .bone.chip { width: 5.5rem; height: 1.35rem; }
+.table-skeleton .bone.chip.short { width: 3.5rem; }
+.table-skeleton .bone.open { width: 1rem; height: 1rem; margin: 0.625rem; border-radius: 50%; }
+.table-skeleton .bone.action { width: 9.5rem; height: 2rem; }
+.table-skeleton .bone.action.short { width: 6rem; }
+.table-skeleton .pager-bone { width: 11rem; height: 0.7rem; margin-block: 0.85rem; }
+.is-waiting .bone { visibility: hidden; }
+/*
+ * T-S14-08: en el celular cada fila es una tarjeta apilada en lugar de una tabla que se desplaza de lado (antes el estado
+ * y la flecha quedaban fuera de la vista). Cada celda declara su papel con data-cell: lo que identifica va primero y en
+ * negritas, los datos secundarios atenuados, las pastillas de estado juntas al pie y la flecha fija a la derecha. El
+ * encabezado sigue en el documento para los lectores de pantalla.
+ */
+@media (max-width: 600px) {
+  .table-card .stack-mobile, .table-card .stack-mobile > tbody { display: block; width: 100%; }
+  .table-card .stack-mobile > thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+  .table-card .stack-mobile > tbody > tr { position: relative; display: flex; flex-wrap: wrap; align-items: baseline; gap: 0.15rem 0.45rem;
+    padding: 0.9rem 3.4rem 0.9rem 1rem; border-bottom: 1px solid var(--border); }
+  .table-card .stack-mobile > tbody > tr:last-child { border-bottom: 0; }
+  .table-card .stack-mobile > tbody > tr:not(:has(> [data-cell='open'])) { padding-right: 1rem; }
+  .table-card .stack-mobile > tbody > tr > [data-cell] { flex: 1 0 100%; min-width: 0; width: auto; padding: 0; border: 0;
+    background: none; text-align: left; white-space: normal; animation: none; }
+  .table-card .stack-mobile > tbody > tr > [data-cell='title'] { order: -2; font-weight: 600; color: var(--text-strong); }
+  .table-card .stack-mobile > tbody > tr:has(> [data-cell='name']) > [data-cell='title'] { flex: 0 1 auto; }
+  .table-card .stack-mobile > tbody > tr > [data-cell='name'] { order: -1; flex: 1 1 auto; font-weight: 600; color: var(--text-strong); }
+  /* Apellidos y nombre en una sola línea: «Aguilar Ávila, Fernanda». */
+  .table-card .stack-mobile > tbody > tr > [data-cell='title']:has(+ [data-cell='name'])::after { content: ','; }
+  .table-card .stack-mobile > tbody > tr > :is([data-cell='meta'], [data-cell='inline']) { color: var(--text-muted); font-size: var(--type-sm); }
+  .table-card .stack-mobile > tbody > tr > [data-cell='inline'] { flex: 0 1 auto; }
+  .table-card .stack-mobile > tbody > tr > [data-cell='inline'] + [data-cell='inline']::before { content: '·'; content: '·' / ''; margin-right: 0.45rem; }
+  .table-card .stack-mobile > tbody > tr > [data-cell='block'] { margin-top: 0.35rem; }
+  .table-card .stack-mobile > tbody > tr > [data-cell='status'] { order: 10; flex: 0 0 auto; margin-top: 0.5rem; }
+  .table-card .stack-mobile > tbody > tr > [data-cell='actions'] { order: 11; margin-top: 0.65rem; }
+  .table-card .stack-mobile > tbody > tr > [data-cell='actions'] > .actions { flex-direction: row; flex-wrap: wrap; align-items: center; justify-content: flex-start; gap: 0.5rem; }
+  .table-card .stack-mobile > tbody > tr > [data-cell='open'] { position: absolute; top: 50%; right: 0.35rem; flex: none; transform: translateY(-50%); }
+  /* Los datos secundarios de una celda (.linkage-meta, correo de la cuenta) siguen en su propia línea. */
+  .table-card .stack-mobile .unit { display: inline; }
+  /* Volver de una fila o recibir mensajes tiñe la tarjeta completa, no cada celda. */
+  .table-card .stack-mobile > tbody > tr.row-return { animation: row-return 1.6s ease-in-out; }
+  .table-card .stack-mobile > tbody > tr.row-updated { animation: row-updated 1.6s ease-out; }
+  .table-skeleton .stack-mobile .bone:is(.v, .short, .mono) { width: 60%; }
+  .table-skeleton .stack-mobile [data-cell='title'] .bone.v { width: 70%; }
+  .table-skeleton .stack-mobile [data-cell='inline'] .bone:is(.v, .short, .mono) { width: 5.5rem; }
+  .table-skeleton .stack-mobile tr:has(> [data-cell='name']) > [data-cell='title'] .bone { width: 8rem; }
+  .table-skeleton .stack-mobile [data-cell='name'] .bone { width: 5rem; }
+  .table-skeleton .stack-mobile tr > [data-cell='title']:has(+ [data-cell='name'])::after { content: none; }
+}
+@media (max-width: 600px) and (hover: hover) {
+  .table-card .stack-mobile > tbody > tr[data-href]:hover { background: var(--surface-muted); }
+}
+@media (max-width: 600px) and (prefers-reduced-motion: reduce) {
+  .table-card .stack-mobile > tbody > tr:is(.row-return, .row-updated) { animation: none; }
+}
+/* Unidades que solo hacen falta sin el encabezado de la columna (por ejemplo «lugares» en la tarjeta del celular). */
+.unit { display: none; }
 /*
  * Acciones de cuentas (T-S8-16): el tono indica la consecuencia. Apoyo (restablecer, reenviar): pastilla de tinte de
  * marca. Quitar el acceso (inactivar): contorno de peligro sin relleno. Devolver el acceso (activar): tono de éxito.

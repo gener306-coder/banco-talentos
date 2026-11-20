@@ -1,3 +1,5 @@
+import { TableHead, TableSkeleton } from '../ui/TableSkeleton'
+import type { TableColumn } from '../ui/TableSkeleton'
 import { useCallback, useState } from 'react'
 import type { FormEvent } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router'
@@ -6,7 +8,7 @@ import { useApiRequest } from '../lib/useApiRequest'
 import { ChevronLeftIcon, ChevronRightIcon, PlusIcon, SearchIcon } from '../ui/icons'
 import { Sheet } from '../ui/Sheet'
 import { backState } from '../ui/backLink'
-import { LoadingState, StateMessage } from '../ui/StateMessage'
+import { StateMessage } from '../ui/StateMessage'
 import { useListParams } from '../ui/useListParams'
 import { useRowNavigation } from '../ui/useRowNavigation'
 import { useTableMemory } from '../ui/useTableMemory'
@@ -21,6 +23,18 @@ import { StudentStatus } from './StudentStatus'
  * Padrón interno de la institución de la sesión (HU-S2-02), con búsqueda por matrícula o nombre, filtro por estado y
  * la columna «Acciones» de las demás tablas del sistema (HU-S8-01).
  */
+/** Totales del pie con separador de miles (T-S14-08): «2,369 alumnos». */
+const countFormat = new Intl.NumberFormat('es-MX')
+
+/** Columnas del padrón (T-S14-08): las comparten la tabla y su esqueleto. */
+const columns: readonly TableColumn[] = [
+  { label: 'Matrícula', role: 'meta', bone: 'mono' },
+  { label: 'Apellidos', role: 'title', bone: 'text' },
+  { label: 'Nombre(s)', role: 'name', bone: 'short' },
+  { label: 'Estado', role: 'status', bone: 'status' },
+  { label: 'Detalle', hidden: true, role: 'open', bone: 'open' },
+]
+
 export function StudentsPage() {
   // HU-S8-01: la búsqueda se aplica al enviarla; los filtros, al elegirlos. Todos vuelven a la página 1.
   // T-S8-09 y T-S12-05: búsqueda, filtros y página viven en la URL; el aviso del inicio llega filtrado y el regreso
@@ -104,7 +118,7 @@ export function StudentsPage() {
         </div>
         <button type="submit" className="secondary"><SearchIcon /><span className="table-search-button-text">Buscar</span></button>
       </form>
-      {loading && !data ? <LoadingState label="Cargando alumnos…" variant="table" />
+      {loading && !data ? <TableSkeleton label="Cargando alumnos…" columns={columns} tableClass="data-table has-actions" pager />
         : failure ? <InstitutionRequestError failure={failure} retry={refresh} page />
         : data && data.total === 0
           ? filtered
@@ -121,9 +135,9 @@ export function StudentsPage() {
               {/* T-S13-13: al buscar, filtrar o paginar, la tabla anterior se queda atenuada mientras llega la nueva. */}
               {refreshing && <p className="visually-hidden" role="status">Actualizando resultados…</p>}
             <div className="data-table-wrapper" ref={tableMemory} aria-busy={refreshing} role="region" aria-label="Padrón de alumnos" tabIndex={0}>
-              <table className="data-table has-actions">
+              <table className="data-table has-actions stack-mobile">
                 <caption className="visually-hidden">Alumnos registrados</caption>
-                <thead><tr><th scope="col">Matrícula</th><th scope="col">Apellidos</th><th scope="col">Nombre(s)</th><th scope="col">Estado</th><th scope="col"><span className="visually-hidden">Detalle</span></th></tr></thead>
+                <TableHead columns={columns} />
                 <tbody key={location.search} className="rows-enter">
                   {data.students.map((student, index) => {
                     const href = `/students/${student.id}`
@@ -131,11 +145,11 @@ export function StudentsPage() {
                     const back = backState('Alumnos', location)
                     return (
                       <tr key={student.id} data-href={href} style={rowIndex(index)} onClick={(event) => openRow(event, href, back)}>
-                        <td className="mono">{student.enrollment_number}</td>
-                        <th scope="row">{surnames(student)}</th>
-                        <td>{student.given_names}</td>
-                        <td><StudentStatus active={student.is_active} /></td>
-                        <td>
+                        <td className="mono" data-cell="meta">{student.enrollment_number}</td>
+                        <th scope="row" data-cell="title">{surnames(student)}</th>
+                        <td data-cell="name">{student.given_names}</td>
+                        <td data-cell="status"><StudentStatus active={student.is_active} /></td>
+                        <td data-cell="open">
                           <Link className="row-link row-open" to={href} state={back} aria-label={`Ver detalle de ${surnames(student)}, ${student.given_names}`} title="Ver detalle"><ChevronRightIcon /></Link>
                         </td>
                       </tr>
@@ -145,7 +159,7 @@ export function StudentsPage() {
               </table>
             </div>
             <div className="pager">
-              <p>Página {data.page} de {data.lastPage} · {data.total} {data.total === 1 ? 'alumno' : 'alumnos'}</p>
+              <p>Página {data.page} de {countFormat.format(data.lastPage)} · {countFormat.format(data.total)} {data.total === 1 ? 'alumno' : 'alumnos'}</p>
               {data.lastPage > 1 && (
                 <div className="actions">
                   <button type="button" className="secondary" disabled={data.page <= 1} onClick={() => setPage(data.page - 1)}>
