@@ -290,7 +290,7 @@ Cada historia termina con su reporte y una revisión del responsable antes de in
 
 ### T-S14-06 — Menú de cuenta profesional, tema claro por defecto y cambio de tema animado
 
-**Estado:** Implementada (19 de noviembre de 2026) en `chore/ui-polish-account-profile`, sin commit. Solicitada por el responsable. Solo frontend.
+**Estado:** Completada (19 de noviembre de 2026, commit e3afd90). Solicitada por el responsable. Solo frontend.
 
 - **Panel del menú:** en capas, al estilo de las grandes plataformas, con secciones separadas por filetes de 1 px:
   - identidad: avatar `md`, nombre, correo atenuado y la insignia del rol con la organización;
@@ -313,3 +313,33 @@ Cada historia termina con su reporte y una revisión del responsable antes de in
   - con movimiento reducido, o si el tema visible no cambia, se aplica al instante.
 - **Pruebas:** Vitest de `theme.test.ts` (predeterminado claro, Sistema guardado, revelado circular, fundido de respaldo y movimiento reducido) y del menú en `SessionPage.test.tsx`; `e2e/theme.spec.ts` ajustada al nuevo predeterminado. Revisión visual a 1440 y 390 px en claro, oscuro y sistema, y a mitad de la animación.
 
+
+### T-S14-07 — Auditoría de los inicios por rol: esqueletos a la medida, jerarquía y transiciones
+
+**Estado:** Implementada (19 de noviembre de 2026) en `chore/ui-polish-home`, sin commit. Solicitada por el responsable. Solo frontend.
+
+- **Hallazgos de la auditoría (los cuatro roles, 1440 y 390 px):**
+  - mientras cargaban los indicadores, el inicio quedaba en blanco: el resumen no tenía esqueleto y las tarjetas de acceso esperaban ocultas a los datos;
+  - al llegar los datos, todo aparecía de golpe y empujaba el contenido; el carrusel de la empresa hacía lo mismo;
+  - el error de los indicadores no ofrecía reintentar;
+  - sin títulos de sección, el resumen y los accesos se leían como un solo bloque;
+  - la acción principal ocupaba una fila propia bajo el saludo, y en el celular los indicadores formaban una columna de seis tarjetas altas;
+  - en la empresa, las Historias (inspiracional) iban antes que su resumen (accionable).
+- **Esqueletos a la medida:**
+  - `useSkeletonDelay` (nuevo, `ui/useSkeletonDelay.ts`): el esqueleto reserva su alto desde el primer pintado, pero sus huesos solo se ven si la espera pasa de `SKELETON_DELAY_MS`; una carga rápida no parpadea;
+  - resumen: una tarjeta por indicador del rol (6, 5, 4 o 3), con la misma retícula, y la carga anunciada en un `role="status"` oculto;
+  - carrusel de la empresa: encabezado, la historia actual con el borde de la siguiente y el pie; si no hay historias o falla, desaparece como antes;
+  - las tarjetas de acceso ya no esperan a los datos: se revelan en cascada al entrar en pantalla.
+- **Jerarquía y disposición:**
+  - encabezado con la fecha del día, el saludo y el rol con la organización en tono secundario; la acción principal sube a la derecha del saludo en pantallas anchas y va a todo el ancho en el celular;
+  - títulos de sección discretos en mayúsculas espaciadas («Indicadores» y «Accesos»), como en Mi cuenta;
+  - indicadores con `auto-fit` (la fila se llena sin huecos con cualquier número) y etiquetas en `--text-muted`; en el celular, dos por fila, y si el número es impar el último ocupa la fila;
+  - descripciones de las tarjetas y avisos en `--text-muted`; tarjetas más compactas en el celular;
+  - la búsqueda de talento de la empresa es un panel sobre `--surface-muted`, y su resumen va antes que las Historias.
+- **Estados:** si los indicadores fallan, un aviso discreto (borde punteado, `role="status"`) con «Reintentar»; las secciones siguen disponibles. Las cifras entran con `content-enter` y conservan el conteo de T-S12-11; con movimiento reducido no hay animación.
+- **Pruebas:**
+  - Vitest de `SessionPage.test.tsx`: esqueleto con una tarjeta por indicador y tarjetas reveladas sin esperar los datos; aviso con «Reintentar» que vuelve a pedir los indicadores y los muestra;
+  - Vitest de `DualStoriesSpotlight.test.tsx`: esqueleto del carrusel mientras carga;
+  - `e2e/home-dashboard.spec.ts`: el error deja el aviso con «Reintentar» y sin cifras.
+  
+  Revisión visual de los cuatro roles a 1440 y 390 px, cargado, cargando y con error, en claro y oscuro, sin desborde horizontal.

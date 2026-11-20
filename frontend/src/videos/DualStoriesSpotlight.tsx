@@ -1,3 +1,4 @@
+import { useSkeletonDelay } from '../ui/useSkeletonDelay'
 import { useCallback, useEffect, useId, useRef, useState } from 'react'
 import type { CSSProperties, FocusEvent } from 'react'
 import { Link } from 'react-router'
@@ -236,6 +237,24 @@ export function DualStoriesSpotlight({ onSettled }: { onSettled?: () => void } =
   // T-S12-11: avisa cuando ya tiene su altura final (con historias, vacío o con error).
   const settled = Boolean(data || failure)
   useEffect(() => { if (settled) onSettled?.() }, [settled, onSettled])
+  // T-S14-07: mientras carga, un esqueleto con la forma del carrusel reserva su lugar; vacío o con error, desaparece.
+  if (!data && !failure) return <SpotlightSkeleton />
   if (!data || data.videos.length === 0) return null
   return <StoriesCarousel pool={data.videos} />
+}
+
+/** Esqueleto del carrusel: encabezado, la historia actual y el borde de la siguiente, y su pie. */
+function SpotlightSkeleton() {
+  const shown = useSkeletonDelay()
+  return (
+    <div className={`spotlight spotlight-skeleton${shown ? '' : ' is-waiting'}`} aria-busy="true" data-testid="spotlight-skeleton">
+      <p className="visually-hidden" role="status">Cargando historias del Dual…</p>
+      <div className="spotlight-heading" aria-hidden="true">
+        <div className="spotlight-skeleton-title"><span className="bone eyebrow-bone" /><span className="bone title-bone" /></div>
+        <span className="bone pill" />
+      </div>
+      <div className="spotlight-skeleton-track" aria-hidden="true"><span className="bone poster" /><span className="bone poster next" /></div>
+      <div className="spotlight-skeleton-footer" aria-hidden="true"><span className="bone" /><span className="bone short" /></div>
+    </div>
+  )
 }

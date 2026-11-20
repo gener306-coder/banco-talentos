@@ -247,6 +247,18 @@ describe('módulo del inicio HU-S9-05', () => {
     expect(screen.queryByRole('region', { name: HEADING })).not.toBeInTheDocument()
   })
 
+  it('mientras carga, un esqueleto con la forma del carrusel reserva su lugar y anuncia la carga (T-S14-07)', async () => {
+    let respond: (response: Response) => void = () => {}
+    galleryMock.mockImplementation(() => new Promise<Response>((resolve) => { respond = resolve }))
+    start()
+    const skeleton = await screen.findByTestId('spotlight-skeleton')
+    expect(skeleton).toHaveAttribute('aria-busy', 'true')
+    expect(screen.getByText('Cargando historias del Dual…')).toHaveAttribute('role', 'status')
+    respond(pageOf([story(1, 'Historia 1'), story(2, 'Historia 2')]))
+    expect(await screen.findByRole('region', { name: HEADING })).toBeInTheDocument()
+    expect(screen.queryByTestId('spotlight-skeleton')).not.toBeInTheDocument()
+  })
+
   it('un error de la galería no muestra alertas', async () => {
     galleryMock.mockImplementation(async () => new Response(null, { status: 500 }))
     start()

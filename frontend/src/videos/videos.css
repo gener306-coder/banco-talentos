@@ -246,6 +246,17 @@
   .spotlight-heading h3 { margin: 0; color: var(--text-strong); font-size: clamp(var(--type-lg), 2.6vw, var(--type-xl)); line-height: 1.2; }
   .spotlight-track { position: relative; display: flex; gap: 1rem; overflow-x: auto; scroll-snap-type: x mandatory; scrollbar-width: none; border-radius: 1rem; }
   .spotlight-track::-webkit-scrollbar { display: none; }
+  /* T-S14-07: esqueleto del carrusel del inicio con su misma forma (encabezado, historia, borde de la siguiente y pie). */
+  .spotlight-skeleton-title { display: grid; gap: 0.45rem; flex: 1; }
+  .spotlight-skeleton .bone.eyebrow-bone { width: 7rem; height: 0.65rem; }
+  .spotlight-skeleton .bone.title-bone { width: min(20rem, 80%); height: 1.2rem; }
+  .spotlight-skeleton .spotlight-heading .bone.pill { width: 10rem; height: 2rem; }
+  .spotlight-skeleton-track { display: flex; gap: 1rem; overflow: hidden; }
+  .spotlight-skeleton .bone.poster { flex: 0 0 var(--slide); height: auto; aspect-ratio: 16 / 9; border-radius: 1rem; }
+  .spotlight-skeleton .bone.poster.next { flex: 1 0 0; }
+  .spotlight-skeleton-footer { display: grid; gap: 0.45rem; margin-top: 1rem; }
+  .spotlight-skeleton-footer .bone { width: 40%; }
+  .spotlight-skeleton-footer .bone.short { width: 22%; height: 0.7rem; }
   /* Espacio final para que la última historia también pueda alinearse al inicio. */
   .spotlight-track::after { content: ''; flex: 0 0 calc(100% - var(--slide) - 1rem); }
   .spotlight-slide { flex: 0 0 var(--slide); min-width: 0; scroll-snap-align: start; }
