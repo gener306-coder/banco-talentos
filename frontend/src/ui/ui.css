@@ -523,27 +523,105 @@ textarea[aria-invalid='true'] { border-color: var(--danger-border); }
 .user-avatar img { width: 100%; height: 100%; object-fit: cover; }
 .user-avatar.sm { width: var(--icon-button-md); height: var(--icon-button-md); font-size: var(--type-sm); }
 .user-avatar.lg { width: 4.5rem; height: 4.5rem; font-size: var(--type-xl); }
-.account-panel { position: absolute; right: 0; top: calc(100% + 0.5rem); z-index: 20; width: min(18rem, calc(100vw - 2rem)); padding: 1rem;
-  display: grid; gap: 0.3rem; background: var(--surface); border: 1px solid var(--border); border-radius: 14px;
-  box-shadow: 0 12px 28px color-mix(in srgb, var(--shadow) 14%, transparent); animation: materialize var(--spring-duration) var(--spring) both; }
+.user-avatar.md { width: 2.75rem; height: 2.75rem; font-size: var(--type-base); }
+/*
+ * Menú de cuenta (rediseño T-S14-06): panel de capas con identidad, acceso a Mi cuenta, tema con vista previa y
+ * «Cerrar sesión» como acción terminal. Secciones separadas por un filete de 1 px; filas de 44 px en pantallas táctiles.
+ */
+.account-panel { position: absolute; right: 0; top: calc(100% + 0.5rem); z-index: 20; width: min(20rem, calc(100vw - 1.5rem)); padding: 0.4rem;
+  display: grid; background: var(--surface); border: 1px solid var(--border); border-radius: 16px; transform-origin: top right;
+  box-shadow: 0 1px 2px color-mix(in srgb, var(--shadow) 6%, transparent), 0 16px 40px color-mix(in srgb, var(--shadow) 16%, transparent);
+  animation: materialize var(--spring-duration) var(--spring) both; }
 .account-panel p { margin: 0; overflow-wrap: anywhere; }
-.account-name { font-weight: 700; }
-.account-detail { font-size: var(--type-sm); color: var(--text); }
-.account-panel button { margin-top: 0.6rem; }
-/* HU-S14-01: «Mi cuenta» como fila del panel, con el acento de la marca; 44 px en pantallas táctiles. */
-.account-link { display: flex; align-items: center; gap: 0.5rem; margin: 0.75rem -0.5rem 0; padding: 0.55rem 0.5rem; border-radius: 10px;
-  color: var(--accent); font-weight: 600; text-decoration: none; }
+.account-panel-identity { display: flex; align-items: center; gap: 0.75rem; padding: 0.7rem 0.7rem 0.45rem; }
+.account-panel-who { min-width: 0; }
+.account-name { font-weight: 600; color: var(--text-strong); line-height: 1.3; }
+.account-detail { margin-top: 0.1rem; font-size: var(--type-sm); color: var(--text-muted); }
+.account-panel-context { display: flex; flex-wrap: wrap; align-items: center; gap: 0.35rem 0.5rem; padding: 0 0.7rem 0.7rem; }
+.account-role-chip { padding: 0.1rem 0.55rem; border-radius: 999px; background: var(--tint); color: var(--accent); font-size: var(--type-xs); font-weight: 600; }
+.account-organization { min-width: 0; font-size: var(--type-sm); color: var(--text-muted); overflow-wrap: anywhere; }
+.account-panel-section { margin: 0; padding: 0.35rem 0; border: 0; border-top: 1px solid var(--border); min-width: 0; }
+/* HU-S14-01: «Mi cuenta» como fila con ícono, descripción y chevron. */
+.account-link { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 0.65rem; padding: 0.5rem 0.6rem; border-radius: 10px;
+  color: var(--text-strong); font-weight: 500; text-decoration: none; transition: background-color 140ms ease; }
+.account-link > .icon { color: var(--text-muted); transition: transform 160ms ease; }
+.account-link-icon { display: grid; place-items: center; width: 2rem; height: 2rem; border-radius: 50%; background: var(--tint); color: var(--accent); }
+.account-link-text { display: grid; line-height: 1.3; }
+.account-link-hint { font-size: var(--type-xs); font-weight: 400; color: var(--text-muted); }
 .account-link:focus-visible { outline: 3px solid var(--focus-ring); outline-offset: 1px; }
-@media (hover: hover) { .account-link:hover { background: var(--tint); } }
-@media (pointer: coarse) { .account-link { min-height: 2.75rem; } }
-/* Selector de tema (modo oscuro): tres opciones en una fila dentro del panel. */
-.account-theme { margin: 0.6rem 0 0; }
-.account-theme div { margin-right: 0.75rem; }
+/* Tema: tres mosaicos con la miniatura de cada uno; el elegido lleva el acento y una marca. */
+.account-theme legend { float: left; width: 100%; padding: 0.35rem 0.6rem 0.5rem; font-size: var(--type-xs); font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase; color: var(--text-muted); }
+.theme-options { clear: both; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0.45rem; padding: 0 0.45rem 0.35rem; }
+.theme-option { position: relative; display: grid; gap: 0.4rem; padding: 0.35rem 0.35rem 0.45rem; border: 1px solid var(--border); border-radius: 12px; cursor: pointer;
+  transition: border-color 160ms ease, background-color 160ms ease, box-shadow 160ms ease; }
+/* El radio invisible cubre todo el mosaico y queda al frente: es el objetivo del clic, no la miniatura. */
+.theme-option input { position: absolute; inset: 0; z-index: 1; width: 100%; height: 100%; margin: 0; opacity: 0; cursor: pointer; }
+.theme-option:has(input:checked) { border-color: var(--accent); background: var(--tint); box-shadow: inset 0 0 0 1px var(--accent); }
+.theme-option:has(input:focus-visible) { outline: 3px solid var(--focus-ring); outline-offset: 2px; }
+.theme-option-label { display: inline-flex; align-items: center; justify-content: center; gap: 0.3rem; font-size: var(--type-xs); font-weight: 600; color: var(--text); }
+.theme-option-label .icon { width: 0.9rem; height: 0.9rem; }
+.theme-option:has(input:checked) .theme-option-label { color: var(--accent); }
+.theme-option-check { position: absolute; top: 0.2rem; right: 0.2rem; display: grid; place-items: center; width: 1.05rem; height: 1.05rem; border-radius: 50%;
+  background: var(--accent-fill); color: var(--on-accent); opacity: 0; transform: scale(0.5); transition: opacity 160ms ease, transform 320ms var(--spring); }
+.theme-option-check .icon { width: 0.65rem; height: 0.65rem; stroke-width: 3; }
+.theme-option:has(input:checked) .theme-option-check { opacity: 1; transform: none; }
+/* Miniatura: los colores fijos de cada tema (tokens --theme-preview-*, iguales en ambos temas). */
+.theme-preview { position: relative; display: block; height: 2.6rem; overflow: hidden; border-radius: 7px; background: var(--theme-preview-light-page);
+  box-shadow: inset 0 0 0 1px var(--theme-preview-light-line); }
+.theme-preview-bar { position: absolute; inset: 0 0 auto 0; height: 0.5rem; background: var(--theme-preview-light-card); box-shadow: 0 1px 0 var(--theme-preview-light-line); }
+.theme-preview-bar::before { content: ''; position: absolute; top: 0.15rem; left: 0.3rem; width: 0.55rem; height: 0.2rem; border-radius: 999px; background: var(--theme-preview-accent); }
+.theme-preview-card { position: absolute; inset: 0.8rem 0.35rem 0.35rem; display: grid; align-content: start; gap: 0.2rem; padding: 0.3rem; border-radius: 4px; background: var(--theme-preview-light-card); }
+.theme-preview-line { display: block; height: 0.18rem; border-radius: 999px; background: var(--theme-preview-light-line); }
+.theme-preview-line.short { width: 55%; background: var(--theme-preview-accent); }
+.theme-preview.dark { background: var(--theme-preview-dark-page); box-shadow: inset 0 0 0 1px var(--theme-preview-dark-line); }
+.theme-preview.dark :is(.theme-preview-bar, .theme-preview-card) { background: var(--theme-preview-dark-card); }
+.theme-preview.dark .theme-preview-bar { box-shadow: 0 1px 0 var(--theme-preview-dark-line); }
+.theme-preview.dark .theme-preview-line:not(.short) { background: var(--theme-preview-dark-line); }
+/* Sistema: la mitad clara y la mitad oscura, lado a lado. */
+.theme-preview.system { background: linear-gradient(90deg, var(--theme-preview-light-page) 50%, var(--theme-preview-dark-page) 50%); }
+.theme-preview.system :is(.theme-preview-bar, .theme-preview-card) { background: linear-gradient(90deg, var(--theme-preview-light-card) 50%, var(--theme-preview-dark-card) 50%); }
+.theme-preview.system .theme-preview-line:not(.short) { background: linear-gradient(90deg, var(--theme-preview-light-line) 50%, var(--theme-preview-dark-line) 50%); }
+/* «Cerrar sesión»: fila terminal neutra que se tiñe de peligro al señalarla. */
+.account-signout { display: flex; align-items: center; justify-content: flex-start; gap: 0.65rem; width: 100%; margin: 0; padding: 0.55rem 0.6rem; border: 0; border-radius: 10px;
+  background: transparent; color: var(--text-strong); font-weight: 500; text-align: left; transition: background-color 140ms ease, color 140ms ease; }
+.account-signout .icon { color: var(--text-muted); transition: color 140ms ease; }
+@media (hover: hover) {
+  .account-link:hover { background: var(--fill); }
+  .account-link:hover > .icon { transform: translateX(2px); }
+  .theme-option:not(:has(input:checked)):hover { border-color: var(--border-strong); }
+  .account-signout:hover:not(:disabled) { background: var(--danger-surface); color: var(--danger-text); }
+  .account-signout:hover:not(:disabled) .icon { color: var(--danger-text); }
+}
+@media (pointer: coarse) { .account-link, .account-signout { min-height: 2.75rem; } }
+/*
+ * Celular (hasta 480 px): el panel se compacta sin perder la zona táctil de 44 px. Avatar y espacios menores, y el tema
+ * como control segmentado de una sola fila (ícono y nombre, sin miniaturas), que se entiende igual en mucho menos alto.
+ */
+@media (max-width: 480px) {
+  .account-panel { width: min(17.5rem, calc(100vw - 1.5rem)); padding: 0.3rem; border-radius: 14px; }
+  .account-panel-identity { gap: 0.6rem; padding: 0.55rem 0.55rem 0.35rem; }
+  .account-panel .user-avatar.md { width: 2.25rem; height: 2.25rem; font-size: var(--type-sm); }
+  .account-name { font-size: var(--type-sm); }
+  .account-detail { font-size: var(--type-xs); }
+  .account-panel-context { padding: 0 0.55rem 0.55rem; }
+  .account-panel-section { padding: 0.25rem 0; }
+  .account-link { gap: 0.55rem; padding: 0.35rem 0.5rem; }
+  .account-link-icon { width: 1.75rem; height: 1.75rem; }
+  .account-link-icon .icon { width: 0.95rem; height: 0.95rem; }
+  .account-theme legend { padding: 0.3rem 0.5rem 0.35rem; }
+  .theme-options { gap: 0.25rem; margin: 0 0.4rem 0.25rem; padding: 0.2rem; border-radius: 12px; background: var(--fill); }
+  .theme-option { min-height: 2.75rem; padding: 0; border: 0; border-radius: 9px; place-items: center; }
+  .theme-option:has(input:checked) { background: var(--surface); box-shadow: 0 1px 3px color-mix(in srgb, var(--shadow) 14%, transparent); }
+  .theme-preview, .theme-option-check { display: none; }
+  .theme-option-label { gap: 0.25rem; }
+  .account-signout { padding: 0.35rem 0.5rem; }
+}
 @media (prefers-reduced-motion: reduce) {
   .home-card, .home-action, .home-task, .home-task-action .icon { transition: none; }
   .home-cards[data-reveal] > li { opacity: 1; animation: none; }
   .home-card:active, .home-action:active { transform: none; }
   .account-panel { animation: fade-in 160ms ease both; }
+  .theme-option, .theme-option-check, .account-link, .account-link > .icon, .account-signout { transition: none; }
 }
 @media (prefers-contrast: more) {
   .home-card, .home-stat, .account-panel { border-color: var(--border-strong); }
@@ -723,4 +801,14 @@ button.account-action.positive { border-color: color-mix(in srgb, var(--success-
 .input-with-icon.has-action > input { padding-right: 3.2rem; }
 .input-with-icon > .input-action { position: absolute; right: 0.3rem; top: 50%; translate: 0 -50%; width: var(--icon-button-md); height: var(--icon-button-md); padding: 0; border-radius: 8px; color: var(--text); }
 .input-with-icon > .input-action:focus-visible { color: var(--accent); }
+}
+
+/*
+ * T-S14-06: cambio de tema animado. Con View Transitions, theme.ts revela el tema nuevo en un círculo; aquí se apaga el
+ * fundido por defecto para que solo se vea el círculo. Sin ellas, la clase .theme-fading funde colores y fondos.
+ */
+@layer components {
+::view-transition-old(root), ::view-transition-new(root) { animation: none; mix-blend-mode: normal; }
+:root.theme-fading, :root.theme-fading *, :root.theme-fading *::before, :root.theme-fading *::after {
+  transition: background-color 400ms ease, color 400ms ease, border-color 400ms ease, fill 400ms ease, stroke 400ms ease, box-shadow 400ms ease; }
 }

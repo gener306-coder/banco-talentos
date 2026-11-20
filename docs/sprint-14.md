@@ -277,3 +277,39 @@ Cada historia termina con su reporte y una revisión del responsable antes de in
 - **Pruebas:** Vitest del esqueleto, el avance en la cabecera, el estado vacío, el grupo vacío y el cierre del aviso; los avisos se verifican en el `Snackbar`. Revisión visual a 1440 y 390 px en claro y oscuro.
 - **E2E:** la spec del onboarding busca la confirmación en el aviso. En `talent-search.spec.ts`, la medición del ancho a 390 px usa `expect.poll`: medía justo después de cambiar el tamaño de la ventana y una vez falló con 435 px. Un desborde real sigue fallando.
 
+### T-S14-05 — Corrección: la pastilla flotante de las Historias del Dual quedaba bajo el encabezado
+
+**Estado:** Implementada (19 de noviembre de 2026) en `chore/ui-polish-account-profile`, sin commit. Reportada por el responsable.
+
+- **Falla:** en el feed de Historias del Dual, la pastilla de orden (Más recientes, Al azar y Volver arriba) dejaba de verse al desplazarse en las cuentas de empresa e institución. Seguía flotando, pero a 8 px del borde, escondida bajo el encabezado fijo.
+- **Causa:** `UnreadSummaryProvider` (T-S13-08, commit `a3628a8`) devolvía sus hijos sin proveedor mientras no había sesión y los envolvía en el proveedor al iniciarla. El cambio de tipo de elemento hacía que React volviera a montar todo el árbol: encabezado, contenido y página. `useAppBarHeight` seguía observando el encabezado desmontado y publicaba `--app-bar-height: 0px`. La variable también alinea el desplazamiento suave de las tablas (`stickyTop`), así que ese ajuste tampoco descontaba el encabezado en esas cuentas.
+- **Corrección:**
+  - el proveedor se renderiza siempre, con valor `null` sin cuenta de empresa o institución; el árbol queda estable y el inicio de sesión ya no vuelve a montar la app;
+  - `useAppBarHeight` sigue al elemento con una referencia de callback, así que se reengancha si el encabezado se vuelve a montar por otra causa.
+- **Pruebas:** `src/AppShell.test.tsx` comprueba que el encabezado y el contenido son los mismos nodos antes y después de cargar la sesión. Falla sin la corrección. En Chromium, `--app-bar-height` vale 67 px en el celular y 79 px en escritorio, y la pastilla flota a 75 px y 87 px.
+
+### T-S14-06 — Menú de cuenta profesional, tema claro por defecto y cambio de tema animado
+
+**Estado:** Implementada (19 de noviembre de 2026) en `chore/ui-polish-account-profile`, sin commit. Solicitada por el responsable. Solo frontend.
+
+- **Panel del menú:** en capas, al estilo de las grandes plataformas, con secciones separadas por filetes de 1 px:
+  - identidad: avatar `md`, nombre, correo atenuado y la insignia del rol con la organización;
+  - «Mi cuenta» como fila con ícono, la descripción «Perfil y seguridad» y un chevron que se desplaza al señalarla;
+  - tema;
+  - «Cerrar sesión» como fila terminal neutra, que se tiñe de peligro al señalarla.
+
+  Filas de 44 px en pantallas táctiles, sombra en dos capas y entrada con el resorte desde la esquina del botón.
+- **Tema:** tres mosaicos (Claro, Oscuro y Sistema), cada uno con:
+  - la miniatura de la aplicación en ese tema (encabezado, tarjeta y acento de la marca; «Sistema» en dos mitades);
+  - su ícono (sol, luna o monitor);
+  - el elegido con el acento, el tinte y una marca que aparece con el resorte.
+
+  Siguen siendo radios nativos: flechas del teclado y foco visible. Los colores fijos de las miniaturas son los tokens `--theme-preview-*`, definidos igual en ambos temas.
+- **Celular (hasta 480 px):** el panel se compacta de 320×360 px a 280×295 px y conserva las zonas táctiles de 44 px. El tema pasa a un control segmentado de una sola fila (ícono y nombre, sin miniaturas), y el elegido se destaca como una pestaña elevada.
+- **Tema claro por defecto:** sin elección guardada, la aplicación se ve en claro aunque el sistema esté en oscuro; «Sistema» se guarda como una elección más. `index.html` aplica la misma regla antes del primer pintado.
+- **Cambio de tema animado:**
+  - con View Transitions, el tema nuevo se revela en un círculo que crece desde el mosaico pulsado (520 ms);
+  - sin ellas, colores y fondos se funden 400 ms (`.theme-fading`);
+  - con movimiento reducido, o si el tema visible no cambia, se aplica al instante.
+- **Pruebas:** Vitest de `theme.test.ts` (predeterminado claro, Sistema guardado, revelado circular, fundido de respaldo y movimiento reducido) y del menú en `SessionPage.test.tsx`; `e2e/theme.spec.ts` ajustada al nuevo predeterminado. Revisión visual a 1440 y 390 px en claro, oscuro y sistema, y a mitad de la animación.
+

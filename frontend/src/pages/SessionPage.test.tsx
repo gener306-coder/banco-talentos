@@ -278,13 +278,15 @@ describe('menú de cuenta', () => {
     expect(within(panel).getAllByText('operador@nueva.test')).toHaveLength(1)
   })
 
-  it('elige el tema desde el menú y lo recuerda (modo oscuro)', async () => {
+  it('elige el tema desde el menú y lo recuerda; el claro es el predeterminado (T-S14-06)', async () => {
     localStorage.clear()
     renderApp()
     fireEvent.click(await screen.findByRole('button', { name: 'Cuenta de Laura Torres' }))
     const group = within(screen.getByRole('region', { name: 'Cuenta' })).getByRole('group', { name: 'Tema' })
-    expect(within(group).getAllByRole('radio').map((radio) => radio.closest('div')?.textContent)).toEqual(['Sistema', 'Claro', 'Oscuro'])
-    expect(within(group).getByLabelText('Sistema')).toBeChecked()
+    expect(within(group).getAllByRole('radio').map((radio) => radio.closest('label')?.textContent)).toEqual(['Claro', 'Oscuro', 'Sistema'])
+    expect(within(group).getByLabelText('Claro')).toBeChecked()
+    // Cada opción muestra la miniatura de su tema.
+    expect(group.querySelectorAll('.theme-preview.light, .theme-preview.dark, .theme-preview.system')).toHaveLength(3)
 
     fireEvent.click(within(group).getByLabelText('Oscuro'))
     expect(document.documentElement.dataset.theme).toBe('dark')
@@ -294,7 +296,18 @@ describe('menú de cuenta', () => {
     fireEvent.click(within(group).getByLabelText('Claro'))
     expect(document.documentElement.dataset.theme).toBe('light')
     fireEvent.click(within(group).getByLabelText('Sistema'))
-    expect(localStorage.getItem('bt-theme')).toBeNull()
+    expect(localStorage.getItem('bt-theme')).toBe('system')
+    expect(within(group).getByLabelText('Sistema')).toBeChecked()
+  })
+
+  it('presenta la identidad, Mi cuenta con su descripción y Cerrar sesión como acción final (T-S14-06)', async () => {
+    renderApp()
+    fireEvent.click(await screen.findByRole('button', { name: 'Cuenta de Laura Torres' }))
+    const panel = screen.getByRole('region', { name: 'Cuenta' })
+    expect(panel.querySelector('.user-avatar.md')).toHaveTextContent('LT')
+    expect(within(panel).getByRole('link', { name: /Mi cuenta/ })).toHaveTextContent('Perfil y seguridad')
+    const actions = within(panel).getAllByRole('button')
+    expect(actions.at(-1)).toHaveTextContent('Cerrar sesión')
   })
 
   it('se cierra con un clic fuera y al navegar', async () => {

@@ -6,7 +6,8 @@ test.use({ storageState: INSTITUTION_STATE })
 test.describe('modo oscuro', () => {
   test.use({ colorScheme: 'dark' })
 
-  test('sigue al sistema desde el primer pintado, con el logotipo blanco y «Educación Dual» en blanco (HU-S8-03)', async ({ page }) => {
+  test('con el tema oscuro elegido, se aplica desde el primer pintado con el logotipo blanco y «Educación Dual» en blanco (HU-S8-03)', async ({ page }) => {
+    await page.addInitScript(() => localStorage.setItem('bt-theme', 'dark'))
     // data-theme se fija antes de que cargue la aplicación (script de index.html).
     await page.goto('/', { waitUntil: 'commit' })
     await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark')
@@ -24,29 +25,31 @@ test.describe('modo oscuro', () => {
     await expect(page.getByRole('link', { name: 'Registrar alumno' })).toHaveCSS('background-color', 'rgb(153, 27, 48)')
   })
 
-  test('el menú de cuenta fija el tema claro y lo recuerda al recargar; «Sistema» vuelve al oscuro', async ({ page }) => {
+  test('T-S14-06: el claro es el predeterminado aunque el sistema esté en oscuro; Sistema lo sigue y se recuerda al recargar', async ({ page }) => {
     await page.goto('/')
+    await expect(page.locator('html')).toHaveAttribute('data-theme', 'light')
     await page.getByRole('button', { name: /^Cuenta de / }).click()
     const theme = page.getByRole('region', { name: 'Cuenta' }).getByRole('group', { name: 'Tema' })
-    await expect(theme.getByLabel('Sistema')).toBeChecked()
-    await theme.getByLabel('Claro').check()
-    await expect(page.locator('html')).toHaveAttribute('data-theme', 'light')
+    await expect(theme.getByLabel('Claro')).toBeChecked()
+    await theme.getByLabel('Sistema').check()
+    await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark')
+    const logo = page.getByRole('banner').getByRole('img', { name: 'Nodologístico' })
+    await expect(logo).toHaveAttribute('src', '/brand/logob.png')
 
     await page.reload()
-    await expect(page.locator('html')).toHaveAttribute('data-theme', 'light')
-    // En claro vuelve el logotipo a color, y cambia al instante al elegir otro tema.
-    const logo = page.getByRole('banner').getByRole('img', { name: 'Nodologístico' })
-    await expect(logo).toHaveAttribute('src', '/brand/logo.png')
-
-    await page.getByRole('button', { name: /^Cuenta de / }).click()
-    await page.getByRole('region', { name: 'Cuenta' }).getByRole('group', { name: 'Tema' }).getByLabel('Sistema').check()
     await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark')
-    await expect(logo).toHaveAttribute('src', '/brand/logob.png')
+
+    // En claro vuelve el logotipo a color, y cambia al elegir otro tema.
+    await page.getByRole('button', { name: /^Cuenta de / }).click()
+    await page.getByRole('region', { name: 'Cuenta' }).getByRole('group', { name: 'Tema' }).getByLabel('Claro').check()
+    await expect(page.locator('html')).toHaveAttribute('data-theme', 'light')
+    await expect(logo).toHaveAttribute('src', '/brand/logo.png')
   })
 
   test('el login muestra el logotipo blanco en tema oscuro (HU-S8-03 CA-02)', async ({ browser, baseURL }) => {
     const context = await browser.newContext({ baseURL, colorScheme: 'dark', storageState: { cookies: [], origins: [] } })
     try {
+      await context.addInitScript(() => localStorage.setItem('bt-theme', 'dark'))
       const page = await context.newPage()
       await page.goto('/login')
       await expect(page.getByRole('region', { name: 'Iniciar sesión' }).getByRole('img', { name: 'Nodologístico' })).toHaveAttribute('src', '/brand/logob.png')

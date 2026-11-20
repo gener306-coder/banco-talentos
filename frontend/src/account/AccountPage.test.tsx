@@ -61,7 +61,7 @@ describe('menú de cuenta', () => {
     render(<MemoryRouter initialEntries={['/']}><App /><Location /></MemoryRouter>)
     fireEvent.click(await screen.findByRole('button', { name: /Cuenta|Administración/ }))
     const panel = screen.getByRole('region', { name: 'Cuenta' })
-    fireEvent.click(within(panel).getByRole('link', { name: 'Mi cuenta' }))
+    fireEvent.click(within(panel).getByRole('link', { name: /^Mi cuenta/ }))
     expect(screen.getByRole('status', { name: 'Ruta actual' })).toHaveTextContent('/account')
     expect(await screen.findByRole('region', { name: 'Mi cuenta' })).toBeInTheDocument()
     expect(screen.queryByRole('region', { name: 'Cuenta' })).not.toBeInTheDocument()

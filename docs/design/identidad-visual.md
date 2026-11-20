@@ -131,8 +131,10 @@ Tokens añadidos con el reproductor de video (HU-S9-04). Tienen el mismo valor e
 **Estado: activo** desde el 29 de octubre de 2026 (HU-S8-03). Se preparó en el Sprint 6 y quedó sin activar a falta de logotipos para fondo oscuro; se activó cuando el responsable entregó `logob.png`.
 
 **Activación.**
-- Sigue la preferencia del sistema (`prefers-color-scheme`).
-- El menú de cuenta ofrece **Tema: Sistema / Claro / Oscuro**, guardado solo en el navegador (`localStorage['bt-theme']`).
+- El tema **claro es el predeterminado** (T-S14-06). «Sistema» sigue la preferencia del sistema (`prefers-color-scheme`).
+- El menú de cuenta ofrece **Tema: Claro / Oscuro / Sistema** con una miniatura de cada uno, guardado solo en el navegador (`localStorage['bt-theme']`).
+- El cambio de tema se anima: con View Transitions, el tema nuevo se revela en un círculo desde la opción pulsada; sin ellas, los colores se funden 400 ms. Con movimiento reducido se aplica al instante.
+- Las miniaturas usan los tokens `--theme-preview-*`, iguales en ambos temas porque cada una muestra el suyo.
 - El tema se expresa como `data-theme="light" | "dark"` en `<html>`. El script de `index.html` lo fija antes del primer pintado, así que no hay destello claro.
 - `watchTheme()` (`src/ui/theme.ts`, llamado en `main.tsx`) lo mantiene al día si cambia el sistema o la elección en otra pestaña.
 

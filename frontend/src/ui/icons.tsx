@@ -22,6 +22,11 @@ export const CloseIcon = () => <Icon><path d="m4 4 8 8M12 4l-8 8" /></Icon>
 export const LockIcon = () => <Icon><rect x="3.5" y="7" width="9" height="6.5" rx="1.5" /><path d="M5.5 7V5a2.5 2.5 0 0 1 5 0v2" /></Icon>
 // Inicio por rol: alumnos y personal, empresas y cuentas de acceso.
 export const UserIcon = () => <Icon><circle cx="8" cy="5.5" r="2.75" /><path d="M2.75 14c0-2.9 2.35-4.75 5.25-4.75S13.25 11.1 13.25 14" /></Icon>
+// T-S14-06: menú de cuenta (tema y cierre de sesión).
+export const SunIcon = () => <Icon><circle cx="8" cy="8" r="2.75" /><path d="M8 1.75v1.5M8 12.75v1.5M1.75 8h1.5M12.75 8h1.5M3.6 3.6l1.05 1.05M11.35 11.35l1.05 1.05M3.6 12.4l1.05-1.05M11.35 4.65l1.05-1.05" /></Icon>
+export const MoonIcon = () => <Icon><path d="M13.25 9.6A5.5 5.5 0 0 1 6.4 2.75a5.5 5.5 0 1 0 6.85 6.85Z" /></Icon>
+export const MonitorIcon = () => <Icon><rect x="1.75" y="2.75" width="12.5" height="8.5" rx="1.5" /><path d="M5.5 14h5M8 11.25V14" /></Icon>
+export const LogOutIcon = () => <Icon><path d="M6.5 13.5H4A1.5 1.5 0 0 1 2.5 12V4A1.5 1.5 0 0 1 4 2.5h2.5M10.5 11 13.5 8l-3-3M13.25 8H6.5" /></Icon>
 export const UsersIcon = () => <Icon><circle cx="6" cy="5.5" r="2.5" /><path d="M1.5 13.5c0-2.5 2-4 4.5-4s4.5 1.5 4.5 4M11 3.2a2.4 2.4 0 0 1 0 4.6M12.5 9.7c1.3.5 2 1.8 2 3.8" /></Icon>
 export const BriefcaseIcon = () => <Icon><rect x="1.5" y="4.5" width="13" height="9" rx="1.5" /><path d="M5.5 4.5V3a1 1 0 0 1 1-1h3a1 1 0 0 1 1 1v1.5M1.5 8.5h13" /></Icon>
 // Reporte ejecutivo (HU-S7-01).

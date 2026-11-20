@@ -51,8 +51,9 @@ export function UnreadSummaryProvider({ children }: { children: ReactNode }) {
     }
   }, [side, account, active, pathname, search])
 
-  if (!side || !account) return children
   // Un resumen de otra cuenta (cambio de sesión) nunca se muestra.
   const summary = result?.account === account ? result.summary : null
-  return <UnreadSummaryContext.Provider value={{ side, account, summary, subscribe }}>{children}</UnreadSummaryContext.Provider>
+  // El proveedor se renderiza siempre (con null sin cuenta de empresa o institución): devolver los hijos sin él cambiaba el
+  // tipo de elemento al iniciar sesión y React volvía a montar todo el árbol, encabezado incluido (ver useAppBarHeight).
+  return <UnreadSummaryContext.Provider value={side && account ? { side, account, summary, subscribe } : null}>{children}</UnreadSummaryContext.Provider>
 }

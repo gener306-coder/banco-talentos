@@ -23,6 +23,14 @@
   --text-strong: var(--color-brand-neutral);
   /* T-S14-04: texto secundario (notas, etiquetas, datos sin capturar); en claro, --text y --text-strong coinciden. */
   --text-muted: #6b6a70;
+  /* T-S14-06: miniaturas del selector de tema; los mismos valores en ambos temas (cada miniatura muestra el suyo). */
+  --theme-preview-light-page: var(--color-neutral-100);
+  --theme-preview-light-card: var(--color-white);
+  --theme-preview-light-line: var(--color-neutral-200);
+  --theme-preview-dark-page: #17161a;
+  --theme-preview-dark-card: #211f24;
+  --theme-preview-dark-line: #3a3840;
+  --theme-preview-accent: var(--color-brand-primary);
   --border: var(--color-neutral-200);
   --border-strong: var(--color-neutral-500);
   --accent: var(--color-brand-primary);
@@ -70,6 +78,13 @@
   --text: #e6e4e8;
   --text-strong: #fff;
   --text-muted: #a9a6ae;
+  --theme-preview-light-page: var(--color-neutral-100);
+  --theme-preview-light-card: var(--color-white);
+  --theme-preview-light-line: var(--color-neutral-200);
+  --theme-preview-dark-page: #17161a;
+  --theme-preview-dark-card: #211f24;
+  --theme-preview-dark-line: #3a3840;
+  --theme-preview-accent: var(--color-brand-primary);
   --border: #3a3840;
   --border-strong: #8a8790;
   --accent: #e07a8a;
