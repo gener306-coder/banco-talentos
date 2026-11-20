@@ -429,10 +429,15 @@ textarea[aria-invalid='true'] { border-color: var(--danger-border); }
 /* Inicio por rol (tarea transversal del Sprint 4): saludo, acción principal y tarjetas de acceso. */
 /* La navegación del inicio es la cuadrícula de tarjetas: no la fila flexible de enlaces de .card > nav. */
 .home > nav { display: block; margin: 0; }
-.home-greeting h2 { margin: 0 0 0.35rem; font-size: clamp(1.6rem, 4vw, 2.1rem); line-height: 1.15; }
-.home-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 0.35rem 0.9rem; margin: 0 0 1.5rem; color: var(--text); font-size: var(--type-base); }
+/* T-S14-07: encabezado con la fecha y el saludo; la acción principal a la derecha en pantallas anchas. */
+.home-header { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 1.1rem 2rem; margin: 0 0 2rem; }
+.home-greeting { min-width: 0; }
+.home-date { margin: 0 0 0.35rem; color: var(--text-muted); font-size: var(--type-sm); font-weight: 500; }
+.home-greeting h2 { margin: 0 0 0.45rem; font-size: clamp(1.6rem, 4vw, 2.1rem); line-height: 1.15; overflow-wrap: anywhere; }
+.home-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 0.35rem 0.75rem; margin: 0; color: var(--text-muted); font-size: var(--type-sm); }
 .home-role { padding: 0.15rem 0.7rem; border-radius: 999px; background: var(--tint); color: var(--accent); font-weight: 600; font-size: var(--type-sm); }
-.home-primary { margin: 0 0 1.75rem; }
+/* Títulos de sección del inicio: discretos, en mayúsculas espaciadas, como los de Mi cuenta. */
+.home-section-title { margin: 0 0 0.8rem; font-size: var(--type-xs); font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-muted); }
 /*
  * T-S14-01: recordatorio discreto del perfil de la empresa. Una línea con el avance y un enlace; el detalle vive en
  * Mi cuenta. Es toda una zona tocable de 44 px, sin borde lateral ni ícono de alerta.
@@ -452,16 +457,29 @@ textarea[aria-invalid='true'] { border-color: var(--danger-border); }
   .profile-nudge-text { flex: 1 1 auto; }
 }
 /* Enlace con aspecto de botón principal (T-S12-02): radio, padding y borde de button. */
-.home-action { display: inline-flex; align-items: center; gap: 0.45rem; padding: 0.8rem 1rem; border: 1px solid var(--accent); border-radius: 10px; background: var(--accent-fill);
+.home-action { display: inline-flex; flex: none; align-items: center; gap: 0.45rem; padding: 0.75rem 1.1rem; border: 1px solid var(--accent); border-radius: 10px; background: var(--accent-fill);
   color: var(--on-accent); font-weight: 600; text-decoration: none; transition: transform 150ms ease-out, background-color 150ms ease-out; }
 .home-action:active { transform: scale(0.97); }
-.home-search { max-width: var(--content-readable); margin: 0 0 1.75rem; gap: 0.4rem; }
+/* Atajo de búsqueda de la empresa como panel, la acción principal de su inicio (T-S14-07). */
+.home-panel { margin: 0 0 2rem; padding: 1.15rem 1.25rem; border: 1px solid var(--border); border-radius: 16px; background: var(--surface-muted); }
+.home-search { display: grid; gap: 0.4rem; max-width: none; }
+.home-search > * { max-width: var(--content-readable); }
 .home-search .actions { margin-top: 0.1rem; }
 /* Indicadores del inicio (HU-S5-01): cifra grande sobre su etiqueta. */
-.home-indicators { margin: 0 0 1.75rem; }
-.home-stats { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(11rem, 100%), 1fr)); gap: 0.9rem; margin: 0; }
-.home-stat { display: flex; flex-direction: column-reverse; gap: 0.2rem; padding: 0.9rem 1.1rem; border: 1px solid var(--border); border-radius: 14px; background: var(--surface); }
-.home-stat dt { font-size: var(--type-sm); line-height: 1.35; color: var(--text); }
+.home-indicators { margin: 0 0 2rem; }
+/* auto-fit: las tarjetas llenan la fila sin dejar huecos, tenga el rol 3, 4, 5 o 6 indicadores. */
+.home-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(10rem, 100%), 1fr)); gap: 0.9rem; margin: 0; }
+.home-stat { display: flex; flex-direction: column-reverse; justify-content: flex-end; gap: 0.25rem; padding: 1rem 1.1rem; border: 1px solid var(--border); border-radius: 14px; background: var(--surface); }
+.home-stat dt { font-size: var(--type-sm); line-height: 1.35; color: var(--text-muted); }
+/* T-S14-07: esqueleto del resumen con la misma tarjeta; reserva el alto aunque sus huesos aún no se vean. */
+.home-stats-skeleton .home-stat { flex-direction: column; gap: 0.65rem; }
+.home-stats-skeleton .bone.value { width: 45%; height: 1.7rem; }
+.home-stats-skeleton .bone.label { width: 75%; height: 0.7rem; }
+.is-waiting .bone { visibility: hidden; }
+.home-stats-failure { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 0.75rem 1rem; padding: 0.9rem 1rem;
+  border: 1px dashed var(--border-strong); border-radius: 14px; color: var(--text-muted); font-size: var(--type-sm); }
+.home-stats-failure p { flex: 1 1 18rem; margin: 0; }
+.home-stats-failure button { margin: 0; }
 .home-stat dd { margin: 0; font-size: var(--type-2xl); font-weight: 700; line-height: 1.1; color: var(--accent); font-variant-numeric: tabular-nums; }
 /* T-S12-11: conteo hasta el valor. El texto real queda transparente (conserva el ancho y es lo que se lee) y la cifra
    intermedia se pinta encima desde data-count, sin texto alternativo para que no se anuncie. */
@@ -480,7 +498,7 @@ textarea[aria-invalid='true'] { border-color: var(--danger-border); }
 .home-task-text { display: grid; gap: 0.2rem; min-width: 0; }
 .home-task-text p { margin: 0; }
 .home-task-title { font-weight: 600; line-height: 1.3; color: var(--text); }
-.home-task-description { font-size: var(--type-sm); line-height: 1.45; color: var(--text); }
+.home-task-description { font-size: var(--type-sm); line-height: 1.45; color: var(--text-muted); }
 .home-task-action { display: inline-flex; align-items: center; gap: 0.2rem; justify-self: start; margin-top: 0.45rem;
   color: var(--task-color); font-weight: 700; text-decoration: none; }
 .home-task-action .icon { transition: transform 150ms ease-out; }
@@ -488,7 +506,6 @@ textarea[aria-invalid='true'] { border-color: var(--danger-border); }
 .home-task-action::after { content: ''; position: absolute; inset: 0; border-radius: inherit; }
 .home-task-action:focus-visible { outline: none; }
 .home-task-action:focus-visible::after { outline: 3px solid var(--focus-ring); outline-offset: 2px; }
-.home-stats-failure { margin: 0 0 1.75rem; }
 .home-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(16rem, 100%), 1fr)); gap: 0.9rem; margin: 0; padding: 0; list-style: none; }
 /* T-S12-11: las tarjetas entran en cascada (50 ms entre una y otra) cuando la lista asoma en pantalla, con el lenguaje
    de movimiento de las historias. Solo se ocultan mientras useReveal espera; sin JS u observador se ven siempre. */
@@ -502,7 +519,7 @@ textarea[aria-invalid='true'] { border-color: var(--danger-border); }
 .home-card-icon { display: grid; place-items: center; flex-shrink: 0; width: 2.5rem; height: 2.5rem; border-radius: 10px; background: var(--tint); color: var(--accent); font-size: var(--type-lg); }
 .home-card-text { display: grid; gap: 0.25rem; flex: 1; min-width: 0; }
 .home-card-title { font-weight: 600; color: var(--accent); }
-.home-card-description { font-size: var(--type-sm); line-height: 1.45; color: var(--text); }
+.home-card-description { font-size: var(--type-sm); line-height: 1.45; color: var(--text-muted); }
 @media (hover: hover) {
   .home-card:hover { border-color: color-mix(in srgb, var(--accent) 35%, var(--border)); box-shadow: 0 6px 18px color-mix(in srgb, var(--shadow) 8%, transparent); }
   .home-card:hover > .icon { transform: translateX(2px); }
@@ -628,7 +645,20 @@ textarea[aria-invalid='true'] { border-color: var(--danger-border); }
   .home-task { border-color: var(--task-color); }
 }
 @media (max-width: 600px) {
+  .home-header { margin-bottom: 1.5rem; }
   .home-action { width: 100%; justify-content: center; }
+  /* Dos indicadores por fila: el resumen cabe en una pantalla en lugar de una columna de tarjetas altas. */
+  .home-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.6rem; }
+  .home-stat { padding: 0.8rem 0.9rem; border-radius: 12px; }
+  .home-stat dd { font-size: var(--type-xl); }
+  /* Con un número impar de indicadores, el último ocupa la fila completa en lugar de quedar huérfano. */
+  .home-stats > .home-stat:last-child:nth-child(odd) { grid-column: 1 / -1; }
+  .home-stat dt { font-size: var(--type-xs); }
+  .home-panel { padding: 1rem; }
+  .home-indicators, .home-panel { margin-bottom: 1.6rem; }
+  .home-card { gap: 0.75rem; padding: 0.9rem; border-radius: 12px; }
+  .home-card-icon { width: 2.25rem; height: 2.25rem; }
+  .home-cards { gap: 0.6rem; }
 }
 }
 

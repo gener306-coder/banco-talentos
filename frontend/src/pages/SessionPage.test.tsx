@@ -53,6 +53,13 @@ beforeEach(() => {
 })
 afterEach(() => vi.unstubAllGlobals())
 
+/** La sección de indicadores existe desde el primer pintado (T-S14-07): se espera a que deje de estar ocupada. */
+async function loadedIndicators() {
+  const region = await screen.findByRole('region', { name: 'Indicadores' })
+  await waitFor(() => expect(region).toHaveAttribute('aria-busy', 'false'))
+  return region
+}
+
 describe('inicio por rol (tarea transversal del Sprint 4)', () => {
   it.each([
     ['ADMIN', {}, 'Administración', 'Administrador', null, ['Nueva institución', '/institutions/new'], [['Instituciones', '/institutions'], ['Cuentas de la Secretaría', '/secretary-accounts'], ['Reporte ejecutivo', '/reports'], ['Bitácora', '/audit-events'], ['Historias del Dual', '/promocion']]],
@@ -153,7 +160,7 @@ describe('inicio por rol (tarea transversal del Sprint 4)', () => {
 describe('indicadores del inicio (HU-S5-01 CA-07)', () => {
   /** Indicadores visibles como pares [etiqueta, cifra], en orden. */
   async function indicators() {
-    const region = await screen.findByRole('region', { name: 'Indicadores' })
+    const region = await loadedIndicators()
     return within(region).getAllByRole('term').map((term) => [term.textContent, term.nextElementSibling?.textContent])
   }
 
@@ -184,7 +191,7 @@ describe('indicadores del inicio (HU-S5-01 CA-07)', () => {
     user = { ...base, role: 'INSTITUTION', institution: { id: 7, name: 'Instituto Dual' } }
     dashboard = () => Response.json({ data: { role: 'INSTITUTION', metrics: { ...zeroMetrics.INSTITUTION, pending_linkage_requests: pending } } })
     renderApp()
-    const region = await screen.findByRole('region', { name: 'Indicadores' })
+    const region = await loadedIndicators()
     const tasks = within(region).getByRole('list', { name: 'Por atender' })
     const task = within(tasks).getByText(text).closest('li')!
     expect(task).toHaveTextContent('Las empresas esperan tu respuesta para continuar.')
@@ -200,7 +207,7 @@ describe('indicadores del inicio (HU-S5-01 CA-07)', () => {
     user = { ...base, role: 'INSTITUTION', institution: { id: 7, name: 'Instituto Dual' } }
     dashboard = () => Response.json({ data: { role: 'INSTITUTION', metrics: { ...zeroMetrics.INSTITUTION, active_students: 20, searchable_students: 5, missing_data_students: missing } } })
     renderApp()
-    const region = await screen.findByRole('region', { name: 'Indicadores' })
+    const region = await loadedIndicators()
     const review = within(region).getByRole('link', { name: 'Revisar el padrón' })
     const task = review.closest('li')!
     expect(within(task).getByText(text)).toHaveClass('home-task-title')
@@ -216,11 +223,24 @@ describe('indicadores del inicio (HU-S5-01 CA-07)', () => {
     dashboard = response
     renderApp()
     expect(await screen.findByText(/No pudimos cargar los indicadores/)).toBeInTheDocument()
-    expect(screen.queryByRole('region', { name: 'Indicadores' })).not.toBeInTheDocument()
+    // T-S14-07: la sección se queda con un aviso discreto y «Reintentar», sin cifras ni alertas.
+    expect(within(screen.getByRole('region', { name: 'Indicadores' })).queryByRole('definition')).not.toBeInTheDocument()
     expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Reintentar' })).toBeInTheDocument()
 
     fireEvent.click(within(screen.getByRole('navigation', { name: 'Institución' })).getByRole('link', { name: 'Alumnos' }))
     await waitFor(() => expect(screen.getByLabelText('Ruta actual')).toHaveTextContent('/students'))
+  })
+
+  it('«Reintentar» vuelve a pedir los indicadores y los muestra (T-S14-07)', async () => {
+    user = { ...base, role: 'INSTITUTION', institution: { id: 7, name: 'Instituto Dual' } }
+    let calls = 0
+    dashboard = () => (++calls === 1 ? new Response(null, { status: 500 }) : Response.json({ data: { role: 'INSTITUTION', metrics: zeroMetrics.INSTITUTION } }))
+    renderApp()
+    fireEvent.click(await screen.findByRole('button', { name: 'Reintentar' }))
+    expect(await screen.findByText('Alumnos activos')).toBeInTheDocument()
+    expect(screen.queryByText(/No pudimos cargar los indicadores/)).not.toBeInTheDocument()
+    expect(calls).toBe(2)
   })
 
   it('sin organización vinculada no consulta indicadores (CA-06)', async () => {
@@ -348,7 +368,7 @@ describe('inicio dinámico T-S12-11', () => {
   const metrics = { available_talent_profiles: 318, active_opportunities: 4, pending_linkage_requests: 6 }
   const company = { company: { id: 3, name: 'ManuGolfo', missing: [] } }
   const stat = async (label: string) => {
-    const region = await screen.findByRole('region', { name: 'Indicadores' })
+    const region = await loadedIndicators()
     return within(region).getByText(label).nextElementSibling as HTMLElement
   }
 
@@ -385,7 +405,7 @@ describe('inicio dinámico T-S12-11', () => {
     }
   })
 
-  it('las tarjetas esperan ocultas hasta que la lista entra en pantalla, ya cargados los indicadores, y entonces entran en cascada', async () => {
+  it('mientras cargan los indicadores, su esqueleto reserva el lugar y las tarjetas se revelan al entrar en pantalla sin esperarlos (T-S14-07)', async () => {
     const observed = new Map<Element, IntersectionObserverCallback>()
     vi.stubGlobal('IntersectionObserver', class {
       private readonly callback: IntersectionObserverCallback
@@ -400,14 +420,17 @@ describe('inicio dinámico T-S12-11', () => {
       renderApp()
       const list = within(await screen.findByRole('navigation', { name: /./ })).getByRole('list')
       expect(list).toHaveAttribute('data-reveal', 'pending')
-      // Mientras los indicadores cargan, la lista todavía puede moverse: no se observa.
-      expect(observed.has(list)).toBe(false)
-
-      respond(Response.json({ data: { role: 'INSTITUTION', metrics: zeroMetrics.INSTITUTION } }))
-      await screen.findByRole('region', { name: 'Indicadores' })
+      // El esqueleto tiene una tarjeta por indicador del rol, así que la lista ya está en su lugar definitivo.
+      const skeleton = screen.getByTestId('home-stats-skeleton')
+      expect(skeleton.querySelectorAll('.home-stat')).toHaveLength(4)
+      expect(screen.getByText('Cargando indicadores…')).toHaveAttribute('role', 'status')
       await waitFor(() => expect(observed.has(list)).toBe(true))
       act(() => observed.get(list)!([{ isIntersecting: true } as IntersectionObserverEntry], {} as IntersectionObserver))
       expect(list).toHaveAttribute('data-reveal', 'shown')
+
+      respond(Response.json({ data: { role: 'INSTITUTION', metrics: zeroMetrics.INSTITUTION } }))
+      await loadedIndicators()
+      expect(screen.queryByTestId('home-stats-skeleton')).not.toBeInTheDocument()
     } finally {
       vi.unstubAllGlobals()
     }

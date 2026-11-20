@@ -68,8 +68,11 @@ test('HU-S6-03: el aviso de solicitudes pendientes enlaza a la bandeja de la ins
 test('HU-S5-01: si los indicadores fallan, el inicio sigue navegable (CA-07)', async ({ page }) => {
   await page.route('**/api/dashboard', (route) => route.fulfill({ status: 500, json: { message: 'Error' } }))
   await page.goto('/')
-  await expect(page.getByText(/No pudimos cargar los indicadores/)).toBeVisible()
-  await expect(page.getByRole('region', { name: 'Indicadores' })).toHaveCount(0)
+  const region = page.getByRole('region', { name: 'Indicadores' })
+  await expect(region.getByText(/No pudimos cargar los indicadores/)).toBeVisible()
+  // T-S14-07: un aviso discreto con «Reintentar», sin cifras.
+  await expect(region.locator('.home-stat')).toHaveCount(0)
+  await expect(region.getByRole('button', { name: 'Reintentar' })).toBeVisible()
   await page.getByRole('navigation', { name: 'Institución' }).getByRole('link', { name: 'Alumnos' }).click()
   await expect(page).toHaveURL(/\/students$/)
 })

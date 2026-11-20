@@ -10,6 +10,8 @@ import { getDashboard, metricKeys, metricLabels } from '../dashboard/api'
 import { useApiRequest } from '../lib/useApiRequest'
 import { useCountUp } from '../ui/useCountUp'
 import { useReveal } from '../ui/useReveal'
+import { useSkeletonDelay } from '../ui/useSkeletonDelay'
+import { PendingLabel } from '../ui/forms'
 import { firstViewInSession } from './homeCountUp'
 import { displayName } from '../students/cvCatalogs'
 import { SkillPicker } from '../students/SkillPicker'
@@ -124,7 +126,7 @@ function TalentShortcut() {
   }
 
   return (
-    <form className="home-search" role="search" aria-label="Buscar talento" onSubmit={submit} noValidate>
+    <form className="home-search home-panel" role="search" aria-label="Buscar talento" onSubmit={submit} noValidate>
       <SkillPicker idPrefix="home" catalogOnly label="Buscar talento por habilidad" placeholder="Ej. React, Contabilidad, Soldadura"
         skills={skills.map((name) => ({ name, kind: 'technical' }))} max={MAX_SKILL_FILTERS} disabled={false} serverError={null}
         onChange={(next) => { setSkills(next.map((skill) => skill.name)); setError(null) }}
@@ -138,6 +140,13 @@ function TalentShortcut() {
 }
 
 const count = new Intl.NumberFormat('es-MX')
+const dateFormat = new Intl.DateTimeFormat('es-MX', { weekday: 'long', day: 'numeric', month: 'long' })
+
+/** Fecha del día para el encabezado del inicio: «Jueves 19 de noviembre». */
+function todayLabel(): string {
+  const text = dateFormat.format(new Date()).replace(',', '')
+  return text.charAt(0).toUpperCase() + text.slice(1)
+}
 
 /**
  * Indicador con conteo (T-S12-11). El texto del `dd` es siempre el valor real (lo leen el lector de pantalla y las
@@ -178,47 +187,75 @@ function HomeTask({ kind, icon, title, description, to, action }: {
 }
 
 /**
- * Indicadores del rol (HU-S5-01 CA-07, HU-S6-03 CA-02). No bloquean el inicio: mientras cargan no se muestra nada y,
- * si fallan, un aviso discreto deja las tarjetas de acceso intactas.
+ * Esqueleto del resumen (T-S14-07): una tarjeta por indicador del rol, con la misma retícula. Reserva el alto desde el
+ * primer pintado; los huesos solo se ven si la espera supera el retardo del esqueleto.
+ */
+function HomeStatsSkeleton({ count: tiles }: { count: number }) {
+  const shown = useSkeletonDelay()
+  return (
+    <div className={`home-stats home-stats-skeleton${shown ? '' : ' is-waiting'}`} aria-hidden="true" data-testid="home-stats-skeleton">
+      {Array.from({ length: tiles }, (_, tile) => (
+        <div className="home-stat" key={tile}><span className="bone value" /><span className="bone label" /></div>
+      ))}
+    </div>
+  )
+}
+
+/**
+ * Indicadores del rol (HU-S5-01 CA-07, HU-S6-03 CA-02). No bloquean el inicio: mientras cargan, un esqueleto reserva su
+ * lugar (T-S14-07) y, si fallan, un aviso discreto con «Reintentar» deja las tarjetas de acceso intactas.
  */
 function HomeIndicators({ role, onSettled }: { role: Role; onSettled: () => void }) {
   const load = useCallback((signal: AbortSignal) => getDashboard(role, signal), [role])
-  const { data, failure } = useApiRequest(load)
+  const { data, failure, refresh, pending } = useApiRequest(load)
   // T-S12-11: avisa cuando ya tiene su altura final, para que las tarjetas se revelen en su lugar definitivo.
   const settled = Boolean(data || failure)
   useEffect(() => { if (settled) onSettled() }, [settled, onSettled])
   const [animate] = useState(firstViewInSession)
-
-  if (failure) {
-    return <p className="notice-muted home-stats-failure">No pudimos cargar los indicadores. Puedes seguir usando las secciones de tu inicio.</p>
-  }
   const metrics = data?.metrics
-  if (!metrics) return null
-  const missing = metrics.missing_data_students ?? 0
+  if (data && !metrics) return null
+  const missing = metrics?.missing_data_students ?? 0
   // HU-S6-03 CA-02: solo la institución responde solicitudes; a la empresa le basta el contador.
-  const linkages = role === 'INSTITUTION' ? metrics.pending_linkage_requests ?? 0 : 0
+  const linkages = role === 'INSTITUTION' ? metrics?.pending_linkage_requests ?? 0 : 0
 
   return (
-    <section className="home-indicators" aria-label="Indicadores">
-      {(linkages > 0 || missing > 0) && (
-        <ul className="home-tasks" aria-label="Por atender">
-          {linkages > 0 && (
-            <HomeTask kind="linkage" icon={<IdCardIcon />} to="/institution/linkage-requests?status=PENDIENTE_INSTITUCION" action="Revisar solicitudes"
-              title={linkages === 1 ? '1 solicitud de vinculación pendiente' : `${count.format(linkages)} solicitudes de vinculación pendientes`}
-              description="Las empresas esperan tu respuesta para continuar." />
+    <section className="home-indicators" aria-labelledby="home-summary-title" aria-busy={!settled || pending}>
+      <h3 className="home-section-title" id="home-summary-title">Indicadores</h3>
+      {failure ? (
+        <div className="home-stats-failure" role="status">
+          <p>No pudimos cargar los indicadores. Puedes seguir usando las secciones de tu inicio.</p>
+          <button type="button" className="secondary" disabled={pending} onClick={() => { void refresh() }}>
+            <PendingLabel pending={pending} label="Reintentar" pendingLabel="Reintentando…" />
+          </button>
+        </div>
+      ) : !metrics ? (
+        <>
+          <p className="visually-hidden" role="status">Cargando indicadores…</p>
+          <HomeStatsSkeleton count={metricKeys[role].length} />
+        </>
+      ) : (
+        <div className="content-enter">
+          {(linkages > 0 || missing > 0) && (
+            <ul className="home-tasks" aria-label="Por atender">
+              {linkages > 0 && (
+                <HomeTask kind="linkage" icon={<IdCardIcon />} to="/institution/linkage-requests?status=PENDIENTE_INSTITUCION" action="Revisar solicitudes"
+                  title={linkages === 1 ? '1 solicitud de vinculación pendiente' : `${count.format(linkages)} solicitudes de vinculación pendientes`}
+                  description="Las empresas esperan tu respuesta para continuar." />
+              )}
+              {missing > 0 && (
+                <HomeTask kind="missing" icon={<UsersIcon />} to="/students?data=missing&status=active" action="Revisar el padrón"
+                  title={missing === 1 ? '1 alumno con datos faltantes' : `${count.format(missing)} alumnos con datos faltantes`}
+                  description="Completa su expediente y su seguro para que puedan participar." />
+              )}
+            </ul>
           )}
-          {missing > 0 && (
-            <HomeTask kind="missing" icon={<UsersIcon />} to="/students?data=missing&status=active" action="Revisar el padrón"
-              title={missing === 1 ? '1 alumno con datos faltantes' : `${count.format(missing)} alumnos con datos faltantes`}
-              description="Completa su expediente y su seguro para que puedan participar." />
-          )}
-        </ul>
+          <dl className="home-stats">
+            {metricKeys[role].map((key) => (
+              <HomeStat key={key} label={metricLabels[key]} value={metrics[key] ?? 0} animate={animate} />
+            ))}
+          </dl>
+        </div>
       )}
-      <dl className="home-stats">
-        {metricKeys[role].map((key) => (
-          <HomeStat key={key} label={metricLabels[key]} value={metrics[key] ?? 0} animate={animate} />
-        ))}
-      </dl>
     </section>
   )
 }
@@ -249,12 +286,11 @@ export function SessionPage() {
   const titleId = useId()
   // T-S12-11: las tarjetas suelen quedar bajo el pliegue; la cascada empieza cuando la lista entra en pantalla, ya con
   // los indicadores (y el carrusel de la empresa) cargados, que las empujan hacia abajo.
-  const [indicatorsReady, setIndicatorsReady] = useState(false)
-  const [spotlightReady, setSpotlightReady] = useState(false)
-  const markIndicators = useCallback(() => setIndicatorsReady(true), [])
-  const markSpotlight = useCallback(() => setSpotlightReady(true), [])
-  const company = user?.role === 'COMPANY'
-  const [cards, reveal] = useReveal<HTMLUListElement>(indicatorsReady && (!company || spotlightReady))
+  const markIndicators = useCallback(() => undefined, [])
+  const markSpotlight = useCallback(() => undefined, [])
+  // T-S14-07: el resumen y el carrusel reservan su alto con sus esqueletos, así que las tarjetas no esperan a los datos:
+  // se revelan en cascada al entrar en pantalla.
+  const [cards, reveal] = useReveal<HTMLUListElement>()
   if (!user) return null
   // HU-S14-03 CA-02: solo el inicio lleva al onboarding pendiente; los enlaces directos no se interceptan.
   if (user.company?.onboarding === 'pending') return <Navigate to="/welcome" replace />
@@ -263,28 +299,32 @@ export function SessionPage() {
 
   return (
     <section className="card home" aria-labelledby={titleId}>
-      <div className="home-greeting">
-        <h2 id={titleId}>Hola, {user.name}</h2>
-        <p className="home-meta">
-          <span className="home-role">{roleLabels[user.role]}</span>
-          {organization && <span>{organization}</span>}
-        </p>
+      {/* T-S14-07: encabezado con la fecha, el saludo y la acción principal a la derecha en pantallas anchas. */}
+      <div className="home-header">
+        <div className="home-greeting">
+          <p className="home-date">{todayLabel()}</p>
+          <h2 id={titleId}>Hola, {user.name}</h2>
+          <p className="home-meta">
+            <span className="home-role">{roleLabels[user.role]}</span>
+            {organization && <span>{organization}</span>}
+          </p>
+        </div>
+        {home?.primary && (
+          <Link className="home-action" to={home.primary.to} state={home.primary.state}><PlusIcon />{home.primary.label}</Link>
+        )}
       </div>
 
       {user.company && user.company.missing.length > 0 && <ProfileNudge company={user.company} />}
 
-      {home?.primary && (
-        <div className="home-primary">
-          <Link className="home-action" to={home.primary.to} state={home.primary.state}><PlusIcon />{home.primary.label}</Link>
-        </div>
-      )}
       {user.role === 'COMPANY' && home && <TalentShortcut />}
-      {user.role === 'COMPANY' && home && <DualStoriesSpotlight onSettled={markSpotlight} />}
+      {/* Lo accionable antes que lo inspiracional: el resumen va antes que las Historias. */}
       {home && <HomeIndicators role={user.role} onSettled={markIndicators} />}
+      {user.role === 'COMPANY' && home && <DualStoriesSpotlight onSettled={markSpotlight} />}
 
       {home
         ? (
           <nav aria-label={home.label}>
+            <h3 className="home-section-title">Accesos</h3>
             <ul ref={cards} className="home-cards" data-reveal={reveal}>
               {home.sections.map((section, index) => (
                 // T-S12-11: entrada escalonada al llegar a la lista.
