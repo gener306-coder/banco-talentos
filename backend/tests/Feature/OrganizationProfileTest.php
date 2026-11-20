@@ -131,10 +131,10 @@ describe('campos permitidos', function () {
         $this->browserRequest('PUT', '/api/organization/profile', [])->assertOk();
     });
 
-    it('lets the institution change only its program contact, never its official name or CCT', function () {
+    it('lets the institution change its program contact without touching its official data, and never company data', function () {
         $this->loginWithCookies($this->institutionAccount)->assertOk();
-        $this->browserRequest('PUT', '/api/organization/profile', institutionProfile(['name' => 'Otra', 'cct' => 'X', 'trade_name' => 'X', 'sector_code' => '54']))
-            ->assertUnprocessable()->assertJsonValidationErrors(['name', 'cct', 'trade_name', 'sector_code']);
+        $this->browserRequest('PUT', '/api/organization/profile', institutionProfile(['trade_name' => 'X', 'sector_code' => '54']))
+            ->assertUnprocessable()->assertJsonValidationErrors(['trade_name', 'sector_code']);
 
         $this->browserRequest('PUT', '/api/organization/profile', institutionProfile())->assertOk()
             ->assertExactJson(['data' => [
@@ -211,10 +211,10 @@ describe('perfil autogestionado y onboarding (HU-S14-03)', function () {
         expect($account->refresh()->name)->toBe('Nombre Final');
     });
 
-    it('never lets the institution rename the account or capture company data', function () {
+    it('never lets the institution capture company data', function () {
         $this->loginWithCookies($this->institutionAccount)->assertOk();
-        $this->browserRequest('PUT', '/api/organization/profile', institutionProfile(['account_name' => 'X', 'legal_name' => 'X', 'rfc' => 'MGO150320AB1']))
-            ->assertUnprocessable()->assertJsonValidationErrors(['account_name', 'legal_name', 'rfc']);
+        $this->browserRequest('PUT', '/api/organization/profile', institutionProfile(['legal_name' => 'X', 'rfc' => 'MGO150320AB1']))
+            ->assertUnprocessable()->assertJsonValidationErrors(['legal_name', 'rfc']);
         // Su contacto sigue siendo obligatorio, como en HU-S14-02.
         $this->browserRequest('PUT', '/api/organization/profile', institutionProfile(['contact_name' => '']))->assertUnprocessable()->assertJsonValidationErrors(['contact_name']);
     });
@@ -323,3 +323,46 @@ describe('sin aviso a la Secretaría (M2) y bitácora', function () {
         $this->browserRequest('GET', '/api/organization/profile')->assertTooManyRequests();
     });
 });
+
+describe('control de la institución sobre sus datos (T-S14-15)', function () {
+    it('lets the institution correct its official name and CCT, normalized, and logs only the changed fields', function () {
+        $this->loginWithCookies($this->institutionAccount)->assertOk();
+        // Primero el contacto de las pruebas, para que el evento siguiente solo registre los datos oficiales.
+        $this->browserRequest('PUT', '/api/organization/profile', institutionProfile())->assertOk();
+
+        $this->browserRequest('PUT', '/api/organization/profile', institutionProfile(['name' => '  Universidad Tecnológica de Tamaulipas  ', 'cct' => ' 28eut-0002 b ']))
+            ->assertOk()->assertJsonPath('data.name', 'Universidad Tecnológica de Tamaulipas')->assertJsonPath('data.cct', '28EUT0002B');
+        expect($this->institution->refresh()->cct)->toBe('28EUT0002B')
+            ->and(AccountAuditEvent::query()->orderByDesc('id')->first()->changed_fields)->toBe(['name', 'cct']);
+        $this->browserRequest('GET', '/api/me')->assertJsonPath('user.institution.name', 'Universidad Tecnológica de Tamaulipas');
+    });
+
+    it('validates the official data: required name, CCT format only when it changes, and CCT uniqueness', function () {
+        Institution::factory()->create(['cct' => '28EUT0009Z']);
+        DB::table('institutions')->where('id', $this->institution->id)->update(['cct' => 'CLAVE-ANTERIOR']);
+        $this->loginWithCookies($this->institutionAccount)->assertOk();
+
+        // Un CCT anterior a la regla sigue siendo válido mientras no cambie.
+        $this->browserRequest('PUT', '/api/organization/profile', institutionProfile(['cct' => 'CLAVE-ANTERIOR', 'name' => 'Universidad Tecnológica del Golfo']))->assertOk();
+        $this->browserRequest('PUT', '/api/organization/profile', institutionProfile(['cct' => '28EUT01']))
+            ->assertUnprocessable()->assertJsonPath('errors.cct.0', \App\Rules\WorkCenterKey::MESSAGE);
+        $this->browserRequest('PUT', '/api/organization/profile', institutionProfile(['cct' => '28eut0009z']))
+            ->assertUnprocessable()->assertJsonPath('errors.cct.0', 'Esa Clave de Centro de Trabajo ya está registrada en otra institución.');
+        $this->browserRequest('PUT', '/api/organization/profile', institutionProfile(['name' => '   ']))->assertUnprocessable()->assertJsonValidationErrors(['name']);
+        expect($this->institution->refresh()->cct)->toBe('CLAVE-ANTERIOR');
+    });
+
+    it('renames the account with Soy yo only when the contact name changes here, like the company', function () {
+        $account = User::factory()->forInstitution($this->institution)->create(['name' => 'Nombre Nuevo', 'email' => 'dual@ut.test']);
+        $this->loginWithCookies($account)->assertOk();
+
+        // Copia vieja del formulario: el contacto no cambia y la cuenta conserva su nombre.
+        $this->browserRequest('PUT', '/api/organization/profile', institutionProfile(['account_name' => 'Laura Méndez']))->assertOk();
+        expect($account->refresh()->name)->toBe('Nombre Nuevo');
+
+        $this->browserRequest('PUT', '/api/organization/profile', institutionProfile(['contact_name' => 'Laura M. Herrera', 'account_name' => 'Laura M. Herrera']))->assertOk();
+        expect($account->refresh()->name)->toBe('Laura M. Herrera')
+            ->and(AccountAuditEvent::query()->where('event', 'account_updated')->count())->toBe(1);
+    });
+});
+

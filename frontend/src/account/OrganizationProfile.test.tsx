@@ -172,20 +172,51 @@ describe('perfil de la empresa en Mi cuenta (CA-01, CA-06)', () => {
     expect(within(section).getByLabelText('Puesto en la empresa (opcional)')).not.toBeRequired()
   })
 
-  it('la institución conserva su alcance: solo su contacto, con el nombre oficial y la clave en solo lectura', async () => {
+  it('la institución corrige su nombre oficial y su CCT, con el formato en línea, sin datos de empresa (T-S14-15)', async () => {
     user = { id: 2, name: 'Coordinación', email: 'dual@ut.test', role: 'INSTITUTION', institution: { id: 1, name: 'UT del Golfo' }, company: null }
     profile = institutionProfile
-    apiMock.mockResolvedValueOnce(Response.json({ data: { ...institutionProfile, contact_phone: '8331234567' } }))
+    apiMock.mockResolvedValueOnce(Response.json({ data: { ...institutionProfile, name: 'Universidad Tecnológica de Tamaulipas', cct: '28EUT0002B' } }))
     renderApp('/account')
     const section = await screen.findByRole('region', { name: 'Perfil de la institución' })
     expect(section).toHaveTextContent('28EUT0001A')
-    expect(section).toHaveTextContent('Los mantiene la Administración del Banco de Talentos.')
+    expect(section).not.toHaveTextContent('Los mantiene la Administración')
     openEditor(section)
-    expect(within(section).queryByLabelText(/Razón social|RFC|Sector|Municipio|Soy yo/)).not.toBeInTheDocument()
-    fireEvent.change(within(section).getByLabelText('Teléfono de contacto (opcional)'), { target: { value: '8331234567' } })
+    expect(within(section).queryByLabelText(/Razón social|RFC|Sector|Municipio/)).not.toBeInTheDocument()
+    // El contacto es la persona de la sesión (mismo correo): «Soy yo» viene marcado.
+    expect(within(section).getByLabelText('Soy yo')).toBeChecked()
+
+    const cct = within(section).getByLabelText('Clave de Centro de Trabajo (CCT)')
+    fireEvent.change(cct, { target: { value: '28EUT01' } })
+    fireEvent.blur(cct)
+    expect(await within(section).findByText(/La CCT debe tener 10 caracteres/)).toBeInTheDocument()
+    fireEvent.click(within(section).getByRole('button', { name: 'Guardar cambios' }))
+    expect(puts()).toHaveLength(0)
+
+    fireEvent.change(within(section).getByLabelText('Nombre oficial'), { target: { value: '  Universidad Tecnológica de Tamaulipas ' } })
+    fireEvent.change(cct, { target: { value: '28eut-0002 b' } })
     fireEvent.click(within(section).getByRole('button', { name: 'Guardar cambios' }))
     await waitFor(() => expect(puts()).toHaveLength(1))
-    expect(body()).toEqual({ contact_name: 'Laura Méndez', contact_position: 'Coordinación Dual', contact_email: 'dual@ut.test', contact_phone: '8331234567' })
+    // El nombre del responsable no cambió aquí: no viaja como nombre de la cuenta.
+    expect(body()).toEqual({
+      name: 'Universidad Tecnológica de Tamaulipas', cct: '28EUT0002B',
+      contact_name: 'Laura Méndez', contact_position: 'Coordinación Dual', contact_email: 'dual@ut.test', contact_phone: null,
+    })
+    await expectSnackbar('Perfil actualizado.')
+    expect(section).toHaveTextContent('28EUT0002B')
+  })
+
+  it('con «Soy yo», corregir el nombre del responsable corrige el de la cuenta de la institución (T-S14-15)', async () => {
+    user = { id: 2, name: 'Coordinación', email: 'dual@ut.test', role: 'INSTITUTION', institution: { id: 1, name: 'UT del Golfo' }, company: null }
+    profile = institutionProfile
+    apiMock.mockResolvedValueOnce(Response.json({ data: { ...institutionProfile, contact_name: 'Laura M. Herrera' } }))
+    renderApp('/account')
+    const section = await screen.findByRole('region', { name: 'Perfil de la institución' })
+    openEditor(section)
+    fireEvent.change(within(section).getByLabelText('Tu nombre'), { target: { value: 'Laura M. Herrera' } })
+    fireEvent.click(within(section).getByRole('button', { name: 'Guardar cambios' }))
+    await waitFor(() => expect(puts()).toHaveLength(1))
+    expect(body()).toMatchObject({ contact_name: 'Laura M. Herrera', account_name: 'Laura M. Herrera' })
+    expect(await screen.findByRole('button', { name: 'Cuenta de Laura M. Herrera' })).toBeInTheDocument()
   })
 
   it('no se muestra a ADMIN', async () => {

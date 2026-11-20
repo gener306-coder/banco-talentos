@@ -7,6 +7,7 @@ import { DeliveryMethodField } from './SetupLinkDelivery'
 import type { InstitutionFailure } from './useInstitutionRequest'
 import { PendingLabel } from '../ui/forms'
 import { emailErrorOnBlur, INVALID_EMAIL } from '../ui/validation'
+import { normalizeCct } from './cct'
 
 type InstitutionFormProps = {
   submitLabel: string
@@ -45,7 +46,8 @@ export function InstitutionForm({ initialValue, submitLabel, cancelTo, pending, 
 
     const input: InstitutionInput = {
       name: values.name.trim(),
-      cct: values.cct.trim(),
+      // T-S14-15: mayúsculas, sin espacios ni guiones; el servidor valida el formato SEP de un CCT nuevo.
+      cct: normalizeCct(values.cct),
       contact_name: values.contact_name.trim(),
       contact_position: values.contact_position.trim() || null,
       contact_email: values.contact_email.trim(),

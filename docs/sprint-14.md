@@ -528,3 +528,39 @@ El responsable pidió auditar la lógica y el flujo de las oportunidades duales.
   - Vitest de `AppShell.test.tsx` comprueba el regreso arriba al entrar a una sección y al volver al inicio por su enlace.
 - **Entorno de desarrollo:** tenía 7 migraciones pendientes, de `2026_11_17_000001` (mensajes) a `2026_11_20_000002` (baja). Con el código actual, varias pantallas fallaban ahí; por ejemplo, registrar una oportunidad exigía el tipo de periodo que ya no existe. Se aplicaron y se reinició la cola.
 - **E2E:** `support/students.ts` (`publishStudent`) espera a que el CV esté listo, comprueba el titular escrito y espera la respuesta de su guardado. Fallaba de forma intermitente con la máquina cargada. Suite completa: 46 de 46.
+
+### T-S14-15 — Control de la institución sobre sus datos
+
+**Estado:** Implementada (20 de noviembre de 2026) en `feat/s14-institution-profile`; publicada en `main`. Solicitada por el responsable: aplicar a la institución las mismas reglas de control que tiene la empresa sobre su perfil.
+
+- **Decisiones del responsable:**
+  - la institución edita su nombre oficial y su CCT;
+  - su contacto se vincula con la cuenta («Soy yo»), con la corrección de T-S14-09;
+  - el formato del CCT se valida solo cuando se escribe uno nuevo;
+  - el administrador conserva la edición, como la Secretaría con las empresas (M4);
+  - cada cambio queda en la bitácora, sin avisos por correo (M2).
+- **Contrato:** `PUT /api/organization/profile` de la institución admite `name`, `cct`, `contact_*` y `account_name`.
+  - Nombre oficial y CCT obligatorios si se envían; un guardado solo del contacto los conserva.
+  - CCT único entre instituciones, normalizado (mayúsculas, sin espacios ni guiones).
+  - Formato de la SEP (`App\Rules\WorkCenterKey`): 2 dígitos de la entidad, 3 letras, 4 dígitos y 1 letra. Se exige solo a un CCT nuevo; uno anterior a la regla, incluso con guiones o minúsculas, se conserva tal cual mientras equivalga al registrado.
+  - El contacto conserva su nombre y correo obligatorios.
+  - Cualquier otro campo, `422`.
+  - `organization_profile_updated` registra los campos que cambiaron, ahora también `name` y `cct`.
+- **«Soy yo» (T-S14-09):**
+  - `account_name` renombra la cuenta de la institución solo si el nombre del responsable cambió en ese guardado (o la cuenta tiene el nombre provisional);
+  - `PATCH /api/me` renombra al responsable si es la misma persona (el correo del contacto es el de la cuenta).
+- **Administración:** el alta y la edición de instituciones normalizan el CCT con la misma regla; el formato se exige en el alta y, en la edición, solo si el CCT cambia.
+  - **Cambio de una regla anterior:** el CCT ya no se guarda tal cual. Antes «exact-cct» y «Exact-Cct» convivían; ahora la unicidad se aplica al valor normalizado.
+- **Interfaz:**
+  - Mi cuenta de la institución muestra «Datos de la institución» (nombre oficial y CCT) sin la nota «Los mantiene la Administración»;
+  - «Editar» abre en la tarjeta el nombre oficial, el CCT (con la ayuda del formato, validación al salir del campo y mayúsculas) y el responsable con «Soy yo»;
+  - al guardar, la sesión refleja el nombre de la institución (Tu perfil y el menú) y, si cambió, el de la cuenta.
+  - La lógica de «Soy yo» se extrajo a `account/useSelfContact.ts`, que comparten la empresa y la institución; el formulario de la empresa no cambia de comportamiento.
+- **Pruebas:**
+  - Pest `OrganizationProfileTest`: corrección de nombre y CCT normalizado con su bitácora; CCT inválido, repetido (también en minúsculas) o heredado sin cambiar; nombre vacío; «Soy yo» sin revertir con una copia vieja; la institución sigue sin capturar datos de empresa;
+  - Pest `AccountTest`: renombrar la cuenta actualiza al responsable de la institución;
+  - Pest `InstitutionTest`: normalización, formato y unicidad normalizada en el alta, y un CCT heredado conservado al editar otros datos;
+  - Vitest: ficha y edición de la institución, formato en línea, carga útil normalizada sin `account_name`, «Soy yo» que sí renombra, y la sesión con el nombre nuevo;
+  - E2E `institution-profile.spec.ts` (nueva): la institución corrige su nombre y su CCT y Administración los ve en su listado. Las specs que dan de alta instituciones usan `randomCct()` con el formato SEP.
+
+  Revisión visual de la tarjeta a 1440 y 390 px, en claro y oscuro, sin desborde horizontal. Verificación: Pest completo 1657 de 1657 y E2E 47 de 47.

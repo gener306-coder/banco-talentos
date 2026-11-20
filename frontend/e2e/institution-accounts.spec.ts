@@ -2,6 +2,7 @@ import { randomBytes } from 'node:crypto'
 import { expect, test } from '@playwright/test'
 import { ADMIN_STATE, NO_SESSION } from './support/admin'
 import { linkFromMail } from './support/mailpit'
+import { randomCct } from './support/institution'
 
 test.use({ storageState: ADMIN_STATE })
 
@@ -15,7 +16,7 @@ test('ADMIN crea una cuenta sin contraseña; su titular la establece y pierde ac
   const suffix = randomBytes(8).toString('hex')
   const institution = {
     name: `Instituto cuentas E2E ${suffix}`,
-    cct: `CUENTAS${suffix}`,
+    cct: randomCct(),
     email: `contacto-${suffix}@example.test`,
   }
   const account = {

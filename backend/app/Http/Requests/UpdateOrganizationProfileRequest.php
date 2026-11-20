@@ -6,7 +6,9 @@ use App\Enums\EconomicSector;
 use App\Enums\MexicanState;
 use App\Enums\UserRole;
 use App\Rules\PhoneNumber;
+use App\Models\Institution;
 use App\Rules\Rfc;
+use App\Rules\WorkCenterKey;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
@@ -16,7 +18,8 @@ use Illuminate\Validation\Validator;
  * Perfil de la organización de la sesión (HU-S14-03). Lista explícita de campos por rol:
  * - la empresa captura y corrige todo su perfil (M1 a M4): todo opcional, solo se valida el formato de lo capturado y
  *   un texto vacío se guarda como null. `account_name` actualiza además el nombre de la cuenta de la sesión;
- * - la institución, solo el contacto de su programa dual (su nombre oficial y su CCT los mantiene Administración).
+ * - la institución, su nombre oficial, su CCT y el contacto de su programa dual (T-S14-15, las mismas reglas que la
+ *   empresa: corrige sus datos y `account_name` con «Soy yo»). Su nombre, su CCT y el contacto siguen siendo obligatorios.
  * Los ids, el folio de validación, el estado, la autoría y cualquier otro campo se rechazan por nombre.
  */
 class UpdateOrganizationProfileRequest extends FormRequest
@@ -25,7 +28,9 @@ class UpdateOrganizationProfileRequest extends FormRequest
 
     private const COMPANY = ['trade_name', 'legal_name', 'rfc', 'sector_code', 'state_code', 'municipality_code', ...self::CONTACT, 'account_name'];
 
-    private const TEXT = ['trade_name', 'legal_name', 'rfc', 'sector_code', 'state_code', 'municipality_code', ...self::CONTACT, 'account_name'];
+    private const INSTITUTION = ['name', 'cct', ...self::CONTACT, 'account_name'];
+
+    private const TEXT = ['trade_name', 'legal_name', 'rfc', 'sector_code', 'state_code', 'municipality_code', 'name', 'cct', ...self::CONTACT, 'account_name'];
 
     public function authorize(): bool
     {
@@ -40,7 +45,7 @@ class UpdateOrganizationProfileRequest extends FormRequest
     /** @return list<string> */
     public function allowed(): array
     {
-        return $this->isCompany() ? self::COMPANY : self::CONTACT;
+        return $this->isCompany() ? self::COMPANY : self::INSTITUTION;
     }
 
     protected function prepareForValidation(): void
@@ -55,6 +60,9 @@ class UpdateOrganizationProfileRequest extends FormRequest
         if (isset($clean['rfc'])) {
             $clean['rfc'] = Rfc::normalize($clean['rfc']);
         }
+        if (isset($clean['cct']) && ! $this->isCompany()) {
+            $clean['cct'] = WorkCenterKey::normalizeAgainst($clean['cct'], Institution::query()->whereKey($this->user()->institution_id)->value('cct'));
+        }
         if (isset($clean['contact_email'])) {
             $clean['contact_email'] = Str::lower($clean['contact_email']);
         }
@@ -64,8 +72,16 @@ class UpdateOrganizationProfileRequest extends FormRequest
     public function rules(): array
     {
         if (! $this->isCompany()) {
-            // HU-S14-02, sin cambios: la institución mantiene su responsable con nombre y correo.
+            // T-S14-15: el nombre oficial y el CCT son obligatorios; el formato del CCT solo se exige si cambia. El
+            // responsable conserva su nombre y correo obligatorios (HU-S14-02).
+            $institution = $this->user()->institution_id;
+
             return [
+                'name' => ['sometimes', 'required', 'string', 'max:255'],
+                'cct' => ['bail', 'sometimes', 'required', 'string',
+                    new WorkCenterKey(Institution::query()->whereKey($institution)->value('cct')),
+                    Rule::unique('institutions', 'cct')->ignore($institution)],
+                'account_name' => ['nullable', 'string', 'max:120'],
                 'contact_name' => ['required', 'string', 'max:120'],
                 'contact_position' => ['nullable', 'string', 'max:120'],
                 'contact_email' => ['required', 'string', 'email', 'max:254'],
@@ -107,6 +123,12 @@ class UpdateOrganizationProfileRequest extends FormRequest
     public function messages(): array
     {
         return [
+            'name.required' => 'El nombre oficial es obligatorio.',
+            'name.string' => 'El nombre oficial no es válido.',
+            'name.max' => 'El nombre oficial no debe superar 255 caracteres.',
+            'cct.required' => 'La Clave de Centro de Trabajo es obligatoria.',
+            'cct.string' => 'La Clave de Centro de Trabajo no es válida.',
+            'cct.unique' => 'Esa Clave de Centro de Trabajo ya está registrada en otra institución.',
             'trade_name.string' => 'El nombre comercial no es válido.',
             'trade_name.max' => 'El nombre comercial no debe superar 150 caracteres.',
             'legal_name.string' => 'La razón social no es válida.',
