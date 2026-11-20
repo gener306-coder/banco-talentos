@@ -166,22 +166,26 @@ function HomeStat({ label, value, animate }: { label: string; value: number; ani
  * Pendiente del inicio (T-S8-10): conteo, motivo y acción juntos. Toda la tarjeta es clicable, pero el enlace conserva
  * como nombre accesible solo su acción.
  */
-function HomeTask({ kind, icon, title, description, to, action }: {
+/**
+ * Aviso de algo por atender (T-S14-16): una línea discreta y toda tocable, como el recordatorio del perfil de la empresa
+ * (T-S14-01). El enlace se anuncia por su acción («Revisar solicitudes») y el conteo es su descripción; el detalle vive
+ * en la bandeja o en el padrón.
+ */
+function HomeTask({ kind, icon, title, to, action }: {
   kind: 'linkage' | 'missing'
   icon: ReactNode
   title: string
-  description: string
   to: string
   action: string
 }) {
+  const id = useId()
   return (
-    <li className={`home-task home-task-${kind}`}>
-      <span className="home-task-icon" aria-hidden="true">{icon}</span>
-      <div className="home-task-text">
-        <p className="home-task-title">{title}</p>
-        <p className="home-task-description">{description}</p>
-        <Link className="home-task-action" to={to}>{action}<ChevronRightIcon /></Link>
-      </div>
+    <li>
+      <Link className={`home-task home-task-${kind}`} to={to} aria-label={action} aria-describedby={id}>
+        <span className="home-task-icon" aria-hidden="true">{icon}</span>
+        <span className="home-task-title" id={id}>{title}</span>
+        <span className="home-task-action" aria-hidden="true">Revisar<ChevronRightIcon /></span>
+      </Link>
     </li>
   )
 }
@@ -239,13 +243,11 @@ function HomeIndicators({ role, onSettled }: { role: Role; onSettled: () => void
             <ul className="home-tasks" aria-label="Por atender">
               {linkages > 0 && (
                 <HomeTask kind="linkage" icon={<IdCardIcon />} to="/institution/linkage-requests?status=PENDIENTE_INSTITUCION" action="Revisar solicitudes"
-                  title={linkages === 1 ? '1 solicitud de vinculación pendiente' : `${count.format(linkages)} solicitudes de vinculación pendientes`}
-                  description="Las empresas esperan tu respuesta para continuar." />
+                  title={linkages === 1 ? '1 solicitud espera tu respuesta' : `${count.format(linkages)} solicitudes esperan tu respuesta`} />
               )}
               {missing > 0 && (
                 <HomeTask kind="missing" icon={<UsersIcon />} to="/students?data=missing&status=active" action="Revisar el padrón"
-                  title={missing === 1 ? '1 alumno con datos faltantes' : `${count.format(missing)} alumnos con datos faltantes`}
-                  description="Completa su expediente y su seguro para que puedan participar." />
+                  title={missing === 1 ? '1 alumno con datos por completar' : `${count.format(missing)} alumnos con datos por completar`} />
               )}
             </ul>
           )}

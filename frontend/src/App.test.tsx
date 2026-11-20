@@ -42,7 +42,9 @@ beforeEach(() => {
   fetchMock.mockReset()
   // Los indicadores del inicio (HU-S5-01) quedan pendientes fuera de fetchMock: no consumen sus respuestas en orden.
   vi.stubGlobal('fetch', (path: RequestInfo | URL, options?: RequestInit) =>
-    path === '/api/dashboard' ? new Promise<Response>(() => undefined) : fetchMock(path, options))
+    path === '/api/dashboard' ? new Promise<Response>(() => undefined)
+      : String(path).endsWith('/unread-summary') ? Promise.resolve(Response.json({ data: { conversations: 0, items: [] } }))
+        : fetchMock(path, options))
   document.cookie = 'XSRF-TOKEN=; Max-Age=0; Path=/'
   localStorage.clear()
   sessionStorage.clear()
@@ -73,7 +75,8 @@ describe('acceso y sesión', () => {
     renderApp()
     expect(await screen.findByRole('heading', greeting)).toBeInTheDocument()
     expect(screen.getByText(label)).toBeInTheDocument()
-    expect(screen.getAllByRole('button')).toHaveLength(1)
+    // El menú de cuenta y, para empresa e institución, el de mensajes sin leer (T-S14-17).
+    expect(screen.getAllByRole('button')).toHaveLength(role === 'COMPANY' || role === 'INSTITUTION' ? 2 : 1)
     if (role === 'ADMIN') {
       expect(screen.getByRole('link', { name: 'Instituciones' })).toHaveAttribute('href', '/institutions')
     }

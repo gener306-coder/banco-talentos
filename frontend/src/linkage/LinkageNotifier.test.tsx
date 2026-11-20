@@ -105,14 +105,15 @@ describe('avisos del navegador', () => {
     expect(shown[0].instance.close).toHaveBeenCalled()
   })
 
-  it('no avisa de la conversación que la persona tiene abierta y a la vista', async () => {
+  it('con la pestaña a la vista no usa el aviso del navegador: lo da la barra de mensajes dentro de la app (T-S14-17)', async () => {
     hidden = false
     view(company, '/linkage-requests/41/chat')
     await baseline()
     items = [conversation(41, 3), conversation(42, 4)]
     await poll()
-    await waitFor(() => expect(shown).toHaveLength(1))
-    expect(shown[0].options.tag).toBe('linkage-COMPANY-42')
+    await act(async () => { await Promise.resolve() })
+    expect(summaries()).toBeGreaterThan(1)
+    expect(shown).toHaveLength(0)
   })
 
   it('sin permiso ni contador en pantalla no consulta; al conceder el permiso empieza a escuchar', async () => {

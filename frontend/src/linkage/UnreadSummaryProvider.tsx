@@ -1,17 +1,17 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import type { ReactNode } from 'react'
 import { useLocation } from 'react-router'
 import { useAuth } from '../auth/useAuth'
-import { getUnreadSummary, LINKAGE_READ_EVENT } from './conversationApi'
 import type { LinkageSide, UnreadSummary } from './conversationApi'
 import { UnreadSummaryContext } from './unreadSummaryContext'
-import { UNREAD_POLL_INTERVAL_MS } from './useUnreadConversations'
+import { startUnreadPolling } from './unreadTransport'
+import type { UnreadTransport } from './unreadTransport'
 
 /**
  * Consulta única del resumen de mensajes sin leer (T-S13-08) para las cuentas de empresa e institución, activa
- * mientras haya un contador en la pantalla o los avisos del navegador estén permitidos. Se actualiza
- * al navegar, al volver a la pestaña o a la ventana, cuando una conversación se marca como leída y cada 60 s, también
- * con la pestaña oculta: es cuando el aviso del navegador sirve. Un error deja el último valor.
+ * mientras haya un contador en la pantalla o los avisos del navegador estén permitidos. Cómo llega el resumen lo decide
+ * el transporte (T-S14-17, `unreadTransport.ts`): hoy, cada 10 s con la pestaña visible y cada 60 s oculta, al volver a
+ * la pestaña, al leer y compartido entre pestañas. Además se consulta al navegar. Un error deja el último valor.
  */
 export function UnreadSummaryProvider({ children }: { children: ReactNode }) {
   const { user } = useAuth()
@@ -27,29 +27,24 @@ export function UnreadSummaryProvider({ children }: { children: ReactNode }) {
   }, [])
   const active = subscribers > 0
 
+  const transport = useRef<UnreadTransport | null>(null)
   useEffect(() => {
     if (!side || !account || !active) return
-    const controller = new AbortController()
-    const refresh = () => {
-      getUnreadSummary(side, controller.signal)
-        .then((summary) => setResult({ account, summary }))
-        .catch(() => { /* El siguiente intento lo corrige. */ })
-    }
-    const onVisibility = () => { if (!document.hidden) refresh() }
-
-    refresh()
-    const timer = window.setInterval(refresh, UNREAD_POLL_INTERVAL_MS)
-    document.addEventListener('visibilitychange', onVisibility)
-    window.addEventListener('focus', refresh)
-    window.addEventListener(LINKAGE_READ_EVENT, refresh)
+    transport.current = startUnreadPolling({ side, account, onSummary: (summary) => setResult({ account, summary }) })
     return () => {
-      window.clearInterval(timer)
-      controller.abort()
-      document.removeEventListener('visibilitychange', onVisibility)
-      window.removeEventListener('focus', refresh)
-      window.removeEventListener(LINKAGE_READ_EVENT, refresh)
+      transport.current?.stop()
+      transport.current = null
     }
-  }, [side, account, active, pathname, search])
+  }, [side, account, active])
+
+  // Al navegar se consulta de nuevo (la primera vez ya lo hizo el transporte al arrancar).
+  const route = `${pathname}${search}`
+  const lastRoute = useRef(route)
+  useEffect(() => {
+    if (lastRoute.current === route) return
+    lastRoute.current = route
+    transport.current?.refresh()
+  }, [route])
 
   // Un resumen de otra cuenta (cambio de sesión) nunca se muestra.
   const summary = result?.account === account ? result.summary : null
