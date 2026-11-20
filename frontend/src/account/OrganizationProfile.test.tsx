@@ -38,6 +38,10 @@ function Location() {
   const location = useLocation()
   return <output aria-label="Ruta actual">{location.pathname + location.hash}</output>
 }
+/** T-S14-03: la tarjeta abre en lectura; «Editar» la pasa al formulario en su sitio. */
+function openEditor(section: HTMLElement) {
+  fireEvent.click(within(section).getByRole('button', { name: 'Editar' }))
+}
 const renderApp = (path: string) => render(<MemoryRouter initialEntries={[path]}><App /><Location /></MemoryRouter>)
 
 beforeEach(() => {
@@ -63,12 +67,19 @@ beforeEach(() => {
 })
 afterEach(() => vi.unstubAllGlobals())
 
+/** T-S14-04: las confirmaciones salen en el aviso breve (Snackbar), fuera de las tarjetas. */
+async function expectSnackbar(text: string) {
+  const message = await screen.findByText(text)
+  expect(message.closest('.snackbar')).toHaveAttribute('role', 'status')
+}
+
+
 describe('perfil de la empresa en Mi cuenta (CA-01, CA-06)', () => {
   it('edita todo el perfil, incluidos los datos fiscales y el sector, sin bloqueos ni confirmación', async () => {
     apiMock.mockResolvedValueOnce(Response.json({ data: { ...companyProfile, sector_code: '54', legal_name: 'Golfo Industrial, S.A.', missing: [] } }))
     renderApp('/account#organization')
     const section = await screen.findByRole('region', { name: 'Perfil de la empresa' })
-    expect(section).toHaveTextContent('6 de 7 datos del perfil completos')
+    expect(section).toHaveTextContent('6 de 7 datos')
     expect(within(section).getByLabelText('Razón social')).toHaveValue('Manufacturas del Golfo, S.A. de C.V.')
     expect(within(section).getByLabelText('RFC')).toHaveValue('MGO150320AB1')
     expect(within(section).queryByText('Folio u oficio de validación')).not.toBeInTheDocument()
@@ -76,13 +87,16 @@ describe('perfil de la empresa en Mi cuenta (CA-01, CA-06)', () => {
     fireEvent.change(within(section).getByLabelText('Sector económico (SCIAN)'), { target: { value: '54' } })
     fireEvent.click(within(section).getByRole('button', { name: 'Guardar cambios' }))
 
-    expect(await within(section).findByText('Perfil actualizado correctamente.')).toHaveAttribute('role', 'status')
+    // Al guardar, la tarjeta vuelve a la ficha de lectura con una confirmación discreta.
+    await expectSnackbar('Perfil actualizado.')
     expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument()
     expect(body()).toEqual({
       trade_name: 'ManuGolfo', legal_name: 'Golfo Industrial, S.A.', rfc: 'MGO150320AB1', sector_code: '54', state_code: '28', municipality_code: '28041',
       contact_name: 'Lucía Herrera', contact_position: 'Recursos Humanos', contact_email: 'lucia@manugolfo.test', contact_phone: null, account_name: 'Lucía Herrera',
     })
+    expect(section).toHaveTextContent('54 · Servicios profesionales, científicos y técnicos')
     // El sector sigue editable después de guardarlo.
+    openEditor(section)
     expect(within(section).getByLabelText('Sector económico (SCIAN)')).toBeEnabled()
   })
 
@@ -90,6 +104,7 @@ describe('perfil de la empresa en Mi cuenta (CA-01, CA-06)', () => {
     apiMock.mockResolvedValueOnce(Response.json({ message: 'Error', errors: { rfc: ['Ya existe una empresa registrada con ese RFC.'] } }, { status: 422 }))
     renderApp('/account')
     const section = await screen.findByRole('region', { name: 'Perfil de la empresa' })
+    openEditor(section)
     const rfc = within(section).getByLabelText('RFC')
     fireEvent.change(rfc, { target: { value: 'XAXX010101000' } })
     fireEvent.blur(rfc)
@@ -108,11 +123,13 @@ describe('perfil de la empresa en Mi cuenta (CA-01, CA-06)', () => {
     apiMock.mockResolvedValueOnce(Response.json({ data: cleared }))
     const view = renderApp('/account')
     const section = await screen.findByRole('region', { name: 'Perfil de la empresa' })
+    openEditor(section)
     fireEvent.click(within(section).getByLabelText('Soy yo'))
     expect(within(section).getByLabelText(/Nombre del contacto/)).toHaveValue('')
     fireEvent.click(within(section).getByRole('button', { name: 'Guardar cambios' }))
-    await within(section).findByText('Perfil actualizado correctamente.')
+    await expectSnackbar('Perfil actualizado.')
     expect(body()).toMatchObject({ contact_name: null, contact_email: null })
+    openEditor(section)
     expect(within(section).getByLabelText('Soy yo')).not.toBeChecked()
     expect(within(section).getByLabelText(/Correo de contacto/)).toHaveValue('')
     view.unmount()
@@ -121,16 +138,18 @@ describe('perfil de la empresa en Mi cuenta (CA-01, CA-06)', () => {
     profile = cleared
     renderApp('/account')
     const again = await screen.findByRole('region', { name: 'Perfil de la empresa' })
+    expect(within(again).getByRole('list', { name: 'Datos pendientes' })).toHaveTextContent('Nombre del contacto')
+    openEditor(again)
     expect(within(again).getByLabelText('Soy yo')).not.toBeChecked()
     expect(within(again).getByLabelText(/Nombre del contacto/)).toHaveValue('')
     expect(within(again).getByLabelText(/Correo de contacto/)).toHaveValue('')
-    expect(within(again).getByRole('list', { name: 'Datos pendientes' })).toHaveTextContent('Nombre del contacto')
   })
 
   it('asigna el contacto a otra persona al desmarcar Soy yo, sin tocar el nombre de la cuenta', async () => {
     apiMock.mockResolvedValueOnce(Response.json({ data: { ...companyProfile, contact_name: 'Pedro Ruiz', contact_email: 'pedro@manugolfo.test' } }))
     renderApp('/account')
     const section = await screen.findByRole('region', { name: 'Perfil de la empresa' })
+    openEditor(section)
     expect(within(section).getByLabelText('Soy yo')).toBeChecked()
     fireEvent.click(within(section).getByLabelText('Soy yo'))
     const name = within(section).getByLabelText(/Nombre del contacto/)
@@ -146,6 +165,7 @@ describe('perfil de la empresa en Mi cuenta (CA-01, CA-06)', () => {
   it('marca como guía lo necesario para operar: el nombre de la empresa y el nombre y correo del contacto', async () => {
     renderApp('/account')
     const section = await screen.findByRole('region', { name: 'Perfil de la empresa' })
+    openEditor(section)
     // El puesto y el teléfono son opcionales: la guía solo marca el nombre y el nombre y correo del contacto.
     expect(within(section).getAllByText('Necesario para operar')).toHaveLength(3)
     expect(within(section).getByLabelText('Puesto en la empresa (opcional)')).not.toBeRequired()
@@ -158,7 +178,8 @@ describe('perfil de la empresa en Mi cuenta (CA-01, CA-06)', () => {
     renderApp('/account')
     const section = await screen.findByRole('region', { name: 'Perfil de la institución' })
     expect(section).toHaveTextContent('28EUT0001A')
-    expect(within(section).getByRole('note')).toHaveTextContent('Administración del Banco de Talentos')
+    expect(section).toHaveTextContent('Los mantiene la Administración del Banco de Talentos.')
+    openEditor(section)
     expect(within(section).queryByLabelText(/Razón social|RFC|Sector|Municipio|Soy yo/)).not.toBeInTheDocument()
     fireEvent.change(within(section).getByLabelText('Teléfono de contacto (opcional)'), { target: { value: '8331234567' } })
     fireEvent.click(within(section).getByRole('button', { name: 'Guardar cambios' }))
@@ -169,7 +190,7 @@ describe('perfil de la empresa en Mi cuenta (CA-01, CA-06)', () => {
   it('no se muestra a ADMIN', async () => {
     user = { id: 1, name: 'Administración', email: 'admin@bt.test', role: 'ADMIN', institution: null, company: null }
     renderApp('/account')
-    await screen.findByRole('region', { name: 'Tus datos' })
+    await screen.findByRole('region', { name: 'Tu perfil' })
     expect(screen.queryByRole('region', { name: /Perfil de la/ })).not.toBeInTheDocument()
   })
 })
@@ -253,7 +274,7 @@ describe('recordatorio y mínimo para operar (CA-04, CA-05)', () => {
     profile = emptyProfile
     renderApp('/account#organization')
     const section = await screen.findByRole('region', { name: 'Perfil de la empresa' })
-    expect(section).toHaveTextContent('0 de 7 datos del perfil completos')
+    expect(section).toHaveTextContent('0 de 7 datos')
     expect(section).toHaveTextContent('Completa los datos marcados para publicar oportunidades y enviar solicitudes.')
     const pending = within(section).getByRole('list', { name: 'Datos pendientes' })
     expect(within(pending).getAllByRole('listitem').map((item) => item.textContent)).toEqual([
@@ -266,7 +287,8 @@ describe('recordatorio y mínimo para operar (CA-04, CA-05)', () => {
     profile = { ...companyProfile, sector_code: '54', missing: [] }
     renderApp('/account')
     const section = await screen.findByRole('region', { name: 'Perfil de la empresa' })
-    expect(within(section).getByRole('status')).toHaveTextContent('Tu perfil está completo.')
+    // T-S14-03: la insignia lo dice; la ficha no repite el bloque de avance.
+    expect(section).toHaveTextContent('Perfil completo')
     expect(within(section).queryByRole('list', { name: 'Datos pendientes' })).not.toBeInTheDocument()
   })
 
@@ -300,11 +322,11 @@ describe('recordatorio y mínimo para operar (CA-04, CA-05)', () => {
     fireEvent.change(within(section).getByLabelText(/Tu nombre/), { target: { value: 'Rosa Garza' } })
     fireEvent.change(within(section).getByLabelText('Puesto en la empresa (opcional)'), { target: { value: 'Dirección' } })
     fireEvent.click(within(section).getByRole('button', { name: 'Guardar cambios' }))
-    await within(section).findByText('Perfil actualizado correctamente.')
-    // Nombre de la cuenta y de la empresa en Tus datos, sin recargar la sesión.
-    const data = screen.getByRole('region', { name: 'Tus datos' })
-    expect(within(data).getByLabelText('Nombre')).toHaveValue('Rosa Garza')
-    expect(data).toHaveTextContent('Taller Norteño')
+    await expectSnackbar('Perfil actualizado.')
+    // Nombre de la cuenta y de la empresa en la tarjeta de identidad, sin recargar la sesión.
+    const identity = screen.getByRole('region', { name: 'Tu perfil' })
+    expect(within(identity).getByRole('heading', { level: 2, name: 'Rosa Garza' })).toBeInTheDocument()
+    expect(identity).toHaveTextContent('Empresa · Taller Norteño')
     expect(fetchMock.mock.calls.filter(([path]) => path === '/api/me')).toHaveLength(1)
   })
 })

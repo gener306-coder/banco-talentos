@@ -109,6 +109,7 @@ Tokens añadidos con el modo oscuro. En el tema claro son alias de los anteriore
 | Token | Valor claro | Función |
 |---|---|---|
 | `--text-strong` | `--color-brand-neutral` | Texto de máximo contraste del encabezado («Educación Dual») |
+| `--text-muted` | `#6b6a70` | Texto secundario: notas, etiquetas de datos y valores sin capturar (T-S14-04). 5.3:1 sobre `--surface` |
 | `--accent-fill` / `--accent-fill-hover` | `--color-brand-primary` / `-hover` | Relleno de las acciones primarias (botones, «Nueva …», menú de cuenta abierto) |
 | `--logo-plate` / `--logo-plate-padding` | `transparent` / `0` | Pastilla de los logotipos |
 
@@ -130,8 +131,10 @@ Tokens añadidos con el reproductor de video (HU-S9-04). Tienen el mismo valor e
 **Estado: activo** desde el 29 de octubre de 2026 (HU-S8-03). Se preparó en el Sprint 6 y quedó sin activar a falta de logotipos para fondo oscuro; se activó cuando el responsable entregó `logob.png`.
 
 **Activación.**
-- Sigue la preferencia del sistema (`prefers-color-scheme`).
-- El menú de cuenta ofrece **Tema: Sistema / Claro / Oscuro**, guardado solo en el navegador (`localStorage['bt-theme']`).
+- El tema **claro es el predeterminado** (T-S14-06). «Sistema» sigue la preferencia del sistema (`prefers-color-scheme`).
+- El menú de cuenta ofrece **Tema: Claro / Oscuro / Sistema** con una miniatura de cada uno, guardado solo en el navegador (`localStorage['bt-theme']`).
+- El cambio de tema se anima: con View Transitions, el tema nuevo se revela en un círculo desde la opción pulsada; sin ellas, los colores se funden 400 ms. Con movimiento reducido se aplica al instante.
+- Las miniaturas usan los tokens `--theme-preview-*`, iguales en ambos temas porque cada una muestra el suyo.
 - El tema se expresa como `data-theme="light" | "dark"` en `<html>`. El script de `index.html` lo fija antes del primer pintado, así que no hay destello claro.
 - `watchTheme()` (`src/ui/theme.ts`, llamado en `main.tsx`) lo mantiene al día si cambia el sistema o la elección en otra pestaña.
 
@@ -149,6 +152,7 @@ Todo token nuevo debe definirse también en el bloque oscuro y cumplir el contra
 | `--surface` / `--surface-muted` | `#211f24` / `#17161a` | — |
 | `--text` | `#e6e4e8` | 12.9:1 sobre surface, 14.3:1 sobre muted |
 | `--text-strong` | `#fff` | 16.9:1 sobre el encabezado |
+| `--text-muted` | `#a9a6ae` | Texto secundario; 7:1 sobre `--surface` oscura |
 | `--border` / `--border-strong` | `#3a3840` / `#8a8790` | borde de campos 4.6:1 (≥ 3:1) |
 | `--accent` / `--accent-hover` | `#e07a8a` / `#ea97a3` | 5.7:1 / 7.4:1 sobre surface |
 | `--accent-fill` / `--accent-fill-hover` | vino `#991B30` / `#7A1626` | blanco encima 8.2:1 / 10.7:1 |

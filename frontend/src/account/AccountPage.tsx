@@ -1,4 +1,4 @@
-import { useId, useState } from 'react'
+import { useId, useRef, useState } from 'react'
 import type { FormEvent } from 'react'
 import { changePassword, roleLabels, updateAccount } from '../auth/api'
 import type { Role, User } from '../auth/api'
@@ -6,9 +6,11 @@ import { useAuth } from '../auth/useAuth'
 import { useApiMutation } from '../lib/useApiRequest'
 import type { FailureMessages } from '../lib/useApiRequest'
 import { PendingLabel } from '../ui/forms'
-import { EyeIcon, EyeOffIcon, LockIcon } from '../ui/icons'
+import { EyeIcon, EyeOffIcon, LockIcon, PencilIcon } from '../ui/icons'
 import { NavBackLink } from '../ui/NavBackLink'
 import { Sheet } from '../ui/Sheet'
+import { useSnackbar } from '../ui/useSnackbar'
+import { UserAvatar } from '../ui/UserAvatar'
 import { OrganizationProfileSection } from './OrganizationProfileSection'
 import './account.css'
 
@@ -28,45 +30,80 @@ function fieldErrors(errors: Record<string, string[]> | undefined, name: string)
   return errors?.[name]?.join(' ')
 }
 
-/** Nombre de la cuenta (HU-S14-01 CA-02): se edita en su sitio y el menú lo refleja al guardar. */
-function NameForm({ user }: { user: User }) {
+/** Subtítulo del perfil: el rol y, si la tiene, la organización de la cuenta. */
+function roleLine(user: User): string {
+  const organization = user.company?.name ?? user.institution?.name
+  return organization ? `${roleLabels[user.role]} · ${organization}` : roleLabels[user.role]
+}
+
+/**
+ * Tarjeta de identidad (T-S14-03): avatar, nombre, rol y correo. El nombre se edita en su sitio con el lápiz
+ * (HU-S14-01 CA-02): Enter guarda, Escape cancela y el menú lo refleja al guardar, sin estado de carga.
+ */
+function IdentityCard({ user, notify }: { user: User; notify: (message: string) => void }) {
   const { updateUser } = useAuth()
-  const [name, setName] = useState(user.name)
-  // HU-S14-03: si el perfil de la empresa corrige el nombre de la cuenta, el campo lo sigue sin remontarse.
-  const [synced, setSynced] = useState(user.name)
-  if (synced !== user.name) {
-    setSynced(user.name)
-    setName(user.name)
-  }
-  const [notice, setNotice] = useState<string | null>(null)
+  // M3: el nombre provisional de una invitada es su correo; se pide uno real en lugar de repetirlo.
+  const provisional = user.name === user.email
+  const [editing, setEditing] = useState(false)
+  const [name, setName] = useState('')
+  const pencil = useRef<HTMLButtonElement>(null)
   const mutation = useApiMutation(accountMessages)
   const error = fieldErrors(mutation.failure?.errors, 'name') ?? (mutation.failure && !mutation.failure.errors.name ? mutation.failure.message : undefined)
   const unchanged = name.trim() === user.name
 
+  function start() {
+    setName(provisional ? '' : user.name)
+    setEditing(true)
+  }
+
+  function cancel() {
+    setEditing(false)
+    // El foco vuelve al lápiz, que reaparece al salir de la edición.
+    requestAnimationFrame(() => pencil.current?.focus())
+  }
+
   function submit(event: FormEvent) {
     event.preventDefault()
-    setNotice(null)
+    if (unchanged) return cancel()
     void mutation.submit(() => updateAccount(name.trim()), (updated) => {
       updateUser(updated)
-      setName(updated.name)
-      setNotice('Nombre actualizado correctamente.')
+      notify('Nombre actualizado.')
+      cancel()
     })
   }
 
   return (
-    <form className="account-name-form" onSubmit={submit} aria-busy={mutation.pending} noValidate>
-      <label htmlFor="account-name">Nombre</label>
-      <div className="account-inline">
-        <input id="account-name" name="name" type="text" autoComplete="name" required maxLength={120} value={name}
-          disabled={mutation.pending} aria-invalid={Boolean(error)} aria-describedby={error ? 'account-name-error' : undefined}
-          onChange={(event) => { setName(event.target.value); setNotice(null) }} />
-        <button type="submit" disabled={mutation.pending || unchanged || name.trim() === ''}>
-          <PendingLabel pending={mutation.pending} label="Guardar" pendingLabel="Guardando…" />
-        </button>
+    <section className="account-card account-identity" aria-label="Tu perfil">
+      <UserAvatar name={user.name} size="lg" />
+      <div className="account-identity-body">
+        {editing ? (
+          <form className="account-name-edit content-enter" onSubmit={submit} aria-busy={mutation.pending} noValidate>
+            <label htmlFor="account-name" className="visually-hidden">Tu nombre</label>
+            {/* El campo recibe el foco al entrar a la edición, que solo ocurre por acción de la persona. */}
+            <input id="account-name" name="name" type="text" autoComplete="name" required maxLength={120} value={name} autoFocus
+              placeholder="Tu nombre" disabled={mutation.pending} aria-invalid={Boolean(error)} aria-describedby={error ? 'account-name-error' : undefined}
+              onChange={(event) => setName(event.target.value)}
+              onKeyDown={(event) => { if (event.key === 'Escape') { event.preventDefault(); cancel() } }} />
+            <div className="account-name-actions">
+              <button type="submit" disabled={mutation.pending || name.trim() === ''}>
+                <PendingLabel pending={mutation.pending} label="Guardar" pendingLabel="Guardando…" />
+              </button>
+              <button type="button" className="secondary" disabled={mutation.pending} onClick={cancel}>Cancelar</button>
+            </div>
+            {error && <p className="field-error" id="account-name-error">{error}</p>}
+          </form>
+        ) : (
+          <div className="account-name-row content-enter">
+            <h2 className={provisional ? 'account-name-title is-empty' : 'account-name-title'}>{provisional ? 'Agrega tu nombre' : user.name}</h2>
+            <button ref={pencil} type="button" className="icon-button account-edit" aria-label="Editar nombre" title="Editar nombre" onClick={start}>
+              <PencilIcon />
+            </button>
+          </div>
+        )}
+        <p className="account-role">{roleLine(user)}</p>
+        <p className="account-email">{user.email}</p>
       </div>
-      {error && <p className="field-error" id="account-name-error">{error}</p>}
-      {notice && <p className="institution-success" role="status">{notice}</p>}
-    </form>
+    </section>
   )
 }
 
@@ -139,46 +176,59 @@ function PasswordSheet({ open, onClose, onChanged }: { open: boolean; onClose: (
 }
 
 /**
- * Mi cuenta (HU-S14-01): la persona de la sesión corrige su nombre y cambia su contraseña. El correo de acceso, el rol y
- * la organización se muestran como contexto, sin editarse aquí.
+ * Acceso y seguridad (T-S14-03), al estilo de Ajustes: filas con divisores finos. El correo de acceso es de solo lectura
+ * (D5) y la contraseña se cambia en la hoja de HU-S14-01.
+ */
+function SecurityCard({ user, notify }: { user: User; notify: (message: string) => void }) {
+  const [sheetOpen, setSheetOpen] = useState(false)
+  return (
+    <section className="account-card" aria-labelledby="account-security-title">
+      <div className="account-card-head"><h3 id="account-security-title">Acceso y seguridad</h3></div>
+      <div className="account-rows">
+        <div className="account-row">
+          <div className="account-row-main">
+            <p className="account-row-label">Correo de acceso</p>
+            <p className="account-row-value">{user.email}</p>
+            <p className="account-row-note">{emailOwner[user.role]}</p>
+          </div>
+        </div>
+        <div className="account-row">
+          <div className="account-row-main">
+            <p className="account-row-label">Contraseña</p>
+            <p className="account-row-value account-dots"><span aria-hidden="true">••••••••••••</span><span className="visually-hidden">Oculta</span></p>
+            <p className="account-row-note">Al cambiarla se cierran tus sesiones en otros dispositivos.</p>
+          </div>
+          <button type="button" className="secondary account-row-action" onClick={() => setSheetOpen(true)}>Cambiar contraseña</button>
+        </div>
+      </div>
+      <PasswordSheet open={sheetOpen} onClose={() => setSheetOpen(false)}
+        onChanged={() => { setSheetOpen(false); notify('Contraseña actualizada. Cerramos tus sesiones en otros dispositivos.') }} />
+    </section>
+  )
+}
+
+/**
+ * Mi cuenta (HU-S14-01, rediseño T-S14-03): perfil de lectura primero y edición bajo demanda. La tarjeta de identidad,
+ * acceso y seguridad y, para empresas e instituciones, el perfil de la organización.
  */
 export function AccountPage() {
   const { user } = useAuth()
-  const [sheetOpen, setSheetOpen] = useState(false)
-  const [passwordNotice, setPasswordNotice] = useState<string | null>(null)
+  // T-S14-04: las confirmaciones se anuncian en un aviso breve, no como texto suelto dentro de las tarjetas.
+  const [snackbar, notify] = useSnackbar()
   if (!user) return null
-  const organization = user.company?.name ?? user.institution?.name
 
   return (
-    <section className="card institutions account-page" aria-labelledby="account-title">
+    <section className="card institutions account-page" aria-label="Mi cuenta">
+      {snackbar}
       <nav className="institution-navigation" aria-label="Navegación de la cuenta">
         <NavBackLink />
       </nav>
-      <h2 id="account-title">Mi cuenta</h2>
-      <div className="content-enter">
-        <section className="student-section" aria-labelledby="account-data-title">
-          <h3 id="account-data-title">Tus datos</h3>
-          <NameForm user={user} />
-          <dl className="student-identity">
-            <dt>Correo de acceso</dt>
-            <dd>{user.email}<span className="account-hint">{emailOwner[user.role]}</span></dd>
-            <dt>Rol</dt><dd>{roleLabels[user.role]}</dd>
-            {organization && <><dt>Organización</dt><dd>{organization}</dd></>}
-          </dl>
-        </section>
+      <div className="content-enter account-stack">
+        <IdentityCard user={user} notify={notify} />
+        <SecurityCard user={user} notify={notify} />
         {/* HU-S14-02: el perfil de la organización, solo para empresas e instituciones. */}
-        {(user.role === 'COMPANY' || user.role === 'INSTITUTION') && <OrganizationProfileSection />}
-        <section className="student-section" aria-labelledby="account-security-title">
-          <h3 id="account-security-title">Seguridad</h3>
-          <p>Cambia tu contraseña cuando lo necesites. Te pediremos la actual para confirmar que eres tú.</p>
-          {passwordNotice && <p className="institution-success" role="status">{passwordNotice}</p>}
-          <button type="button" className="secondary" onClick={() => { setPasswordNotice(null); setSheetOpen(true) }}>
-            <LockIcon />Cambiar contraseña
-          </button>
-        </section>
+        {(user.role === 'COMPANY' || user.role === 'INSTITUTION') && <OrganizationProfileSection notify={notify} />}
       </div>
-      <PasswordSheet open={sheetOpen} onClose={() => setSheetOpen(false)}
-        onChanged={() => { setSheetOpen(false); setPasswordNotice('Contraseña actualizada correctamente. Cerramos tus sesiones en otros dispositivos.') }} />
     </section>
   )
 }

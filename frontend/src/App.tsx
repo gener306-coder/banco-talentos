@@ -168,16 +168,19 @@ function useRouteTransition(element: RefObject<HTMLElement | null>, pathname: st
 }
 
 /** El borde suave bajo el encabezado solo aparece cuando hay contenido debajo. */
-/** T-S12-09: publica la altura de la barra fija en `--app-bar-height` para que otros elementos fijos se alineen debajo. */
-function useAppBarHeight(bar: RefObject<HTMLElement | null>) {
+/**
+ * T-S12-09: publica la altura de la barra fija en `--app-bar-height` para que otros elementos fijos (la pastilla de
+ * las Historias del Dual, el desplazamiento de las tablas) se alineen debajo. Sigue al elemento, no a una referencia
+ * fija: si el encabezado se vuelve a montar, el observador se engancha al nuevo en lugar de medir uno desmontado (0 px).
+ */
+function useAppBarHeight(element: HTMLElement | null) {
   useEffect(() => {
-    const element = bar.current
     if (!element || typeof ResizeObserver !== 'function') return
     const root = document.documentElement
     const observer = new ResizeObserver(() => root.style.setProperty('--app-bar-height', `${element.offsetHeight}px`))
     observer.observe(element)
     return () => { observer.disconnect(); root.style.removeProperty('--app-bar-height') }
-  }, [bar])
+  }, [element])
 }
 
 function useScrolled() {
@@ -206,7 +209,7 @@ function App() {
   const withSession = !PASSWORD_PATHS.includes(pathname)
   const main = useRef<HTMLElement>(null)
   const scrolled = useScrolled()
-  const bar = useRef<HTMLElement>(null)
+  const [bar, setBar] = useState<HTMLElement | null>(null)
   useAppBarHeight(bar)
   // T-S12-08: en móvil el coemblema sale de la barra a una franja propia, donde se lee completo.
   const narrow = useMediaQuery('(max-width: 480px)')
@@ -217,7 +220,7 @@ function App() {
   const shell = (
     <>
       {narrow && <div className="partner-band">{partner}</div>}
-      <header ref={bar} className="app-bar" data-scrolled={scrolled}>
+      <header ref={setBar} className="app-bar" data-scrolled={scrolled}>
         <div className={`app-bar-inner${wide ? ' wide' : ''}`}>
           {/* En /login el logotipo se muestra en el formulario; se evita duplicarlo. */}
           {pathname !== '/login' && (

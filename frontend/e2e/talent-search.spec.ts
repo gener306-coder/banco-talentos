@@ -279,7 +279,8 @@ test('HU-S4-05, HU-S5-04, HU-S5-05, HU-S6-01, HU-S6-02, HU-S6-03, HU-S13-02, HU-
     // contenedor) y la hoja de Filtros se abre a la vista con sus selectores.
     await company.setViewportSize({ width: 390, height: 844 })
     await expect(inbox).toBeVisible()
-    expect(await company.evaluate<number>('document.documentElement.scrollWidth')).toBeLessThanOrEqual(390)
+    // Se mide con el diseño ya acomodado al nuevo ancho: un desborde real sigue fallando, una medición a mitad del cambio no.
+    await expect.poll(() => company.evaluate<number>('document.documentElement.scrollWidth')).toBeLessThanOrEqual(390)
     await company.getByRole('button', { name: /^Filtros/ }).click()
     const filtersSheet = company.getByRole('dialog', { name: 'Filtros' })
     await expect(filtersSheet.getByLabel('Interacción')).toBeInViewport()

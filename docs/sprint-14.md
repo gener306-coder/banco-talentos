@@ -233,3 +233,83 @@ Cada historia termina con su reporte y una revisión del responsable antes de in
 - **Corrección:** la sugerencia de «Soy yo» con los datos precargados queda solo para el onboarding (`/welcome`, prop `suggestSelf`). En Mi cuenta, la casilla refleja el contacto guardado: se marca solo si su correo es el de la cuenta, también después de guardar. Un contacto vacío se respeta y la empresa puede marcar «Soy yo» para usar sus datos.
 - **Pruebas:** regresión en Vitest (vaciar, guardar y volver sin que se rellene ni se marque) y la E2E del onboarding ajustada.
 
+### T-S14-03 — Rediseño de Mi cuenta: perfil de lectura primero
+
+**Estado:** Implementada (19 de noviembre de 2026) en `chore/ui-polish-account-profile`, sin commit. Solicitada por el responsable. Solo frontend: sin cambios de backend ni de contratos.
+
+- **`UserAvatar` (`ui/UserAvatar.tsx`):** iniciales con el tinte de la marca y un anillo de 1 px, en tamaño `sm` para el menú de cuenta y `lg` (72 px) para Mi cuenta. Acepta `src` para una foto futura y es decorativo: el nombre siempre está escrito.
+- **Tarjeta de identidad:**
+  - avatar, nombre como `h2` y el lápiz «Editar nombre», que edita en su sitio (Enter guarda, Escape o «Cancelar» salen y el foco vuelve al lápiz);
+  - rol y organización, y el correo en tono secundario;
+  - con el nombre provisional muestra «Agrega tu nombre» en lugar de repetir el correo.
+- **Acceso y seguridad:** filas con filete al estilo de Ajustes.
+  - Correo de acceso, con a quién pedir el cambio.
+  - Contraseña oculta, con la nota de que cambiarla cierra las demás sesiones y «Cambiar contraseña», que abre la hoja existente.
+- **Perfil de la empresa o de la institución:**
+  - ficha de lectura en dos columnas (una en el celular), agrupada en Datos generales, Ubicación y Contacto, con «Sin capturar» en lo vacío;
+  - insignia «Perfil completo» o «Perfil incompleto» para la empresa;
+  - «Editar» pasa la misma tarjeta al formulario existente, con «Guardar cambios» y «Cancelar»; al guardar vuelve a la lectura con una confirmación discreta;
+  - la institución muestra sus datos oficiales en un bloque de solo lectura;
+  - al llegar por `/account#organization` con datos faltantes, la empresa entra directo a la edición, con el avance a la vista y desplazamiento suave.
+- **`ADMIN` y `SECRETARY`:** solo identidad y acceso.
+- **El nombre es `h2`:** la página ya tiene un `h1` en el encabezado general, así que el nombre ocupa el nivel del título de la vista.
+- **Pruebas:** Vitest (avatar, nombre provisional, edición del nombre con Enter, Escape y Cancelar, lectura y edición de la empresa y la institución, apertura automática, vista sin organización) y la E2E del onboarding ajustada. Revisión visual a 1440 y 390 px en claro y oscuro.
+
+### T-S14-04 — Auditoría y refinamiento visual de Mi cuenta
+
+**Estado:** Implementada (19 de noviembre de 2026) en `chore/ui-polish-account-profile`, sin commit. Solicitada por el responsable sobre T-S14-03. Solo frontend.
+
+- **Avisos de confirmación:** `ui/Snackbar.tsx` y `ui/useSnackbar.tsx` sustituyen a los textos sueltos dentro de las tarjetas para «Nombre actualizado.», «Perfil actualizado.» y el cambio de contraseña.
+  - Superficie invertida centrada abajo, respetando el área segura.
+  - Entrada con el resorte del sistema y solo aparición con movimiento reducido.
+  - `role="status"`, cierre manual de 44 px en el celular y pausa mientras el puntero o el foco están encima.
+- **Carga:** `LoadingState` suma la variante `facts`, un esqueleto con la forma de la ficha (grupos y pares etiqueta-valor en dos columnas) en lugar del genérico.
+- **Avance del perfil:** la barra vuelve a la cabecera de la tarjeta de la empresa (`ProfileScore`) con «N de 7 datos», o la insignia verde «Perfil completo». El detalle de abajo (`ProfileProgress compact`) dice qué falta sin repetir la cuenta.
+- **Estados vacíos:**
+  - una empresa sin ningún dato ve «Tu empresa aún no tiene perfil» con «Completar perfil», y no una ficha llena de «Sin capturar»; sin la lista de pendientes ni un «Editar» duplicado;
+  - un grupo sin datos (ubicación o contacto) se resume en una línea.
+- **Tipografía y jerarquía:**
+  - nuevo token `--text-muted` (claro `#6b6a70`, 5.3:1; oscuro `#a9a6ae`, 7:1), definido en los dos temas, verificado en `tokens.test` y documentado en `identidad-visual.md`, porque en claro `--text` y `--text-strong` coinciden;
+  - etiquetas en `--type-sm` atenuado, valores en `--type-base` con peso 500, encabezados de grupo en `--type-xs` en mayúsculas espaciadas y títulos de tarjeta en peso 600;
+  - las filas de seguridad usan la misma escala que la ficha.
+- **Disposición:** la cabecera de cada tarjeta agrupa el título y su estado, y deja «Editar» fijo arriba a la derecha en cualquier ancho. El lápiz se separa del nombre.
+- **Transiciones:** el cambio entre lectura y edición del nombre y de la tarjeta entra con `content-enter`, sin movimiento con movimiento reducido. Los controles conservan la presión, el foco y el cursor del sistema.
+- **Pruebas:** Vitest del esqueleto, el avance en la cabecera, el estado vacío, el grupo vacío y el cierre del aviso; los avisos se verifican en el `Snackbar`. Revisión visual a 1440 y 390 px en claro y oscuro.
+- **E2E:** la spec del onboarding busca la confirmación en el aviso. En `talent-search.spec.ts`, la medición del ancho a 390 px usa `expect.poll`: medía justo después de cambiar el tamaño de la ventana y una vez falló con 435 px. Un desborde real sigue fallando.
+
+### T-S14-05 — Corrección: la pastilla flotante de las Historias del Dual quedaba bajo el encabezado
+
+**Estado:** Implementada (19 de noviembre de 2026) en `chore/ui-polish-account-profile`, sin commit. Reportada por el responsable.
+
+- **Falla:** en el feed de Historias del Dual, la pastilla de orden (Más recientes, Al azar y Volver arriba) dejaba de verse al desplazarse en las cuentas de empresa e institución. Seguía flotando, pero a 8 px del borde, escondida bajo el encabezado fijo.
+- **Causa:** `UnreadSummaryProvider` (T-S13-08, commit `a3628a8`) devolvía sus hijos sin proveedor mientras no había sesión y los envolvía en el proveedor al iniciarla. El cambio de tipo de elemento hacía que React volviera a montar todo el árbol: encabezado, contenido y página. `useAppBarHeight` seguía observando el encabezado desmontado y publicaba `--app-bar-height: 0px`. La variable también alinea el desplazamiento suave de las tablas (`stickyTop`), así que ese ajuste tampoco descontaba el encabezado en esas cuentas.
+- **Corrección:**
+  - el proveedor se renderiza siempre, con valor `null` sin cuenta de empresa o institución; el árbol queda estable y el inicio de sesión ya no vuelve a montar la app;
+  - `useAppBarHeight` sigue al elemento con una referencia de callback, así que se reengancha si el encabezado se vuelve a montar por otra causa.
+- **Pruebas:** `src/AppShell.test.tsx` comprueba que el encabezado y el contenido son los mismos nodos antes y después de cargar la sesión. Falla sin la corrección. En Chromium, `--app-bar-height` vale 67 px en el celular y 79 px en escritorio, y la pastilla flota a 75 px y 87 px.
+
+### T-S14-06 — Menú de cuenta profesional, tema claro por defecto y cambio de tema animado
+
+**Estado:** Implementada (19 de noviembre de 2026) en `chore/ui-polish-account-profile`, sin commit. Solicitada por el responsable. Solo frontend.
+
+- **Panel del menú:** en capas, al estilo de las grandes plataformas, con secciones separadas por filetes de 1 px:
+  - identidad: avatar `md`, nombre, correo atenuado y la insignia del rol con la organización;
+  - «Mi cuenta» como fila con ícono, la descripción «Perfil y seguridad» y un chevron que se desplaza al señalarla;
+  - tema;
+  - «Cerrar sesión» como fila terminal neutra, que se tiñe de peligro al señalarla.
+
+  Filas de 44 px en pantallas táctiles, sombra en dos capas y entrada con el resorte desde la esquina del botón.
+- **Tema:** tres mosaicos (Claro, Oscuro y Sistema), cada uno con:
+  - la miniatura de la aplicación en ese tema (encabezado, tarjeta y acento de la marca; «Sistema» en dos mitades);
+  - su ícono (sol, luna o monitor);
+  - el elegido con el acento, el tinte y una marca que aparece con el resorte.
+
+  Siguen siendo radios nativos: flechas del teclado y foco visible. Los colores fijos de las miniaturas son los tokens `--theme-preview-*`, definidos igual en ambos temas.
+- **Celular (hasta 480 px):** el panel se compacta de 320×360 px a 280×295 px y conserva las zonas táctiles de 44 px. El tema pasa a un control segmentado de una sola fila (ícono y nombre, sin miniaturas), y el elegido se destaca como una pestaña elevada.
+- **Tema claro por defecto:** sin elección guardada, la aplicación se ve en claro aunque el sistema esté en oscuro; «Sistema» se guarda como una elección más. `index.html` aplica la misma regla antes del primer pintado.
+- **Cambio de tema animado:**
+  - con View Transitions, el tema nuevo se revela en un círculo que crece desde el mosaico pulsado (520 ms);
+  - sin ellas, colores y fondos se funden 400 ms (`.theme-fading`);
+  - con movimiento reducido, o si el tema visible no cambia, se aplica al instante.
+- **Pruebas:** Vitest de `theme.test.ts` (predeterminado claro, Sistema guardado, revelado circular, fundido de respaldo y movimiento reducido) y del menú en `SessionPage.test.tsx`; `e2e/theme.spec.ts` ajustada al nuevo predeterminado. Revisión visual a 1440 y 390 px en claro, oscuro y sistema, y a mitad de la animación.
+
