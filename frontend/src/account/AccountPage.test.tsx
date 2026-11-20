@@ -323,20 +323,23 @@ describe('perfil de la organización: lectura primero y edición en su sitio (T-
     expect(within(card).queryByRole('textbox')).not.toBeInTheDocument()
   })
 
-  it('la institución ve sus datos oficiales en solo lectura y edita solo el contacto en la tarjeta', async () => {
+  it('la institución ve y edita en la tarjeta sus datos oficiales y su contacto; la sesión refleja su nombre (T-S14-15)', async () => {
     user = institutionUser
     profile = institutionProfile
-    apiMock.mockResolvedValueOnce(Response.json({ data: { ...institutionProfile, contact_phone: '8331234567' } }))
+    apiMock.mockResolvedValueOnce(Response.json({ data: { ...institutionProfile, name: 'UT de Tamaulipas', contact_phone: '8331234567' } }))
     render(<MemoryRouter initialEntries={['/account']}><App /></MemoryRouter>)
     const card = await screen.findByRole('region', { name: 'Perfil de la institución' })
     expect(card).toHaveTextContent('28EUT0001A')
-    expect(card).toHaveTextContent('Los mantiene la Administración del Banco de Talentos.')
+    expect(within(card).getByRole('heading', { name: 'Datos de la institución' })).toBeInTheDocument()
     fireEvent.click(within(card).getByRole('button', { name: 'Editar' }))
-    expect(within(card).queryByLabelText(/Nombre oficial|Clave/)).not.toBeInTheDocument()
+    expect(within(card).getByLabelText('Nombre oficial')).toHaveValue('Universidad Tecnológica del Golfo')
+    fireEvent.change(within(card).getByLabelText('Nombre oficial'), { target: { value: 'UT de Tamaulipas' } })
     fireEvent.change(within(card).getByLabelText('Teléfono de contacto (opcional)'), { target: { value: '8331234567' } })
     fireEvent.click(within(card).getByRole('button', { name: 'Guardar cambios' }))
     await expectSnackbar('Perfil actualizado.')
+    expect(card).toHaveTextContent('UT de Tamaulipas')
     expect(card).toHaveTextContent('8331234567')
+    expect(screen.getByRole('region', { name: 'Tu perfil' })).toHaveTextContent('Institución · UT de Tamaulipas')
   })
 
   it.each([adminUser, secretaryUser])('$role solo ve su identidad y el acceso, sin tarjeta de organización', async (account) => {

@@ -14,6 +14,8 @@ import { LoadingState } from '../ui/StateMessage'
 import { CompanyProfileForm } from './CompanyProfileForm'
 import { ProfileProgress, ProfileScore } from './ProfileProgress'
 import { PROFILE_FIELDS } from './profileGaps'
+import { useSelfContact } from './useSelfContact'
+import { cctError, normalizeCct } from '../institutions/cct'
 import { getOrganizationProfile, updateOrganizationProfile } from './organizationApi'
 import type { CompanyProfile, InstitutionProfile } from './organizationApi'
 
@@ -21,9 +23,10 @@ const profileMessages: FailureMessages = {
   429: 'Hiciste demasiados cambios seguidos. Espera un minuto antes de volver a intentarlo.',
 }
 
-type ContactField = 'contact_name' | 'contact_position' | 'contact_email' | 'contact_phone'
+type InstitutionField = 'name' | 'cct' | 'contact_name' | 'contact_position' | 'contact_email' | 'contact_phone'
 
-const contactOf = (profile: InstitutionProfile): Record<ContactField, string> => ({
+const valuesOf = (profile: InstitutionProfile): Record<InstitutionField, string> => ({
+  name: profile.name, cct: profile.cct,
   contact_name: profile.contact_name ?? '', contact_position: profile.contact_position ?? '',
   contact_email: profile.contact_email ?? '', contact_phone: profile.contact_phone ?? '',
 })
@@ -97,7 +100,7 @@ function ContactFacts({ title, profile }: { title: string; profile: CompanyProfi
   )
 }
 
-function Field({ id, label, error, children }: { id: string; label: string; error?: string; children: ReactNode }) {
+function Field({ id, label, error, children }: { id: string; label: ReactNode; error?: string; children: ReactNode }) {
   return (
     <div className="account-field">
       <label htmlFor={id}>{label}</label>
@@ -107,30 +110,70 @@ function Field({ id, label, error, children }: { id: string; label: string; erro
   )
 }
 
-/** HU-S14-02, sin cambios de alcance: la institución mantiene solo el responsable de su programa dual. */
-function InstitutionContactForm({ profile, onSaved, onCancel }: { profile: InstitutionProfile; onSaved: (profile: InstitutionProfile) => void; onCancel: () => void }) {
-  const [values, setValues] = useState(() => contactOf(profile))
+/**
+ * T-S14-15: la institución controla sus datos con las mismas reglas que la empresa. Corrige su nombre oficial y su CCT
+ * (el formato solo se exige a un CCT nuevo) y el responsable de su programa dual, con «Soy yo» y la sincronización con
+ * el nombre de su cuenta (T-S14-09).
+ */
+function InstitutionProfileForm({ profile, onSaved, onCancel }: { profile: InstitutionProfile; onSaved: (profile: InstitutionProfile) => void; onCancel: () => void }) {
+  const { user, updateUser } = useAuth()
+  const [values, setValues] = useState(() => valuesOf(profile))
+  const [localErrors, setLocalErrors] = useState<Partial<Record<InstitutionField, string>>>({})
+  const contact = useSelfContact({
+    savedEmail: profile.contact_email, initialName: values.contact_name, currentName: values.contact_name,
+    fill: ({ name, email }) => setValues((current) => ({ ...current, ...(name !== undefined ? { contact_name: name } : {}), ...(email !== undefined ? { contact_email: email } : {}) })),
+  })
   const mutation = useApiMutation(profileMessages)
   const errors = mutation.failure?.errors ?? {}
   const general = mutation.failure && Object.keys(mutation.failure.errors).length === 0 ? mutation.failure.message : null
-  const error = (field: ContactField) => errors[field]?.join(' ')
-  const set = (field: ContactField) => (value: string) => setValues((current) => ({ ...current, [field]: value }))
-  const input = (field: ContactField, label: string, props: { type: string; maxLength: number }) => (
-    <Field id={`profile-${field}`} label={label} error={error(field)}>
-      <input id={`profile-${field}`} type={props.type} maxLength={props.maxLength} value={values[field]}
-        disabled={mutation.pending} aria-invalid={Boolean(error(field))} aria-describedby={error(field) ? `profile-${field}-error` : undefined}
-        onChange={(event) => set(field)(event.target.value)} />
-    </Field>
-  )
+  const error = (field: InstitutionField) => localErrors[field] ?? errors[field]?.join(' ')
+  const set = (field: InstitutionField) => (value: string) => {
+    setValues((current) => ({ ...current, [field]: value }))
+    setLocalErrors((current) => ({ ...current, [field]: undefined }))
+  }
+  const input = (field: InstitutionField, label: ReactNode, props: { type: string; maxLength: number; help?: string; autoComplete?: string; onBlur?: () => void }) => {
+    const help = props.help ? `profile-${field}-help` : null
+    const describedBy = [help, error(field) ? `profile-${field}-error` : null].filter(Boolean).join(' ') || undefined
+    return (
+      <Field id={`profile-${field}`} label={label} error={error(field)}>
+        {props.help && <p className="field-help" id={`profile-${field}-help`}>{props.help}</p>}
+        <input id={`profile-${field}`} type={props.type} maxLength={props.maxLength} value={values[field]} autoComplete={props.autoComplete ?? 'off'}
+          disabled={mutation.pending} aria-invalid={Boolean(error(field))} aria-describedby={describedBy}
+          onChange={(event) => set(field)(event.target.value)} onBlur={props.onBlur} />
+      </Field>
+    )
+  }
+
+  function checkCct() {
+    const message = values.cct.trim() ? cctError(values.cct, profile.cct) : null
+    setLocalErrors((current) => ({ ...current, cct: message ?? undefined }))
+    if (!message && values.cct.trim()) setValues((current) => ({ ...current, cct: normalizeCct(current.cct) }))
+  }
 
   function submit(event: FormEvent) {
     event.preventDefault()
-    const input = {
-      contact_name: values.contact_name.trim(), contact_position: optional(values.contact_position),
+    if (mutation.pending) return
+    const found: Partial<Record<InstitutionField, string>> = {}
+    if (!values.name.trim()) found.name = 'El nombre oficial es obligatorio.'
+    if (!values.cct.trim()) found.cct = 'La Clave de Centro de Trabajo es obligatoria.'
+    else { const message = cctError(values.cct, profile.cct); if (message) found.cct = message }
+    setLocalErrors(found)
+    if (Object.keys(found).length) return
+    const contactName = values.contact_name.trim()
+    const accountRename = contact.accountNameFor(contactName || null)
+    const payload = {
+      name: values.name.trim(), cct: normalizeCct(values.cct),
+      contact_name: contactName, contact_position: optional(values.contact_position),
       contact_email: values.contact_email.trim(), contact_phone: optional(values.contact_phone),
+      // Con «Soy yo», corregir aquí el nombre del responsable corrige el de la cuenta.
+      ...(accountRename ? { account_name: accountRename } : {}),
     }
-    void mutation.submit(() => updateOrganizationProfile(input), (updated) => {
-      if (updated.type === 'institution') onSaved(updated)
+    void mutation.submit(() => updateOrganizationProfile(payload), (updated) => {
+      if (updated.type !== 'institution') return
+      contact.saved({ name: updated.contact_name, email: updated.contact_email })
+      // La sesión refleja el nombre de la institución y, si cambió, el de la cuenta, sin volver a cargarse.
+      if (user?.institution) updateUser({ ...user, name: accountRename ?? user.name, institution: { ...user.institution, name: updated.name } })
+      onSaved(updated)
     })
   }
 
@@ -138,13 +181,30 @@ function InstitutionContactForm({ profile, onSaved, onCancel }: { profile: Insti
     <>
       {general && <p className="notice" role="alert">{general}</p>}
       <form className="account-profile-form" onSubmit={submit} aria-busy={mutation.pending} noValidate>
-        <fieldset className="account-contact">
-          <legend>Responsable del programa dual</legend>
+        <fieldset className="account-contact" disabled={mutation.pending}>
+          <legend>Datos de la institución</legend>
           <div className="account-fields">
-            {input('contact_name', 'Nombre del responsable', { type: 'text', maxLength: 120 })}
-            {input('contact_position', 'Puesto o departamento (opcional)', { type: 'text', maxLength: 120 })}
-            {input('contact_email', 'Correo de contacto', { type: 'email', maxLength: 254 })}
-            {input('contact_phone', 'Teléfono de contacto (opcional)', { type: 'tel', maxLength: 20 })}
+            {input('name', 'Nombre oficial', { type: 'text', maxLength: 255, autoComplete: 'organization' })}
+            {input('cct', 'Clave de Centro de Trabajo (CCT)', { type: 'text', maxLength: 14, help: '10 caracteres, por ejemplo 28EUT0001A.', onBlur: checkCct })}
+          </div>
+        </fieldset>
+        <fieldset className="account-contact" disabled={mutation.pending}>
+          <legend>Responsable del programa dual</legend>
+          <div className="profile-self">
+            <input id="profile-self" type="checkbox" checked={contact.self} onChange={(event) => {
+              contact.toggle(event.target.checked)
+              setLocalErrors((current) => ({ ...current, contact_name: undefined, contact_email: undefined }))
+            }} />
+            <label htmlFor="profile-self">Soy yo</label>
+            <p className="field-help" id="profile-self-help">Usa tu nombre y el correo de tu cuenta. Desmárcalo para asignar a otra persona.</p>
+          </div>
+          <div className="account-fields">
+            {input('contact_name', contact.self ? 'Tu nombre' : 'Nombre del responsable', {
+              type: 'text', maxLength: 120, autoComplete: contact.self ? 'name' : 'off', help: contact.self ? 'También corrige el nombre de tu cuenta.' : undefined,
+            })}
+            {input('contact_position', 'Puesto o departamento (opcional)', { type: 'text', maxLength: 120, autoComplete: 'organization-title' })}
+            {input('contact_email', 'Correo de contacto', { type: 'email', maxLength: 254, autoComplete: contact.self ? 'email' : 'off' })}
+            {input('contact_phone', 'Teléfono de contacto (opcional)', { type: 'tel', maxLength: 20, autoComplete: 'tel' })}
           </div>
         </fieldset>
         <div className="profile-actions">
@@ -240,17 +300,15 @@ export function OrganizationProfileSection({ notify }: { notify: (message: strin
         : data?.type === 'institution' && (
           editing ? (
             <div className="content-enter" key="edit">
-              <InstitutionContactForm profile={data} onSaved={(saved) => close(saved)} onCancel={() => close()} />
+              <InstitutionProfileForm profile={data} onSaved={(saved) => close(saved)} onCancel={() => close()} />
             </div>
           ) : (
             <div className="content-enter" key="read">
-              <div className="profile-official">
-                <dl className="profile-facts">
-                  <Fact label="Nombre oficial" value={data.name} />
-                  <Fact label="Clave de Centro de Trabajo" value={data.cct} />
-                </dl>
-                <p className="account-row-note">Los mantiene la Administración del Banco de Talentos. Para corregirlos, escríbele.</p>
-              </div>
+              {/* T-S14-15: la institución corrige sus datos oficiales desde «Editar», como la empresa. */}
+              <FactGroup title="Datos de la institución">
+                <Fact label="Nombre oficial" value={data.name} />
+                <Fact label="Clave de Centro de Trabajo" value={data.cct} />
+              </FactGroup>
               <ContactFacts title="Contacto del programa dual" profile={data} />
             </div>
           )

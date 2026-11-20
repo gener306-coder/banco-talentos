@@ -102,7 +102,8 @@ it('accepts field values at their supported length limits', function () {
     $this->loginWithCookies(User::factory()->role(UserRole::ADMIN)->create())->assertOk();
     $payload = institutionPayload([
         'name' => str_repeat('n', 255),
-        'cct' => str_repeat('c', 255),
+        // T-S14-15: el CCT tiene un formato fijo de 10 caracteres.
+        'cct' => '09DIT0010Z',
         'contact_name' => str_repeat('r', 120),
         'contact_position' => str_repeat('p', 120),
         'contact_email' => str_repeat('a', 64).'@'.str_repeat('b', 62).'.'.str_repeat('c', 62).'.'.str_repeat('d', 58).'.test',
@@ -235,17 +236,30 @@ it('returns a validation error and rolls back when a cct becomes occupied after 
     $this->assertDatabaseMissing('institutions', ['cct' => '09DIT0001A']);
 })->with(['POST', 'PUT']);
 
-it('applies exact cct uniqueness without normalizing case or making names and emails unique', function () {
-    Institution::factory()->create(institutionPayload(['cct' => 'Exact-Cct']));
+// T-S14-15: el CCT se normaliza (mayúsculas, sin espacios ni guiones) y sigue el formato SEP; la unicidad se aplica al
+// valor normalizado. Antes se guardaba tal cual y «exact-cct» y «Exact-Cct» convivían.
+it('normalizes the cct, requires the SEP format and applies uniqueness to the normalized value, without making names and emails unique', function () {
+    Institution::factory()->create(institutionPayload(['cct' => '09DIT0005B']));
     $this->loginWithCookies(User::factory()->role(UserRole::ADMIN)->create())->assertOk();
 
-    $this->browserRequest('POST', '/api/institutions', institutionPayload(['cct' => 'exact-cct']))
-        ->assertCreated()
-        ->assertJsonPath('data.cct', 'exact-cct');
+    $this->browserRequest('POST', '/api/institutions', institutionPayload(['cct' => '09dit-0005 b', 'contact_email' => 'otra@example.test']))
+        ->assertUnprocessable()->assertJsonValidationErrors(['cct' => 'La Clave de Centro de Trabajo ya está registrada.']);
+    $this->browserRequest('POST', '/api/institutions', institutionPayload(['cct' => 'EXACT-CCT', 'contact_email' => 'otra@example.test']))
+        ->assertUnprocessable()->assertJsonValidationErrors(['cct' => \App\Rules\WorkCenterKey::MESSAGE]);
+    $this->browserRequest('POST', '/api/institutions', institutionPayload(['cct' => '09dit 0006 c', 'contact_email' => 'otra@example.test']))
+        ->assertCreated()->assertJsonPath('data.cct', '09DIT0006C');
 
     $this->assertDatabaseCount('institutions', 2);
-    $this->assertDatabaseHas('institutions', ['cct' => 'Exact-Cct']);
-    $this->assertDatabaseHas('institutions', ['cct' => 'exact-cct']);
+});
+
+it('lets the admin keep an older cct without the SEP format while editing other data, and validates a new one (T-S14-15)', function () {
+    $institution = Institution::factory()->create(institutionPayload(['cct' => 'CLAVE-ANTERIOR']));
+    $this->loginWithCookies(User::factory()->role(UserRole::ADMIN)->create())->assertOk();
+
+    $this->browserRequest('PUT', '/api/institutions/'.$institution->id, institutionPayload(['cct' => 'CLAVE-ANTERIOR', 'name' => 'Nombre corregido']))
+        ->assertOk()->assertJsonPath('data.cct', 'CLAVE-ANTERIOR');
+    $this->browserRequest('PUT', '/api/institutions/'.$institution->id, institutionPayload(['cct' => 'OTRA-CLAVE']))
+        ->assertUnprocessable()->assertJsonValidationErrors(['cct' => \App\Rules\WorkCenterKey::MESSAGE]);
 });
 
 it('only permits status changes through the dedicated action', function (string $method, mixed $state) {
@@ -557,7 +571,7 @@ describe('cuenta de la persona responsable (T-S8-11)', function () {
 
         $this->browserRequest('PUT', '/api/institutions/'.$id, institutionPayload(['contact_name' => 'Luis Pérez', 'contact_position' => '']))
             ->assertOk()->assertJsonPath('data.contact_name', 'Luis Pérez')->assertJsonPath('data.contact_position', null);
-        $this->browserRequest('POST', '/api/institutions', institutionPayload(['cct' => 'OTRO', 'contact_email' => 'otro@example.test', 'contact_position' => str_repeat('p', 121)]))
+        $this->browserRequest('POST', '/api/institutions', institutionPayload(['cct' => '09DIT0007D', 'contact_email' => 'otro@example.test', 'contact_position' => str_repeat('p', 121)]))
             ->assertUnprocessable()->assertJsonValidationErrors(['contact_position' => 'El puesto o departamento no debe superar 120 caracteres.']);
         // La cuenta conserva el nombre con el que se creó.
         expect(User::query()->where('institution_id', $id)->sole()->name)->toBe('María Fernanda López');

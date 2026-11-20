@@ -67,6 +67,16 @@ describe('nombre (CA-02)', function () {
             ->and($events[1]->subject_type)->toBe('company')->and($events[1]->changed_fields)->toBe(['contact_name']);
     });
 
+    it('renames the institution program contact too when it is the same person (T-S14-15)', function () {
+        $institution = Institution::factory()->create(['contact_name' => 'Nombre Anterior', 'contact_email' => 'dual@ut.test']);
+        $account = User::factory()->forInstitution($institution)->create(['name' => 'Nombre Anterior', 'email' => 'Dual@UT.test']);
+        $this->loginWithCookies($account)->assertOk();
+
+        $this->browserRequest('PATCH', '/api/me', ['name' => 'Nombre Nuevo'])->assertOk();
+        expect($institution->refresh()->contact_name)->toBe('Nombre Nuevo')
+            ->and(AccountAuditEvent::query()->orderBy('id')->pluck('event')->all())->toBe(['account_updated', 'organization_profile_updated']);
+    });
+
     it('leaves the company contact alone when it is someone else (T-S14-09)', function () {
         $company = Company::factory()->create(['contact_name' => 'Otra Persona', 'contact_email' => 'dual@empresa.test']);
         $account = User::factory()->forCompany($company)->create(['name' => 'Nombre Anterior', 'email' => 'rh@empresa.test']);

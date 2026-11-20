@@ -2,6 +2,8 @@
 
 namespace App\Http\Requests;
 
+use App\Models\Institution;
+use App\Rules\WorkCenterKey;
 use Illuminate\Validation\Rule;
 
 class UpdateInstitutionRequest extends StoreInstitutionRequest
@@ -16,13 +18,20 @@ class UpdateInstitutionRequest extends StoreInstitutionRequest
             ...parent::rules(),
             'contact_email' => ['required', 'string', 'email', 'max:254'],
             'delivery_method' => ['prohibited'],
+            // T-S14-15: el formato se exige solo a un CCT nuevo; uno anterior a la regla se conserva si no cambia.
             'cct' => [
+                'bail',
                 'required',
                 'string',
-                'max:255',
+                new WorkCenterKey($this->currentCct()),
                 Rule::unique('institutions', 'cct')->ignore($this->route('institution')),
             ],
         ];
+    }
+
+    protected function currentCct(): ?string
+    {
+        return Institution::query()->whereKey($this->route('institution'))->value('cct');
     }
 
     public function messages(): array

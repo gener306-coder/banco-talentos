@@ -1,6 +1,7 @@
 import { expect, test } from '@playwright/test'
 import { ADMIN_STATE } from './support/admin'
 import { linkFromMail, mailCount } from './support/mailpit'
+import { randomCct } from './support/institution'
 
 test.use({ storageState: ADMIN_STATE })
 
@@ -8,12 +9,12 @@ test('ADMIN registra, consulta, edita, inactiva y reactiva una institución cons
   const suffix = Date.now().toString()
   const institution = {
     name: `Instituto E2E ${suffix}`,
-    cct: `E2E${suffix}`,
+    cct: randomCct(),
     contactEmail: `vinculacion-${suffix}@example.test`,
   }
   const updated = {
     name: `${institution.name} actualizado`,
-    cct: `${institution.cct}A`,
+    cct: randomCct(),
     contactEmail: `direccion-${suffix}@example.test`,
   }
 
@@ -92,7 +93,7 @@ test('T-S8-11: ADMIN registra una institución y comparte el enlace del responsa
 
   await page.goto('/institutions/new')
   await page.getByLabel('Nombre', { exact: true }).fill(`Instituto enlace E2E ${suffix}`)
-  await page.getByLabel('CCT', { exact: true }).fill(`ENLACE${suffix}`)
+  await page.getByLabel('CCT', { exact: true }).fill(randomCct())
   await page.getByLabel('Nombre de la persona responsable', { exact: true }).fill('Responsable enlace')
   await page.getByLabel('Puesto o departamento (opcional)', { exact: true }).fill('Coordinación Dual')
   await page.getByLabel('Correo de la persona responsable', { exact: true }).fill(email)

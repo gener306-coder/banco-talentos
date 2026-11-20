@@ -2,6 +2,7 @@ import { randomBytes } from 'node:crypto'
 import { expect, test } from '@playwright/test'
 import { ADMIN_STATE, NO_SESSION } from './support/admin'
 import { mailCount } from './support/mailpit'
+import { randomCct } from './support/institution'
 
 const mailpitUrl = process.env.MAILPIT_URL
 
@@ -23,7 +24,7 @@ test('HU-S2-01: ADMIN genera el enlace manual sin correo → la persona titular 
   await page.getByRole('link', { name: 'Instituciones', exact: true }).click()
   await page.getByRole('link', { name: 'Nueva institución', exact: true }).click()
   await page.getByLabel('Nombre', { exact: true }).fill(`Instituto manual E2E ${suffix}`)
-  await page.getByLabel('CCT', { exact: true }).fill(`MANUAL${suffix}`)
+  await page.getByLabel('CCT', { exact: true }).fill(randomCct())
   await page.getByLabel('Nombre de la persona responsable', { exact: true }).fill('Responsable manual')
   await page.getByLabel('Correo de la persona responsable', { exact: true }).fill(`vinculacion-${suffix}@example.test`)
   await page.getByRole('button', { name: 'Crear institución', exact: true }).click()

@@ -3,6 +3,7 @@ import { expect, test } from '@playwright/test'
 import type { BrowserContext, Page } from '@playwright/test'
 import { ADMIN_STATE, NO_SESSION } from './support/admin'
 import { linkFromMail } from './support/mailpit'
+import { randomCct } from './support/institution'
 
 const mailpitUrl = process.env.MAILPIT_URL
 
@@ -37,7 +38,7 @@ async function me(context: BrowserContext, baseURL: string) {
 
 test('ADMIN inicia el restablecimiento → la persona titular establece su nueva contraseña → login exitoso', async ({ page, browser, baseURL, request }) => {
   const suffix = randomBytes(8).toString('hex')
-  const institution = { name: `Instituto reset E2E ${suffix}`, cct: `RESET${suffix}`, email: `contacto-reset-${suffix}@example.test` }
+  const institution = { name: `Instituto reset E2E ${suffix}`, cct: randomCct(), email: `contacto-reset-${suffix}@example.test` }
   const account = {
     name: `Titular reset ${suffix}`,
     email: `reset-${suffix}@example.test`,

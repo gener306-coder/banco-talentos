@@ -10,6 +10,7 @@ import { MunicipalityCombobox } from '../students/MunicipalityCombobox'
 import { PendingLabel } from '../ui/forms'
 import { emailErrorOnBlur, INVALID_EMAIL } from '../ui/validation'
 import { updateOrganizationProfile } from './organizationApi'
+import { useSelfContact } from './useSelfContact'
 import type { CompanyProfile } from './organizationApi'
 
 const profileMessages: FailureMessages = {
@@ -55,34 +56,23 @@ export function CompanyProfileForm({ profile, submitLabel, pendingLabel, seconda
   // M3: el nombre provisional de una invitada es su correo; no se propone como nombre de nadie.
   const accountName = user && user.name !== user.email ? user.name : ''
   const emptyContact = profile.contact_name === null && profile.contact_email === null
-  // «Soy yo» refleja el contacto guardado: es la persona de la sesión si su correo es el de la cuenta.
-  const [self, setSelf] = useState(() => (suggestSelf && emptyContact)
-    || (profile.contact_email !== null && profile.contact_email.toLowerCase() === accountEmail.toLowerCase()))
   const [values, setValues] = useState<Values>(() => {
     const initial = valuesOf(profile)
     if (suggestSelf && emptyContact) return { ...initial, contact_name: accountName, contact_email: accountEmail }
     return initial
   })
-  // T-S14-09: el nombre del contacto con el que se abrió el formulario. Solo si se corrige aquí viaja como nombre de la
-  // cuenta; una copia vieja nunca devuelve la cuenta a un nombre anterior.
-  const [baseName, setBaseName] = useState(values.contact_name)
+  // «Soy yo» y la sincronización con el nombre de la cuenta (T-S14-09), compartidos con la institución (T-S14-15).
+  const contact = useSelfContact({
+    savedEmail: profile.contact_email, initialName: values.contact_name, currentName: values.contact_name, suggest: suggestSelf && emptyContact,
+    fill: ({ name, email }) => setValues((current) => ({ ...current, ...(name !== undefined ? { contact_name: name } : {}), ...(email !== undefined ? { contact_email: email } : {}) })),
+  })
+  const self = contact.self
   const [localErrors, setLocalErrors] = useState<Partial<Record<Field, string>>>({})
   const [notice, setNotice] = useState<string | null>(null)
   const mutation = useApiMutation(profileMessages)
   const serverErrors = mutation.failure?.errors ?? {}
   const general = mutation.failure && Object.keys(mutation.failure.errors).length === 0 ? mutation.failure.message : null
   const error = (field: Field) => localErrors[field] ?? serverErrors[field]?.join(' ')
-
-  // T-S14-09: si la persona se renombra (en Tu perfil) con el formulario abierto y «Soy yo», el campo que no ha tocado
-  // sigue al nombre nuevo de la cuenta.
-  const [seenAccountName, setSeenAccountName] = useState(accountName)
-  if (seenAccountName !== accountName) {
-    setSeenAccountName(accountName)
-    if (self && accountName && values.contact_name === baseName) {
-      setValues((current) => ({ ...current, contact_name: accountName }))
-      setBaseName(accountName)
-    }
-  }
 
   function set(field: Field, value: string) {
     setValues((current) => ({ ...current, [field]: value }))
@@ -91,9 +81,8 @@ export function CompanyProfileForm({ profile, submitLabel, pendingLabel, seconda
   }
 
   function toggleSelf(checked: boolean) {
-    setSelf(checked)
     // Soy yo: los datos de la cuenta; otra persona: se capturan desde cero.
-    setValues((current) => ({ ...current, contact_name: checked ? accountName : '', contact_email: checked ? accountEmail : '' }))
+    contact.toggle(checked)
     setLocalErrors((current) => ({ ...current, contact_name: undefined, contact_email: undefined }))
   }
 
@@ -114,7 +103,7 @@ export function CompanyProfileForm({ profile, submitLabel, pendingLabel, seconda
     if (Object.keys(found).length) return
 
     const contactName = optional(values.contact_name)
-    const renamesAccount = self && contactName !== null && contactName !== (optional(baseName) ?? '')
+    const accountRename = contact.accountNameFor(contactName)
     const input = {
       trade_name: optional(values.trade_name), legal_name: optional(values.legal_name), rfc: rfc || null,
       sector_code: isSectorCode(values.sector_code) ? values.sector_code : null,
@@ -122,19 +111,18 @@ export function CompanyProfileForm({ profile, submitLabel, pendingLabel, seconda
       contact_name: contactName, contact_position: optional(values.contact_position),
       contact_email: optional(values.contact_email)?.toLowerCase() ?? null, contact_phone: optional(values.contact_phone),
       // Con «Soy yo», corregir aquí el nombre del contacto corrige el de la cuenta; vacío no lo borra.
-      ...(renamesAccount ? { account_name: contactName } : {}),
+      ...(accountRename ? { account_name: accountRename } : {}),
     }
     void mutation.submit(() => updateOrganizationProfile(input), (updated) => {
       if (updated.type !== 'company') return
       setValues(valuesOf(updated))
-      setBaseName(updated.contact_name ?? '')
       // Tras guardar, la casilla sigue al contacto guardado (p. ej. vaciarlo la desmarca).
-      setSelf(updated.contact_email !== null && updated.contact_email.toLowerCase() === accountEmail.toLowerCase())
+      contact.saved({ name: updated.contact_name, email: updated.contact_email })
       setNotice('Perfil actualizado correctamente.')
       // La sesión refleja el nombre de la empresa, lo que falta y el nombre de la cuenta sin volver a cargarse.
       if (user?.company) {
         updateUser({
-          ...user, name: renamesAccount ? contactName : user.name,
+          ...user, name: accountRename ?? user.name,
           company: sessionCompany(user.company.id, updated.name, updated.missing, 'done'),
         })
       }

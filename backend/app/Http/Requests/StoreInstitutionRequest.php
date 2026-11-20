@@ -5,6 +5,7 @@ namespace App\Http\Requests;
 use App\Enums\SetupDeliveryMethod;
 use App\Enums\UserRole;
 use App\Rules\PhoneNumber;
+use App\Rules\WorkCenterKey;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
@@ -22,6 +23,16 @@ class StoreInstitutionRequest extends FormRequest
         if (is_string($this->input('contact_email'))) {
             $this->merge(['contact_email' => Str::lower(trim($this->input('contact_email')))]);
         }
+        // T-S14-15: el CCT se guarda en mayúsculas y sin espacios ni guiones, igual que lo escribe la institución.
+        if (is_string($this->input('cct'))) {
+            $this->merge(['cct' => WorkCenterKey::normalizeAgainst($this->input('cct'), $this->currentCct())]);
+        }
+    }
+
+    /** CCT registrado de la institución que se edita; null en el alta. */
+    protected function currentCct(): ?string
+    {
+        return null;
     }
 
     /**
@@ -33,7 +44,7 @@ class StoreInstitutionRequest extends FormRequest
     {
         return [
             'name' => ['required', 'string', 'max:255'],
-            'cct' => ['required', 'string', 'max:255', Rule::unique('institutions', 'cct')],
+            'cct' => ['bail', 'required', 'string', new WorkCenterKey, Rule::unique('institutions', 'cct')],
             'contact_name' => ['required', 'string', 'max:120'],
             'contact_position' => ['nullable', 'string', 'max:120'],
             'contact_email' => ['required', 'string', 'email', 'max:254', 'unique:users,email'],

@@ -47,6 +47,13 @@ export type CompanyProfileInput = OrganizationContact & {
   account_name?: string | null
 }
 
+/** T-S14-15: la institución corrige su nombre oficial, su CCT y su contacto; `account_name` con «Soy yo». */
+export type InstitutionProfileInput = OrganizationContact & {
+  name: string
+  cct: string
+  account_name?: string | null
+}
+
 const isObject = (value: unknown): value is Record<string, unknown> => typeof value === 'object' && value !== null && !Array.isArray(value)
 const isText = (value: unknown): value is string => typeof value === 'string'
 const isOptionalText = (value: unknown): value is string | null => value === null || typeof value === 'string'
@@ -76,7 +83,7 @@ export async function getOrganizationProfile(signal?: AbortSignal): Promise<Orga
 }
 
 /** Guarda solo los campos editables del lado de la sesión. */
-export async function updateOrganizationProfile(input: CompanyProfileInput | OrganizationContact): Promise<OrganizationProfile> {
+export async function updateOrganizationProfile(input: CompanyProfileInput | InstitutionProfileInput | OrganizationContact): Promise<OrganizationProfile> {
   if (!csrfToken()) await request('/sanctum/csrf-cookie')
   const response = await request('/api/organization/profile', { method: 'PUT', body: JSON.stringify(input) })
   if (!isObject(response)) throw new ApiError(502)
