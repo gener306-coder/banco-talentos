@@ -1,3 +1,4 @@
+import { PlacesStatus } from '../opportunities/PlacesStatus'
 import { useCallback } from 'react'
 import { Link, useLocation, useParams } from 'react-router'
 import { NO_SECTOR, NOT_CAPTURED, sectorName } from '../companies/catalogs'
@@ -5,7 +6,7 @@ import { InstitutionRequestError, InstitutionStatus } from '../institutions/Inst
 import { useApiRequest } from '../lib/useApiRequest'
 import { SkillTags } from '../opportunities/OpportunityLayout'
 import { fullName } from '../students/api'
-import { periodLabel, stateName } from '../students/catalogs'
+import { minimumPeriodLabel, periodLabel, stateName } from '../students/catalogs'
 import { languageName, levelLabel } from '../students/cvCatalogs'
 import { StudentStatus } from '../students/StudentStatus'
 import { backState, useBackLink, useContextualBack } from '../ui/backLink'
@@ -13,10 +14,11 @@ import { Callout } from '../ui/Callout'
 import { EmailMenu } from '../ui/EmailMenu'
 import { ChevronRightIcon, MessageIcon } from '../ui/icons'
 import { LoadingState } from '../ui/StateMessage'
-import { getReceivedLinkage, institutionLinkageMessages } from './institutionApi'
+import { getReceivedLinkage, institutionLinkageMessages, terminateReceivedLinkage } from './institutionApi'
 import type { ReceivedLinkageDetail } from './institutionApi'
 import { InstitutionLinkageLayout } from './InstitutionLinkageRequestsPage'
 import { LinkageDecisionSection } from './LinkageDecisionSection'
+import { LinkageTerminationSection } from './LinkageTermination'
 import { LinkageStatus } from './LinkageStatus'
 
 const dateFormat = new Intl.DateTimeFormat('es-MX', { dateStyle: 'long' })
@@ -91,9 +93,9 @@ function Detail({ data, onDecided, refresh }: {
         <dl className="student-identity">
           <dt>Título</dt><dd>{opportunity.title}</dd>
           <dt>Actividades y objetivos</dt><dd className="opportunity-description">{opportunity.description}</dd>
-          <dt>Lugares disponibles</dt><dd>{opportunity.vacancies}</dd>
+          <dt>Lugares</dt><dd><PlacesStatus opportunity={opportunity} /></dd>
           <dt>Carrera o programa requerido</dt><dd>{opportunity.program}</dd>
-          <dt>Periodo mínimo</dt><dd>{periodLabel(opportunity.period_type, opportunity.period_number)} o posterior</dd>
+          <dt>Periodo mínimo</dt><dd>{minimumPeriodLabel(opportunity.period_number)}, semestre o cuatrimestre</dd>
           <dt>Idioma</dt>
           <dd>{opportunity.language_code && opportunity.min_level ? `${languageName(opportunity.language_code)}, ${levelLabel(opportunity.min_level)} o superior` : 'Sin idioma requerido'}</dd>
           <dt>Habilidades requeridas</dt>
@@ -123,6 +125,9 @@ function Detail({ data, onDecided, refresh }: {
       </section>
 
       <LinkageDecisionSection data={data} onDecided={onDecided} refresh={refresh} />
+      {/* T-S14-13: la institución da de baja una vinculación aceptada de su alumno (libera el lugar). */}
+      <LinkageTerminationSection viewer="INSTITUTION" status={data.status} termination={data.termination} messages={institutionLinkageMessages}
+        submit={(reason) => terminateReceivedLinkage(data.id, reason)} onTerminated={onDecided} />
     </>
   )
 }

@@ -406,3 +406,125 @@ Alcance: los ocho listados principales (instituciones, cuentas de la Secretaría
   - `OrganizationProfile.test.tsx`: ajustada, porque esperaba `account_name` aunque el nombre no cambiara.
 
   Las dos pruebas de Vitest que reproducen la reversión (renombrarse y guardar después; copia vieja del formulario) fallaban antes de la corrección.
+
+### Auditoría del flujo de oportunidades (19 de noviembre de 2026)
+
+El responsable pidió auditar la lógica y el flujo de las oportunidades duales. Hallazgos y decisiones:
+
+| Tema | Hallazgo | Decisión |
+| --- | --- | --- |
+| Habilidades | El catálogo es abierto y compartido: lo que se escribe en una oportunidad o un CV se agrega para todos, con el tipo (técnica o blanda) de quien lo crea primero. Por eso el buscador, que solo elige del catálogo, encuentra después esas habilidades. Riesgos: errores de captura y duplicados. | Sin cambios, por decisión del responsable. |
+| Periodo mínimo | La oportunidad pedía tipo y número, pero nunca se validaban, y el filtro del buscador compara solo el número. El selector de tipo sugería excluir al plan cuatrimestral. | T-S14-10: solo el número. |
+| Lugares | Al aceptar se bloqueaba solo la solicitud, sin contar las aceptadas: varias instituciones podían exceder los lugares, también a la vez. La empresa podía bajar los lugares por debajo de los cubiertos. | T-S14-11: control atómico del cupo. |
+| Alumno aceptado varias veces | Un alumno puede quedar aceptado en varias oportunidades a la vez, sin que la institución lo vea al responder. | T-S14-12: aviso a la institución. |
+| Lugar ocupado para siempre | Una aceptada era final y nunca liberaba su lugar. | T-S14-13: baja por la institución o la empresa. |
+
+### T-S14-10 — Periodo mínimo sin tipo
+
+**Estado:** Implementada (19 de noviembre de 2026) en `feat/s14-opportunity-rules`; publicada en `main`. Solicitada por el responsable.
+
+- **Migración** `2026_11_20_000001_drop_period_type_from_opportunities`: elimina `opportunities.period_type` y su CHECK. El periodo del alumno no cambia.
+- **Contrato:** `POST` y `PUT /api/opportunities` ya no piden `period_type`; si llega, se ignora. Las respuestas de la oportunidad y del detalle de la solicitud de la institución dejan de incluirlo. `period_number` sigue de 1 a 15.
+- **Interfaz:**
+  - el formulario pide «Periodo mínimo» con opciones «6.º o posterior» y la ayuda «Semestre o cuatrimestre, según el plan de estudios del alumno»;
+  - el detalle de la empresa y el de la institución muestran «6.º o posterior, semestre o cuatrimestre».
+- **Pruebas:**
+  - Pest `OpportunityTest`: un `period_type` enviado se ignora, no se devuelve y la columna ya no existe; los datos de prueba de las oportunidades lo dejan de enviar;
+  - Vitest: el formulario sin el selector de tipo y con su ayuda, y el detalle;
+  - E2E `opportunities.spec.ts` y `support/company.ts`, ajustadas.
+
+### T-S14-11 — Control atómico de los lugares de una oportunidad
+
+**Estado:** Implementada (19 de noviembre de 2026) en `feat/s14-opportunity-rules`; publicada en `main`. Solicitada por el responsable.
+
+- **Aceptar** (`PATCH /api/institution/linkage-requests/{id}/decision` con ACEPTADA), en una transacción y en este orden fijo:
+  1. se lee la solicitud propia (anti-IDOR);
+  2. se bloquea la oportunidad (`FOR UPDATE`);
+  3. se bloquea la solicitud y se comprueba que siga pendiente;
+  4. se cuentan las aceptadas de todas las instituciones;
+  5. con el cupo lleno, responde `422` («La oportunidad ya cubrió sus N lugares. Puedes rechazar la solicitud.») sin cambios.
+
+  Dos aceptaciones simultáneas se ordenan y la segunda recibe el `422`. Rechazar nunca bloquea la oportunidad.
+- **Enviar una solicitud** (`POST /api/linkage-requests`): con el cupo lleno responde `422` en `opportunity_id` («… Amplía los lugares para enviar más solicitudes.»). El `FOR SHARE` que ya tomaba sobre la oportunidad espera a una aceptación en curso.
+- **Editar la oportunidad:** reducir los lugares nunca los deja por debajo de los cubiertos (`422` en `vacancies`); la fila se bloquea antes de contar. Solo se valida cuando los lugares bajan: una oportunidad con más aceptadas que lugares, de antes de la regla, sigue editable en lo demás.
+- **Contrato:** `accepted_count` (lugares cubiertos) en el listado, el detalle y las opciones de la oportunidad, y en la oportunidad de la bandeja y del detalle de la institución. La bandeja lo carga en la misma consulta, sin una por fila.
+- **Interfaz:**
+  - «2 de 5 lugares cubiertos» y la etiqueta «Cupo lleno» (`PlacesStatus`) en el listado y el detalle de la empresa y en el detalle de la institución;
+  - en el formulario de edición, la ayuda «Ya hay N lugares cubiertos: los lugares no pueden ser menos» y la validación local;
+  - en la hoja de solicitud, las oportunidades llenas aparecen deshabilitadas con «Cupo lleno»;
+  - si todas están llenas, el perfil explica que se pueden ampliar los lugares y enlaza a las oportunidades;
+  - en el detalle de la institución, con el cupo lleno, «Aceptar solicitud» se deshabilita con su explicación y «Rechazar» sigue disponible. Si otra institución cubrió el último lugar mientras decidía, se muestra el aviso del servidor con «Actualizar solicitud».
+- **Pruebas:**
+  - Pest `LinkageDecisionTest`: aceptar hasta llenar el cupo, la siguiente con `422` sin cambios y rechazar permitido; las aceptadas de otras instituciones cuentan; el orden de bloqueo (oportunidad, solicitud y conteo) verificado con `DB::listen`; rechazar no bloquea la oportunidad;
+  - Pest `LinkageRequestTest`: solicitud con el cupo lleno con `422` y permitida tras ampliar; opciones con los lugares;
+  - Pest `OpportunityTest`: `accepted_count`, y lugares por debajo de los cubiertos con `422`;
+  - Vitest: disponibilidad con el cupo lleno, opción deshabilitada, aviso del perfil, botón deshabilitado y `422` de la carrera en el detalle de la institución, ayuda y validación de los lugares;
+  - E2E `opportunity-places.spec.ts` (nueva): con 1 lugar, la institución acepta una solicitud, la segunda ya no se puede aceptar, y la empresa ve «1 de 1 lugar cubierto» y «Cupo lleno».
+- **Concurrencia real (simulación):** dos instituciones distintas aceptaron a la vez, desde dos navegadores con sesiones propias y sincronizados al mismo milisegundo, el último lugar de la oportunidad 609 (2 lugares, 1 cubierto):
+  - una recibió `200` con 2 de 2 lugares cubiertos;
+  - la otra recibió `422` («La oportunidad ya cubrió sus 2 lugares») y tardó 191 ms contra 138, esperando el bloqueo;
+  - en la base quedaron exactamente 2 aceptadas.
+
+  Después se devolvieron las dos solicitudes a pendiente y se restauraron las contraseñas de las cuentas usadas.
+- **Datos anteriores a la regla:** la simulación tenía 260 oportunidades con más aceptadas que lugares, generadas antes de esta regla; lo mismo podría haber en datos reales. Se tratan como cupo lleno: no admiten más aceptaciones ni solicitudes y siguen editables. Las aceptadas no se tocan.
+- **Migración aplicada en la simulación** y cola reiniciada.
+
+### T-S14-12 — Aviso de otras vinculaciones aceptadas del alumno
+
+**Estado:** Implementada (20 de noviembre de 2026) en `feat/s14-opportunity-rules`; publicada en `main`. Solicitada por el responsable (opción «Avisar a la institución»).
+
+- **Contrato:** el detalle de la institución (`GET /api/institution/linkage-requests/{id}`) agrega `student_accepted_elsewhere`: las otras solicitudes ACEPTADAS del mismo alumno, solo de la institución de la sesión, con `id`, `company` (nombre visible o «Empresa sin nombre»), `opportunity` y `responded_at`. No incluye la solicitud consultada ni ningún dato del alumno.
+- **Interfaz:** mientras la solicitud está pendiente, la sección «Responder solicitud» muestra una nota discreta con cada empresa y oportunidad y la sugerencia de considerar la disponibilidad del alumno. Aceptar sigue permitido: la institución decide.
+- **Pruebas:** Pest `LinkageTerminationTest` (otras aceptadas, sin la actual y con los campos exactos); Vitest (la nota y el botón habilitado).
+
+### T-S14-13 — Baja de una vinculación aceptada
+
+**Estado:** Implementada (20 de noviembre de 2026) en `feat/s14-opportunity-rules`; publicada en `main`. Solicitada por el responsable (opción «Baja por cualquiera»).
+
+- **Migración** `2026_11_20_000002_add_termination_to_linkage_requests`:
+  - estado nuevo `BAJA` («Dada de baja») en el CHECK de `status`;
+  - columnas `terminated_at`, `terminated_by` (FK a `users`), `terminated_party` (`COMPANY` o `INSTITUTION`) y `termination_reason`;
+  - un CHECK exige que, con `BAJA`, estén los cuatro datos de la baja, y sin ella, ninguno.
+- **Contrato:** `PATCH /api/institution/linkage-requests/{id}/termination` y `PATCH /api/linkage-requests/{id}/termination`, con `{reason}` obligatorio (hasta 500 caracteres, sin datos de contacto, sin otros campos).
+  - Solo procede una solicitud propia (si es ajena o no existe, `404`) y ACEPTADA (si no, `422` sin cambios). La fila se bloquea, así que las dos partes no pueden darla de baja a la vez.
+  - Las respuestas agregan `termination` con `at`, `party`, `reason` y `by`; `by` (la cuenta que la registró) solo llega al lado que la registró.
+- **Efectos:**
+  - la baja libera el lugar, porque la oportunidad solo cuenta las ACEPTADAS, y una solicitud pendiente de la misma oportunidad se puede aceptar de nuevo;
+  - la conversación conserva su historial en solo lectura: se puede consultar y marcar como leída, pero no escribir (`422`), y `can_write` es falso;
+  - la bandeja, su filtro de estado, el CSV y el reporte ejecutivo incluyen «Dada de baja»;
+  - como una cancelada, no impide volver a solicitar el perfil para esa oportunidad.
+- **Interfaz:**
+  - en el detalle de la institución y en el de la empresa, con la solicitud aceptada, la sección «Baja de la vinculación» explica cuándo usarla y ofrece «Dar de baja». Abre una hoja con el motivo obligatorio y la validación local de datos de contacto;
+  - después, la sección muestra quién la registró («Tu institución (nombre)» o «La empresa»), la fecha, el motivo y que el lugar quedó libre;
+  - la conversación muestra el historial con el aviso de solo lectura y deja de consultarse cada 15 s;
+  - el estado usa los tokens de estado inactivo.
+- **Pruebas:**
+  - Pest `LinkageTerminationTest`:
+    - la institución y la empresa dan de baja, con el lado y la cuenta registrados;
+    - el otro lado no ve la cuenta;
+    - el lugar se libera y una pendiente ya se puede aceptar;
+    - pendiente, rechazada o cancelada responden `422`;
+    - una solicitud ajena responde `404`;
+    - sin CSRF, `419`;
+    - un motivo vacío o con un correo, o un campo ajeno, responden `422`;
+    - la conversación queda en solo lectura;
+    - el CHECK de la base impide una baja sin sus datos.
+  - Pest: contratos de la bandeja, el detalle y el reporte con `termination` y `BAJA`.
+  - Vitest: baja desde la institución (validaciones, petición y resultado), baja registrada por la empresa vista por la institución, baja desde la empresa, sin baja en una pendiente, y la conversación dada de baja en solo lectura sin consultas periódicas.
+- **Verificación:** Pest completo 1652 de 1652; E2E 46 de 46 (`reports.spec.ts` ajustada: el embudo tiene la fila «Dada de baja»); migración aplicada en la simulación.
+- **Fuera de alcance:** la baja no envía aviso por correo; el otro lado la ve en su bandeja y en el detalle. La bitácora (`/audit-events`) no la registra; la fila guarda quién, cuándo y por qué.
+
+
+### T-S14-14 — Cada vista empieza arriba
+
+**Estado:** Implementada (20 de noviembre de 2026) en `feat/s14-opportunity-rules`; publicada en `main`. Reportada por el responsable: al entrar a un apartado del panel, las tablas y el feed no empezaban desde arriba.
+
+- **Causa:** al cambiar de ruta nadie regresaba la página arriba, así que la vista nueva heredaba el desplazamiento de la anterior. Por ejemplo, desde el inicio con la vista bajada, `/talent` arrancaba en 265 px y `/linkage-requests` en 355 px.
+- **Corrección** (`useRouteTransition` en `App.tsx`): toda navegación nueva (`PUSH` o `REPLACE`) a otra ruta lleva la página arriba.
+  - Volver con «Atrás» (`POP`) lo deja al navegador y a la memoria de las tablas (T-S13-12), que devuelve la fila a su lugar.
+  - Una URL con ancla (`#organization`) ubica su propia sección.
+- **Verificación:**
+  - en la simulación, entrando desde el inicio arriba y abajo, las tres secciones de la empresa, las tres de la institución y el feed de Historias empiezan en 0 px, a 1440 y 390 px;
+  - Vitest de `AppShell.test.tsx` comprueba el regreso arriba al entrar a una sección y al volver al inicio por su enlace.
+- **Entorno de desarrollo:** tenía 7 migraciones pendientes, de `2026_11_17_000001` (mensajes) a `2026_11_20_000002` (baja). Con el código actual, varias pantallas fallaban ahí; por ejemplo, registrar una oportunidad exigía el tipo de periodo que ya no existe. Se aplicaron y se reinició la cola.
+- **E2E:** `support/students.ts` (`publishStudent`) espera a que el CV esté listo, comprueba el titular escrito y espera la respuesta de su guardado. Fallaba de forma intermitente con la máquina cargada. Suite completa: 46 de 46.

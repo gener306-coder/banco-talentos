@@ -13,6 +13,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
 
 /**
  * Oportunidades de Educación Dual de la empresa de la sesión (HU-S5-02). Anti-IDOR (CA-02): toda consulta filtra
@@ -36,6 +37,7 @@ class OpportunityController extends Controller
         $page = Opportunity::query()
             ->where('company_id', $request->user()->company_id)
             ->with(['municipality:code,name', 'skills:id,name,kind'])
+            ->withAcceptedCount()
             ->orderByDesc('created_at')
             ->orderByDesc('id')
             ->paginate(self::PER_PAGE);
@@ -77,16 +79,20 @@ class OpportunityController extends Controller
             ->where('company_id', $request->user()->company_id)
             ->where('is_active', true)
             ->with('municipality:code,name')
+            ->withAcceptedCount()
             ->orderByDesc('created_at')
             ->orderByDesc('id')
             ->limit(self::OPTIONS_LIMIT)
-            ->get(['id', 'title', 'program', 'municipality_code', 'created_at']);
+            ->get(['id', 'title', 'program', 'municipality_code', 'vacancies', 'created_at']);
 
         return response()->json(['data' => $opportunities->map(fn (Opportunity $opportunity): array => [
             'id' => $opportunity->id,
             'title' => $opportunity->title,
             'program' => $opportunity->program,
             'municipality' => $opportunity->municipality?->name,
+            // T-S14-11: con el cupo lleno se muestra, pero no se puede elegir.
+            'vacancies' => $opportunity->vacancies,
+            'accepted_count' => $opportunity->coveredPlaces(),
         ])->values()])->header('Cache-Control', 'no-store, private');
     }
 
@@ -165,6 +171,18 @@ class OpportunityController extends Controller
         DB::transaction(function () use ($opportunity, $skills): void {
             // HU-S14-03 (M1): crear o editar una oportunidad la publica con el nombre y el contacto de la empresa.
             $this->ensureOperableCompany($opportunity->company_id);
+            // T-S14-11: reducir los lugares nunca los deja por debajo de los ya cubiertos. La fila se bloquea para que
+            // una aceptación simultánea no se cuele entre el conteo y el guardado. Solo se valida si cambian: una
+            // oportunidad con más aceptadas que lugares (datos anteriores a la regla) sigue editable en lo demás.
+            if ($opportunity->exists && $opportunity->isDirty('vacancies') && $opportunity->vacancies < $opportunity->getOriginal('vacancies')) {
+                Opportunity::query()->whereKey($opportunity->id)->lockForUpdate()->first();
+                $covered = $opportunity->acceptedCount();
+                if ($opportunity->vacancies < $covered) {
+                    throw ValidationException::withMessages(['vacancies' => [
+                        $covered === 1 ? 'Ya hay 1 lugar cubierto: los lugares no pueden ser menos.' : "Ya hay {$covered} lugares cubiertos: los lugares no pueden ser menos.",
+                    ]]);
+                }
+            }
             $opportunity->save();
             $ids = SkillCatalog::ids($skills);
             DB::table('opportunity_skills')->where('opportunity_id', $opportunity->id)->delete();
@@ -193,6 +211,8 @@ class OpportunityController extends Controller
             'municipality_code' => $opportunity->municipality_code,
             'municipality' => $opportunity->municipality?->name,
             'vacancies' => $opportunity->vacancies,
+            // T-S14-11: lugares ya cubiertos por solicitudes aceptadas.
+            'accepted_count' => $opportunity->coveredPlaces(),
             'is_active' => $opportunity->is_active,
             'created_at' => $opportunity->created_at?->toISOString(),
         ];
@@ -204,7 +224,6 @@ class OpportunityController extends Controller
 
         return response()->json(['data' => [
             ...$this->summary($opportunity),
-            'period_type' => $opportunity->period_type->value,
             'period_number' => $opportunity->period_number,
             'can_relocate' => $opportunity->can_relocate,
             'description' => $opportunity->description,

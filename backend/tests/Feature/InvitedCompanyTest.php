@@ -45,7 +45,7 @@ function invitedLinkage(Institution $institution): LinkageRequest
     $company = Company::factory()->create();
     $student = invitedStudent($institution, '28032', 'Analista de datos');
     $opportunity = new Opportunity([
-        'title' => 'Tableros de producción', 'program' => 'Ingeniería en Datos', 'period_type' => 'semester', 'period_number' => 5,
+        'title' => 'Tableros de producción', 'program' => 'Ingeniería en Datos', 'period_number' => 5,
         'vacancies' => 2, 'can_relocate' => false, 'state_code' => '28', 'municipality_code' => '28032', 'description' => 'Actividades.',
     ]);
     $opportunity->company_id = $company->id;

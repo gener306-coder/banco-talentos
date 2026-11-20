@@ -39,7 +39,7 @@ function auditAccount(User $creator, UserRole $role = UserRole::SECRETARY, array
 function auditOpportunity(Company $company, User $creator, string $title = 'Tableros de producción'): Opportunity
 {
     $opportunity = new Opportunity([
-        'title' => $title, 'program' => 'Ingeniería Mecatrónica', 'period_type' => 'semester', 'period_number' => 5,
+        'title' => $title, 'program' => 'Ingeniería Mecatrónica', 'period_number' => 5,
         'vacancies' => 2, 'can_relocate' => false, 'state_code' => '28', 'municipality_code' => '28032', 'description' => 'Actividades.',
     ]);
     $opportunity->company_id = $company->id;

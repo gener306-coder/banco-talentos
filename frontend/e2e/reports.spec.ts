@@ -13,7 +13,8 @@ async function openReport(page: Page) {
   await expect(page.getByRole('heading', { name: 'Reporte ejecutivo', level: 2 })).toBeVisible()
 
   const statuses = page.getByRole('table', { name: 'Solicitudes de vinculación por estado' })
-  await expect(statuses.getByRole('row')).toHaveCount(5)
+  // Encabezado y un renglón por estado: pendiente, aceptada, rechazada, cancelada y dada de baja (T-S14-13).
+  await expect(statuses.getByRole('row')).toHaveCount(6)
   await expect(page.getByText(/^\d[\d,]* solicitud(es)? registradas?$/)).toBeVisible()
   // Los escenarios de configuración registran al menos una institución y una empresa del sector 31-33.
   await expect(page.getByRole('table', { name: 'Participación por institución educativa' }).getByRole('row').nth(1)).toBeVisible()

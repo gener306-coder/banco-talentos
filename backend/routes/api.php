@@ -205,6 +205,8 @@ Route::middleware(['auth:sanctum', 'active', 'role:'.UserRole::COMPANY->value, '
         // Detalle de la solicitud (HU-S13-02).
         Route::get('{linkageRequest}', [LinkageRequestController::class, 'show']);
         Route::patch('{linkageRequest}/cancel', [LinkageRequestController::class, 'cancel']);
+        // T-S14-13: baja de una vinculación aceptada; libera el lugar de la oportunidad.
+        Route::patch('{linkageRequest}/termination', [LinkageRequestController::class, 'terminate']);
         // Conversación de la solicitud aceptada con la institución (HU-S13-01).
         Route::get('{linkageRequest}/messages', [LinkageMessageController::class, 'index']);
         Route::post('{linkageRequest}/messages', [LinkageMessageController::class, 'store'])->middleware('throttle:linkage-messages');
@@ -227,6 +229,8 @@ Route::middleware(['auth:sanctum', 'active', 'role:'.UserRole::INSTITUTION->valu
         Route::get('{linkageRequest}', [InstitutionLinkageRequestController::class, 'show']);
         // Respuesta institucional (HU-S6-02).
         Route::patch('{linkageRequest}/decision', [InstitutionLinkageRequestController::class, 'decide']);
+        // T-S14-13: baja de una vinculación aceptada de su alumno.
+        Route::patch('{linkageRequest}/termination', [InstitutionLinkageRequestController::class, 'terminate']);
         // Conversación de la solicitud aceptada con la empresa (HU-S13-01).
         Route::get('{linkageRequest}/messages', [LinkageMessageController::class, 'index']);
         Route::post('{linkageRequest}/messages', [LinkageMessageController::class, 'store'])->middleware('throttle:linkage-messages');

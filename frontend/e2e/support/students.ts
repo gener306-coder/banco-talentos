@@ -35,8 +35,16 @@ export async function publishStudent(page: Page, data: { surname: string; enroll
   await expect(profile.getByRole('status')).toHaveText('Expediente guardado correctamente.')
 
   await page.getByRole('link', { name: 'CV profesional' }).click()
-  await page.getByLabel('Titular', { exact: true }).fill(data.headline)
+  // Con la máquina cargada, el CV puede terminar de cargar después de escribir y vaciar el campo: se espera a que esté
+  // listo, se comprueba el valor y se espera la respuesta del guardado (así un fallo muestra su causa real).
+  const headline = page.getByLabel('Titular', { exact: true })
+  await expect(page.getByRole('heading', { name: 'Titular profesional' })).toBeVisible()
+  await expect(headline).toBeEnabled()
+  await headline.fill(data.headline)
+  await expect(headline).toHaveValue(data.headline)
+  const savedHeadline = page.waitForResponse((response) => response.url().includes('/cv/headline') && response.request().method() === 'PUT')
   await page.getByRole('button', { name: 'Guardar titular', exact: true }).click()
+  expect((await savedHeadline).status()).toBe(200)
   await expect(page.getByText('Titular guardado correctamente.')).toBeVisible()
   const skill = page.getByRole('combobox', { name: 'Agregar habilidad' })
   await skill.fill(data.skill)

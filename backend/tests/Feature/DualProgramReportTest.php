@@ -37,7 +37,7 @@ function reportStudent(Institution $institution, bool $searchable = true, array 
 function reportOpportunity(Company $company, bool $active = true): Opportunity
 {
     $opportunity = new Opportunity([
-        'title' => 'Tableros de producción', 'program' => 'Ingeniería Mecatrónica', 'period_type' => 'semester', 'period_number' => 5,
+        'title' => 'Tableros de producción', 'program' => 'Ingeniería Mecatrónica', 'period_number' => 5,
         'vacancies' => 2, 'can_relocate' => false, 'state_code' => '28', 'municipality_code' => '28032', 'description' => 'Actividades.',
     ]);
     $opportunity->company_id = $company->id;
@@ -107,7 +107,7 @@ it('returns zero counts and empty lists without data (CA-02)', function () {
 
     $response = dualProgramReport($this)->assertOk()->assertHeader('Cache-Control', 'no-store, private');
     expect($response->json('data.linkage_summary'))->toBe(['total' => 0, 'by_status' => [
-        'PENDIENTE_INSTITUCION' => 0, 'ACEPTADA' => 0, 'RECHAZADA' => 0, 'CANCELADA' => 0,
+        'PENDIENTE_INSTITUCION' => 0, 'ACEPTADA' => 0, 'RECHAZADA' => 0, 'CANCELADA' => 0, 'BAJA' => 0,
     ]])
         ->and($response->json('data.by_institution'))->toBe([])
         ->and($response->json('data.by_sector'))->toBe([])
@@ -150,7 +150,7 @@ it('aggregates linkage requests, institutions and SCIAN sectors (CA-02)', functi
     $data = dualProgramReport($this)->assertOk()->json('data');
 
     expect($data['linkage_summary'])->toBe(['total' => 6, 'by_status' => [
-        'PENDIENTE_INSTITUCION' => 1, 'ACEPTADA' => 3, 'RECHAZADA' => 1, 'CANCELADA' => 1,
+        'PENDIENTE_INSTITUCION' => 1, 'ACEPTADA' => 3, 'RECHAZADA' => 1, 'CANCELADA' => 1, 'BAJA' => 0,
     ]]);
     expect($data['by_institution'])->toBe([
         ['id' => $closed->id, 'name' => 'Bachillerato Cerrado', 'is_active' => false, 'active_students' => 1, 'searchable_profiles' => 1, 'received_requests' => 0, 'accepted_requests' => 0],

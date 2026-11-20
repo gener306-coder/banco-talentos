@@ -64,6 +64,9 @@ function closedReason(status: LinkageStatus, role: LinkageSide): string {
       return role === 'COMPANY'
         ? 'Cancelaste esta solicitud; la conversación no se habilitó.'
         : 'La empresa canceló la solicitud; la conversación no se habilitó.'
+    // T-S14-13: el historial se conserva para consulta.
+    case 'BAJA':
+      return 'La vinculación se dio de baja: la conversación queda en solo lectura. Conserva el historial para consulta.'
     default:
       return `La conversación es de solo lectura: ${counterpart[role]} ya no está activa en la plataforma. Conserva el historial para consulta.`
   }
@@ -87,7 +90,8 @@ export function LinkageConversation({ linkageRequestId, role, status, intro = []
   /** Encabezado que flota sobre el hilo (nombre de la otra organización, estado, regreso). */
   header?: ReactNode
 }) {
-  const accepted = status === 'ACEPTADA'
+  // T-S14-13: una vinculación dada de baja también carga su historial, en solo lectura.
+  const accepted = status === 'ACEPTADA' || status === 'BAJA'
   const load = useCallback(
     (signal: AbortSignal) => accepted ? listLinkageMessages(role, linkageRequestId, 0, signal) : Promise.resolve(CLOSED_THREAD),
     [accepted, role, linkageRequestId],
@@ -110,7 +114,8 @@ export function LinkageConversation({ linkageRequestId, role, status, intro = []
   const lastId = data?.items.at(-1)?.id ?? 0
   const lastIdRef = useRef(0)
   const readRequested = useRef(0)
-  const polling = accepted && data !== null
+  // Una dada de baja ya no recibe mensajes: no se consulta periódicamente.
+  const polling = status === 'ACEPTADA' && data !== null
 
   useEffect(() => { lastIdRef.current = lastId }, [lastId])
 

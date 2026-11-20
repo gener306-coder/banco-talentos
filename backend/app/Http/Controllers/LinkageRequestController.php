@@ -7,6 +7,8 @@ use App\Enums\LinkageRequestStatus;
 use App\Http\Controllers\Concerns\RequiresOperableCompany;
 use App\Http\Requests\ListLinkageRequestsRequest;
 use App\Http\Requests\StoreLinkageRequestRequest;
+use App\Http\Requests\TerminateLinkageRequestRequest;
+use App\Http\Controllers\Concerns\TerminatesLinkage;
 use App\Models\LinkageRequest;
 use App\Models\Opportunity;
 use App\Models\Student;
@@ -26,6 +28,7 @@ use Illuminate\Validation\ValidationException;
 class LinkageRequestController extends Controller
 {
     use RequiresOperableCompany;
+    use TerminatesLinkage;
 
     private const DUPLICATE = 'Ya enviaste una solicitud para este perfil en esa oportunidad.';
 
@@ -55,6 +58,7 @@ class LinkageRequestController extends Controller
                 'opportunity:id,title',
                 'student:id,public_id,headline,program,period_type,period_number',
                 'institution:id,name,contact_name,contact_position,contact_email,contact_phone',
+                'terminator:id,name',
             ])
             ->inboxSort($filters['sort'] ?? null)
             ->paginate(self::PER_PAGE);
@@ -83,6 +87,7 @@ class LinkageRequestController extends Controller
                 'opportunity:id,title',
                 'student:id,public_id,headline,program,period_type,period_number',
                 'institution:id,name,contact_name,contact_position,contact_email,contact_phone',
+                'terminator:id,name',
             ])
             ->find((int) $linkageRequest);
         abort_if($linkage === null, 404, 'La solicitud no existe.');
@@ -112,9 +117,18 @@ class LinkageRequestController extends Controller
             return $linkage;
         });
 
-        $linkage->load(['opportunity:id,title', 'student:id,public_id,headline,program,period_type,period_number', 'institution:id,name,contact_name,contact_position,contact_email,contact_phone']);
+        $linkage->load(['opportunity:id,title', 'student:id,public_id,headline,program,period_type,period_number', 'institution:id,name,contact_name,contact_position,contact_email,contact_phone', 'terminator:id,name']);
 
         return response()->json(['data' => $this->item($linkage)])->header('Cache-Control', 'no-store, private');
+    }
+
+    /** T-S14-13: la empresa da de baja una vinculación aceptada (p. ej., el alumno no se presentó); libera el lugar. */
+    public function terminate(TerminateLinkageRequestRequest $request, string $linkageRequest): JsonResponse
+    {
+        $user = $request->user();
+        $linkage = $this->terminateLinkage($user, LinkageParty::COMPANY, (int) $user->company_id, $linkageRequest, $request->validated('reason'));
+
+        return $this->show($request, (string) $linkage->id);
     }
 
     public function store(StoreLinkageRequestRequest $request): JsonResponse
@@ -147,6 +161,13 @@ class LinkageRequestController extends Controller
                 }
                 if (! $opportunity->is_active) {
                     throw ValidationException::withMessages(['opportunity_id' => ['Solo puedes usar oportunidades activas. Reactívala o elige otra.']]);
+                }
+                // T-S14-11: con el cupo lleno no se envían más solicitudes. FOR SHARE sobre la oportunidad espera a una
+                // aceptación en curso (FOR UPDATE), así que el conteo es el definitivo.
+                if ($opportunity->acceptedCount() >= $opportunity->vacancies) {
+                    throw ValidationException::withMessages(['opportunity_id' => [
+                        Opportunity::fullMessage($opportunity->vacancies).' Amplía los lugares para enviar más solicitudes.',
+                    ]]);
                 }
 
                 $duplicate = LinkageRequest::query()
@@ -237,6 +258,8 @@ class LinkageRequestController extends Controller
             // Respuesta de la institución (HU-S6-02 CA-04), sin la cuenta que respondió.
             'responded_at' => $linkage->responded_at?->toISOString(),
             'response_message' => $linkage->response_message,
+            // T-S14-13: la baja, con la cuenta solo si la registró la empresa.
+            'termination' => $linkage->terminationFor(LinkageParty::COMPANY),
             // HU-S13-04 CA-02: mensajes de la institución sin leer; una solicitud recién cancelada no tiene conversación.
             'unread_count' => (int) ($linkage->getAttribute('unread_count') ?? 0),
             // T-S13-09: último mensaje del hilo, para explicar el orden por actividad.

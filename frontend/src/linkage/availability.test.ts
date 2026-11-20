@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { linkageAvailability } from './availability'
 
-const option = (id: number, title: string) => ({ id, title, program: 'Ingeniería', municipality: null })
+const option = (id: number, title: string, vacancies = 3, accepted = 0) => ({ id, title, program: 'Ingeniería', municipality: null, vacancies, accepted_count: accepted })
 const sent = (id: number, status: 'PENDIENTE_INSTITUCION' | 'ACEPTADA' | 'RECHAZADA' | 'CANCELADA') => ({ status, opportunity: { id } })
 
 describe('disponibilidad de oportunidades para solicitar un perfil (T-S12-07)', () => {
@@ -29,5 +29,17 @@ describe('disponibilidad de oportunidades para solicitar un perfil (T-S12-07)', 
 
   it('ignora solicitudes de oportunidades que ya no están activas', () => {
     expect(linkageAvailability(options, [sent(9, 'PENDIENTE_INSTITUCION')])).toMatchObject({ eligible: 3 })
+  })
+
+  it('una oportunidad que ya cubrió sus lugares no se puede elegir (T-S14-11)', () => {
+    const result = linkageAvailability([option(1, 'Automatización', 2, 2), option(2, 'Calidad', 2, 1)], [])
+    expect(result.items.map((item) => item.blockedBy)).toEqual(['CUPO_LLENO', null])
+    expect(result).toMatchObject({ eligible: 1, requestedAll: false })
+  })
+
+  it('una solicitud previa explica mejor el bloqueo que el cupo lleno, y distingue cuando todo se bloqueó por el cupo', () => {
+    expect(linkageAvailability([option(1, 'Automatización', 1, 1)], [sent(1, 'ACEPTADA')]).items[0].blockedBy).toBe('ACEPTADA')
+    expect(linkageAvailability([option(1, 'Automatización', 1, 1)], [])).toMatchObject({ eligible: 0, requestedAll: false })
+    expect(linkageAvailability([option(1, 'Automatización')], [sent(1, 'PENDIENTE_INSTITUCION')])).toMatchObject({ eligible: 0, requestedAll: true })
   })
 })

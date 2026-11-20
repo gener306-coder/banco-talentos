@@ -33,7 +33,7 @@ const posts = () => linkageMock.mock.calls.filter(([, init]) => init?.method ===
 
 beforeEach(() => {
   user = companyUser
-  options = [{ id: 12, title: 'Automatización de línea', program: 'Mecatrónica', municipality: 'Reynosa' }, { id: 13, title: 'Calidad', program: 'Industrial', municipality: null }]
+  options = [{ id: 12, title: 'Automatización de línea', program: 'Mecatrónica', municipality: 'Reynosa', vacancies: 3, accepted_count: 0 }, { id: 13, title: 'Calidad', program: 'Industrial', municipality: null, vacancies: 2, accepted_count: 0 }]
   linkageMock.mockReset()
   sentMock.mockReset()
   sentMock.mockImplementation(async () => sentPage([]))
@@ -201,12 +201,30 @@ describe('solicitar vinculación según las solicitudes previas (T-S12-07)', () 
     expect(within(select).getByRole('option', { name: 'Calidad' })).toBeEnabled()
   })
 
+  it('deshabilita las oportunidades que ya cubrieron sus lugares (T-S14-11)', async () => {
+    options = [{ id: 12, title: 'Automatización de línea', program: 'Mecatrónica', municipality: 'Reynosa', vacancies: 2, accepted_count: 2 },
+      { id: 13, title: 'Calidad', program: 'Industrial', municipality: null, vacancies: 2, accepted_count: 1 }]
+    renderProfile()
+    fireEvent.click(await screen.findByRole('button', { name: 'Solicitar vinculación' }))
+    const select = await within(await screen.findByRole('dialog', { name: 'Solicitar vinculación' })).findByLabelText('Oportunidad')
+    expect(within(select).getByRole('option', { name: 'Automatización de línea · Reynosa · Cupo lleno' })).toBeDisabled()
+    expect(within(select).getByRole('option', { name: 'Calidad' })).toBeEnabled()
+  })
+
+  it('si todas sus oportunidades cubrieron sus lugares, no ofrece solicitar y explica que puede ampliarlos (T-S14-11)', async () => {
+    options = [{ id: 12, title: 'Automatización de línea', program: 'Mecatrónica', municipality: 'Reynosa', vacancies: 1, accepted_count: 1 }]
+    renderProfile()
+    expect(await screen.findByText(/Tus oportunidades activas ya cubrieron sus lugares/)).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'oportunidad' })).toHaveAttribute('href', '/opportunities')
+    expect(screen.queryByRole('button', { name: 'Solicitar vinculación' })).not.toBeInTheDocument()
+  })
+
   it('al abrir la hoja vuelve a consultar las oportunidades: una registrada en otra pestaña aparece', async () => {
     options = []
     renderProfile()
     const open = await screen.findByRole('button', { name: 'Solicitar vinculación' })
     await waitFor(() => expect(fetchMock.mock.calls.filter(([path]) => path === '/api/opportunities/options')).toHaveLength(1))
-    options = [{ id: 21, title: 'Recién registrada', program: 'Mecatrónica', municipality: null }]
+    options = [{ id: 21, title: 'Recién registrada', program: 'Mecatrónica', municipality: null, vacancies: 1, accepted_count: 0 }]
     fireEvent.click(open)
     const select = await within(await screen.findByRole('dialog', { name: 'Solicitar vinculación' })).findByLabelText('Oportunidad')
     expect(within(select).getByRole('option', { name: 'Recién registrada' })).toBeEnabled()

@@ -7,6 +7,7 @@ import { Link } from 'react-router'
 import { InstitutionRequestError } from '../institutions/InstitutionLayout'
 import { useApiMutation } from '../lib/useApiRequest'
 import type { ApiFailure } from '../lib/useApiRequest'
+import { isFull } from '../opportunities/api'
 import type { OpportunityOption } from '../opportunities/api'
 import { OPPORTUNITY_CONTACT_MESSAGE } from '../opportunities/OpportunityForm'
 import { hasContactInformation } from '../students/cvCatalogs'
@@ -40,8 +41,11 @@ export function LinkageRequestForm({ publicId, options, availability, onSent }: 
   availability: readonly OpportunityAvailability[] | null
   onSent?: () => void
 }) {
-  const items: readonly OpportunityAvailability[] = availability ?? (options.data ?? []).map((option) => ({ option, blockedBy: null }))
+  // Sin las solicitudes previas, al menos el cupo lleno ya se conoce (T-S14-11).
+  const items: readonly OpportunityAvailability[] = availability
+    ?? (options.data ?? []).map((option) => ({ option, blockedBy: isFull(option) ? 'CUPO_LLENO' as const : null }))
   const allBlocked = items.length > 0 && items.every((item) => item.blockedBy !== null)
+  const allFull = allBlocked && items.some((item) => item.blockedBy === 'CUPO_LLENO')
   const mutation = useApiMutation(linkageMessages)
   // HU-S14-03 CA-05 (M1): sin el mínimo del perfil no se ofrece enviar; el aviso lleva a completarlo.
   const { user } = useAuth()
@@ -97,7 +101,9 @@ export function LinkageRequestForm({ publicId, options, availability, onSent }: 
           ? (
             <>
               {sent && <p className="institution-success" role="status">{sent}</p>}
-              <p className="notice-muted">Ya solicitaste este perfil para todas tus oportunidades activas. Registra otra oportunidad para enviar una nueva solicitud.</p>
+              <p className="notice-muted">{allFull
+                ? 'Tus oportunidades activas ya cubrieron sus lugares o ya tienen una solicitud para este perfil. Amplía los lugares de una oportunidad o registra otra para enviar una nueva solicitud.'
+                : 'Ya solicitaste este perfil para todas tus oportunidades activas. Registra otra oportunidad para enviar una nueva solicitud.'}</p>
             </>
           )
         : options.data && (

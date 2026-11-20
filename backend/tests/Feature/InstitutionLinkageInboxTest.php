@@ -44,7 +44,7 @@ function receivedStudent(Institution $institution, array $identity = []): Studen
 function receivedOpportunity(Company $company, string $title): Opportunity
 {
     $opportunity = new Opportunity([
-        'title' => $title, 'program' => 'Ingeniería en Datos', 'period_type' => 'semester', 'period_number' => 5,
+        'title' => $title, 'program' => 'Ingeniería en Datos', 'period_number' => 5,
         'vacancies' => 2, 'can_relocate' => true, 'state_code' => '28', 'municipality_code' => '28032', 'description' => 'Actividades.',
         'language_code' => 'en', 'min_level' => 3,
     ]);
@@ -147,7 +147,7 @@ describe('bandeja (CA-02, CA-03, CA-04)', function () {
             'status' => 'PENDIENTE_INSTITUCION',
             'created_at' => $linkage->created_at->toISOString(),
             'company' => ['name' => 'ManuGolfo', 'municipality' => Municipality::query()->find('28041')->name],
-            'opportunity' => ['id' => $this->opportunity->id, 'title' => 'Tableros de producción', 'program' => 'Ingeniería en Datos', 'vacancies' => 2],
+            'opportunity' => ['id' => $this->opportunity->id, 'title' => 'Tableros de producción', 'program' => 'Ingeniería en Datos', 'vacancies' => 2, 'accepted_count' => 0],
             'student' => [
                 'id' => $this->student->id, 'enrollment_number' => 'MAT-0001', 'given_names' => 'Ana Sofía', 'first_surname' => 'García',
                 'second_surname' => 'López', 'is_active' => true, 'program' => 'Ingeniería en Datos', 'period_type' => 'semester', 'period_number' => 6,
@@ -261,8 +261,8 @@ describe('detalle (CA-02, CA-05)', function () {
                 'contact_name' => 'Laura Méndez', 'contact_position' => 'Recursos Humanos', 'contact_email' => 'dual@manugolfo.mx', 'contact_phone' => '8331234567',
             ],
             'opportunity' => [
-                'id' => $this->opportunity->id, 'title' => 'Tableros de producción', 'program' => 'Ingeniería en Datos', 'vacancies' => 2,
-                'period_type' => 'semester', 'period_number' => 5, 'can_relocate' => true, 'state_code' => '28', 'municipality' => $municipality,
+                'id' => $this->opportunity->id, 'title' => 'Tableros de producción', 'program' => 'Ingeniería en Datos', 'vacancies' => 2, 'accepted_count' => 0,
+                'period_number' => 5, 'can_relocate' => true, 'state_code' => '28', 'municipality' => $municipality,
                 'description' => 'Actividades.', 'skills' => [['name' => 'Python', 'kind' => 'technical'], ['name' => 'Trabajo en equipo', 'kind' => 'soft']],
                 'language_code' => 'en', 'min_level' => 3, 'is_active' => true,
             ],
@@ -276,6 +276,8 @@ describe('detalle (CA-02, CA-05)', function () {
             'responded_at' => null,
             'response_message' => null,
             'responded_by' => null,
+            'termination' => null,
+            'student_accepted_elsewhere' => [],
         ]);
     });
 

@@ -4,8 +4,8 @@ import { isPeriodType, isStateCode } from '../students/catalogs'
 import type { PeriodType } from '../students/catalogs'
 import { isCvLanguage, isLanguageLevel, isSkillKind } from '../students/cvCatalogs'
 import type { SkillKind } from '../students/cvCatalogs'
-import { LINKAGE_STATUSES } from './api'
-import type { LinkageStatus } from './api'
+import { LINKAGE_STATUSES, parseTermination } from './api'
+import type { LinkageStatus, LinkageTermination } from './api'
 import { inboxParams } from './inboxFilters'
 import type { InboxFilters } from './inboxFilters'
 
@@ -35,7 +35,8 @@ export interface ReceivedLinkage {
   status: LinkageStatus
   created_at: string
   company: { name: string; municipality: string | null }
-  opportunity: { id: number; title: string; program: string; vacancies: number }
+  /** T-S14-11: `accepted_count`, lugares ya cubiertos por solicitudes aceptadas de cualquier institución. */
+  opportunity: { id: number; title: string; program: string; vacancies: number; accepted_count: number }
   student: ReceivedStudent
 }
 
@@ -68,7 +69,7 @@ export interface ReceivedLinkageDetail extends ReceivedLinkage {
     contact_phone: string | null
   }
   opportunity: ReceivedLinkage['opportunity'] & {
-    period_type: PeriodType
+    /** T-S14-10: solo el número, sea semestre o cuatrimestre. */
     period_number: number
     can_relocate: boolean
     state_code: string
@@ -90,6 +91,10 @@ export interface ReceivedLinkageDetail extends ReceivedLinkage {
   responded_at: string | null
   response_message: string | null
   responded_by: { name: string } | null
+  /** T-S14-13: la baja, si la hubo. */
+  termination: LinkageTermination | null
+  /** T-S14-12: otras vinculaciones aceptadas del mismo alumno. */
+  student_accepted_elsewhere: { id: number; company: string; opportunity: string; responded_at: string | null }[]
 }
 
 const STATUSES: readonly LinkageStatus[] = LINKAGE_STATUSES.map((item) => item.value)
@@ -116,12 +121,16 @@ function item(data: unknown): ReceivedLinkage {
   if (!isObject(data) || !isPositiveInt(data.id) || !STATUSES.includes(data.status as LinkageStatus) || !isText(data.created_at) ||
       !isObject(data.company) || !isText(data.company.name) || !isOptionalText(data.company.municipality) ||
       !isObject(data.opportunity) || !isPositiveInt(data.opportunity.id) || !isText(data.opportunity.title) ||
-      !isText(data.opportunity.program) || !isPositiveInt(data.opportunity.vacancies)) return invalid()
+      !isText(data.opportunity.program) || !isPositiveInt(data.opportunity.vacancies) ||
+      typeof data.opportunity.accepted_count !== 'number' || !Number.isSafeInteger(data.opportunity.accepted_count) || data.opportunity.accepted_count < 0) return invalid()
   // Solo se conservan los campos del contrato.
   return {
     id: data.id, status: data.status as LinkageStatus, created_at: data.created_at,
     company: { name: data.company.name, municipality: data.company.municipality },
-    opportunity: { id: data.opportunity.id, title: data.opportunity.title, program: data.opportunity.program, vacancies: data.opportunity.vacancies },
+    opportunity: {
+      id: data.opportunity.id, title: data.opportunity.title, program: data.opportunity.program, vacancies: data.opportunity.vacancies,
+      accepted_count: data.opportunity.accepted_count,
+    },
     student: student(data.student),
   }
 }
@@ -135,13 +144,20 @@ function listItem(data: unknown): ReceivedLinkageItem {
 
 function detail(data: unknown): ReceivedLinkageDetail {
   const base = item(data)
-  if (!isObject(data) || !isOptionalText(data.message) || !isOptionalText(data.responded_at) || !isOptionalText(data.response_message) ||
+  const termination = isObject(data) ? parseTermination(data.termination) : undefined
+  const elsewhere = isObject(data) && Array.isArray(data.student_accepted_elsewhere) && data.student_accepted_elsewhere.every((other) =>
+    isObject(other) && isPositiveInt(other.id) && isText(other.company) && isText(other.opportunity) && isOptionalText(other.responded_at))
+    ? (data.student_accepted_elsewhere as { id: number; company: string; opportunity: string; responded_at: string | null }[])
+      .map((other) => ({ id: other.id, company: other.company, opportunity: other.opportunity, responded_at: other.responded_at }))
+    : null
+  if (termination === undefined || elsewhere === null ||
+      !isObject(data) || !isOptionalText(data.message) || !isOptionalText(data.responded_at) || !isOptionalText(data.response_message) ||
       (data.responded_by !== null && (!isObject(data.responded_by) || !isText(data.responded_by.name)))) return invalid()
   const { company, opportunity, student: person } = data
   if (!isObject(company) || !isOptionalText(company.legal_name) || !isOptionalText(company.trade_name) || !isOptionalText(company.sector_code) ||
       (company.state_code !== null && !isStateCode(company.state_code)) || !isOptionalText(company.contact_name) || !isOptionalText(company.contact_position) ||
       !isOptionalText(company.contact_email) || !isOptionalText(company.contact_phone)) return invalid()
-  if (!isObject(opportunity) || !isPeriodType(opportunity.period_type) || !isPositiveInt(opportunity.period_number) ||
+  if (!isObject(opportunity) || !isPositiveInt(opportunity.period_number) ||
       typeof opportunity.can_relocate !== 'boolean' || !isStateCode(opportunity.state_code) || !isOptionalText(opportunity.municipality) ||
       !isText(opportunity.description) || !Array.isArray(opportunity.skills) ||
       !opportunity.skills.every((skill) => isObject(skill) && isText(skill.name) && isSkillKind(skill.kind)) ||
@@ -159,7 +175,7 @@ function detail(data: unknown): ReceivedLinkageDetail {
       state_code: company.state_code as string | null, contact_name: company.contact_name, contact_position: company.contact_position, contact_email: company.contact_email, contact_phone: company.contact_phone,
     },
     opportunity: {
-      ...base.opportunity, period_type: opportunity.period_type, period_number: opportunity.period_number, can_relocate: opportunity.can_relocate,
+      ...base.opportunity, period_number: opportunity.period_number, can_relocate: opportunity.can_relocate,
       state_code: opportunity.state_code, municipality: opportunity.municipality, description: opportunity.description,
       skills: (opportunity.skills as { name: string; kind: SkillKind }[]).map((skill) => ({ name: skill.name, kind: skill.kind })),
       language_code: opportunity.language_code as string | null, min_level: opportunity.min_level as number | null, is_active: opportunity.is_active,
@@ -174,6 +190,8 @@ function detail(data: unknown): ReceivedLinkageDetail {
     },
     responded_at: data.responded_at, response_message: data.response_message,
     responded_by: isObject(data.responded_by) ? { name: data.responded_by.name as string } : null,
+    termination,
+    student_accepted_elsewhere: elsewhere,
   }
 }
 
@@ -201,6 +219,14 @@ export function downloadReceivedLinkagesCsv(filters: Partial<InboxFilters>): Pro
 
 export async function getReceivedLinkage(id: string, signal?: AbortSignal): Promise<ReceivedLinkageDetail> {
   const response = await request(`/api/institution/linkage-requests/${encodeURIComponent(id)}`, { signal })
+  if (!isObject(response)) throw new ApiError(502)
+  return detail(response.data)
+}
+
+/** T-S14-13: la institución da de baja una vinculación aceptada de su alumno; devuelve el detalle actualizado. */
+export async function terminateReceivedLinkage(id: number, reason: string): Promise<ReceivedLinkageDetail> {
+  await request('/sanctum/csrf-cookie')
+  const response = await request(`/api/institution/linkage-requests/${id}/termination`, { method: 'PATCH', body: JSON.stringify({ reason }) })
   if (!isObject(response)) throw new ApiError(502)
   return detail(response.data)
 }

@@ -43,7 +43,7 @@ function messageStudent(Institution $institution): Student
 function messageOpportunity(Company $company, string $title): Opportunity
 {
     $opportunity = new Opportunity([
-        'title' => $title, 'program' => 'Ingeniería en Datos', 'period_type' => 'semester', 'period_number' => 5,
+        'title' => $title, 'program' => 'Ingeniería en Datos', 'period_number' => 5,
         'vacancies' => 2, 'can_relocate' => false, 'state_code' => '28', 'municipality_code' => '28032', 'description' => 'Actividades.',
     ]);
     $opportunity->company_id = $company->id;

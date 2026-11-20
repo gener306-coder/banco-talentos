@@ -13,6 +13,8 @@ enum LinkageRequestStatus: string
     case REJECTED = 'RECHAZADA';
     // La empresa la retiró mientras estaba pendiente (HU-S5-05 CA-03).
     case CANCELLED = 'CANCELADA';
+    // T-S14-13: una aceptada que la institución o la empresa dio de baja; libera el lugar de la oportunidad.
+    case TERMINATED = 'BAJA';
 
     /** Estados que impiden repetir la solicitud de la misma empresa, alumno y oportunidad (CA-03). */
     public const ACTIVE = [self::PENDING_INSTITUTION, self::ACCEPTED];
@@ -25,6 +27,7 @@ enum LinkageRequestStatus: string
             self::ACCEPTED => 'Aceptada',
             self::REJECTED => 'Rechazada',
             self::CANCELLED => 'Cancelada',
+            self::TERMINATED => 'Dada de baja',
         };
     }
 }

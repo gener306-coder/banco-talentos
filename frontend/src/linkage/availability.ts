@@ -1,23 +1,29 @@
+import { isFull } from '../opportunities/api'
 import type { OpportunityOption } from '../opportunities/api'
 import type { LinkageStatus } from './api'
 
 /** Estados que impiden volver a solicitar el mismo perfil para la misma oportunidad (T-S12-07). */
 export type BlockingStatus = Extract<LinkageStatus, 'PENDIENTE_INSTITUCION' | 'ACEPTADA' | 'RECHAZADA'>
 
+/** T-S14-11: además de una solicitud previa, una oportunidad que ya cubrió sus lugares no se puede elegir. */
+export type BlockingReason = BlockingStatus | 'CUPO_LLENO'
+
 /** Motivo breve junto a una oportunidad que ya no se puede elegir. */
-export const blockingLabels: Record<BlockingStatus, string> = {
+export const blockingLabels: Record<BlockingReason, string> = {
   PENDIENTE_INSTITUCION: 'Pendiente',
   ACEPTADA: 'Aceptada',
   RECHAZADA: 'Rechazada',
+  CUPO_LLENO: 'Cupo lleno',
 }
 
 // Si una oportunidad tiene varias solicitudes, manda la más fuerte: aceptada, luego pendiente, luego rechazada.
-const STRENGTH: Record<LinkageStatus, number> = { ACEPTADA: 3, PENDIENTE_INSTITUCION: 2, RECHAZADA: 1, CANCELADA: 0 }
+// T-S14-13: una dada de baja, como una cancelada, no bloquea volver a solicitar.
+const STRENGTH: Record<LinkageStatus, number> = { ACEPTADA: 3, PENDIENTE_INSTITUCION: 2, RECHAZADA: 1, CANCELADA: 0, BAJA: 0 }
 
 export interface OpportunityAvailability {
   option: OpportunityOption
-  /** null: se puede elegir (sin solicitud o solo canceladas). */
-  blockedBy: BlockingStatus | null
+  /** null: se puede elegir (sin solicitud o solo canceladas, y con lugares libres). */
+  blockedBy: BlockingReason | null
 }
 
 /**
@@ -33,7 +39,14 @@ export function linkageAvailability(options: readonly OpportunityOption[], sent:
   }
   const items: OpportunityAvailability[] = options.map((option) => {
     const status = strongest.get(option.id)
-    return { option, blockedBy: status === undefined || status === 'CANCELADA' ? null : status }
+    // Una solicitud previa explica mejor por qué no se puede elegir; sin ella, el cupo lleno.
+    const blockedBy: BlockingReason | null = status !== undefined && status !== 'CANCELADA' && status !== 'BAJA' ? status : isFull(option) ? 'CUPO_LLENO' : null
+    return { option, blockedBy }
   })
-  return { items, eligible: items.filter((item) => item.blockedBy === null).length }
+  return {
+    items,
+    eligible: items.filter((item) => item.blockedBy === null).length,
+    /** Todas bloqueadas por solicitudes ya enviadas (no por el cupo). */
+    requestedAll: items.length > 0 && items.every((item) => item.blockedBy !== null && item.blockedBy !== 'CUPO_LLENO'),
+  }
 }

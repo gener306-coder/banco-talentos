@@ -40,7 +40,7 @@ function decisionStudent(Institution $institution): Student
 function decisionOpportunity(Company $company, string $title): Opportunity
 {
     $opportunity = new Opportunity([
-        'title' => $title, 'program' => 'Ingeniería en Datos', 'period_type' => 'semester', 'period_number' => 5,
+        'title' => $title, 'program' => 'Ingeniería en Datos', 'period_number' => 5,
         'vacancies' => 2, 'can_relocate' => false, 'state_code' => '28', 'municipality_code' => '28032', 'description' => 'Actividades.',
     ]);
     $opportunity->company_id = $company->id;
@@ -227,3 +227,59 @@ describe('visibilidad (CA-04, CA-05)', function () {
             ->not->toContain('Nombre Secreto')->not->toContain('Apellido Secreto')->not->toContain('"student_id"')->not->toContain('location');
     });
 });
+
+describe('cupo de la oportunidad (T-S14-11)', function () {
+    it('accepts until the places are covered; the next acceptance gets 422 without changes and rejecting is still allowed', function () {
+        $this->loginWithCookies($this->account)->assertOk();
+        // La oportunidad tiene 2 lugares.
+        $second = decisionLinkage($this->company, $this->opportunity, decisionStudent($this->institution));
+        $third = decisionLinkage($this->company, $this->opportunity, decisionStudent($this->institution));
+
+        decide($this, $this->linkage, ['status' => 'ACEPTADA'])->assertOk()->assertJsonPath('data.opportunity.accepted_count', 1);
+        decide($this, $second, ['status' => 'ACEPTADA'])->assertOk()->assertJsonPath('data.opportunity.accepted_count', 2);
+
+        decide($this, $third, ['status' => 'ACEPTADA'])->assertUnprocessable()
+            ->assertJsonPath('errors.status.0', 'La oportunidad ya cubrió sus 2 lugares. Puedes rechazar la solicitud.');
+        expect($third->refresh()->status->value)->toBe('PENDIENTE_INSTITUCION')->and($third->responded_at)->toBeNull();
+
+        decide($this, $third, ['status' => 'RECHAZADA'])->assertOk()->assertJsonPath('data.status', 'RECHAZADA');
+        expect(LinkageRequest::query()->where('status', 'ACEPTADA')->count())->toBe(2);
+    });
+
+    it('counts the acceptances of every institution in the same opportunity', function () {
+        $other = Institution::factory()->create();
+        $otherAccount = User::factory()->forInstitution($other)->create();
+        decisionLinkage($this->company, $this->opportunity, decisionStudent($other), 'ACEPTADA');
+        decisionLinkage($this->company, $this->opportunity, decisionStudent($other), 'ACEPTADA');
+
+        $this->loginWithCookies($this->account)->assertOk();
+        decide($this, $this->linkage, ['status' => 'ACEPTADA'])->assertUnprocessable()->assertJsonValidationErrors('status');
+        expect($this->linkage->refresh()->status->value)->toBe('PENDIENTE_INSTITUCION')
+            ->and($otherAccount->institution_id)->not->toBe($this->institution->id);
+    });
+
+    it('locks the opportunity (FOR UPDATE) before the request and before counting, so simultaneous acceptances are serialized', function () {
+        $this->loginWithCookies($this->account)->assertOk();
+        $queries = [];
+        DB::listen(function ($query) use (&$queries): void { $queries[] = strtolower($query->sql); });
+
+        decide($this, $this->linkage, ['status' => 'ACEPTADA'])->assertOk();
+
+        $position = fn (callable $match): int|false => array_search(true, array_map($match, $queries), true);
+        $lockOpportunity = $position(fn (string $sql): bool => str_contains($sql, 'from "opportunities"') && str_contains($sql, 'for update'));
+        $lockRequest = $position(fn (string $sql): bool => str_contains($sql, 'from "linkage_requests"') && str_contains($sql, 'for update'));
+        $count = $position(fn (string $sql): bool => str_contains($sql, 'count(*)') && str_contains($sql, '"linkage_requests"'));
+        expect($lockOpportunity)->not->toBeFalse()->and($lockRequest)->not->toBeFalse()->and($count)->not->toBeFalse()
+            ->and($lockOpportunity)->toBeLessThan($lockRequest)->and($lockRequest)->toBeLessThan($count);
+    });
+
+    it('rejecting never locks the opportunity', function () {
+        $this->loginWithCookies($this->account)->assertOk();
+        $queries = [];
+        DB::listen(function ($query) use (&$queries): void { $queries[] = strtolower($query->sql); });
+
+        decide($this, $this->linkage, ['status' => 'RECHAZADA'])->assertOk();
+        expect(collect($queries)->contains(fn (string $sql): bool => str_contains($sql, 'from "opportunities"') && str_contains($sql, 'for update')))->toBeFalse();
+    });
+});
+

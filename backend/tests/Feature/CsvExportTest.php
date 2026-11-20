@@ -37,7 +37,7 @@ function csvStudent(Institution $institution, array $identity = [], ?string $pro
 function csvLinkage(Company $company, Student $student, string $status = 'PENDIENTE_INSTITUCION', string $title = 'Tableros de producción'): LinkageRequest
 {
     $opportunity = new Opportunity([
-        'title' => $title, 'program' => 'Ingeniería Mecatrónica', 'period_type' => 'semester', 'period_number' => 5,
+        'title' => $title, 'program' => 'Ingeniería Mecatrónica', 'period_number' => 5,
         'vacancies' => 2, 'can_relocate' => false, 'state_code' => '28', 'municipality_code' => '28032', 'description' => 'Actividades.',
     ]);
     $opportunity->company_id = $company->id;

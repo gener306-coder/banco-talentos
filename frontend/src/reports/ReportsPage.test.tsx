@@ -10,7 +10,7 @@ const admin = { id: 1, name: 'Administración', email: 'admin@bt.test', role: 'A
 const secretary = { id: 2, name: 'Analista', email: 'analista@economia.test', role: 'SECRETARY', institution: null, company: null }
 const report = {
   generated_at: '2026-10-28T18:00:00Z',
-  linkage_summary: { total: 8, by_status: { PENDIENTE_INSTITUCION: 2, ACEPTADA: 4, RECHAZADA: 1, CANCELADA: 1 } },
+  linkage_summary: { total: 8, by_status: { PENDIENTE_INSTITUCION: 2, ACEPTADA: 4, RECHAZADA: 1, CANCELADA: 1, BAJA: 0 } },
   by_institution: [
     { id: 4, name: 'Bachillerato Cerrado', is_active: false, active_students: 3, searchable_profiles: 0, received_requests: 0, accepted_requests: 0 },
     { id: 2, name: 'Universidad Tecnológica', is_active: true, active_students: 1250, searchable_profiles: 40, received_requests: 8, accepted_requests: 4 },
@@ -85,7 +85,7 @@ describe('reporte ejecutivo HU-S7-01', () => {
 
   it('muestra 0% sin solicitudes y avisa de listas vacías', async () => {
     apiMock.mockResolvedValueOnce(Response.json({ data: {
-      ...report, linkage_summary: { total: 0, by_status: { PENDIENTE_INSTITUCION: 0, ACEPTADA: 0, RECHAZADA: 0, CANCELADA: 0 } },
+      ...report, linkage_summary: { total: 0, by_status: { PENDIENTE_INSTITUCION: 0, ACEPTADA: 0, RECHAZADA: 0, CANCELADA: 0, BAJA: 0 } },
       by_institution: [], by_sector: [],
     } }))
     renderApp()

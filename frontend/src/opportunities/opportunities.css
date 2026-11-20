@@ -10,6 +10,10 @@
 .opportunity-skills .chip { padding: 0.15rem 0.65rem; }
 .opportunity-details { max-width: var(--content-readable); }
 .opportunity-description { white-space: pre-line; }
+/* T-S14-11: lugares cubiertos y la etiqueta de cupo lleno, con los tokens de estado inactivo. */
+.places-status { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 0.25rem 0.5rem; }
+.places-full { display: inline-block; padding: 0.1rem 0.55rem; border-radius: 999px; background: var(--status-off-surface);
+  color: var(--status-off-text); font-size: var(--type-xs); font-weight: 700; white-space: nowrap; }
 .opportunity-status { max-width: var(--content-readable); margin-top: 1.75rem; padding-top: 1.25rem; border-top: 1px solid var(--border); }
 .opportunity-status h3 { margin: 0 0 0.4rem; }
 }

@@ -28,7 +28,7 @@ const sent = (id: number, title: string, unread: number) => ({
 const received = (id: number, title: string, unread: number) => ({
   id, status: 'ACEPTADA', created_at: '2026-10-28T10:00:00Z',
   company: { name: 'ManuGolfo', municipality: 'Victoria' },
-  opportunity: { id, title, program: 'Ingeniería en Datos', vacancies: 2 },
+  opportunity: { id, title, program: 'Ingeniería en Datos', vacancies: 2, accepted_count: 0 },
   student: { id: 7, enrollment_number: 'MAT-1', given_names: 'Ana', first_surname: `García ${title}`, second_surname: null, is_active: true, program: null, period_type: null, period_number: null },
   unread_count: unread,
 })

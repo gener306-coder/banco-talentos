@@ -14,11 +14,11 @@ const companyUser = { id: 9, name: 'Reclutadora', email: 'rh@manugolfo.test', ro
 const defaults = { state_code: '28', municipality_code: '28032', municipality: 'Reynosa' }
 const summary = {
   id: 12, title: 'Automatización de línea', program: 'Ingeniería Mecatrónica', state_code: '28', municipality_code: '28032',
-  municipality: 'Reynosa', vacancies: 3, is_active: true, created_at: '2026-10-27T10:00:00Z',
+  municipality: 'Reynosa', vacancies: 3, accepted_count: 0, is_active: true, created_at: '2026-10-27T10:00:00Z',
   skills: [{ name: 'PLC', kind: 'technical' }, { name: 'Trabajo en equipo', kind: 'soft' }],
 }
 const opportunity = {
-  ...summary, period_type: 'semester', period_number: 5, can_relocate: false,
+  ...summary, period_number: 5, can_relocate: false,
   description: 'Programación de PLC y mantenimiento preventivo.', language_code: 'en', min_level: 4,
   created_by: { id: 9, name: 'Reclutadora' }, updated_at: '2026-10-27T10:00:00Z',
 }
@@ -73,7 +73,6 @@ async function fillRequired(view: HTMLElement) {
   fireEvent.change(within(view).getByLabelText('Actividades y objetivos'), { target: { value: 'Programación de PLC y mantenimiento preventivo.' } })
   fireEvent.change(within(view).getByLabelText('Lugares disponibles'), { target: { value: '3' } })
   fireEvent.change(within(view).getByLabelText('Carrera o programa requerido'), { target: { value: 'Ingeniería Mecatrónica' } })
-  fireEvent.change(within(view).getByLabelText('Tipo de periodo'), { target: { value: 'semester' } })
   fireEvent.change(within(view).getByLabelText('Periodo mínimo'), { target: { value: '5' } })
   fireEvent.click(within(within(view).getByRole('group', { name: '¿Requiere que el alumno se reubique?' })).getByLabelText('No'))
 }
@@ -98,7 +97,7 @@ describe('oportunidades duales HU-S5-02', () => {
     const row = within(table).getByRole('row', { name: /Automatización de línea/ })
     expect(within(row).getByText(/Ingeniería Mecatrónica/)).toBeInTheDocument()
     expect(within(row).getByText('Reynosa')).toBeInTheDocument()
-    expect(within(row).getByText('3')).toBeInTheDocument()
+    expect(within(row).getByText('0 de 3 lugares cubiertos')).toBeInTheDocument()
     expect(within(row).getByText('ACTIVA')).toBeInTheDocument()
     expect(within(within(row).getByRole('list', { name: 'Habilidades de Automatización de línea' })).getAllByRole('listitem').map((item) => item.textContent)).toEqual(['PLC', 'Trabajo en equipo'])
     expect(within(table).getByText('INACTIVA')).toBeInTheDocument()
@@ -138,7 +137,7 @@ describe('oportunidades duales HU-S5-02', () => {
     expect(await screen.findByText('Oportunidad registrada correctamente.')).toHaveAttribute('role', 'status')
     expect(screen.getByLabelText('Ruta actual')).toHaveTextContent('/opportunities/12')
     expect(sent('POST')).toEqual({
-      title: 'Automatización de línea', program: 'Ingeniería Mecatrónica', period_type: 'semester', period_number: 5,
+      title: 'Automatización de línea', program: 'Ingeniería Mecatrónica', period_number: 5,
       vacancies: 3, can_relocate: false, state_code: '28', municipality_code: '28032',
       description: 'Programación de PLC y mantenimiento preventivo.', skills: [{ name: 'PLC', kind: 'technical' }],
       language_code: 'en', min_level: 4,
@@ -181,6 +180,27 @@ describe('oportunidades duales HU-S5-02', () => {
     expect(writes('POST')).toHaveLength(0)
   })
 
+  it('pide el periodo mínimo solo como número, válido para semestre o cuatrimestre (T-S14-10)', async () => {
+    renderApp('/opportunities/new')
+    const view = await form()
+    expect(within(view).queryByLabelText('Tipo de periodo')).not.toBeInTheDocument()
+    const period = within(view).getByLabelText('Periodo mínimo')
+    expect(period).toHaveAccessibleDescription('Semestre o cuatrimestre, según el plan de estudios del alumno.')
+    expect(within(period).getByRole('option', { name: '6.º o posterior' })).toBeInTheDocument()
+  })
+
+  it('muestra los lugares cubiertos y el cupo lleno, y no deja bajar los lugares por debajo de ellos (T-S14-11)', async () => {
+    apiMock.mockResolvedValueOnce(Response.json({ data: { ...opportunity, vacancies: 3, accepted_count: 3 } }))
+    renderApp('/opportunities/12/edit')
+    const view = await screen.findByRole('region', { name: /Editar oportunidad/ })
+    const places = await within(view).findByLabelText('Lugares disponibles')
+    expect(places).toHaveAccessibleDescription('Ya hay 3 lugares cubiertos: los lugares no pueden ser menos.')
+    fireEvent.change(places, { target: { value: '2' } })
+    fireEvent.click(within(view).getByRole('button', { name: /Guardar/ }))
+    expect(await within(view).findByText('Ya hay 3 lugares cubiertos: los lugares no pueden ser menos.', { selector: '.field-error' })).toBeInTheDocument()
+    expect(writes('PUT')).toHaveLength(0)
+  })
+
   it('muestra los errores del servidor junto a cada campo', async () => {
     apiMock.mockResolvedValueOnce(Response.json({ message: 'Invalid', errors: {
       municipality_code: ['El municipio no pertenece al estado seleccionado.'], 'skills.0.name': ['Los datos de contacto no se permiten.'],
@@ -201,7 +221,7 @@ describe('oportunidades duales HU-S5-02', () => {
       .mockResolvedValueOnce(Response.json({ data: updated }))
     renderApp('/opportunities/12')
     expect(await screen.findByText('Automatización de línea')).toBeInTheDocument()
-    expect(screen.getByText('5.º semestre o posterior')).toBeInTheDocument()
+    expect(screen.getByText('5.º o posterior, semestre o cuatrimestre')).toBeInTheDocument()
     expect(screen.getByText('Inglés, B2 · Intermedio alto o superior')).toBeInTheDocument()
     expect(screen.getByText('Reynosa, Tamaulipas')).toBeInTheDocument()
     expect(within(screen.getByRole('list', { name: 'Habilidades requeridas' })).getByText('PLC')).toBeInTheDocument()

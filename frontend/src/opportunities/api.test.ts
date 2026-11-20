@@ -4,8 +4,8 @@ import { getOpportunity, getOpportunityDefaults, listOpportunities, setOpportuni
 const fetchMock = vi.fn<typeof fetch>()
 const base = {
   id: 12, title: 'Automatización', program: 'Mecatrónica', state_code: '28', municipality_code: '28032', municipality: 'Reynosa',
-  vacancies: 3, is_active: true, created_at: '2026-10-27T10:00:00Z', skills: [{ name: 'PLC', kind: 'technical' }],
-  period_type: 'semester', period_number: 5, can_relocate: false, description: 'Actividades', language_code: 'en', min_level: 4,
+  vacancies: 3, accepted_count: 0, is_active: true, created_at: '2026-10-27T10:00:00Z', skills: [{ name: 'PLC', kind: 'technical' }],
+  period_number: 5, can_relocate: false, description: 'Actividades', language_code: 'en', min_level: 4,
   created_by: { id: 9, name: 'Reclutadora' }, updated_at: '2026-10-27T10:00:00Z',
 }
 
@@ -34,7 +34,8 @@ describe('cliente de oportunidades HU-S5-02', () => {
   it.each([
     ['idioma sin nivel', { min_level: null }],
     ['nivel fuera de catálogo', { min_level: 9 }],
-    ['periodo desconocido', { period_type: 'year' }],
+    ['periodo mínimo en cero', { period_number: 0 }],
+    ['lugares cubiertos negativos (T-S14-11)', { accepted_count: -1 }],
     ['habilidad sin tipo', { skills: [{ name: 'PLC' }] }],
     ['municipio mal formado', { municipality_code: '2803' }],
     ['vacantes en cero', { vacancies: 0 }],

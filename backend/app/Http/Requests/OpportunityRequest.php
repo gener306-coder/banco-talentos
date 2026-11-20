@@ -2,7 +2,6 @@
 
 namespace App\Http\Requests;
 
-use App\Enums\AcademicPeriodType;
 use App\Enums\CvLanguage;
 use App\Enums\LanguageLevel;
 use App\Enums\MexicanState;
@@ -34,7 +33,7 @@ class OpportunityRequest extends FormRequest
         return [
             'title' => ['required', 'string', 'max:150', new NoContactInformation(ContactInformation::OPPORTUNITY_MESSAGE)],
             'program' => ['required', 'string', 'max:150', new NoContactInformation(ContactInformation::OPPORTUNITY_MESSAGE)],
-            'period_type' => ['required', 'string', Rule::enum(AcademicPeriodType::class)],
+            // T-S14-10: solo el número; se lee contra el periodo del alumno, sea semestre o cuatrimestre.
             'period_number' => ['required', 'integer', 'between:1,15'],
             'vacancies' => ['required', 'integer', 'between:1,50'],
             'can_relocate' => ['required', 'boolean'],
@@ -66,9 +65,6 @@ class OpportunityRequest extends FormRequest
             'program.required' => 'La carrera o programa requerido es obligatorio.',
             'program.string' => 'La carrera o programa requerido no es válido.',
             'program.max' => 'La carrera o programa requerido no debe superar 150 caracteres.',
-            'period_type.required' => 'Indica si el periodo mínimo es semestre o cuatrimestre.',
-            'period_type.string' => 'El tipo de periodo no es válido.',
-            'period_type.enum' => 'El tipo de periodo no es válido.',
             'period_number.required' => 'El periodo mínimo es obligatorio.',
             'period_number.integer' => 'El periodo mínimo debe ser un número del 1 al 15.',
             'period_number.between' => 'El periodo mínimo debe ser un número del 1 al 15.',
