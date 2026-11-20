@@ -96,7 +96,7 @@ test('HU-S4-05, HU-S5-04, HU-S5-05, HU-S6-01, HU-S6-02, HU-S6-03, HU-S13-02, HU-
       const institution = await receiving.newPage()
       await institution.goto('/')
       // HU-S6-03 CA-02: el inicio avisa de las solicitudes pendientes y enlaza a la bandeja.
-      await expect(institution.getByRole('region', { name: 'Indicadores' })).toContainText(/solicitud(es)? de vinculación pendientes?/)
+      await expect(institution.getByRole('region', { name: 'Indicadores' })).toContainText(/solicitud(es)? esperan? tu respuesta/)
       await institution.getByRole('link', { name: 'Revisar solicitudes' }).click()
       const pending = institution.waitForResponse((response) => response.url().includes('/api/institution/linkage-requests?') && response.url().includes('status=PENDIENTE_INSTITUCION'))
       await institution.getByLabel('Estado').selectOption('PENDIENTE_INSTITUCION')
@@ -213,6 +213,14 @@ test('HU-S4-05, HU-S5-04, HU-S5-05, HU-S6-01, HU-S6-02, HU-S6-03, HU-S13-02, HU-
       await answering.close()
     }
 
+    // T-S14-17: el mensaje de la institución aparece en la barra de mensajes de la empresa y lleva a su conversación.
+    await company.goto('/')
+    const messages = company.getByRole('button', { name: /^Mensajes sin leer: \d+ conversaci/ })
+    await expect(messages).toBeVisible({ timeout: 15000 })
+    await messages.click()
+    const unreadPanel = company.getByRole('region', { name: 'Mensajes sin leer' })
+    await expect(unreadPanel.getByRole('link', { name: new RegExp(opportunityTitle) })).toBeVisible()
+
     // CA-04: la empresa ve la respuesta y ya no puede cancelarla.
     await company.goto('/linkage-requests')
     // Se espera la respuesta filtrada: antes de que llegue, la tabla aún muestra la solicitud cancelada con el mismo título.
@@ -248,6 +256,8 @@ test('HU-S4-05, HU-S5-04, HU-S5-05, HU-S6-01, HU-S6-02, HU-S6-03, HU-S13-02, HU-
     const companyLog = companyChat.getByRole('log', { name: 'Mensajes' })
     await expect(companyLog.getByRole('listitem').first()).toContainText('Coordinemos la entrevista con el área dual.')
     await expect(companyLog).toContainText('¿Puede presentarse el lunes?')
+    // T-S14-17: al leer la conversación, la barra ya no la cuenta.
+    await expect(company.getByRole('button', { name: 'Mensajes, sin pendientes' })).toBeVisible({ timeout: 15000 })
     await companyChat.getByLabel('Mensaje para la institución').fill('Sí, el lunes a las 9:00.')
     await companyChat.getByRole('button', { name: 'Enviar mensaje' }).click()
     await expect(companyLog).toContainText('Sí, el lunes a las 9:00.')

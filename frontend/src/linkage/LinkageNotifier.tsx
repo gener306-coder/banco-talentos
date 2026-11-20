@@ -57,7 +57,9 @@ export function LinkageNotifier() {
     for (const item of summary.items) {
       if (item.last_message_id <= (previous.get(item.id) ?? 0)) continue
       const notice = conversationNotice(side, item)
-      if (!document.hidden && where.current === notice.url) continue
+      // T-S14-17: con la pestaña a la vista avisa la Snackbar de la barra de mensajes; el del navegador es para cuando
+      // la pestaña está oculta.
+      if (!document.hidden) continue
       void showConversationNotice(notice, (url) => navigate(url)).catch(() => { /* Sin aviso; queda el contador. */ })
     }
   }, [summary, side, navigate])

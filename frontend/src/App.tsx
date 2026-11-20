@@ -40,6 +40,8 @@ import { GALLERY_VIEWERS } from './videos/galleryApi'
 import { InstitutionVideosPage } from './videos/InstitutionVideosPage'
 import { PromotionalVideosPage } from './videos/PromotionalVideosPage'
 import { AccountMenu } from './ui/AccountMenu'
+import { MessagesMenu } from './ui/MessagesMenu'
+import { SnackbarProvider } from './ui/SnackbarProvider'
 import { AccountPage } from './account/AccountPage'
 import { WelcomePage } from './onboarding/WelcomePage'
 import { LinkageNotifier } from './linkage/LinkageNotifier'
@@ -238,6 +240,8 @@ function App() {
           {/* Coemblema a la derecha en pantallas anchas. */}
           {!narrow && <span className="app-bar-partner">{partner}</span>}
           {/* Menú de cuenta: identidad y «Cerrar sesión» en todas las vistas con sesión. */}
+          {/* T-S14-17: mensajes sin leer de empresa e institución, junto al menú de cuenta. */}
+          {withSession && <MessagesMenu />}
           {withSession && <AccountMenu />}
         </div>
       </header>
@@ -255,7 +259,8 @@ function App() {
   // T-S13-08: una sola consulta del resumen de mensajes sin leer alimenta el contador del menú, el título de la pestaña
   // y los avisos del navegador.
   return withSession
-    ? <AuthProvider><UnreadSummaryProvider>{shell}<LinkageNotifier /></UnreadSummaryProvider></AuthProvider>
+    // T-S14-17: aviso breve global (mensajes nuevos), siempre montado para no cambiar la estructura del árbol.
+    ? <AuthProvider><UnreadSummaryProvider><SnackbarProvider>{shell}<LinkageNotifier /></SnackbarProvider></UnreadSummaryProvider></AuthProvider>
     : shell
 }
 

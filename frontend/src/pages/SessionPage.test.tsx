@@ -185,33 +185,32 @@ describe('indicadores del inicio (HU-S5-01 CA-07)', () => {
   })
 
   it.each([
-    [1, '1 solicitud de vinculación pendiente'],
-    [3, '3 solicitudes de vinculación pendientes'],
+    [1, '1 solicitud espera tu respuesta'],
+    [3, '3 solicitudes esperan tu respuesta'],
   ])('avisa a la institución de %i solicitudes pendientes y enlaza a su bandeja (HU-S6-03 CA-02)', async (pending, text) => {
     user = { ...base, role: 'INSTITUTION', institution: { id: 7, name: 'Instituto Dual' } }
     dashboard = () => Response.json({ data: { role: 'INSTITUTION', metrics: { ...zeroMetrics.INSTITUTION, pending_linkage_requests: pending } } })
     renderApp()
     const region = await loadedIndicators()
     const tasks = within(region).getByRole('list', { name: 'Por atender' })
-    const task = within(tasks).getByText(text).closest('li')!
-    expect(task).toHaveTextContent('Las empresas esperan tu respuesta para continuar.')
-    const review = within(task).getByRole('link', { name: 'Revisar solicitudes' })
+    // T-S14-16: todo el aviso es el enlace; se anuncia por su acción y el conteo es su descripción.
+    const review = within(tasks).getByRole('link', { name: 'Revisar solicitudes' })
+    expect(review).toHaveAccessibleDescription(text)
     expect(review).toHaveAttribute('href', '/institution/linkage-requests?status=PENDIENTE_INSTITUCION')
-    expect(review).toHaveClass('home-task-action')
+    expect(review).toHaveClass('home-task', 'home-task-linkage')
   })
 
   it.each([
-    [1, '1 alumno con datos faltantes'],
-    [14, '14 alumnos con datos faltantes'],
+    [1, '1 alumno con datos por completar'],
+    [14, '14 alumnos con datos por completar'],
   ])('avisa a la institución de %i alumnos con datos faltantes y enlaza al padrón', async (missing, text) => {
     user = { ...base, role: 'INSTITUTION', institution: { id: 7, name: 'Instituto Dual' } }
     dashboard = () => Response.json({ data: { role: 'INSTITUTION', metrics: { ...zeroMetrics.INSTITUTION, active_students: 20, searchable_students: 5, missing_data_students: missing } } })
     renderApp()
     const region = await loadedIndicators()
     const review = within(region).getByRole('link', { name: 'Revisar el padrón' })
-    const task = review.closest('li')!
-    expect(within(task).getByText(text)).toHaveClass('home-task-title')
-    expect(task).toHaveTextContent('Completa su expediente y su seguro para que puedan participar.')
+    expect(within(review).getByText(text)).toHaveClass('home-task-title')
+    expect(review).toHaveAccessibleDescription(text)
     expect(review).toHaveAttribute('href', '/students?data=missing&status=active')
   })
 

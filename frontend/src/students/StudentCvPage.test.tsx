@@ -53,7 +53,10 @@ beforeEach(() => {
     if (url === '/api/students/3/cv' && !options?.method) return Response.json({ data: cv })
     return writeMock(path, options)
   })
-  vi.stubGlobal('fetch', fetchMock)
+  // T-S14-17: el menú de mensajes consulta el resumen en todas las vistas de la institución; se responde aparte para que
+  // no consuma las respuestas en orden de fetchMock.
+  vi.stubGlobal('fetch', (path: RequestInfo | URL, options?: RequestInit) => String(path).endsWith('/unread-summary')
+    ? Promise.resolve(Response.json({ data: { conversations: 0, items: [] } })) : fetchMock(path, options))
   document.cookie = 'XSRF-TOKEN=; Max-Age=0; Path=/'
 })
 afterEach(() => vi.unstubAllGlobals())

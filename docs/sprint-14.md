@@ -564,3 +564,41 @@ El responsable pidió auditar la lógica y el flujo de las oportunidades duales.
   - E2E `institution-profile.spec.ts` (nueva): la institución corrige su nombre y su CCT y Administración los ve en su listado. Las specs que dan de alta instituciones usan `randomCct()` con el formato SEP.
 
   Revisión visual de la tarjeta a 1440 y 390 px, en claro y oscuro, sin desborde horizontal. Verificación: Pest completo 1657 de 1657 y E2E 47 de 47.
+
+### T-S14-16 — Avisos del inicio de la institución, en una línea
+
+**Estado:** Implementada (20 de noviembre de 2026) en `feat/s14-alerts-messages`; publicada en `main`. Solicitada por el responsable: los avisos de la institución ocupaban mucho espacio, como antes el del perfil de la empresa.
+
+- **Antes:** «3 solicitudes de vinculación pendientes» y «9 alumnos con datos faltantes» eran dos tarjetas grandes, con borde lateral, descripción y enlace, que ocupaban casi un tercio de la pantalla.
+- **Ahora** (`HomeTask`): cada aviso es una línea discreta, como el recordatorio del perfil (T-S14-01).
+  - Pastilla de 44 px toda tocable, con el ícono en una chapa pequeña, el conteo («129 solicitudes esperan tu respuesta», «1,337 alumnos con datos por completar») y «Revisar ›» al final.
+  - Uno junto al otro en pantallas anchas y apilados en el celular. El tono de marca es para las solicitudes y el de estado inactivo para los datos faltantes.
+  - El enlace se anuncia por su acción («Revisar solicitudes», «Revisar el padrón») y el conteo es su descripción accesible. El detalle vive en la bandeja y en el padrón.
+- **Pruebas:** Vitest de `SessionPage.test.tsx` (textos, descripción accesible, destino y clases); E2E de `home-dashboard.spec.ts` y `talent-search.spec.ts` con los textos nuevos.
+
+### T-S14-17 — Mensajes sin leer en la barra superior, en tiempo casi real
+
+**Estado:** Implementada (20 de noviembre de 2026) en `feat/s14-alerts-messages`; publicada en `main`. Solicitada por el responsable para empresa e institución.
+
+- **Decisión del responsable:** consulta frecuente por ahora, con la opción de usar WebSockets en producción más adelante.
+- **Transporte** (`linkage/unreadTransport.ts`, nuevo):
+  - el resumen (`…/unread-summary`, sin cambios de contrato) se consulta cada 10 s con la pestaña visible y cada 60 s oculta, para los avisos del navegador;
+  - también al instante al volver a la pestaña o a la ventana, al marcar una conversación como leída y al navegar;
+  - las pestañas abiertas comparten el resultado por `BroadcastChannel`.
+  - `UnreadSummaryProvider` usa este transporte. Es el único punto que sabe cómo llega el resumen: para WebSockets (Laravel Reverb, sin Redis en una instancia), otro transporte con la misma firma escucharía un evento de difusión en el canal privado de la organización y llamaría a `refresh()`, sin cambiar la interfaz.
+- **Barra superior** (`ui/MessagesMenu.tsx`, nuevo), junto al menú de cuenta, solo para empresa e institución:
+  - ícono de mensajes de 44 px con la insignia del número de conversaciones sin leer (rebota al cambiar; «99+»). Nombre accesible «Mensajes sin leer: 3 conversaciones» o «Mensajes, sin pendientes»;
+  - el panel, con el lenguaje del menú de cuenta, lista cada conversación (la otra organización, la oportunidad y cuántos mensajes) con enlace a su chat, más «Ver todas las solicitudes». Sin pendientes: «Estás al día»;
+  - se cierra con Esc, con un clic fuera o al navegar.
+- **Aviso breve al llegar un mensaje:**
+  - Snackbar global (`ui/SnackbarProvider.tsx`; `Snackbar` admite ahora ícono y acción) con «Mensaje nuevo de …» y «Ver», que abre la conversación; con varias conversaciones, «Mensajes nuevos en N conversaciones» y «Ver» abre el panel;
+  - lo que ya estaba sin leer al entrar no se avisa, ni la conversación abierta y a la vista;
+  - con la pestaña a la vista avisa la Snackbar; el aviso del navegador (`LinkageNotifier`) queda para cuando la pestaña está oculta, así no se duplican.
+- **Pruebas:**
+  - Vitest:
+    - `unreadTransport.test.ts` (nuevo): 10 s, 60 s, consulta al volver, `refresh` y `stop`, y sincronización entre pestañas;
+    - `MessagesMenu.test.tsx` (nuevo): insignia, panel con enlaces, estado vacío, Esc, sin el menú para ADMIN ni SECRETARY, aviso con «Ver», sin aviso en la línea base ni en la conversación abierta;
+    - ajustadas: `UnreadMessages` (10 s a la vista), `LinkageNotifier` (sin aviso del navegador con la pestaña visible), `App.test` (dos botones en la barra) y las pruebas de alumnos, que responden el resumen aparte.
+  - E2E `talent-search.spec.ts`: el mensaje de la institución aparece en la barra de la empresa y su panel lleva a la conversación; al leerla, la barra queda sin pendientes.
+- **Revisión visual** en la simulación (con el resumen simulado para ver la lista y el aviso) a 1440 y 390 px, en claro y oscuro, sin desborde horizontal.
+- **Verificación:** Vitest completo, salvo las descargas conocidas; E2E 47 de 47. Sin cambios en el backend.

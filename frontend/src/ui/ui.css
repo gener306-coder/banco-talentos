@@ -32,7 +32,7 @@ h4 { font-weight: 600; }
 .app-bar h1 { margin: 0.1rem 0 0; font-size: var(--type-xl); color: var(--accent); white-space: nowrap; }
 /* T-S12-08: el título no cede ancho; sin coemblema en la barra (móvil), el menú de cuenta se alinea a la derecha. */
 .app-bar-title { flex: none; }
-.app-bar-title + .account-menu { margin-left: auto; }
+.app-bar-title + .account-menu, .app-bar-title + .messages-menu { margin-left: auto; }
 .app-bar .eyebrow { margin: 0; color: var(--text-strong); }
 .app-bar-partner { display: flex; margin-left: auto; padding-left: 0.9rem; border-left: 1px solid var(--border); flex-shrink: 1; min-width: 0; }
 .app-bar-partner img { min-width: 0; max-width: 100%; object-fit: contain; }
@@ -491,25 +491,31 @@ textarea[aria-invalid='true'] { border-color: var(--danger-border); }
 .home-stat dd[data-count]::before { content: attr(data-count); content: attr(data-count) / ''; position: absolute; inset: 0; color: var(--accent); }
 /* Solicitudes de vinculación por responder (HU-S6-03 CA-02): aviso destacado con el acento de la marca. */
 /* Pendientes del inicio (T-S8-10): tarjetas de dos columnas con la acción junto a su motivo; toda la tarjeta es clicable. */
-.home-tasks { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(24rem, 100%), 1fr)); gap: 0.9rem; margin: 0 0 1.25rem; padding: 0; list-style: none; }
+/*
+ * T-S14-16: avisos de lo que hay por atender como líneas discretas, con el lenguaje del recordatorio del perfil
+ * (T-S14-01): una pastilla de 44 px toda tocable, el ícono en una chapa pequeña, el conteo y «Revisar ›» al final.
+ * Uno junto al otro en pantallas anchas; apilados en el celular.
+ */
+.home-tasks { display: flex; flex-wrap: wrap; gap: 0.6rem; margin: 0 0 1.25rem; padding: 0; list-style: none; }
+.home-tasks > li { flex: 0 1 auto; min-width: 0; }
 .home-task { --task-color: var(--status-off-text); --task-surface: var(--status-off-surface);
-  position: relative; display: flex; align-items: flex-start; gap: 0.85rem; height: 100%; padding: 1rem 1.1rem;
-  border: 1px solid color-mix(in srgb, var(--task-color) 22%, transparent); border-left: 4px solid var(--task-color); border-radius: 14px;
-  background: var(--task-surface); transition: box-shadow 150ms ease-out, border-color 150ms ease-out; }
+  display: flex; align-items: center; gap: 0.65rem; min-height: 2.75rem; max-width: 100%; padding: 0.4rem 0.75rem 0.4rem 0.45rem;
+  border: 1px solid color-mix(in srgb, var(--task-color) 20%, var(--border)); border-radius: 999px; background: var(--surface);
+  color: var(--text); font-size: var(--type-sm); text-decoration: none;
+  transition: border-color 160ms ease, background-color 160ms ease; }
 .home-task-linkage { --task-color: var(--accent); --task-surface: var(--tint); }
-.home-task-icon { display: grid; place-items: center; flex-shrink: 0; width: 2.4rem; height: 2.4rem; border-radius: 10px;
-  background: var(--surface); color: var(--task-color); font-size: var(--type-lg); }
-.home-task-text { display: grid; gap: 0.2rem; min-width: 0; }
-.home-task-text p { margin: 0; }
-.home-task-title { font-weight: 600; line-height: 1.3; color: var(--text); }
-.home-task-description { font-size: var(--type-sm); line-height: 1.45; color: var(--text-muted); }
-.home-task-action { display: inline-flex; align-items: center; gap: 0.2rem; justify-self: start; margin-top: 0.45rem;
-  color: var(--task-color); font-weight: 700; text-decoration: none; }
-.home-task-action .icon { transition: transform 150ms ease-out; }
-/* El área del enlace cubre la tarjeta: un objetivo grande sin cambiar lo que anuncia el lector de pantalla. */
-.home-task-action::after { content: ''; position: absolute; inset: 0; border-radius: inherit; }
-.home-task-action:focus-visible { outline: none; }
-.home-task-action:focus-visible::after { outline: 3px solid var(--focus-ring); outline-offset: 2px; }
+.home-task-icon { display: grid; place-items: center; flex: none; width: 1.9rem; height: 1.9rem; border-radius: 50%;
+  background: var(--task-surface); color: var(--task-color); }
+.home-task-icon .icon { width: 1rem; height: 1rem; }
+.home-task-title { min-width: 0; font-weight: 600; line-height: 1.3; }
+.home-task-action { display: inline-flex; align-items: center; gap: 0.1rem; flex: none; margin-left: 0.15rem; color: var(--task-color); font-weight: 600; }
+.home-task-action .icon { width: 1rem; height: 1rem; transition: transform 150ms ease-out; }
+.home-task:focus-visible { outline: 3px solid var(--focus-ring); outline-offset: 2px; }
+@media (max-width: 600px) {
+  .home-tasks > li { flex: 1 1 100%; }
+  .home-task { border-radius: 14px; }
+  .home-task-title { flex: 1 1 auto; }
+}
 .home-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(16rem, 100%), 1fr)); gap: 0.9rem; margin: 0; padding: 0; list-style: none; }
 /* T-S12-11: las tarjetas entran en cascada (50 ms entre una y otra) cuando la lista asoma en pantalla, con el lenguaje
    de movimiento de las historias. Solo se ocultan mientras useReveal espera; sin JS u observador se ven siempre. */
@@ -527,12 +533,48 @@ textarea[aria-invalid='true'] { border-color: var(--danger-border); }
 @media (hover: hover) {
   .home-card:hover { border-color: color-mix(in srgb, var(--accent) 35%, var(--border)); box-shadow: 0 6px 18px color-mix(in srgb, var(--shadow) 8%, transparent); }
   .home-card:hover > .icon { transform: translateX(2px); }
-  .home-task:hover { border-color: color-mix(in srgb, var(--task-color) 45%, transparent); box-shadow: 0 6px 18px color-mix(in srgb, var(--shadow) 8%, transparent); }
+  .home-task:hover { border-color: var(--task-color); background: var(--task-surface); }
   .home-task:hover .home-task-action .icon { transform: translateX(2px); }
 }
 
 /* Menú de cuenta del encabezado: el panel solo existe mientras está abierto. */
 .account-menu { position: relative; flex-shrink: 0; }
+/*
+ * T-S14-17: mensajes sin leer en la barra. Botón de 44 px con el ícono y una insignia con el número de conversaciones; el
+ * panel usa el lenguaje del menú de cuenta y lista cada conversación con su contador.
+ */
+.messages-menu { position: relative; flex-shrink: 0; }
+.app-bar-inner > .messages-menu + .account-menu { margin-left: -0.35rem; }
+.messages-trigger { position: relative; display: grid; place-items: center; width: var(--icon-button-md); height: var(--icon-button-md); margin: 0; padding: 0;
+  border: 0; border-radius: 50%; background: transparent; color: var(--text-muted); transition: background-color 140ms ease, color 140ms ease; }
+.messages-trigger .icon { width: 1.25rem; height: 1.25rem; }
+.messages-trigger[aria-expanded='true'] { background: var(--tint); color: var(--accent); }
+.messages-trigger:focus-visible { outline: 3px solid var(--focus-ring); outline-offset: 2px; }
+.messages-badge { position: absolute; top: 0.15rem; right: 0.1rem; display: grid; place-items: center; min-width: 1.15rem; height: 1.15rem; padding: 0 0.3rem;
+  border-radius: 999px; background: var(--accent-fill); color: var(--on-accent); box-shadow: 0 0 0 2px var(--surface);
+  font-size: var(--type-xs); font-weight: 700; line-height: 1; font-variant-numeric: tabular-nums; animation: count-pop 420ms var(--spring); }
+.messages-panel { width: min(21rem, calc(100vw - 1.5rem)); }
+.messages-panel-title { padding: 0.6rem 0.7rem 0.4rem; font-size: var(--type-xs); font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-muted); }
+.messages-empty { padding: 0.4rem 0.7rem 0.8rem; font-size: var(--type-sm); color: var(--text-muted); }
+.messages-list { display: grid; gap: 0.1rem; max-height: min(22rem, 60vh); margin: 0; padding: 0 0 0.35rem; overflow-y: auto; list-style: none; }
+.messages-item { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; align-items: center; gap: 0.55rem; min-height: 2.75rem; padding: 0.45rem 0.6rem;
+  border-radius: 10px; color: var(--text-strong); text-decoration: none; transition: background-color 140ms ease; }
+.messages-item > .icon { width: 1rem; height: 1rem; color: var(--text-muted); }
+.messages-item-text { display: grid; min-width: 0; }
+.messages-item-name { overflow: hidden; font-weight: 600; text-overflow: ellipsis; white-space: nowrap; }
+.messages-item-detail { overflow: hidden; font-size: var(--type-xs); color: var(--text-muted); text-overflow: ellipsis; white-space: nowrap; }
+.messages-item-count { display: grid; place-items: center; min-width: 1.4rem; height: 1.4rem; padding: 0 0.35rem; border-radius: 999px;
+  background: var(--tint); color: var(--accent); font-size: var(--type-xs); font-weight: 700; font-variant-numeric: tabular-nums; }
+.messages-item:focus-visible, .messages-all:focus-visible { outline: 3px solid var(--focus-ring); outline-offset: -1px; }
+.messages-all { display: flex; align-items: center; justify-content: space-between; min-height: 2.75rem; padding: 0.4rem 0.6rem; border-radius: 10px;
+  color: var(--accent); font-weight: 600; text-decoration: none; }
+.messages-all .icon { width: 1rem; height: 1rem; }
+@media (hover: hover) {
+  .messages-trigger:hover { background: var(--tint); color: var(--accent); }
+  .messages-item:hover, .messages-all:hover { background: var(--surface-muted); }
+}
+@media (prefers-reduced-motion: reduce) { .messages-badge { animation: none; } .messages-trigger, .messages-item { transition: none; } }
+@media (prefers-contrast: more) { .messages-badge { box-shadow: 0 0 0 2px var(--text-strong); } }
 /* T-S14-03: el botón del menú solo contiene el avatar; el avatar lleva el color y su estado abierto. */
 .account-trigger { display: grid; place-items: center; width: var(--icon-button-md); height: var(--icon-button-md); padding: 0; border: 0; border-radius: 50%;
   background: transparent; }
@@ -735,13 +777,20 @@ textarea[aria-invalid='true'] { border-color: var(--danger-border); }
   animation: snackbar-in var(--spring-duration) var(--spring) both; }
 .snackbar .icon { flex: none; width: 1.05rem; height: 1.05rem; }
 .snackbar-text { min-width: 0; overflow-wrap: anywhere; }
+/* T-S14-17: acción breve del aviso (p. ej. «Ver» un mensaje nuevo), subrayada sobre la superficie invertida. */
+.snackbar-action { flex: none; min-height: 2rem; margin: 0; padding: 0.25rem 0.6rem; border: 0; border-radius: 8px; background: transparent;
+  color: var(--on-inverse); font: inherit; font-weight: 700; text-decoration: underline; text-underline-offset: 0.2em; cursor: pointer; }
+.snackbar-action:focus-visible { outline: 2px solid var(--on-inverse); outline-offset: 1px; }
 .snackbar-close { display: grid; place-items: center; flex: none; width: 2rem; height: 2rem; margin: 0; padding: 0; border: 0; border-radius: 50%;
   background: transparent; color: inherit; opacity: 0.85; }
 .snackbar-close:focus-visible { outline-color: var(--on-inverse); outline-offset: 0; }
 @keyframes snackbar-in { from { opacity: 0; transform: translate(-50%, 0.75rem) scale(0.98); } to { opacity: 1; transform: translateX(-50%); } }
-@media (hover: hover) { .snackbar-close:hover { opacity: 1; background: color-mix(in srgb, var(--on-inverse) 14%, transparent); } }
+@media (hover: hover) {
+  .snackbar-close:hover { opacity: 1; background: color-mix(in srgb, var(--on-inverse) 14%, transparent); }
+  .snackbar-action:hover { background: color-mix(in srgb, var(--on-inverse) 14%, transparent); }
+}
 @media (prefers-reduced-motion: reduce) { .snackbar { animation: fade-in 160ms ease both; } }
-@media (max-width: 600px) { .snackbar-close { width: 2.75rem; height: 2.75rem; } }
+@media (max-width: 600px) { .snackbar-close { width: 2.75rem; height: 2.75rem; } .snackbar-action { min-height: 2.75rem; } }
 @media (prefers-contrast: more) { .email-menu { border-color: var(--border-strong); } }
 }
 

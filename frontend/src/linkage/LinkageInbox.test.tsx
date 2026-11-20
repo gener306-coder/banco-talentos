@@ -81,7 +81,8 @@ describe('barra de la bandeja de la empresa', () => {
     render(<MemoryRouter initialEntries={['/linkage-requests?q=golfo&status=ACEPTADA']}><App /><Location /></MemoryRouter>)
     const field = await screen.findByLabelText('Buscar por institución, oportunidad o perfil')
     expect(field).toHaveValue('golfo')
-    expect(listCalls()[0]).toBe('/api/linkage-requests?page=1&status=ACEPTADA&q=golfo')
+    // La petición sale en un efecto: puede llegar después de que el campo ya esté en pantalla.
+    await waitFor(() => expect(listCalls()[0]).toBe('/api/linkage-requests?page=1&status=ACEPTADA&q=golfo'))
     fireEvent.change(field, { target: { value: '' } })
     await waitFor(() => expect(route()).toHaveTextContent(/^\/linkage-requests\?status=ACEPTADA$/))
   })

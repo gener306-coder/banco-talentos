@@ -9,6 +9,7 @@ import { LINKAGE_READ_EVENT } from './conversationApi'
 import { UnreadBadge } from './UnreadBadge'
 import { UnreadSummaryProvider } from './UnreadSummaryProvider'
 import { UNREAD_POLL_INTERVAL_MS } from './useUnreadConversations'
+import { UNREAD_VISIBLE_INTERVAL_MS } from './unreadTransport'
 
 // HU-S13-04: aviso de conversaciones sin leer en el menú, contador en las bandejas (T-S13-08) y filtro.
 const fetchMock = vi.fn<typeof fetch>()
@@ -110,12 +111,12 @@ describe('aviso del menú (CA-03)', () => {
 
     beforeEach(() => { vi.useFakeTimers({ toFake: ['setInterval', 'clearInterval'] }) })
 
-    it('consulta una sola vez para varios contadores, cada 60 s aun con la pestaña oculta, y enseguida al volver', async () => {
+    it('consulta una sola vez para varios contadores, cada 10 s a la vista y cada 60 s oculta, y enseguida al volver (T-S14-17)', async () => {
       renderBadge()
       await waitFor(() => expect(summaries()).toHaveLength(1))
 
       unreadConversations = 2
-      await act(async () => { vi.advanceTimersByTime(UNREAD_POLL_INTERVAL_MS) })
+      await act(async () => { vi.advanceTimersByTime(UNREAD_VISIBLE_INTERVAL_MS) })
       await waitFor(() => expect(badge()).toHaveAccessibleName('Solicitudes de vinculación, 2 conversaciones con mensajes sin leer'))
 
       // T-S13-08: con la pestaña oculta sigue consultando, porque es cuando sirve el aviso del navegador.
