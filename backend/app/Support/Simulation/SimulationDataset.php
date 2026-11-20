@@ -447,7 +447,7 @@ final class SimulationDataset
                 'company_id' => $companyId,
                 'title' => $this->pick(SimulationCatalog::OPPORTUNITY_TITLES[$area]),
                 'program' => $this->pick(SimulationCatalog::PROGRAMS[$area]),
-                'period_type' => $fourMonth ? 'four_month' : 'semester',
+                // T-S14-10: el periodo mínimo es solo un número. La misma tirada conserva la secuencia del generador.
                 'period_number' => $this->random->getInt(3, $fourMonth ? 9 : 8),
                 'vacancies' => $this->weighted([1 => 30, 2 => 30, 3 => 20, 5 => 12, 10 => 8]),
                 'can_relocate' => $this->chance(0.2),

@@ -58,7 +58,7 @@ function BackLink({ side, compact = false }: { side: LinkageSide; compact?: bool
 }
 
 const statusTone: Record<Status, string> = {
-  PENDIENTE_INSTITUCION: 'pending', ACEPTADA: 'accepted', RECHAZADA: 'rejected', CANCELADA: 'cancelled',
+  PENDIENTE_INSTITUCION: 'pending', ACEPTADA: 'accepted', RECHAZADA: 'rejected', CANCELADA: 'cancelled', BAJA: 'terminated',
 }
 
 function ContextCard({ icon, kicker, item, state }: { icon: ReactNode; kicker: string; item: ContextItem; state: unknown }) {

@@ -13,7 +13,8 @@ export const linkageMessages: FailureMessages = {
 
 export const LINKAGE_MESSAGE_LIMIT = 500
 
-export type LinkageStatus = 'PENDIENTE_INSTITUCION' | 'ACEPTADA' | 'RECHAZADA' | 'CANCELADA'
+/** T-S14-13: BAJA, una aceptada que la institución o la empresa dio de baja; libera el lugar. */
+export type LinkageStatus = 'PENDIENTE_INSTITUCION' | 'ACEPTADA' | 'RECHAZADA' | 'CANCELADA' | 'BAJA'
 
 /** Estados en el orden del filtro de la bandeja (HU-S5-05 CA-05). */
 export const LINKAGE_STATUSES: readonly { value: LinkageStatus; label: string }[] = [
@@ -21,7 +22,32 @@ export const LINKAGE_STATUSES: readonly { value: LinkageStatus; label: string }[
   { value: 'ACEPTADA', label: 'Aceptada' },
   { value: 'RECHAZADA', label: 'Rechazada' },
   { value: 'CANCELADA', label: 'Cancelada' },
+  { value: 'BAJA', label: 'Dada de baja' },
 ]
+
+/** T-S14-13: baja de una vinculación aceptada. `by` solo llega si la registró la organización que consulta. */
+export interface LinkageTermination {
+  at: string
+  party: 'COMPANY' | 'INSTITUTION'
+  reason: string
+  by: { name: string } | null
+}
+
+/** Límite del motivo de la baja (T-S14-13). */
+export const TERMINATION_REASON_LIMIT = 500
+
+/** Valida la baja del contrato; null si la solicitud no está dada de baja, undefined si el dato no es válido. */
+export function parseTermination(value: unknown): LinkageTermination | null | undefined {
+  if (value === null || value === undefined) return null
+  if (typeof value !== 'object' || Array.isArray(value)) return undefined
+  const data = value as Record<string, unknown>
+  if (typeof data.at !== 'string' || (data.party !== 'COMPANY' && data.party !== 'INSTITUTION') || typeof data.reason !== 'string') return undefined
+  const by = data.by === null ? null
+    : typeof data.by === 'object' && data.by !== null && typeof (data.by as Record<string, unknown>).name === 'string'
+      ? { name: (data.by as Record<string, unknown>).name as string } : undefined
+  if (by === undefined) return undefined
+  return { at: data.at, party: data.party, reason: data.reason, by }
+}
 
 export const linkageStatusLabel = (status: LinkageStatus) => LINKAGE_STATUSES.find((item) => item.value === status)?.label ?? status
 
@@ -81,6 +107,8 @@ export interface LinkageInboxItem {
   /** Respuesta de la institución (HU-S6-02 CA-04), sin la cuenta que respondió. */
   responded_at: string | null
   response_message: string | null
+  /** T-S14-13: la baja, si la hubo. */
+  termination: LinkageTermination | null
   /** Mensajes de la institución sin leer (HU-S13-04 CA-02). */
   unread_count: number
   /** Último mensaje del hilo (T-S13-09), para explicar el orden por actividad. */
@@ -97,7 +125,8 @@ export interface LinkageInboxPage {
 const isOptionalText = (value: unknown): value is string | null => value === null || typeof value === 'string'
 
 function inboxItem(data: unknown): LinkageInboxItem {
-  if (!isObject(data) || !isPositiveInt(data.id) || !STATUSES.includes(data.status as LinkageStatus) || typeof data.created_at !== 'string' ||
+  const termination = isObject(data) ? parseTermination(data.termination) : undefined
+  if (termination === undefined || !isObject(data) || !isPositiveInt(data.id) || !STATUSES.includes(data.status as LinkageStatus) || typeof data.created_at !== 'string' ||
       !isOptionalText(data.message) || !isObject(data.opportunity) || !isPositiveInt(data.opportunity.id) || typeof data.opportunity.title !== 'string' ||
       !isObject(data.profile) || typeof data.profile.public_id !== 'string' || !isOptionalText(data.profile.headline) ||
       !isOptionalText(data.profile.program) || (data.profile.period_type !== null && !isPeriodType(data.profile.period_type)) ||
@@ -122,7 +151,7 @@ function inboxItem(data: unknown): LinkageInboxItem {
       name: data.institution.name, contact_name: data.institution.contact_name, contact_position: data.institution.contact_position,
       contact_email: data.institution.contact_email, contact_phone: data.institution.contact_phone,
     },
-    responded_at: data.responded_at, response_message: data.response_message, unread_count: data.unread_count,
+    responded_at: data.responded_at, response_message: data.response_message, termination, unread_count: data.unread_count,
     last_message_at: (data.last_message_at as string | null | undefined) ?? null,
   }
 }
@@ -152,6 +181,14 @@ export const linkageDetailMessages: FailureMessages = {
 /** Detalle de una solicitud de la empresa (HU-S13-02 CA-01): los mismos campos que la bandeja. */
 export async function getLinkageRequest(id: string, signal?: AbortSignal): Promise<LinkageInboxItem> {
   const response = await request(`/api/linkage-requests/${encodeURIComponent(id)}`, { signal })
+  if (!isObject(response)) throw new ApiError(502)
+  return inboxItem(response.data)
+}
+
+/** T-S14-13: la empresa da de baja una vinculación aceptada con su motivo; libera el lugar. */
+export async function terminateLinkageRequest(id: number, reason: string): Promise<LinkageInboxItem> {
+  await request('/sanctum/csrf-cookie')
+  const response = await request(`/api/linkage-requests/${id}/termination`, { method: 'PATCH', body: JSON.stringify({ reason }) })
   if (!isObject(response)) throw new ApiError(502)
   return inboxItem(response.data)
 }

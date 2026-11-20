@@ -41,7 +41,7 @@ function inboxStudent(Institution $institution, string $headline): Student
 function inboxOpportunity(Company $company, string $title): Opportunity
 {
     $opportunity = new Opportunity([
-        'title' => $title, 'program' => 'Ingeniería en Datos', 'period_type' => 'semester', 'period_number' => 5,
+        'title' => $title, 'program' => 'Ingeniería en Datos', 'period_number' => 5,
         'vacancies' => 2, 'can_relocate' => false, 'state_code' => '28', 'municipality_code' => '28032', 'description' => 'Actividades.',
     ]);
     $opportunity->company_id = $company->id;
@@ -135,6 +135,7 @@ describe('bandeja (CA-01, CA-02)', function () {
             ],
             'responded_at' => null,
             'response_message' => null,
+            'termination' => null,
             'unread_count' => 0,
             'last_message_at' => null,
         ]]);

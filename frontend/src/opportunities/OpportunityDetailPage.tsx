@@ -4,7 +4,8 @@ import { Link, useLocation, useParams } from 'react-router'
 import { ProfileIncompleteNotice } from '../account/ProfileIncompleteNotice'
 import { InstitutionRequestError, InstitutionStatus } from '../institutions/InstitutionLayout'
 import { useApiMutation, useApiRequest } from '../lib/useApiRequest'
-import { periodLabel, stateName } from '../students/catalogs'
+import { minimumPeriodLabel, stateName } from '../students/catalogs'
+import { PlacesStatus } from './PlacesStatus'
 import { languageName, levelLabel } from '../students/cvCatalogs'
 import { useBackLink } from '../ui/backLink'
 import { ConfirmDialog } from '../ui/ConfirmDialog'
@@ -56,9 +57,9 @@ function OpportunityDetail({ id }: { id: string }) {
             <dl className="opportunity-details">
               <dt>Título</dt><dd>{data.title}</dd>
               <dt>Actividades y objetivos</dt><dd className="opportunity-description">{data.description}</dd>
-              <dt>Lugares disponibles</dt><dd>{data.vacancies}</dd>
+              <dt>Lugares</dt><dd><PlacesStatus opportunity={data} /></dd>
               <dt>Carrera o programa requerido</dt><dd>{data.program}</dd>
-              <dt>Periodo mínimo</dt><dd>{periodLabel(data.period_type, data.period_number)} o posterior</dd>
+              <dt>Periodo mínimo</dt><dd>{minimumPeriodLabel(data.period_number)}, semestre o cuatrimestre</dd>
               <dt>Idioma</dt>
               <dd>{data.language_code && data.min_level ? `${languageName(data.language_code)}, ${levelLabel(data.min_level)} o superior` : 'Sin idioma requerido'}</dd>
               <dt>Habilidades requeridas</dt>

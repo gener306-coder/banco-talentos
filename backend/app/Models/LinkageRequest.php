@@ -23,7 +23,7 @@ class LinkageRequest extends Model
     // Los marcadores de lectura de la conversación (HU-S13-01) son por lado: ninguno sale hacia el otro.
     protected $hidden = [
         'student_id', 'responded_by', 'company_last_read_message_id', 'institution_last_read_message_id',
-        'company_notified_at', 'institution_notified_at',
+        'company_notified_at', 'institution_notified_at', 'terminated_by',
     ];
 
     protected $attributes = ['status' => 'PENDIENTE_INSTITUCION'];
@@ -31,7 +31,8 @@ class LinkageRequest extends Model
     protected function casts(): array
     {
         return ['status' => LinkageRequestStatus::class, 'responded_at' => 'datetime', 'last_message_at' => 'datetime',
-            'company_notified_at' => 'datetime', 'institution_notified_at' => 'datetime'];
+            'company_notified_at' => 'datetime', 'institution_notified_at' => 'datetime',
+            'terminated_at' => 'datetime', 'terminated_party' => LinkageParty::class];
     }
 
     public function company(): BelongsTo
@@ -53,6 +54,27 @@ class LinkageRequest extends Model
     public function responder(): BelongsTo
     {
         return $this->belongsTo(User::class, 'responded_by');
+    }
+
+    /** T-S14-13: cuenta que dio de baja la vinculación; como `responder`, nunca sale hacia el otro lado. */
+    public function terminator(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'terminated_by');
+    }
+
+    /** T-S14-13: datos de la baja para una respuesta, con la cuenta solo si la registró el lado que consulta. */
+    public function terminationFor(LinkageParty $viewer): ?array
+    {
+        if ($this->terminated_at === null) {
+            return null;
+        }
+
+        return [
+            'at' => $this->terminated_at->toISOString(),
+            'party' => $this->terminated_party->value,
+            'reason' => $this->termination_reason,
+            'by' => $this->terminated_party === $viewer && $this->terminator !== null ? ['name' => $this->terminator->name] : null,
+        ];
     }
 
     public function institution(): BelongsTo

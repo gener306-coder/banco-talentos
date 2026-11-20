@@ -4,7 +4,7 @@
 .linkage-status.pending { background: var(--tint); color: var(--accent); }
 .linkage-status.accepted { background: var(--success-surface); color: var(--success-text); }
 .linkage-status.rejected { background: var(--danger-surface); color: var(--danger-text); }
-.linkage-status.cancelled { background: var(--status-off-surface); color: var(--status-off-text); }
+.linkage-status:is(.cancelled, .terminated) { background: var(--status-off-surface); color: var(--status-off-text); }
 .linkage-profile-meta { display: block; font-size: var(--type-sm); color: var(--text); }
 .linkage-decision { max-width: var(--content-readable); }
 .linkage-decision > fieldset { margin: 0; padding: 0; border: 0; min-width: 0; }
@@ -92,7 +92,7 @@ main:has(.linkage-chat.is-ready) { margin-bottom: 1rem; }
 .linkage-status-dot { flex: none; width: 0.5rem; height: 0.5rem; border-radius: 50%; background: var(--accent); }
 .linkage-status-dot.accepted { background: var(--success-text); }
 .linkage-status-dot.rejected { background: var(--danger-text); }
-.linkage-status-dot.cancelled { background: var(--status-off-text); }
+.linkage-status-dot:is(.cancelled, .terminated) { background: var(--status-off-text); }
 /* «Ver solicitud»: texto en escritorio, solo el ícono en el celular (conserva su nombre accesible). */
 .linkage-chat-request { flex: none; }
 /* T-S13-07: tarjetas de contexto. Dicen de qué alumno y de qué oportunidad trata la conversación, cada una con su acceso. */
@@ -251,4 +251,11 @@ tr.has-unread > :first-child .linkage-meta { font-weight: 400; }
 .linkage-inbox-sheet-title { margin: 0; font-size: var(--type-lg); }
 .linkage-inbox-sheet-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem; }
 .linkage-inbox-sheet-actions > :first-child { flex: 1 1 auto; }
+/* T-S14-12: aviso de otras vinculaciones aceptadas del alumno, discreto y sin color de alerta. */
+.callout-lite { margin: 0 0 1rem; padding: 0.75rem 1rem; border: 1px solid var(--border); border-radius: 12px; background: var(--surface-muted);
+  color: var(--text); font-size: var(--type-sm); }
+.callout-lite p { margin: 0; }
+.callout-lite ul { margin: 0.35rem 0; padding-left: 1.1rem; }
+/* T-S14-13: baja de la vinculación. */
+.linkage-termination-form textarea { width: 100%; resize: vertical; }
 }

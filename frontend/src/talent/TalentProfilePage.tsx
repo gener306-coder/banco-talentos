@@ -37,6 +37,8 @@ function TalentProfile({ publicId }: { publicId: string }) {
   const availability = options.data && sent.data ? linkageAvailability(options.data, sent.data.items) : null
   // Sin datos para decidir (cargando o con error) el botón se ofrece: el formulario y el backend tienen la última palabra.
   const exhausted = availability !== null && availability.items.length > 0 && availability.eligible === 0
+  // T-S14-11: sin oportunidades disponibles porque el cupo se llenó (no porque ya se solicitó en todas).
+  const placesExhausted = exhausted && !availability.requestedAll
   const [requesting, setRequesting] = useState(false)
   // La hoja monta el formulario al abrirse por primera vez y conserva lo escrito al cerrarla.
   const [requested, setRequested] = useState(false)
@@ -57,13 +59,16 @@ function TalentProfile({ publicId }: { publicId: string }) {
             {sent.data && sent.data.items.length > 0 && (
               <Callout tone="info" label="Solicitudes enviadas para este perfil"
                 action={<Link className="pill-link" to="/linkage-requests">Ver tus solicitudes<ChevronRightIcon /></Link>}>
-                <p>{exhausted ? 'Ya solicitaste este perfil para todas tus oportunidades activas:' : 'Ya solicitaste la vinculación de este perfil para:'}</p>
+                <p>{exhausted && !placesExhausted ? 'Ya solicitaste este perfil para todas tus oportunidades activas:' : 'Ya solicitaste la vinculación de este perfil para:'}</p>
                 <ul>
                   {sent.data.items.map((item) => (
                     <li key={item.id}><strong className="notice-subject">{item.opportunity.title}</strong> · <LinkageStatus status={item.status} /></li>
                   ))}
                 </ul>
               </Callout>
+            )}
+            {placesExhausted && (
+              <p className="notice-muted">Tus oportunidades activas ya cubrieron sus lugares. Amplía los lugares de una <Link to="/opportunities">oportunidad</Link> para solicitar este perfil.</p>
             )}
             {!exhausted && (
               <div className="actions">

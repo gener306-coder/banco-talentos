@@ -20,7 +20,7 @@ const sent = {
 }
 const received = {
   id: 5, status: 'ACEPTADA', created_at: '2026-10-28T10:00:00Z', company: { name: 'ManuGolfo', municipality: 'Victoria' },
-  opportunity: { id: 12, title: 'Tableros de producción', program: 'Ingeniería en Datos', vacancies: 2 },
+  opportunity: { id: 12, title: 'Tableros de producción', program: 'Ingeniería en Datos', vacancies: 2, accepted_count: 0 },
   student: { id: 7, enrollment_number: 'MAT-1', given_names: 'Ana', first_surname: 'García', second_surname: null, is_active: true, program: null, period_type: null, period_number: null },
   unread_count: 0, last_message_at: null,
 }

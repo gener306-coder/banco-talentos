@@ -1,3 +1,4 @@
+import { PlacesStatus } from './PlacesStatus'
 import { TableHead, TableSkeleton } from '../ui/TableSkeleton'
 import type { TableColumn } from '../ui/TableSkeleton'
 import { useCallback } from 'react'
@@ -22,7 +23,7 @@ const countFormat = new Intl.NumberFormat('es-MX')
 const columns: readonly TableColumn[] = [
   { label: 'Oportunidad', role: 'title', bone: 'text-meta' },
   { label: 'Municipio', role: 'inline', bone: 'short' },
-  { label: 'Lugares', role: 'inline', bone: 'mono' },
+  { label: 'Lugares', role: 'inline', bone: 'short' },
   { label: 'Habilidades', role: 'block', bone: 'chips' },
   { label: 'Estado', role: 'status', bone: 'status' },
   { label: 'Detalle', hidden: true, role: 'open', bone: 'open' },
@@ -72,7 +73,7 @@ export function OpportunitiesPage() {
                           {/* T-S14-08: el programa, en su propia línea atenuada bajo el título. */}
                           <th scope="row" data-cell="title">{opportunity.title}<span className="row-subtitle">{opportunity.program}</span></th>
                           <td data-cell="inline">{opportunity.municipality ?? opportunity.municipality_code}</td>
-                          <td data-cell="inline">{opportunity.vacancies}<span className="unit">{opportunity.vacancies === 1 ? ' lugar' : ' lugares'}</span></td>
+                          <td data-cell="inline"><PlacesStatus opportunity={opportunity} /></td>
                           <td data-cell="block">{opportunity.skills.length ? <SkillTags skills={opportunity.skills} label={`Habilidades de ${opportunity.title}`} /> : '—'}</td>
                           <td data-cell="status"><InstitutionStatus active={opportunity.is_active} /></td>
                           <td data-cell="open"><Link className="row-link row-open" to={href} state={back} aria-label={`Ver detalle de ${opportunity.title}`} title="Ver detalle"><ChevronRightIcon /></Link></td>

@@ -163,6 +163,17 @@ describe('burbujas de la solicitud y estados (HU-S13-06)', () => {
     expect(readIds()).toEqual([])
   })
 
+  it('dada de baja conserva el historial en solo lectura y deja de consultarlo (T-S14-13)', async () => {
+    canWrite = false
+    renderConversation('COMPANY', false, 'BAJA')
+    expect(await within(await screen.findByRole('log', { name: 'Mensajes' })).findByText('El lunes 24.')).toBeInTheDocument()
+    expect(screen.getByRole('note')).toHaveTextContent('La vinculación se dio de baja: la conversación queda en solo lectura.')
+    expect(screen.queryByRole('textbox')).not.toBeInTheDocument()
+    const loaded = getPaths().length
+    await tick(POLL_INTERVAL_MS * 2)
+    expect(getPaths()).toHaveLength(loaded)
+  })
+
   it('sin mensaje en la solicitud explica que la empresa no escribió', async () => {
     renderConversation('INSTITUTION', false, 'PENDIENTE_INSTITUCION', [])
     expect(await screen.findByText('La empresa no envió mensaje con la solicitud.')).toBeInTheDocument()

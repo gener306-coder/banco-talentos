@@ -4,7 +4,7 @@ import { Link } from 'react-router'
 import { ProfileIncompleteNotice } from '../account/ProfileIncompleteNotice'
 import { InstitutionRequestError } from '../institutions/InstitutionLayout'
 import type { ApiFailure } from '../lib/useApiRequest'
-import { isPeriodType, MAX_PERIOD, MEXICAN_STATES, PERIOD_TYPES } from '../students/catalogs'
+import { MAX_PERIOD, MEXICAN_STATES } from '../students/catalogs'
 import type { SkillInput } from '../students/cv'
 import { CV_LANGUAGES, hasContactInformation, LANGUAGE_LEVELS } from '../students/cvCatalogs'
 import { MunicipalityCombobox } from '../students/MunicipalityCombobox'
@@ -16,7 +16,7 @@ import type { Opportunity, OpportunityDefaults, OpportunityInput } from './api'
 /** Igual que ContactInformation::OPPORTUNITY_MESSAGE del backend (CA-04). */
 export const OPPORTUNITY_CONTACT_MESSAGE = 'No incluyas enlaces, correos ni teléfonos: el contacto con el alumno se coordina con su institución.'
 
-type Field = 'title' | 'program' | 'period_type' | 'period_number' | 'vacancies' | 'can_relocate' | 'state_code' |
+type Field = 'title' | 'program' | 'period_number' | 'vacancies' | 'can_relocate' | 'state_code' |
   'municipality_code' | 'description' | 'language_code' | 'min_level'
 type Values = Record<Field, string>
 
@@ -25,7 +25,7 @@ const periods = Array.from({ length: MAX_PERIOD }, (_, index) => String(index + 
 function valuesOf(opportunity: Opportunity | undefined, defaults: OpportunityDefaults | null): Values {
   if (opportunity) {
     return {
-      title: opportunity.title, program: opportunity.program, period_type: opportunity.period_type,
+      title: opportunity.title, program: opportunity.program,
       period_number: String(opportunity.period_number), vacancies: String(opportunity.vacancies),
       can_relocate: opportunity.can_relocate ? 'yes' : 'no', state_code: opportunity.state_code,
       municipality_code: opportunity.municipality_code, description: opportunity.description,
@@ -33,7 +33,7 @@ function valuesOf(opportunity: Opportunity | undefined, defaults: OpportunityDef
     }
   }
   return {
-    title: '', program: '', period_type: '', period_number: '', vacancies: '1', can_relocate: '',
+    title: '', program: '', period_number: '', vacancies: '1', can_relocate: '',
     // CA-05: por defecto, la ubicación de la empresa.
     state_code: defaults?.state_code ?? '', municipality_code: defaults?.municipality_code ?? '',
     description: '', language_code: '', min_level: '',
@@ -53,6 +53,7 @@ interface OpportunityFormProps {
 /** Alta y edición de una oportunidad dual (HU-S5-02 CA-03 a CA-05, CA-07), con validación en línea. */
 export function OpportunityForm({ opportunity, defaults = null, submitLabel, cancelTo, pending, failure, onSubmit }: OpportunityFormProps) {
   const [values, setValues] = useState<Values>(() => valuesOf(opportunity, defaults))
+  const covered = opportunity?.accepted_count ?? 0
   const [skills, setSkills] = useState<SkillInput[]>(() => opportunity?.skills.map(({ name, kind }) => ({ name, kind })) ?? [])
   const [localErrors, setLocalErrors] = useState<Partial<Record<Field, string[]>>>({})
   const [municipalityTyped, setMunicipalityTyped] = useState(false)
@@ -88,7 +89,6 @@ export function OpportunityForm({ opportunity, defaults = null, submitLabel, can
     const required = (field: Field, message: string) => { if (!text(field)) found[field] = [message] }
     required('title', 'El título de la oportunidad es obligatorio.')
     required('program', 'La carrera o programa requerido es obligatorio.')
-    required('period_type', 'Indica si el periodo mínimo es semestre o cuatrimestre.')
     required('period_number', 'El periodo mínimo es obligatorio.')
     required('can_relocate', 'Indica si la oportunidad requiere reubicarse.')
     required('state_code', 'El estado es obligatorio.')
@@ -101,13 +101,15 @@ export function OpportunityForm({ opportunity, defaults = null, submitLabel, can
     if (!Number.isInteger(vacancies) || vacancies < 1 || vacancies > OPPORTUNITY_LIMITS.vacancies || !text('vacancies')) {
       found.vacancies = [`El número de lugares debe ser un entero del 1 al ${OPPORTUNITY_LIMITS.vacancies}.`]
     }
+    // Solo al reducirlos: una oportunidad con más aceptadas que lugares (datos anteriores a la regla) sigue editable.
+    else if (vacancies < covered && vacancies < (opportunity?.vacancies ?? vacancies)) found.vacancies = [covered === 1 ? 'Ya hay 1 lugar cubierto: los lugares no pueden ser menos.' : `Ya hay ${covered} lugares cubiertos: los lugares no pueden ser menos.`]
     if (values.language_code && !values.min_level) found.min_level = ['Selecciona el nivel mínimo del idioma.']
     if (!values.language_code && values.min_level) found.language_code = ['Selecciona el idioma del nivel mínimo.']
     setLocalErrors(found)
-    if (Object.keys(found).length || !isPeriodType(values.period_type)) return
+    if (Object.keys(found).length) return
 
     await onSubmit({
-      title: text('title'), program: text('program'), period_type: values.period_type, period_number: Number(values.period_number),
+      title: text('title'), program: text('program'), period_number: Number(values.period_number),
       vacancies, can_relocate: values.can_relocate === 'yes', state_code: values.state_code,
       municipality_code: values.municipality_code, description: text('description'), skills,
       language_code: values.language_code || null, min_level: values.min_level ? Number(values.min_level) : null,
@@ -152,8 +154,13 @@ export function OpportunityForm({ opportunity, defaults = null, submitLabel, can
           <p className="field-hint" id="opportunity-description-count">{values.description.length} de {OPPORTUNITY_LIMITS.description} caracteres</p>
           {fieldError('description')}
           <label htmlFor="opportunity-vacancies">Lugares disponibles</label>
+          {/* T-S14-11: los lugares no pueden quedar por debajo de los ya cubiertos por solicitudes aceptadas. */}
+          {covered > 0 && (
+            <p className="field-hint" id="opportunity-vacancies-help">{covered === 1 ? 'Ya hay 1 lugar cubierto' : `Ya hay ${covered} lugares cubiertos`}: los lugares no pueden ser menos.</p>
+          )}
           <input id="opportunity-vacancies" name="vacancies" type="number" inputMode="numeric" required min={1} max={OPPORTUNITY_LIMITS.vacancies} step={1}
-            value={values.vacancies} aria-invalid={Boolean(errors.vacancies?.length)} aria-describedby={describedBy('vacancies')}
+            value={values.vacancies} aria-invalid={Boolean(errors.vacancies?.length)}
+            aria-describedby={describedBy('vacancies', covered > 0 ? 'opportunity-vacancies-help' : undefined)}
             onChange={(event) => set('vacancies', event.target.value)} />
           {fieldError('vacancies')}
         </fieldset>
@@ -165,10 +172,17 @@ export function OpportunityForm({ opportunity, defaults = null, submitLabel, can
             value={values.program} aria-invalid={Boolean(errors.program?.length)} aria-describedby={describedBy('program')}
             onChange={(event) => set('program', event.target.value)} onBlur={() => checkContact('program')} />
           {fieldError('program')}
-          <div className="field-row">
-            <div>{select('period_type', 'Tipo de periodo', <><option value="">Selecciona…</option>{PERIOD_TYPES.map((type) => <option key={type.value} value={type.value}>{type.label}</option>)}</>)}</div>
-            <div>{select('period_number', 'Periodo mínimo', <><option value="">Selecciona…</option>{periods.map((number) => <option key={number} value={number}>{number}.º</option>)}</>)}</div>
-          </div>
+          {/* T-S14-10: solo el número. Se lee contra el periodo del alumno, sea semestre o cuatrimestre, para no dejar fuera
+              a ningún plan de estudios. */}
+          <label htmlFor="opportunity-period_number">Periodo mínimo</label>
+          <p className="field-hint" id="opportunity-period_number-help">Semestre o cuatrimestre, según el plan de estudios del alumno.</p>
+          <select id="opportunity-period_number" name="period_number" value={values.period_number}
+            aria-invalid={Boolean(errors.period_number?.length)} aria-describedby={describedBy('period_number', 'opportunity-period_number-help')}
+            onChange={(event) => set('period_number', event.target.value)}>
+            <option value="">Selecciona…</option>
+            {periods.map((number) => <option key={number} value={number}>{number}.º o posterior</option>)}
+          </select>
+          {fieldError('period_number')}
           <div className="field-row">
             <div>{select('language_code', 'Idioma (opcional)', <><option value="">Sin idioma requerido</option>{CV_LANGUAGES.map((language) => <option key={language.code} value={language.code}>{language.name}</option>)}</>)}</div>
             <div>{select('min_level', 'Nivel mínimo', <><option value="">Selecciona…</option>{LANGUAGE_LEVELS.map((level) => <option key={level.value} value={level.value}>{level.label}</option>)}</>)}</div>

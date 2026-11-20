@@ -43,7 +43,7 @@ function linkageStudent(Institution $institution, array $values = []): Student
 function linkageOpportunity(Company $company, bool $active = true): Opportunity
 {
     $opportunity = new Opportunity([
-        'title' => 'Automatización de línea', 'program' => 'Ingeniería Mecatrónica', 'period_type' => 'semester', 'period_number' => 5,
+        'title' => 'Automatización de línea', 'program' => 'Ingeniería Mecatrónica', 'period_number' => 5,
         'vacancies' => 3, 'can_relocate' => false, 'state_code' => '28', 'municipality_code' => '28032', 'description' => 'Actividades.',
     ]);
     $opportunity->company_id = $company->id;
@@ -280,8 +280,8 @@ describe('oportunidades activas para la solicitud (CA-06)', function () {
         $this->browserRequest('GET', '/api/opportunities/options')->assertOk()
             ->assertHeader('Cache-Control', 'no-store, private')
             ->assertExactJson(['data' => [
-                ['id' => $newer->id, 'title' => 'Automatización de línea', 'program' => 'Ingeniería Mecatrónica', 'municipality' => 'Reynosa'],
-                ['id' => $this->opportunity->id, 'title' => 'Automatización de línea', 'program' => 'Ingeniería Mecatrónica', 'municipality' => 'Reynosa'],
+                ['id' => $newer->id, 'title' => 'Automatización de línea', 'program' => 'Ingeniería Mecatrónica', 'municipality' => 'Reynosa', 'vacancies' => 3, 'accepted_count' => 0],
+                ['id' => $this->opportunity->id, 'title' => 'Automatización de línea', 'program' => 'Ingeniería Mecatrónica', 'municipality' => 'Reynosa', 'vacancies' => 3, 'accepted_count' => 0],
             ]]);
     });
 
@@ -290,3 +290,33 @@ describe('oportunidades activas para la solicitud (CA-06)', function () {
         $this->browserRequest('GET', '/api/opportunities/options')->assertForbidden();
     });
 });
+
+describe('cupo de la oportunidad (T-S14-11)', function () {
+    it('rejects new requests once the opportunity covered its places, and allows them again after widening them', function () {
+        $this->loginWithCookies($this->account)->assertOk();
+        foreach (range(1, 3) as $place) {
+            $linkage = new LinkageRequest(['message' => null]);
+            $linkage->company_id = $this->company->id;
+            $linkage->opportunity_id = $this->opportunity->id;
+            $linkage->student_id = linkageStudent($this->institution)->id;
+            $linkage->institution_id = $this->institution->id;
+            $linkage->requested_by = $this->account->id;
+            $linkage->status = 'ACEPTADA';
+            $linkage->save();
+        }
+
+        sendLinkage($this)->assertUnprocessable()
+            ->assertJsonPath('errors.opportunity_id.0', 'La oportunidad ya cubrió sus 3 lugares. Amplía los lugares para enviar más solicitudes.');
+        expect(LinkageRequest::query()->where('student_id', $this->student->id)->exists())->toBeFalse();
+
+        $this->opportunity->forceFill(['vacancies' => 4])->save();
+        sendLinkage($this)->assertCreated();
+    });
+
+    it('offers full opportunities with their covered places so the form can disable them', function () {
+        $this->loginWithCookies($this->account)->assertOk();
+        $this->browserRequest('GET', '/api/opportunities/options')->assertOk()
+            ->assertJsonPath('data.0.vacancies', 3)->assertJsonPath('data.0.accepted_count', 0);
+    });
+});
+

@@ -14,7 +14,7 @@ const accepted = {
   opportunity: { id: 12, title: 'Tableros de producción' },
   profile: { public_id: publicId, headline: 'Analista de datos', program: 'Ingeniería en Datos', period_type: 'semester', period_number: 6 },
   institution: { name: 'UT del Golfo', contact_name: 'Laura Méndez', contact_position: 'Coordinación Dual', contact_email: 'dual@utgolfo.edu.mx', contact_phone: '+52 833 357 4800' },
-  responded_at: '2026-10-29T16:00:00Z', response_message: 'Coordinemos la entrevista.', unread_count: 0,
+  responded_at: '2026-10-29T16:00:00Z', response_message: 'Coordinemos la entrevista.', termination: null, unread_count: 0,
 }
 const pending = { ...accepted, status: 'PENDIENTE_INSTITUCION', responded_at: null, response_message: null }
 const page = (items: unknown[]) => Response.json({ data: items, meta: { current_page: 1, last_page: 1, total: items.length, per_page: 20 } })
@@ -120,6 +120,28 @@ describe('detalle de la solicitud para la empresa HU-S13-02', () => {
     expect(screen.getByText('Cancelada', { selector: '.linkage-status' })).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Cancelar solicitud' })).not.toBeInTheDocument()
     expect(screen.queryByRole('note', { name: 'Estado de la solicitud' })).not.toBeInTheDocument()
+  })
+
+  it('da de baja una vinculación aceptada con su motivo; la baja libera el lugar (T-S14-13)', async () => {
+    apiMock.mockResolvedValueOnce(Response.json({ data: accepted }))
+      .mockResolvedValueOnce(Response.json({ data: { ...accepted, status: 'BAJA', termination: { at: '2026-11-02T10:00:00Z', party: 'COMPANY', reason: 'El alumno no se presentó.', by: { name: 'Reclutadora' } } } }))
+    renderApp()
+    const section = await screen.findByRole('region', { name: 'Baja de la vinculación' })
+    fireEvent.click(within(section).getByRole('button', { name: 'Dar de baja' }))
+    const sheet = await screen.findByRole('dialog', { name: 'Dar de baja la vinculación' })
+    fireEvent.change(within(sheet).getByLabelText('Motivo de la baja'), { target: { value: 'El alumno no se presentó.' } })
+    fireEvent.click(within(sheet).getByRole('button', { name: 'Dar de baja' }))
+    await waitFor(() => expect(screen.getByRole('region', { name: 'Baja de la vinculación' })).toHaveTextContent('Tu empresa (Reclutadora)'))
+    const [path, init] = apiMock.mock.calls.filter(([, call]) => call?.method === 'PATCH')[0]
+    expect([path, JSON.parse(init?.body as string)]).toEqual(['/api/linkage-requests/41/termination', { reason: 'El alumno no se presentó.' }])
+    expect(screen.getAllByText('Dada de baja').length).toBeGreaterThan(0)
+  })
+
+  it('una pendiente no ofrece dar de baja (T-S14-13)', async () => {
+    apiMock.mockResolvedValueOnce(Response.json({ data: pending }))
+    renderApp()
+    await screen.findByRole('button', { name: 'Cancelar solicitud' })
+    expect(screen.queryByRole('region', { name: 'Baja de la vinculación' })).not.toBeInTheDocument()
   })
 
   it('responde igual a una solicitud ajena o inexistente', async () => {

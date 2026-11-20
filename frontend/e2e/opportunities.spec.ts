@@ -28,7 +28,6 @@ test('HU-S5-02 y HU-S5-03: la empresa registra una oportunidad con el municipio 
     await form.getByLabel('Actividades y objetivos').fill('Programación de celdas robotizadas y mejora continua de la línea.')
     await form.getByLabel('Lugares disponibles').fill('4')
     await form.getByLabel('Carrera o programa requerido').fill('Ingeniería Mecatrónica')
-    await form.getByLabel('Tipo de periodo').selectOption('semester')
     await form.getByLabel('Periodo mínimo').selectOption('5')
     await form.getByLabel('Idioma (opcional)').selectOption('en')
     await form.getByLabel('Nivel mínimo').selectOption('4')
@@ -44,7 +43,7 @@ test('HU-S5-02 y HU-S5-03: la empresa registra una oportunidad con el municipio 
     await expect(page.getByText('Oportunidad registrada correctamente.')).toBeVisible()
     await expect(page.getByText(title, { exact: true })).toBeVisible()
     await expect(page.getByText('Reynosa, Tamaulipas')).toBeVisible()
-    await expect(page.getByText('5.º semestre o posterior')).toBeVisible()
+    await expect(page.getByText('5.º o posterior, semestre o cuatrimestre')).toBeVisible()
     await expect(page.getByRole('list', { name: 'Habilidades requeridas' }).getByText(skill)).toBeVisible()
 
     // Edición: más lugares y otro municipio del catálogo.

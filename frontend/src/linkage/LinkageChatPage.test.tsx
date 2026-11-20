@@ -23,7 +23,7 @@ const received = {
     sector_code: '54', state_code: '28', contact_name: 'Laura Méndez', contact_position: null, contact_email: 'rh@manugolfo.mx', contact_phone: null,
   },
   opportunity: {
-    id: 12, title: 'Tableros de producción', program: 'Ingeniería en Datos', vacancies: 2, period_type: 'semester', period_number: 5,
+    id: 12, title: 'Tableros de producción', program: 'Ingeniería en Datos', vacancies: 2, accepted_count: 0, period_number: 5,
     can_relocate: false, state_code: '28', municipality: 'Victoria', description: 'Actividades.', skills: [], language_code: null, min_level: null, is_active: true,
   },
   student: {
@@ -31,7 +31,7 @@ const received = {
     program: 'Ingeniería en Datos', period_type: 'semester', period_number: 6, dual_available: true, state_code: '28', municipality: 'Victoria',
     can_relocate: false, social_security: { insurance_type: 'IMSS', insurer_name: null, has_number: true, has_document: true },
   },
-  responded_at: null, response_message: null, responded_by: null,
+  responded_at: null, response_message: null, responded_by: null, termination: null, student_accepted_elsewhere: [],
 }
 const thread = [{ id: 5, sender_party: 'INSTITUTION', sender_name: 'UT del Golfo', is_own: false, account_name: null, body: '¿Puede iniciar el lunes?', created_at: '2026-10-30T09:00:00Z' }]
 const messagePaths = () => fetchMock.mock.calls.map(([path]) => String(path)).filter((path) => path.includes('/messages'))

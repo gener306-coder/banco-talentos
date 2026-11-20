@@ -31,6 +31,8 @@ class LinkageMessageController extends Controller
 
     private const READ_ONLY = 'La conversación es de solo lectura: la otra organización ya no está activa.';
 
+    private const TERMINATED = 'La vinculación se dio de baja: la conversación queda en solo lectura.';
+
     /** CA-06: mensajes en orden cronológico, de 100 en 100, con after=<id> para la consulta incremental. */
     public function index(ListLinkageMessagesRequest $request, string $linkageRequest): JsonResponse
     {
@@ -48,7 +50,7 @@ class LinkageMessageController extends Controller
             'data' => $messages->take(self::PER_PAGE)->map(fn (LinkageMessage $message): array => $this->item($message, $linkage, $party))->values(),
             'meta' => [
                 'has_more' => $messages->count() > self::PER_PAGE,
-                'can_write' => $this->counterpartActive($linkage, $party),
+                'can_write' => $linkage->status === LinkageRequestStatus::ACCEPTED && $this->counterpartActive($linkage, $party),
                 'last_read_message_id' => $linkage->getAttribute($party->readMarkerColumn()),
             ],
         ])->header('Cache-Control', 'no-store, private');
@@ -66,6 +68,9 @@ class LinkageMessageController extends Controller
         [$message, $linkage] = DB::transaction(function () use ($request, $linkageRequest, $user, $party): array {
             $linkage = $this->conversation($request, $linkageRequest, lock: true);
 
+            if ($linkage->status === LinkageRequestStatus::TERMINATED) {
+                throw ValidationException::withMessages(['status' => [self::TERMINATED]]);
+            }
             if (! $this->counterpartActive($linkage, $party)) {
                 throw ValidationException::withMessages(['status' => [self::READ_ONLY]]);
             }
@@ -175,7 +180,8 @@ class LinkageMessageController extends Controller
             ->find((int) $linkageRequest);
         abort_if($linkage === null, 404, 'La solicitud no existe.');
 
-        if ($linkage->status !== LinkageRequestStatus::ACCEPTED) {
+        // T-S14-13: una vinculación dada de baja conserva su historial en solo lectura.
+        if (! in_array($linkage->status, [LinkageRequestStatus::ACCEPTED, LinkageRequestStatus::TERMINATED], true)) {
             throw ValidationException::withMessages(['status' => [self::NOT_ACCEPTED]]);
         }
 

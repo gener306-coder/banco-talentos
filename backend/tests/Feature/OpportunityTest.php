@@ -3,8 +3,10 @@
 use App\Enums\UserRole;
 use App\Models\Company;
 use App\Models\Institution;
+use App\Models\LinkageRequest;
 use App\Models\Opportunity;
 use App\Models\Skill;
+use App\Models\Student;
 use App\Models\User;
 use App\Support\ContactInformation;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -26,7 +28,6 @@ function opportunityPayload(array $overrides = []): array
     return array_replace([
         'title' => 'Automatización de línea de ensamble',
         'program' => 'Ingeniería Mecatrónica',
-        'period_type' => 'semester',
         'period_number' => 5,
         'vacancies' => 3,
         'can_relocate' => false,
@@ -137,9 +138,9 @@ describe('alta y autoría (CA-02, CA-03, CA-05)', function () {
             'municipality_code' => '28032',
             'municipality' => 'Reynosa',
             'vacancies' => 3,
+            'accepted_count' => 0,
             'is_active' => true,
             'created_at' => $opportunity->created_at->toISOString(),
-            'period_type' => 'semester',
             'period_number' => 5,
             'can_relocate' => false,
             'description' => 'Apoyo en la programación de PLC y en el mantenimiento preventivo de la línea.',
@@ -170,6 +171,14 @@ describe('alta y autoría (CA-02, CA-03, CA-05)', function () {
         $body = $this->browserRequest('GET', '/api/opportunities/'.$id)->getContent().
             $this->browserRequest('GET', '/api/opportunities')->getContent();
         expect($body)->not->toContain('location')->not->toContain('latitude')->not->toContain('company_id');
+    });
+
+    it('keeps only the minimum period number: a period type sent by an old client is ignored and never returned (T-S14-10)', function () {
+        signInCompany($this);
+        $response = $this->browserRequest('POST', '/api/opportunities', opportunityPayload(['period_type' => 'four_month', 'period_number' => 6]))
+            ->assertCreated()->assertJsonPath('data.period_number', 6);
+        expect($response->json('data'))->not->toHaveKey('period_type')
+            ->and(\Illuminate\Support\Facades\Schema::hasColumn('opportunities', 'period_type'))->toBeFalse();
     });
 
     it('accepts an opportunity without skills nor language', function () {
@@ -209,7 +218,6 @@ describe('validación (CA-03, CA-04)', function () {
         'título largo' => [['title' => str_repeat('a', 151)], 'title'],
         'sin carrera' => [['program' => null], 'program'],
         'carrera larga' => [['program' => str_repeat('a', 151)], 'program'],
-        'tipo de periodo' => [['period_type' => 'year'], 'period_type'],
         'periodo 0' => [['period_number' => 0], 'period_number'],
         'periodo 16' => [['period_number' => 16], 'period_number'],
         'vacantes 0' => [['vacancies' => 0], 'vacancies'],
@@ -293,9 +301,55 @@ describe('listado (CA-06)', function () {
         ]))->assertCreated();
 
         $item = $this->browserRequest('GET', '/api/opportunities')->assertOk()->json('data.0');
-        expect(array_keys($item))->toBe(['id', 'title', 'program', 'state_code', 'municipality_code', 'municipality', 'vacancies', 'is_active', 'created_at', 'skills'])
+        expect(array_keys($item))->toBe(['id', 'title', 'program', 'state_code', 'municipality_code', 'municipality', 'vacancies', 'accepted_count', 'is_active', 'created_at', 'skills'])
             ->and($item['municipality'])->toBe('Reynosa')
             ->and(array_column($item['skills'], 'name'))->toBe(['Skill 1', 'Skill 2', 'Skill 3', 'Skill 4', 'Skill 5']);
+    });
+});
+
+describe('lugares cubiertos (T-S14-11)', function () {
+    it('reports the covered places and never lets the places drop below them', function () {
+        signInCompany($this);
+        $opportunity = opportunityFor($this->company, ['vacancies' => 3]);
+        $institution = Institution::factory()->create();
+        foreach (range(1, 2) as $place) {
+            $linkage = new LinkageRequest(['message' => null]);
+            $linkage->company_id = $this->company->id;
+            $linkage->opportunity_id = $opportunity->id;
+            $linkage->student_id = Student::factory()->for($institution)->create()->id;
+            $linkage->institution_id = $institution->id;
+            $linkage->requested_by = $this->account->id;
+            $linkage->status = 'ACEPTADA';
+            $linkage->save();
+        }
+
+        $this->browserRequest('GET', '/api/opportunities/'.$opportunity->id)->assertOk()->assertJsonPath('data.accepted_count', 2);
+        $this->browserRequest('GET', '/api/opportunities')->assertOk()->assertJsonPath('data.0.accepted_count', 2);
+
+        $this->browserRequest('PUT', '/api/opportunities/'.$opportunity->id, opportunityPayload(['vacancies' => 1]))
+            ->assertUnprocessable()->assertJsonPath('errors.vacancies.0', 'Ya hay 2 lugares cubiertos: los lugares no pueden ser menos.');
+        expect($opportunity->refresh()->vacancies)->toBe(3);
+
+        $this->browserRequest('PUT', '/api/opportunities/'.$opportunity->id, opportunityPayload(['vacancies' => 2]))->assertOk()->assertJsonPath('data.vacancies', 2);
+    });
+
+    it('keeps an opportunity with more accepted requests than places (data older than the rule) editable without changing its places', function () {
+        signInCompany($this);
+        $opportunity = opportunityFor($this->company, ['vacancies' => 1]);
+        $institution = Institution::factory()->create();
+        foreach (range(1, 2) as $place) {
+            $linkage = new LinkageRequest(['message' => null]);
+            $linkage->company_id = $this->company->id;
+            $linkage->opportunity_id = $opportunity->id;
+            $linkage->student_id = Student::factory()->for($institution)->create()->id;
+            $linkage->institution_id = $institution->id;
+            $linkage->requested_by = $this->account->id;
+            $linkage->status = 'ACEPTADA';
+            $linkage->save();
+        }
+
+        $this->browserRequest('PUT', '/api/opportunities/'.$opportunity->id, opportunityPayload(['vacancies' => 1, 'title' => 'Título corregido']))
+            ->assertOk()->assertJsonPath('data.title', 'Título corregido')->assertJsonPath('data.accepted_count', 2);
     });
 });
 

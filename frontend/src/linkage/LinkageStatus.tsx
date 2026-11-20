@@ -3,7 +3,7 @@ import type { LinkageStatus as Status } from './api'
 import './linkage.css'
 
 const variants: Record<Status, string> = {
-  PENDIENTE_INSTITUCION: 'pending', ACEPTADA: 'accepted', RECHAZADA: 'rejected', CANCELADA: 'cancelled',
+  PENDIENTE_INSTITUCION: 'pending', ACEPTADA: 'accepted', RECHAZADA: 'rejected', CANCELADA: 'cancelled', BAJA: 'terminated',
 }
 
 /** Estado de una solicitud con su texto: el color nunca es el único indicador. */

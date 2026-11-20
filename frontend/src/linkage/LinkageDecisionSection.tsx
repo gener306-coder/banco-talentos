@@ -4,6 +4,7 @@ import { InstitutionRequestError } from '../institutions/InstitutionLayout'
 import { useApiMutation } from '../lib/useApiRequest'
 import { hasContactInformation } from '../students/cvCatalogs'
 import { ConfirmDialog } from '../ui/ConfirmDialog'
+import { isFull, placesLabel } from '../opportunities/api'
 import { LINKAGE_MESSAGE_LIMIT } from './api'
 import { decideLinkage, institutionLinkageMessages } from './institutionApi'
 import type { LinkageDecision, ReceivedLinkageDetail } from './institutionApi'
@@ -39,6 +40,8 @@ export function LinkageDecisionSection({ data, onDecided, refresh }: {
   const [notice, setNotice] = useState<string | null>(null)
   const origin = useRef<HTMLButtonElement | null>(null)
 
+  // T-S14-11: con el cupo lleno ya no se puede aceptar; rechazar sigue disponible. El servidor decide de forma atómica.
+  const full = isFull(data.opportunity)
   const messageError = localError ?? mutation.failure?.errors.response_message?.join(' ')
   const statusError = mutation.failure?.errors.status?.join(' ')
 
@@ -77,6 +80,21 @@ export function LinkageDecisionSection({ data, onDecided, refresh }: {
                 <button type="button" className="secondary" onClick={() => { void refresh() }}>Actualizar solicitud</button>
               </div>
             )}
+            {/* T-S14-12: el alumno ya tiene otras vinculaciones aceptadas. La institución decide; puede tener sentido. */}
+            {data.student_accepted_elsewhere.length > 0 && (
+              <div className="callout-lite" role="note" aria-label="Otras vinculaciones aceptadas del alumno">
+                <p>{data.student_accepted_elsewhere.length === 1 ? 'Este alumno ya tiene una vinculación aceptada:' : `Este alumno ya tiene ${data.student_accepted_elsewhere.length} vinculaciones aceptadas:`}</p>
+                <ul>
+                  {data.student_accepted_elsewhere.map((other) => (
+                    <li key={other.id}><strong className="notice-subject">{other.company}</strong> · {other.opportunity}</li>
+                  ))}
+                </ul>
+                <p>Considera su disponibilidad antes de aceptar otra.</p>
+              </div>
+            )}
+            {full && !statusError && (
+              <p className="notice-muted" id="linkage-full-note">La oportunidad ya cubrió sus lugares ({placesLabel(data.opportunity)}). Ya no puedes aceptar esta solicitud; puedes rechazarla con un mensaje para la empresa.</p>
+            )}
             <form className="linkage-decision" onSubmit={(event) => event.preventDefault()} aria-busy={mutation.pending} noValidate>
               <fieldset disabled={mutation.pending}>
                 <label htmlFor="linkage-response-message">Mensaje para la empresa (opcional)</label>
@@ -88,7 +106,8 @@ export function LinkageDecisionSection({ data, onDecided, refresh }: {
                 <p className="field-hint" id="linkage-response-count">{message.length} de {LINKAGE_MESSAGE_LIMIT} caracteres · sin enlaces, correos ni teléfonos</p>
                 {messageError && <p className="field-error" id="linkage-response-error">{messageError}</p>}
                 <div className="actions">
-                  <button type="button" onClick={(event) => request('ACEPTADA', event.currentTarget)}>
+                  <button type="button" disabled={full} aria-describedby={full ? 'linkage-full-note' : undefined}
+                    onClick={(event) => request('ACEPTADA', event.currentTarget)}>
                     <PendingLabel pending={mutation.pending} label={decisions.ACEPTADA.label} pendingLabel="Guardando respuesta…" />
                   </button>
                   <button type="button" className="secondary" onClick={(event) => request('RECHAZADA', event.currentTarget)}>

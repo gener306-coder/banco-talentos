@@ -56,6 +56,11 @@ export function stateName(code: string): string {
   return MEXICAN_STATES.find((state) => state.code === code)?.name ?? code
 }
 
+/** T-S14-10: periodo mínimo de una oportunidad, válido para semestre o cuatrimestre: «6.º o posterior». */
+export function minimumPeriodLabel(number: number): string {
+  return `${number}.º o posterior`
+}
+
 /** «6.º semestre». */
 export function periodLabel(type: PeriodType, number: number): string {
   return `${number}.º ${type === 'semester' ? 'semestre' : 'cuatrimestre'}`

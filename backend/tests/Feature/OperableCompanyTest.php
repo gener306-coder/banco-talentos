@@ -24,7 +24,7 @@ beforeEach(function () {
 function operableOpportunityPayload(): array
 {
     return [
-        'title' => 'Automatización de línea de ensamble', 'program' => 'Ingeniería Mecatrónica', 'period_type' => 'semester', 'period_number' => 5,
+        'title' => 'Automatización de línea de ensamble', 'program' => 'Ingeniería Mecatrónica', 'period_number' => 5,
         'vacancies' => 3, 'can_relocate' => false, 'state_code' => '28', 'municipality_code' => '28032',
         'description' => 'Apoyo en la programación de PLC.', 'skills' => [['name' => 'PLC', 'kind' => 'technical']],
     ];
@@ -45,7 +45,7 @@ function operableStudent(Institution $institution): Student
 function operableOpportunity(Company $company, bool $active = true): Opportunity
 {
     $opportunity = new Opportunity([
-        'title' => 'Automatización', 'program' => 'Ingeniería Mecatrónica', 'period_type' => 'semester', 'period_number' => 5,
+        'title' => 'Automatización', 'program' => 'Ingeniería Mecatrónica', 'period_number' => 5,
         'vacancies' => 3, 'can_relocate' => false, 'state_code' => '28', 'municipality_code' => '28032', 'description' => 'Actividades.',
     ]);
     $opportunity->company_id = $company->id;

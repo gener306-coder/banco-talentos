@@ -55,7 +55,7 @@ function dashboard($test)
 function dashboardOpportunity(Company $company, bool $active = true): Opportunity
 {
     $opportunity = new Opportunity([
-        'title' => 'Tableros de producción', 'program' => 'Ingeniería Mecatrónica', 'period_type' => 'semester', 'period_number' => 5,
+        'title' => 'Tableros de producción', 'program' => 'Ingeniería Mecatrónica', 'period_number' => 5,
         'vacancies' => 2, 'can_relocate' => false, 'state_code' => '28', 'municipality_code' => '28032', 'description' => 'Actividades.',
     ]);
     $opportunity->company_id = $company->id;

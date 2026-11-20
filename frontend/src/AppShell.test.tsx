@@ -1,4 +1,4 @@
-import { act, render, screen } from '@testing-library/react'
+import { act, fireEvent, render, screen } from '@testing-library/react'
 import { MemoryRouter } from 'react-router'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import App from './App'
@@ -27,5 +27,28 @@ describe('estructura de la aplicación', () => {
     await screen.findByRole('heading', { name: 'Hola, Rosa Garza' })
     expect(view.container.querySelector('header.app-bar')).toBe(header)
     expect(view.container.querySelector('main')).toBe(main)
+  })
+
+  it('cada vista nueva empieza arriba, también al regresar al inicio por su enlace (T-S14-14)', async () => {
+    const user = { id: 9, name: 'Rosa Garza', email: 'rosa@x.test', role: 'COMPANY', institution: null,
+      company: { id: 3, name: 'ManuGolfo', missing: [], onboarding: 'done', can_operate: true } }
+    vi.stubGlobal('fetch', vi.fn<typeof fetch>(async (path) => {
+      if (path === '/api/me') return Response.json({ user })
+      if (typeof path === 'string' && path.endsWith('/unread-summary')) return Response.json({ data: { conversations: 0, items: [] } })
+      return new Promise<Response>(() => undefined)
+    }))
+    const scrollTo = vi.fn()
+    vi.stubGlobal('scrollTo', scrollTo)
+    render(<MemoryRouter initialEntries={['/']}><App /></MemoryRouter>)
+    const link = await screen.findByRole('link', { name: /Oportunidades Duales/ })
+    scrollTo.mockClear()
+    fireEvent.click(link)
+    await screen.findByRole('heading', { name: 'Oportunidades Duales', level: 2 })
+    expect(scrollTo).toHaveBeenCalledWith(0, 0)
+
+    scrollTo.mockClear()
+    fireEvent.click(screen.getByRole('link', { name: 'Volver al inicio' }))
+    await screen.findByRole('heading', { name: 'Hola, Rosa Garza' })
+    expect(scrollTo).toHaveBeenCalledWith(0, 0)
   })
 })

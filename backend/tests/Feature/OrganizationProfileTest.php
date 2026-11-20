@@ -40,7 +40,7 @@ function profileLinkage(Company $company, Institution $institution): LinkageRequ
 {
     $student = Student::factory()->for($institution)->withIdentity()->create();
     $opportunity = new Opportunity([
-        'title' => 'Tableros de producción', 'program' => 'Ingeniería en Datos', 'period_type' => 'semester', 'period_number' => 5,
+        'title' => 'Tableros de producción', 'program' => 'Ingeniería en Datos', 'period_number' => 5,
         'vacancies' => 2, 'can_relocate' => false, 'state_code' => '28', 'municipality_code' => '28032', 'description' => 'Actividades.',
     ]);
     $opportunity->company_id = $company->id;

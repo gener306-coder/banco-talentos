@@ -11,9 +11,10 @@ import { ConfirmDialog } from '../ui/ConfirmDialog'
 import { EmailMenu } from '../ui/EmailMenu'
 import { ChevronRightIcon, MessageIcon } from '../ui/icons'
 import { LoadingState } from '../ui/StateMessage'
-import { cancelLinkageRequest, getLinkageRequest, linkageDetailMessages } from './api'
+import { cancelLinkageRequest, getLinkageRequest, linkageDetailMessages, terminateLinkageRequest } from './api'
 import type { LinkageInboxItem } from './api'
 import { LinkageStatus } from './LinkageStatus'
+import { LinkageTerminationSection } from './LinkageTermination'
 import { UnreadTag } from './UnreadBadge'
 import '../institutions/institutions.css'
 
@@ -121,6 +122,9 @@ function Detail({ data, onCancelled }: { data: LinkageInboxItem; onCancelled: (u
         </dl>
       </section>
 
+      {/* T-S14-13: la empresa da de baja una vinculación aceptada (p. ej., el alumno no se presentó); libera el lugar. */}
+      <LinkageTerminationSection viewer="COMPANY" status={data.status} termination={data.termination} messages={linkageDetailMessages}
+        submit={(reason) => terminateLinkageRequest(data.id, reason)} onTerminated={onCancelled} />
 
       <ConfirmDialog open={confirming} origin={origin}
         title="¿Cancelar la solicitud?"

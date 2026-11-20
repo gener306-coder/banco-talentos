@@ -7,8 +7,11 @@ use App\Enums\LinkageParty;
 use App\Enums\LinkageRequestStatus;
 use App\Http\Requests\DecideLinkageRequestRequest;
 use App\Http\Requests\ListInstitutionLinkageRequestsRequest;
+use App\Http\Requests\TerminateLinkageRequestRequest;
+use App\Http\Controllers\Concerns\TerminatesLinkage;
 use App\Models\Company;
 use App\Models\LinkageRequest;
+use App\Models\Opportunity;
 use App\Models\Skill;
 use App\Models\Student;
 use App\Support\CsvExport;
@@ -30,6 +33,8 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
  */
 class InstitutionLinkageRequestController extends Controller
 {
+    use TerminatesLinkage;
+
     private const PER_PAGE = 20;
 
     private const EXPORT_TIMEZONE = 'America/Mexico_City';
@@ -44,7 +49,8 @@ class InstitutionLinkageRequestController extends Controller
             ->with([
                 'company:id,legal_name,trade_name,municipality_code',
                 'company.municipality:code,name',
-                'opportunity:id,title,program,vacancies',
+                // T-S14-11: los lugares cubiertos en la misma consulta, sin una por fila.
+                'opportunity' => fn ($opportunity) => $opportunity->select(['id', 'title', 'program', 'vacancies'])->withAcceptedCount(),
                 self::STUDENT_COLUMNS,
                 'student.identity',
             ])
@@ -120,17 +126,29 @@ class InstitutionLinkageRequestController extends Controller
      * Respuesta institucional (HU-S6-02 CA-01 a CA-03): solo una solicitud propia y PENDIENTE_INSTITUCION. La fila se
      * bloquea para que la empresa no la cancele a la vez; una ajena o inexistente responde 404 y una que ya no está
      * pendiente, 422, sin cambios.
+     *
+     * T-S14-11: aceptar cubre un lugar de la oportunidad. Primero se bloquea la oportunidad (FOR UPDATE) y después la
+     * solicitud, siempre en ese orden, y solo entonces se cuentan las aceptadas: dos instituciones que aceptan a la vez se
+     * ordenan y la que llega con el cupo lleno recibe 422. Rechazar siempre se permite.
      */
     public function decide(DecideLinkageRequestRequest $request, string $linkageRequest): JsonResponse
     {
         $validated = $request->validated();
 
         $linkage = DB::transaction(function () use ($request, $linkageRequest, $validated): LinkageRequest {
+            $opportunityId = $this->owned($request)->whereKey((int) $linkageRequest)->value('opportunity_id');
+            abort_if($opportunityId === null, 404, 'La solicitud no existe.');
+            $accepting = $validated['status'] === LinkageRequestStatus::ACCEPTED->value;
+            $opportunity = $accepting ? Opportunity::query()->lockForUpdate()->find($opportunityId) : null;
+
             $linkage = $this->owned($request)->lockForUpdate()->find((int) $linkageRequest);
             abort_if($linkage === null, 404, 'La solicitud no existe.');
 
             if ($linkage->status !== LinkageRequestStatus::PENDING_INSTITUTION) {
                 throw ValidationException::withMessages(['status' => ['Solo puedes responder solicitudes pendientes.']]);
+            }
+            if ($opportunity !== null && $opportunity->acceptedCount() >= $opportunity->vacancies) {
+                throw ValidationException::withMessages(['status' => [Opportunity::fullMessage($opportunity->vacancies).' Puedes rechazar la solicitud.']]);
             }
             $linkage->status = LinkageRequestStatus::from($validated['status']);
             $linkage->response_message = $validated['response_message'] ?? null;
@@ -156,6 +174,7 @@ class InstitutionLinkageRequestController extends Controller
             // Solo lo necesario para saber qué falta del seguro; nunca se entrega el número ni la ruta del PDF.
             'student.socialSecurity:id,student_id,insurance_type,insurer_name,nss_hash,policy_number,document_path',
             'responder:id,name',
+            'terminator:id,name',
         ]);
 
         // El conteo de no leídos es de la bandeja (HU-S13-04); en el detalle la conversación ya se ve completa.
@@ -181,7 +200,6 @@ class InstitutionLinkageRequestController extends Controller
             ],
             'opportunity' => [
                 ...$item['opportunity'],
-                'period_type' => $opportunity->period_type->value,
                 'period_number' => $opportunity->period_number,
                 'can_relocate' => $opportunity->can_relocate,
                 'state_code' => $opportunity->state_code->value,
@@ -210,7 +228,33 @@ class InstitutionLinkageRequestController extends Controller
             'responded_at' => $linkage->responded_at?->toISOString(),
             'response_message' => $linkage->response_message,
             'responded_by' => $linkage->responder === null ? null : ['name' => $linkage->responder->name],
+            // T-S14-13: la baja, con la cuenta solo si la registró la institución.
+            'termination' => $linkage->terminationFor(LinkageParty::INSTITUTION),
+            // T-S14-12: otras vinculaciones aceptadas del mismo alumno, para decidir con ese contexto. Su institución
+            // ya las ve en su bandeja; solo la empresa, la oportunidad y la fecha de la respuesta.
+            'student_accepted_elsewhere' => LinkageRequest::query()
+                ->where('institution_id', $linkage->institution_id)
+                ->where('student_id', $linkage->student_id)
+                ->whereKeyNot($linkage->id)
+                ->where('status', LinkageRequestStatus::ACCEPTED)
+                ->with(['company:id,legal_name,trade_name', 'opportunity:id,title'])
+                ->orderByDesc('responded_at')
+                ->get()
+                ->map(fn (LinkageRequest $other): array => [
+                    'id' => $other->id,
+                    'company' => $other->company->label(),
+                    'opportunity' => $other->opportunity->title,
+                    'responded_at' => $other->responded_at?->toISOString(),
+                ])->values(),
         ]])->header('Cache-Control', 'no-store, private');
+    }
+
+    /** T-S14-13: la institución da de baja una vinculación aceptada de su alumno; libera el lugar. */
+    public function terminate(TerminateLinkageRequestRequest $request, string $linkageRequest): JsonResponse
+    {
+        $user = $request->user();
+
+        return $this->detail($this->terminateLinkage($user, LinkageParty::INSTITUTION, (int) $user->institution_id, $linkageRequest, $request->validated('reason')));
     }
 
     /** Anti-IDOR (CA-02): siempre dentro de la institución de la sesión. */
@@ -258,6 +302,8 @@ class InstitutionLinkageRequestController extends Controller
                 'title' => $linkage->opportunity->title,
                 'program' => $linkage->opportunity->program,
                 'vacancies' => $linkage->opportunity->vacancies,
+                // T-S14-11: lugares cubiertos, para avisar que el cupo está lleno antes de aceptar.
+                'accepted_count' => $linkage->opportunity->coveredPlaces(),
             ],
             'student' => $this->studentSummary($linkage->student),
             // HU-S13-04 CA-02: mensajes de la empresa sin leer.

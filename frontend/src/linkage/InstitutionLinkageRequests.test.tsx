@@ -15,7 +15,7 @@ const student = {
 const pending = {
   id: 41, status: 'PENDIENTE_INSTITUCION', created_at: '2026-10-28T10:00:00Z',
   company: { name: 'ManuGolfo', municipality: 'Victoria' },
-  opportunity: { id: 12, title: 'Tableros de producción', program: 'Ingeniería en Datos', vacancies: 2 },
+  opportunity: { id: 12, title: 'Tableros de producción', program: 'Ingeniería en Datos', vacancies: 2, accepted_count: 0 },
   student,
   unread_count: 0,
 }
@@ -28,7 +28,7 @@ const detail = {
     sector_code: '54', state_code: '28', contact_name: 'Laura Méndez', contact_position: 'Recursos Humanos', contact_email: 'dual@manugolfo.mx', contact_phone: '(833) 123-4567',
   },
   opportunity: {
-    id: 12, title: 'Tableros de producción', program: 'Ingeniería en Datos', vacancies: 2, period_type: 'semester', period_number: 5,
+    id: 12, title: 'Tableros de producción', program: 'Ingeniería en Datos', vacancies: 2, accepted_count: 0, period_number: 5,
     can_relocate: true, state_code: '28', municipality: 'Reynosa', description: 'Actividades del proyecto.',
     skills: [{ name: 'Python', kind: 'technical' }], language_code: 'en', min_level: 3, is_active: true,
   },
@@ -39,6 +39,8 @@ const detail = {
   responded_at: null,
   response_message: null,
   responded_by: null,
+  termination: null,
+  student_accepted_elsewhere: [],
 }
 const page = (items: unknown[], meta = {}) => Response.json({ data: items, meta: { current_page: 1, last_page: 1, total: items.length, per_page: 20, ...meta } })
 
@@ -198,7 +200,8 @@ describe('detalle de solicitud HU-S6-01', () => {
 
     const opportunity = screen.getByRole('region', { name: 'Oportunidad' })
     expect(opportunity).toHaveTextContent('Actividades del proyecto.')
-    expect(opportunity).toHaveTextContent('5.º semestre o posterior')
+    expect(opportunity).toHaveTextContent('5.º o posterior, semestre o cuatrimestre')
+    expect(opportunity).toHaveTextContent('0 de 2 lugares cubiertos')
     expect(within(opportunity).getByRole('list', { name: 'Habilidades requeridas' })).toHaveTextContent('Python')
 
     const company = screen.getByRole('region', { name: 'Empresa y contacto del programa dual' })
@@ -325,6 +328,81 @@ describe('respuesta institucional HU-S6-02', () => {
     expect(await within(section).findByRole('alert')).toHaveTextContent('Solo puedes responder solicitudes pendientes.')
     fireEvent.click(within(section).getByRole('button', { name: 'Actualizar solicitud' }))
     expect(await screen.findByText('La empresa canceló la solicitud antes de que se respondiera.')).toBeInTheDocument()
+  })
+
+  it('con el cupo lleno no deja aceptar, explica por qué y sigue permitiendo rechazar (T-S14-11)', async () => {
+    const full = { ...detail, opportunity: { ...detail.opportunity, vacancies: 2, accepted_count: 2 } }
+    apiMock.mockResolvedValueOnce(Response.json({ data: full }))
+      .mockResolvedValueOnce(Response.json({ data: { ...full, status: 'RECHAZADA', responded_at: '2026-10-29T16:00:00Z', responded_by: { name: 'Coordinación dual' } } }))
+    renderApp('/institution/linkage-requests/41')
+    const section = await screen.findByRole('region', { name: 'Responder solicitud' })
+    expect(screen.getByRole('region', { name: 'Oportunidad' })).toHaveTextContent('2 de 2 lugares cubiertosCupo lleno')
+    const accept = within(section).getByRole('button', { name: 'Aceptar solicitud' })
+    expect(accept).toBeDisabled()
+    expect(accept).toHaveAccessibleDescription(/ya cubrió sus lugares \(2 de 2 lugares cubiertos\)/)
+    fireEvent.click(within(section).getByRole('button', { name: 'Rechazar solicitud' }))
+    fireEvent.click(within(await screen.findByRole('alertdialog')).getByRole('button', { name: 'Rechazar solicitud' }))
+    expect(await screen.findByRole('region', { name: 'Respuesta' })).toHaveTextContent('Rechazada')
+  })
+
+  it('si otra institución cubrió el último lugar mientras decidía, muestra el aviso del servidor y permite actualizar (T-S14-11)', async () => {
+    apiMock.mockResolvedValueOnce(Response.json({ data: detail }))
+      .mockResolvedValueOnce(Response.json({ message: 'Invalid', errors: { status: ['La oportunidad ya cubrió sus 2 lugares. Puedes rechazar la solicitud.'] } }, { status: 422 }))
+      .mockResolvedValueOnce(Response.json({ data: { ...detail, opportunity: { ...detail.opportunity, accepted_count: 2 } } }))
+    renderApp('/institution/linkage-requests/41')
+    const section = await screen.findByRole('region', { name: 'Responder solicitud' })
+    fireEvent.click(within(section).getByRole('button', { name: 'Aceptar solicitud' }))
+    fireEvent.click(within(await screen.findByRole('alertdialog')).getByRole('button', { name: 'Aceptar solicitud' }))
+    expect(await within(section).findByRole('alert')).toHaveTextContent('La oportunidad ya cubrió sus 2 lugares.')
+    fireEvent.click(within(section).getByRole('button', { name: 'Actualizar solicitud' }))
+    // La vista se vuelve a cargar: se busca la sección de nuevo.
+    await waitFor(() => expect(within(screen.getByRole('region', { name: 'Responder solicitud' })).getByRole('button', { name: 'Aceptar solicitud' })).toBeDisabled())
+  })
+
+  it('avisa si el alumno ya tiene otras vinculaciones aceptadas, sin impedir responder (T-S14-12)', async () => {
+    apiMock.mockResolvedValueOnce(Response.json({ data: { ...detail, student_accepted_elsewhere: [{ id: 77, company: 'Taller Norteño', opportunity: 'Soldadura', responded_at: '2026-10-20T10:00:00Z' }] } }))
+    renderApp('/institution/linkage-requests/41')
+    const section = await screen.findByRole('region', { name: 'Responder solicitud' })
+    const note = within(section).getByRole('note', { name: 'Otras vinculaciones aceptadas del alumno' })
+    expect(note).toHaveTextContent('Este alumno ya tiene una vinculación aceptada:')
+    expect(note).toHaveTextContent('Taller Norteño · Soldadura')
+    expect(within(section).getByRole('button', { name: 'Aceptar solicitud' })).toBeEnabled()
+  })
+
+  it('da de baja una vinculación aceptada con su motivo y muestra la baja registrada (T-S14-13)', async () => {
+    const accepted = { ...detail, status: 'ACEPTADA', responded_at: '2026-10-29T16:00:00Z', response_message: null, responded_by: { name: 'Coordinación dual' } }
+    apiMock.mockResolvedValueOnce(Response.json({ data: accepted }))
+      .mockResolvedValueOnce(Response.json({ data: { ...accepted, status: 'BAJA', termination: { at: '2026-11-02T10:00:00Z', party: 'INSTITUTION', reason: 'Cambió de programa.', by: { name: 'Coordinación dual' } } } }))
+    renderApp('/institution/linkage-requests/41')
+    const section = await screen.findByRole('region', { name: 'Baja de la vinculación' })
+    fireEvent.click(within(section).getByRole('button', { name: 'Dar de baja' }))
+    const sheet = await screen.findByRole('dialog', { name: 'Dar de baja la vinculación' })
+    // Sin motivo, ni con datos de contacto, no se envía.
+    fireEvent.click(within(sheet).getByRole('button', { name: 'Dar de baja' }))
+    expect(await within(sheet).findByText('Escribe el motivo de la baja.')).toBeInTheDocument()
+    fireEvent.change(within(sheet).getByLabelText('Motivo de la baja'), { target: { value: 'Escríbeme a dual@ut.mx' } })
+    fireEvent.click(within(sheet).getByRole('button', { name: 'Dar de baja' }))
+    expect(await within(sheet).findByText(/No incluyas enlaces, correos ni teléfonos/)).toBeInTheDocument()
+    expect(apiMock.mock.calls.filter(([, init]) => init?.method === 'PATCH')).toHaveLength(0)
+
+    fireEvent.change(within(sheet).getByLabelText('Motivo de la baja'), { target: { value: '  Cambió de programa.  ' } })
+    fireEvent.click(within(sheet).getByRole('button', { name: 'Dar de baja' }))
+    await waitFor(() => expect(screen.getByRole('region', { name: 'Baja de la vinculación' })).toHaveTextContent('Cambió de programa.'))
+    const result = screen.getByRole('region', { name: 'Baja de la vinculación' })
+    expect(result).toHaveTextContent('Tu institución (Coordinación dual)')
+    expect(result).toHaveTextContent('El lugar de la oportunidad quedó libre')
+    const [path, init] = apiMock.mock.calls.filter(([, call]) => call?.method === 'PATCH')[0]
+    expect([path, JSON.parse(init?.body as string)]).toEqual(['/api/institution/linkage-requests/41/termination', { reason: 'Cambió de programa.' }])
+  })
+
+  it('una baja registrada por la empresa se muestra sin la cuenta que la registró (T-S14-13)', async () => {
+    apiMock.mockResolvedValueOnce(Response.json({ data: { ...detail, status: 'BAJA', responded_at: '2026-10-29T16:00:00Z', responded_by: { name: 'Coordinación dual' },
+      termination: { at: '2026-11-02T10:00:00Z', party: 'COMPANY', reason: 'El alumno no se presentó.', by: null } } }))
+    renderApp('/institution/linkage-requests/41')
+    const section = await screen.findByRole('region', { name: 'Baja de la vinculación' })
+    expect(section).toHaveTextContent('La empresa')
+    expect(section).toHaveTextContent('El alumno no se presentó.')
+    expect(within(section).queryByRole('button', { name: 'Dar de baja' })).not.toBeInTheDocument()
   })
 
   it('muestra la respuesta registrada al abrir una solicitud ya respondida (CA-05)', async () => {

@@ -1,7 +1,7 @@
 import { PendingLabel } from './ui/forms'
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import type { RefObject } from 'react'
-import { Navigate, Route, Routes, useLocation } from 'react-router'
+import { Navigate, Route, Routes, useLocation, useNavigationType } from 'react-router'
 import { AuditEventsPage } from './audit/AuditEventsPage'
 import { AuthProvider } from './auth/AuthProvider'
 import { ProtectedRoute } from './auth/ProtectedRoute'
@@ -151,9 +151,14 @@ const depth = (path: string) => path.split('/').filter(Boolean).length
  */
 function useRouteTransition(element: RefObject<HTMLElement | null>, pathname: string) {
   const previous = useRef(pathname)
+  const navigation = useNavigationType()
+  const { hash } = useLocation()
   useLayoutEffect(() => {
     const from = previous.current
     previous.current = pathname
+    // T-S14-14: cada vista nueva empieza arriba; antes heredaba el desplazamiento de la anterior. Volver (POP) lo deja
+    // al navegador y a la memoria de las tablas (T-S13-12), y un ancla (#organization) ubica su propia sección.
+    if (from !== pathname && navigation !== 'POP' && !hash) window.scrollTo(0, 0)
     const node = element.current
     if (from === pathname || !node || typeof node.animate !== 'function') return
     const reduced = prefersReducedMotion()
@@ -164,7 +169,7 @@ function useRouteTransition(element: RefObject<HTMLElement | null>, pathname: st
     } catch {
       node.animate(frames, { duration: 300, easing: 'ease-out' })
     }
-  }, [element, pathname])
+  }, [element, pathname, navigation, hash])
 }
 
 /** El borde suave bajo el encabezado solo aparece cuando hay contenido debajo. */
