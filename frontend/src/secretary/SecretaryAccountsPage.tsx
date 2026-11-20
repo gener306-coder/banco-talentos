@@ -1,3 +1,5 @@
+import { TableHead, TableSkeleton } from '../ui/TableSkeleton'
+import type { TableColumn } from '../ui/TableSkeleton'
 import { useCallback, useState } from 'react'
 import { Link, useLocation } from 'react-router'
 import { useAccountAccess } from '../accounts/useAccountAccess'
@@ -8,7 +10,7 @@ import { ChevronLeftIcon, ChevronRightIcon, MailIcon, PlusIcon } from '../ui/ico
 import { Sheet } from '../ui/Sheet'
 import { useTableMemory } from '../ui/useTableMemory'
 import { rowIndex } from '../ui/tableMotion'
-import { LoadingState } from '../ui/StateMessage'
+
 import { useListParams } from '../ui/useListParams'
 import { listSecretaryAccounts, SECRETARY_PASSWORD_RESET_PATH, secretaryAccountStatusPath, secretaryMessages } from './api'
 import type { SecretaryAccountStatus } from './api'
@@ -23,6 +25,18 @@ const dateFormat = new Intl.DateTimeFormat('es-MX', { dateStyle: 'medium' })
  * en hojas, e inactivación, activación y restablecimiento de contraseña (HU-S6-04 CA-04). Disponible para ADMIN y
  * SECRETARY.
  */
+/** Totales del pie con separador de miles (T-S14-08): «2,369 alumnos». */
+const countFormat = new Intl.NumberFormat('es-MX')
+
+/** Columnas del listado (T-S14-08): las comparten la tabla y su esqueleto. */
+const columns: readonly TableColumn[] = [
+  { label: 'Nombre', role: 'title', bone: 'text' },
+  { label: 'Correo de acceso', role: 'meta', bone: 'text' },
+  { label: 'Estado', role: 'status', bone: 'status' },
+  { label: 'Alta', role: 'meta', bone: 'short' },
+  { label: 'Acciones', role: 'actions', bone: 'actions' },
+]
+
 export function SecretaryAccountsPage() {
   // T-S12-05: la página vive en la URL; recargar o compartir la vista la conserva.
   const { page, setPage } = useListParams()
@@ -57,7 +71,7 @@ export function SecretaryAccountsPage() {
         </div>
       </div>
       {access.feedback}
-      {loading && !data ? <LoadingState label="Cargando cuentas…" variant="table" />
+      {loading && !data ? <TableSkeleton label="Cargando cuentas…" columns={columns} tableClass="institution-table has-actions" />
         : failure ? <InstitutionRequestError failure={failure} retry={refresh} page />
         : data && (
           <>
@@ -65,17 +79,17 @@ export function SecretaryAccountsPage() {
               {/* T-S13-18: al filtrar o paginar, la tabla anterior se queda atenuada mientras llega la nueva. */}
               {refreshing && <p className="visually-hidden" role="status">Actualizando resultados…</p>}
               <div className="institution-table-wrapper" ref={tableMemory} aria-busy={refreshing} role="region" aria-label="Listado de cuentas de la Secretaría" tabIndex={0}>
-                <table className="institution-table has-actions">
+                <table className="institution-table has-actions stack-mobile">
                   <caption className="visually-hidden">Cuentas de la Secretaría</caption>
-                  <thead><tr><th scope="col">Nombre</th><th scope="col">Correo de acceso</th><th scope="col">Estado</th><th scope="col">Alta</th><th scope="col">Acciones</th></tr></thead>
+                  <TableHead columns={columns} />
                   <tbody key={location.search} className="rows-enter">
                     {data.accounts.map((account, index) => (
                       <tr key={account.id} style={rowIndex(index)}>
-                        <th scope="row">{account.name}</th>
-                        <td>{account.email}</td>
-                        <td><span className={`institution-status ${account.status}`}>{statusLabels[account.status]}</span></td>
-                        <td>{dateFormat.format(new Date(account.created_at))}</td>
-                        <td>
+                        <th scope="row" data-cell="title">{account.name}</th>
+                        <td data-cell="meta">{account.email}</td>
+                        <td data-cell="status"><span className={`institution-status ${account.status}`}>{statusLabels[account.status]}</span></td>
+                        <td data-cell="meta"><span className="unit">Alta: </span>{dateFormat.format(new Date(account.created_at))}</td>
+                        <td data-cell="actions">
                           <div className="actions">
                             {account.status === 'pending' && (
                               <button type="button" className="account-action" aria-label={`Reenviar enlace a ${account.name}`}
@@ -91,7 +105,7 @@ export function SecretaryAccountsPage() {
               </div>
               {data.lastPage > 1 && (
                 <div className="pager">
-                  <p>Página {data.page} de {data.lastPage} · {data.total} cuentas</p>
+                  <p>Página {data.page} de {countFormat.format(data.lastPage)} · {countFormat.format(data.total)} cuentas</p>
                   <div className="actions">
                     <button type="button" className="secondary" disabled={data.page <= 1} onClick={() => setPage(data.page - 1)}><ChevronLeftIcon />Anterior</button>
                     <button type="button" className="secondary" disabled={data.page >= data.lastPage} onClick={() => setPage(data.page + 1)}>Siguiente<ChevronRightIcon /></button>

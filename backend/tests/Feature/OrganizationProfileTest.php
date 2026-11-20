@@ -194,6 +194,23 @@ describe('perfil autogestionado y onboarding (HU-S14-03)', function () {
         $this->browserRequest('GET', '/api/me')->assertJsonPath('user.name', 'Lucía Herrera');
     });
 
+    it('ignores a stale account_name when the contact name did not change, so a rename is never reverted (T-S14-09)', function () {
+        $company = Company::factory()->create(['contact_name' => 'Nombre Anterior', 'contact_email' => 'rh@empresa.test']);
+        $account = User::factory()->forCompany($company)->create(['name' => 'Nombre Nuevo', 'email' => 'rh@empresa.test']);
+        $this->loginWithCookies($account)->assertOk();
+
+        // Un formulario abierto antes del cambio de nombre guarda otro dato y repite el contacto anterior.
+        $this->browserRequest('PUT', '/api/organization/profile', ['contact_name' => 'Nombre Anterior', 'contact_email' => 'rh@empresa.test',
+            'contact_phone' => '833 100 2000', 'account_name' => 'Nombre Anterior'])->assertOk();
+        expect($account->refresh()->name)->toBe('Nombre Nuevo')
+            ->and(AccountAuditEvent::query()->where('event', 'account_updated')->count())->toBe(0);
+
+        // Corregir el nombre del contacto con «Soy yo» sí corrige el de la cuenta.
+        $this->browserRequest('PUT', '/api/organization/profile', ['contact_name' => 'Nombre Final', 'contact_email' => 'rh@empresa.test',
+            'account_name' => 'Nombre Final'])->assertOk();
+        expect($account->refresh()->name)->toBe('Nombre Final');
+    });
+
     it('never lets the institution rename the account or capture company data', function () {
         $this->loginWithCookies($this->institutionAccount)->assertOk();
         $this->browserRequest('PUT', '/api/organization/profile', institutionProfile(['account_name' => 'X', 'legal_name' => 'X', 'rfc' => 'MGO150320AB1']))

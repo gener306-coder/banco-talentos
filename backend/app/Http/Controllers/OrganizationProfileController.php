@@ -54,7 +54,10 @@ class OrganizationProfileController extends Controller
             }
 
             // CA-03: con «Soy yo», el nombre del contacto también corrige el de la cuenta (p. ej. el provisional, M3).
-            if ($organization instanceof Company && $accountName !== null && $accountName !== $user->name) {
+            // T-S14-09: solo si el nombre del contacto cambió en este guardado o la cuenta aún tiene el nombre provisional.
+            // Un formulario abierto con una copia vieja ya no devuelve la cuenta a un nombre anterior.
+            $renamesAccount = in_array('contact_name', $changed, true) || $user->name === $user->email;
+            if ($organization instanceof Company && $accountName !== null && $accountName !== $user->name && $renamesAccount) {
                 $user->name = $accountName;
                 $user->save();
                 AccountAuditEvent::record($user, AccountAuditEvent::ACCOUNT_UPDATED, $user, ['name']);

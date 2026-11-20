@@ -207,6 +207,96 @@ describe('perfil de la organización: lectura primero y edición en su sitio (T-
     expect(within(card).getByRole('button', { name: 'Editar' })).toBeInTheDocument()
   })
 
+  it('con Soy yo, renombrarse en Tu perfil no se revierte al guardar después el perfil de la empresa (corrección T-S14-09)', async () => {
+    const selfProfile = { ...companyProfile, contact_name: 'Reclutadora', contact_email: 'rh@manugolfo.test' }
+    profile = selfProfile
+    apiMock.mockImplementation(async (path, init) => {
+      if (path === '/api/me' && init?.method === 'PATCH') {
+        // El servidor renombra la cuenta y, como el contacto es la misma persona, también el contacto.
+        profile = { ...selfProfile, contact_name: 'Lucía Herrera' }
+        return Response.json({ user: { ...companyUser, name: 'Lucía Herrera' } })
+      }
+      if (path === '/api/organization/profile' && init?.method === 'PUT') {
+        return Response.json({ data: { ...profile, ...JSON.parse(String(init.body)), account_name: undefined, missing: [] } })
+      }
+      return new Response(null, { status: 500 })
+    })
+    render(<MemoryRouter initialEntries={['/account']}><App /></MemoryRouter>)
+    const identity = await screen.findByRole('region', { name: 'Tu perfil' })
+    const card = await screen.findByRole('region', { name: 'Perfil de la empresa' })
+    expect(await within(card).findByText('Reclutadora')).toBeInTheDocument()
+
+    fireEvent.click(within(identity).getByRole('button', { name: 'Editar nombre' }))
+    fireEvent.change(within(identity).getByLabelText('Tu nombre'), { target: { value: 'Lucía Herrera' } })
+    fireEvent.click(within(identity).getByRole('button', { name: 'Guardar' }))
+    await expectSnackbar('Nombre actualizado.')
+    // La ficha de la empresa se vuelve a leer: el contacto ya es el nombre nuevo, no el anterior.
+    expect(await within(card).findByText('Lucía Herrera')).toBeInTheDocument()
+    expect(within(card).queryByText('Reclutadora')).not.toBeInTheDocument()
+
+    fireEvent.click(within(card).getByRole('button', { name: 'Editar' }))
+    expect(within(card).getByLabelText(/Tu nombre/)).toHaveValue('Lucía Herrera')
+    fireEvent.change(within(card).getByLabelText('Puesto en la empresa (opcional)'), { target: { value: 'Recursos Humanos' } })
+    fireEvent.click(within(card).getByRole('button', { name: 'Guardar cambios' }))
+    await expectSnackbar('Perfil actualizado.')
+    const body = JSON.parse(String(writes().at(-1)![1]!.body)) as Record<string, unknown>
+    // Sin editar el nombre en este formulario, no se manda account_name: nada puede devolver la cuenta al nombre anterior.
+    expect(body).not.toHaveProperty('account_name')
+    expect(body.contact_name).toBe('Lucía Herrera')
+    expect(screen.getByRole('button', { name: 'Cuenta de Lucía Herrera' })).toBeInTheDocument()
+    expect(within(identity).getByRole('heading', { level: 2, name: 'Lucía Herrera' })).toBeInTheDocument()
+  })
+
+  it('con Soy yo, una copia vieja del formulario no manda el nombre anterior como nombre de la cuenta (corrección T-S14-09)', async () => {
+    profile = { ...companyProfile, contact_name: 'Reclutadora', contact_email: 'rh@manugolfo.test' }
+    apiMock.mockImplementation(async (path, init) => {
+      if (path === '/api/organization/profile' && init?.method === 'PUT') return Response.json({ data: { ...profile, missing: [] } })
+      return new Response(null, { status: 500 })
+    })
+    user = { ...companyUser, name: 'Nombre Nuevo' }
+    render(<MemoryRouter initialEntries={['/account']}><App /></MemoryRouter>)
+    const card = await screen.findByRole('region', { name: 'Perfil de la empresa' })
+    fireEvent.click(await within(card).findByRole('button', { name: 'Editar' }))
+    fireEvent.click(within(card).getByRole('button', { name: 'Guardar cambios' }))
+    await expectSnackbar('Perfil actualizado.')
+    expect(JSON.parse(String(writes().at(-1)![1]!.body))).not.toHaveProperty('account_name')
+    expect(screen.getByRole('button', { name: 'Cuenta de Nombre Nuevo' })).toBeInTheDocument()
+  })
+
+  it('con Soy yo y el formulario abierto, renombrarse en Tu perfil actualiza el campo que no se ha tocado (T-S14-09)', async () => {
+    profile = { ...companyProfile, contact_name: 'Reclutadora', contact_email: 'rh@manugolfo.test' }
+    apiMock.mockImplementation(async (path, init) => {
+      if (path === '/api/me' && init?.method === 'PATCH') return Response.json({ user: { ...companyUser, name: 'Lucía Herrera' } })
+      return new Response(null, { status: 500 })
+    })
+    render(<MemoryRouter initialEntries={['/account']}><App /></MemoryRouter>)
+    const identity = await screen.findByRole('region', { name: 'Tu perfil' })
+    const card = await screen.findByRole('region', { name: 'Perfil de la empresa' })
+    fireEvent.click(await within(card).findByRole('button', { name: 'Editar' }))
+    expect(within(card).getByLabelText(/Tu nombre/)).toHaveValue('Reclutadora')
+    fireEvent.click(within(identity).getByRole('button', { name: 'Editar nombre' }))
+    fireEvent.change(within(identity).getByLabelText('Tu nombre'), { target: { value: 'Lucía Herrera' } })
+    fireEvent.click(within(identity).getByRole('button', { name: 'Guardar' }))
+    await expectSnackbar('Nombre actualizado.')
+    await waitFor(() => expect(within(card).getByLabelText(/Tu nombre/)).toHaveValue('Lucía Herrera'))
+  })
+
+  it('con Soy yo, corregir el nombre en el formulario sí corrige el de la cuenta', async () => {
+    profile = { ...companyProfile, contact_name: 'Reclutadora', contact_email: 'rh@manugolfo.test' }
+    apiMock.mockImplementation(async (path, init) => {
+      if (path === '/api/organization/profile' && init?.method === 'PUT') return Response.json({ data: { ...profile, contact_name: 'Lucía Herrera', missing: [] } })
+      return new Response(null, { status: 500 })
+    })
+    render(<MemoryRouter initialEntries={['/account']}><App /></MemoryRouter>)
+    const card = await screen.findByRole('region', { name: 'Perfil de la empresa' })
+    fireEvent.click(await within(card).findByRole('button', { name: 'Editar' }))
+    fireEvent.change(within(card).getByLabelText(/Tu nombre/), { target: { value: 'Lucía Herrera' } })
+    fireEvent.click(within(card).getByRole('button', { name: 'Guardar cambios' }))
+    await expectSnackbar('Perfil actualizado.')
+    expect(JSON.parse(String(writes().at(-1)![1]!.body))).toMatchObject({ contact_name: 'Lucía Herrera', account_name: 'Lucía Herrera' })
+    expect(screen.getByRole('button', { name: 'Cuenta de Lucía Herrera' })).toBeInTheDocument()
+  })
+
   it('cancelar la edición vuelve a la ficha sin guardar', async () => {
     render(<MemoryRouter initialEntries={['/account']}><App /></MemoryRouter>)
     const card = await screen.findByRole('region', { name: 'Perfil de la empresa' })

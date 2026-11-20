@@ -316,7 +316,7 @@ Cada historia termina con su reporte y una revisión del responsable antes de in
 
 ### T-S14-07 — Auditoría de los inicios por rol: esqueletos a la medida, jerarquía y transiciones
 
-**Estado:** Implementada (19 de noviembre de 2026) en `chore/ui-polish-home`, sin commit. Solicitada por el responsable. Solo frontend.
+**Estado:** Completada (19 de noviembre de 2026, commit 33f1594). Solicitada por el responsable. Solo frontend.
 
 - **Hallazgos de la auditoría (los cuatro roles, 1440 y 390 px):**
   - mientras cargaban los indicadores, el inicio quedaba en blanco: el resumen no tenía esqueleto y las tarjetas de acceso esperaban ocultas a los datos;
@@ -343,3 +343,66 @@ Cada historia termina con su reporte y una revisión del responsable antes de in
   - `e2e/home-dashboard.spec.ts`: el error deja el aviso con «Reintentar» y sin cifras.
   
   Revisión visual de los cuatro roles a 1440 y 390 px, cargado, cargando y con error, en claro y oscuro, sin desborde horizontal.
+
+### T-S14-08 — Auditoría de los listados: esqueletos a la medida, tarjetas en el celular y consistencia
+
+**Estado:** Implementada (19 de noviembre de 2026) en `chore/ui-polish-lists`, sin commit. Solicitada por el responsable. Solo frontend.
+
+Alcance: los ocho listados principales (instituciones, cuentas de la Secretaría, bitácora, empresas, alumnos, solicitudes recibidas por la institución, oportunidades y solicitudes enviadas por la empresa).
+
+- **Hallazgos de la auditoría (con los datos de la simulación, a 1440 y 390 px):**
+  - el esqueleto era el mismo para todos: cinco columnas fijas y seis renglones delgados, sin la tarjeta ni el encabezado de la tabla; al llegar los datos aparecían el marco, el encabezado y filas de otra altura, y todo saltaba;
+  - en el celular las tablas se desplazaban de lado: el estado y la flecha del detalle quedaban fuera de la vista y los nombres se partían en tres renglones;
+  - en la bandeja de la institución, «Descargar CSV» quedaba solo en un segundo renglón de la barra de filtros, y el ícono de la conversación bajaba a su propia línea con nombres largos de empresa;
+  - el margen superior de «Inicio» variaba 16 px entre vistas;
+  - el programa de cada oportunidad se pegaba al título y se partía a media frase;
+  - los totales del pie no tenían separador de miles («2369 alumnos»), y las descripciones usaban el mismo tono que el contenido.
+- **Esqueleto a la medida (`ui/TableSkeleton.tsx`, nuevo):**
+  - cada listado declara sus columnas una vez (`TableColumn`) y de ahí salen el encabezado de la tabla (`TableHead`) y su esqueleto;
+  - el esqueleto dibuja la misma tarjeta, el mismo encabezado real y ocho filas con huesos que imitan cada columna: texto con su línea secundaria, pastilla del alumno o del perfil, clave monoespaciada, habilidades, estado, acciones y flecha; con paginación, también el pie;
+  - el marco reserva el espacio desde el primer pintado y los huesos aparecen si la espera pasa de 300 ms (`useSkeletonDelay`); la carga se anuncia en un `role="status"`.
+- **Tarjetas en el celular (600 px o menos):** cada fila se apila como una tarjeta; cada celda declara su papel con `data-cell`:
+  - lo que identifica va primero y resaltado (apellidos y nombre en una línea: «Aguilar Ávila, Fernanda»);
+  - los datos breves van atenuados en una línea, separados por un punto medio («Polotitlán · 5 lugares»);
+  - las pastillas de estado van al pie, las acciones de cuenta lado a lado y la flecha fija a la derecha;
+  - donde hace falta, se agrega la unidad que da el encabezado («lugares», «Alta:», «Recibida el», «Enviada el»);
+  - volver de una fila o recibir mensajes tiñe la tarjeta completa;
+  - el encabezado sigue en el documento para los lectores de pantalla.
+- **Consistencia:**
+  - «Descargar CSV» sube junto a la descripción de la bandeja, como la acción principal de los demás listados, y la búsqueda y los tres selectores caben en una fila;
+  - el ícono de la conversación se queda junto al nombre de la empresa;
+  - el mismo margen de «Inicio» en todas las vistas;
+  - las descripciones van en `--text-muted`, con un ancho de lectura de 62 caracteres;
+  - el programa de la oportunidad va en su propia línea atenuada;
+  - los totales del pie llevan separador de miles.
+- **Pruebas:**
+  - Vitest de `src/ui/TableSkeleton.test.tsx` (nuevo): marco y encabezado inmediatos, huesos tras el retardo, papeles y formas de cada celda, y encabezado compartido;
+  - `Institutions.test.tsx`: la tabla real lleva `stack-mobile` y los papeles de sus celdas;
+  - las pruebas existentes de los ocho listados siguen pasando.
+  
+  Revisión visual de los ocho listados con los datos de la simulación, a 1440 y 390 px, cargados y cargando, en claro y oscuro, sin desborde horizontal.
+- **Limitación:** en el celular las filas se muestran con `display: flex`. Los navegadores actuales conservan la semántica de tabla para los lectores de pantalla, pero algunos lectores antiguos podrían leerlas como texto corrido.
+
+### T-S14-09 — Corrección: el nombre de la cuenta volvía al anterior después de cambiarlo
+
+**Estado:** Implementada (19 de noviembre de 2026) en `chore/ui-polish-lists`, sin commit. Reportada por el responsable: un cambio de nombre se veía un momento y después regresaba al anterior.
+
+- **Causa:** el nombre de la persona vive en dos lugares, la cuenta (`users.name`) y el contacto de la empresa (`companies.contact_name`). «Soy yo» los unía en una sola dirección y con una copia vieja:
+  - al renombrarse en Tu perfil, solo cambiaba la cuenta; el contacto conservaba el nombre anterior y la ficha de la empresa lo seguía mostrando;
+  - al guardar después cualquier otro dato del perfil de la empresa (por ejemplo, el teléfono), el formulario mandaba siempre el nombre del contacto como `account_name`, aunque nadie lo hubiera tocado, y el servidor devolvía la cuenta al nombre anterior. La bitácora de la simulación lo muestra: un `account_updated` de nombre seguido de guardados del perfil sin cambio de contacto.
+
+  Es de la misma familia que T-S14-02: el formulario tomaba los datos de la cuenta como si fueran del contacto, y no al revés.
+- **Corrección en el servidor:**
+  - `PATCH /api/me`: si la persona es el contacto de su empresa (el correo del contacto es el de la cuenta, sin distinguir mayúsculas), el contacto se renombra en la misma transacción y la bitácora registra `organization_profile_updated` con `["contact_name"]`. Si el contacto es otra persona, no se toca;
+  - `PUT /api/organization/profile`: `account_name` solo renombra la cuenta si el nombre del contacto cambió en ese guardado o la cuenta aún tiene el nombre provisional (M3). Una copia vieja ya no revierte nada.
+- **Corrección en la interfaz:**
+  - el formulario manda `account_name` solo si el nombre se corrigió en él;
+  - al renombrarse con el formulario abierto, el campo que no se ha tocado sigue al nombre nuevo;
+  - la ficha de la empresa se vuelve a leer al cambiar el nombre de la cuenta.
+- **Pruebas:**
+  - Pest `AccountTest`: renombrarse actualiza el contacto propio, con sus dos eventos, y deja intacto el de otra persona;
+  - Pest `OrganizationProfileTest`: un `account_name` viejo con el contacto sin cambios no revierte la cuenta, y corregir el contacto sí la corrige;
+  - Vitest `AccountPage.test.tsx`: renombrarse y luego guardar el perfil no revierte el nombre; el formulario abierto sigue al nombre nuevo; una copia vieja no manda `account_name`; corregir el nombre en el formulario sí lo manda;
+  - `OrganizationProfile.test.tsx`: ajustada, porque esperaba `account_name` aunque el nombre no cambiara.
+
+  Las dos pruebas de Vitest que reproducen la reversión (renombrarse y guardar después; copia vieja del formulario) fallaban antes de la corrección.

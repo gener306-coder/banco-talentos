@@ -2,6 +2,7 @@
 
 use App\Enums\UserRole;
 use App\Models\AccountAuditEvent;
+use App\Models\Company;
 use App\Models\Institution;
 use App\Models\User;
 use App\Notifications\PasswordChanged;
@@ -54,6 +55,28 @@ describe('acceso (CA-05)', function () {
 });
 
 describe('nombre (CA-02)', function () {
+    it('renames the company contact too when it is the same person (Soy yo), in the same transaction (T-S14-09)', function () {
+        $company = Company::factory()->create(['contact_name' => 'Nombre Anterior', 'contact_email' => 'RH@Empresa.test']);
+        $account = User::factory()->forCompany($company)->create(['name' => 'Nombre Anterior', 'email' => 'rh@empresa.test']);
+        $this->loginWithCookies($account)->assertOk();
+
+        $this->browserRequest('PATCH', '/api/me', ['name' => 'Nombre Nuevo'])->assertOk()->assertJsonPath('user.name', 'Nombre Nuevo');
+        expect($company->refresh()->contact_name)->toBe('Nombre Nuevo')->and($account->refresh()->name)->toBe('Nombre Nuevo');
+        $events = AccountAuditEvent::query()->orderBy('id')->get();
+        expect($events->pluck('event')->all())->toBe(['account_updated', 'organization_profile_updated'])
+            ->and($events[1]->subject_type)->toBe('company')->and($events[1]->changed_fields)->toBe(['contact_name']);
+    });
+
+    it('leaves the company contact alone when it is someone else (T-S14-09)', function () {
+        $company = Company::factory()->create(['contact_name' => 'Otra Persona', 'contact_email' => 'dual@empresa.test']);
+        $account = User::factory()->forCompany($company)->create(['name' => 'Nombre Anterior', 'email' => 'rh@empresa.test']);
+        $this->loginWithCookies($account)->assertOk();
+
+        $this->browserRequest('PATCH', '/api/me', ['name' => 'Nombre Nuevo'])->assertOk();
+        expect($company->refresh()->contact_name)->toBe('Otra Persona')
+            ->and(AccountAuditEvent::query()->pluck('event')->all())->toBe(['account_updated']);
+    });
+
     it('only accepts the name: email, role and organization cannot change here', function () {
         $this->loginWithCookies($this->account)->assertOk();
         $other = Institution::factory()->create();
