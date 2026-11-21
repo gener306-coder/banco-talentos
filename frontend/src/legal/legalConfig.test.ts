@@ -1,37 +1,38 @@
 import { describe, expect, it } from 'vitest'
-import { byRegime, dataProtectionLaw, formatLegalDate, legalConfig, missingLegalFields, PENDING } from './legalConfig'
-import type { LegalConfig } from './legalConfig'
+import { byRegime, dataProtectionLaw, footerOwner, formatLegalDate, legalConfig, missingLegalFields } from './legalConfig'
+import { completeLegalConfig } from './testing'
 
-const complete: LegalConfig = {
-  regime: 'private_entity',
-  controller: { name: 'Operadora Dual, S.A. de C.V.', shortName: 'Operadora Dual', address: 'Av. Reforma 1, Ciudad de México', website: null },
-  dataProtection: { channelName: 'Área de datos personales', email: 'privacidad@example.test', phone: null, address: null, hours: null, responseTerm: '20 días hábiles' },
-  authority: { name: 'Secretaría Anticorrupción y Buen Gobierno', website: null },
-  jurisdiction: { governingLaw: 'las leyes federales de México', courts: 'los tribunales de la Ciudad de México' },
-  processors: [{ name: 'Correo', purpose: 'Avisos.', location: 'México' }],
-  version: '1.0',
-  lastUpdated: '2026-11-20',
-}
-
-describe('configuración legal HU-S15-01', () => {
-  it('nace con el régimen pendiente y lista cada dato por definir (D1)', () => {
+describe('configuración legal HU-S15-01 y T-S15-02', () => {
+  it('es publicable por defecto: responsable operativo y datos jurídicos opcionales vacíos', () => {
+    expect(legalConfig.controller.name).toBe('Administración del Banco de Talentos')
+    expect(legalConfig.programName).toBe('Banco de Talentos – Educación Dual')
     expect(legalConfig.regime).toBeNull()
-    const missing = missingLegalFields()
-    expect(missing).toEqual(expect.arrayContaining(['regime', 'controller.name', 'dataProtection.email', 'authority.name', 'jurisdiction.courts', 'processors[0].location']))
+    expect(legalConfig.processors).toEqual([])
+    expect(JSON.stringify(legalConfig)).not.toMatch(/Pendiente de definir/i)
   })
 
-  it('una configuración completa no tiene pendientes', () => {
-    expect(missingLegalFields(complete)).toEqual([])
-    expect(missingLegalFields({ ...complete, controller: { ...complete.controller, address: PENDING } })).toEqual(['controller.address'])
+  it('missingLegalFields lista los datos jurídicos vacíos, solo para revisiones internas', () => {
+    expect(missingLegalFields()).toEqual([
+      'regime', 'controller.address', 'dataProtection.channelName', 'dataProtection.email', 'dataProtection.responseTerm',
+      'authority.name', 'jurisdiction.governingLaw', 'jurisdiction.courts', 'processors',
+    ])
+    expect(missingLegalFields(completeLegalConfig)).toEqual([])
   })
 
-  it('elige el texto y la ley según el régimen', () => {
+  it('elige el texto y el marco según el régimen', () => {
     const variants = { public_entity: 'público', private_entity: 'particular', pending: 'pendiente' }
     expect(byRegime({ regime: 'public_entity' }, variants)).toBe('público')
     expect(byRegime({ regime: 'private_entity' }, variants)).toBe('particular')
     expect(byRegime({ regime: null }, variants)).toBe('pendiente')
     expect(dataProtectionLaw({ regime: 'public_entity' })).toContain('Sujetos Obligados')
     expect(dataProtectionLaw({ regime: 'private_entity' })).toContain('Particulares')
+    expect(dataProtectionLaw({ regime: null })).toBe('los principios y la legislación vigentes en México en materia de protección de datos personales')
+  })
+
+  it('el footer no repite el programa si no hay un nombre corto distinto', () => {
+    expect(footerOwner()).toBe('Banco de Talentos – Educación Dual')
+    expect(footerOwner({ ...legalConfig, controller: { ...legalConfig.controller, shortName: 'Banco de Talentos – Educación Dual' } })).toBe('Banco de Talentos – Educación Dual')
+    expect(footerOwner(completeLegalConfig)).toBe('Operadora Dual · Banco de Talentos – Educación Dual')
   })
 
   it('escribe la fecha en español sin desfase por zona horaria', () => {

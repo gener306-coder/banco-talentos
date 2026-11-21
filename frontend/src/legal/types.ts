@@ -15,8 +15,6 @@ export interface LegalDocument {
   /** Nombre corto para el selector y el footer. */
   shortTitle: string
   lead: ReactNode
-  /** Si usa datos de legalConfig: solo entonces muestra el aviso de borrador mientras falten. */
-  usesConfig: boolean
   /** Contenido previo a las secciones (por ejemplo, el resumen del Aviso de Privacidad). */
   intro?: ReactNode
   sections: readonly LegalSection[]

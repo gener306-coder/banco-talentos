@@ -368,7 +368,6 @@ Adoptado el 20 de noviembre de 2026 (`docs/sprint-15.md`).
 - Control segmentado de documentos con nombres cortos: pista en `--fill` y el actual en `--surface` con `--accent` (T-S15-01).
 - Desde 960 px, el índice es una columna de 13.5 rem desde el título, `sticky` bajo la barra (`--app-bar-height`). Resalta la sección en lectura con `--tint`.
 - En pantallas estrechas, el índice es una barra translúcida fija bajo el encabezado que nombra la sección actual y se despliega.
-- Los datos jurídicos pendientes se marcan con el tono de estado inactivo (`.legal-pending`).
 - La tabla de cookies se vuelve una tarjeta por tecnología a 600 px o menos.
 - Las secciones llevan `scroll-margin-top` con la altura de la barra.
 - El resumen del Aviso de Privacidad usa tarjetas por actor sobre `--surface-muted`.

@@ -31,7 +31,7 @@ for (const viewport of VIEWPORTS) {
         await expect(page.locator('html')).toHaveAttribute('data-theme', theme)
 
         // Aviso simplificado (HU-S15-04) y footer (HU-S15-03).
-        const notice = page.getByText(/trata tus datos para administrar tu cuenta/)
+        const notice = page.getByText(/Responsable de tus datos/)
         await expect(notice).toBeVisible()
         const footer = page.getByRole('contentinfo')
         await expect(footer).toBeVisible()
@@ -46,6 +46,9 @@ for (const viewport of VIEWPORTS) {
         await expect(page.getByRole('heading', { level: 2, name: 'Aviso de Privacidad Integral' })).toBeVisible()
         await expect(page.getByRole('region', { name: 'De un vistazo' })).toBeVisible()
         await expect(page.getByText(/INAI/)).toHaveCount(0)
+        // T-S15-02: publicable sin borrador ni marcadores pendientes.
+        await expect(page.getByText(/Pendiente de definir|Borrador/)).toHaveCount(0)
+        await expect(page.getByRole('note', { name: 'Documento en borrador' })).toHaveCount(0)
         await expectNoHorizontalOverflow(page)
 
         if (viewport.width >= 960) {

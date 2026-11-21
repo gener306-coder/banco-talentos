@@ -6,7 +6,6 @@ export function cookiesDocument(): LegalDocument {
     slug: 'cookies',
     title: 'Cookies y tecnologías técnicas',
     shortTitle: 'Cookies',
-    usesConfig: false,
     lead: (
       <>
         El Banco de Talentos <strong>no usa cookies publicitarias, analítica ni rastreadores de terceros</strong>. Solo usa las tecnologías

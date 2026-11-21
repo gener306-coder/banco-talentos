@@ -3,12 +3,11 @@ import type { MouseEvent, RefObject } from 'react'
 import { Link, Navigate, useLocation, useParams } from 'react-router'
 import { useAuth } from '../auth/useAuth'
 import { useContextualBack } from '../ui/backLink'
-import { Callout } from '../ui/Callout'
 import { NavBackLink } from '../ui/NavBackLink'
 import { prefersReducedMotion } from '../ui/modal'
 import { useMediaQuery } from '../ui/useMediaQuery'
 import { isLegalSlug, legalDocuments } from './documents'
-import { formatLegalDate, legalConfig, missingLegalFields } from './legalConfig'
+import { formatLegalDate, legalConfig } from './legalConfig'
 import type { LegalSection, LegalSlug } from './types'
 import './legal.css'
 
@@ -132,7 +131,6 @@ export function LegalPage() {
   if (!isLegalSlug(slug)) return <Navigate to="/legal/privacidad" replace state={location.state} />
 
   const legal = legalDocuments[slug]()
-  const draft = legal.usesConfig && missingLegalFields().length > 0
 
   return (
     <section className="card legal-page" aria-labelledby="legal-title">
@@ -152,13 +150,9 @@ export function LegalPage() {
       <div className="legal-layout">
         <div className="legal-header">
           <h2 id="legal-title">{legal.title}</h2>
-          <p className="legal-updated"><span>Actualizado el {formatLegalDate(legalConfig.lastUpdated)}</span> <span>Versión {legalConfig.version}</span></p>
+          {/* El punto queda pegado a la fecha (espacio duro): si no cabe, baja solo la versión, sin empezar el renglón con el separador. */}
+          <p className="legal-updated">Actualizado el {formatLegalDate(legalConfig.lastUpdated)}{'\u00a0· '}<span>Versión {legalConfig.version}</span></p>
           <p className="legal-lead">{legal.lead}</p>
-          {draft && (
-            <Callout tone="pending" label="Documento en borrador">
-              <p>Borrador: el área jurídica aún debe completar los datos marcados como pendientes de definir.</p>
-            </Callout>
-          )}
         </div>
         <TableOfContents sections={legal.sections} wide={wide} />
         <article className="legal-article">

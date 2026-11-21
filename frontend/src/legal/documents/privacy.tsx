@@ -1,7 +1,6 @@
 import { byRegime, dataProtectionLaw, legalConfig } from '../legalConfig'
 import type { LegalConfig } from '../legalConfig'
 import type { LegalDocument } from '../types'
-import { LegalValue } from '../LegalValue'
 import { PrivacySummary } from '../PrivacySummary'
 
 export function privacyDocument(config: LegalConfig = legalConfig): LegalDocument {
@@ -11,16 +10,18 @@ export function privacyDocument(config: LegalConfig = legalConfig): LegalDocumen
     private_entity: 'el área de datos personales del responsable',
     pending: 'el canal de datos personales del responsable',
   })
+  // T-S15-02: sin canal ARCO dedicado, las solicitudes se atienden por medio del responsable operativo.
+  const dedicatedChannel = Boolean(dataProtection.channelName || dataProtection.email || dataProtection.phone)
+  const channelAddress = dataProtection.address ?? controller.address
 
   return {
     slug: 'privacidad',
     title: 'Aviso de Privacidad Integral',
     shortTitle: 'Privacidad',
-    usesConfig: true,
     lead: (
       <>
-        Este aviso explica cómo el Banco de Talentos – Educación Dual trata los datos personales de las personas usuarias y de los
-        alumnos que registran sus instituciones, conforme a la {dataProtectionLaw(config)}.
+        Este aviso explica cómo el {config.programName} trata los datos personales de las personas usuarias y de los alumnos que
+        registran sus instituciones, conforme a {dataProtectionLaw(config)}.
       </>
     ),
     intro: <PrivacySummary />,
@@ -30,7 +31,8 @@ export function privacyDocument(config: LegalConfig = legalConfig): LegalDocumen
         title: 'Responsable',
         body: (
           <>
-            <p>El responsable del tratamiento es <strong><LegalValue value={controller.name} /></strong>, con domicilio en <LegalValue value={controller.address} />.</p>
+            <p>Responsable del tratamiento: <strong>{controller.name}</strong>.</p>
+            {controller.address && <p>Domicilio: {controller.address}.</p>}
             {controller.website && <p>Sitio web: {controller.website}</p>}
           </>
         ),
@@ -96,12 +98,23 @@ export function privacyDocument(config: LegalConfig = legalConfig): LegalDocumen
               No vendemos ni cedemos datos personales. Dentro de la plataforma, cada actor ve solo lo que su rol necesita, como se describe arriba.
               Fuera de ella, solo se comunican datos cuando una autoridad competente lo requiera conforme a la ley.
             </p>
-            <p>Para operar, el responsable se apoya en estos encargados, que tratan los datos solo por su cuenta y bajo sus instrucciones:</p>
-            <ul>
-              {config.processors.map((processor) => (
-                <li key={processor.name}><strong>{processor.name}</strong>: {processor.purpose} Ubicación: <LegalValue value={processor.location} />.</li>
-              ))}
-            </ul>
+            {config.processors.length > 0 ? (
+              <>
+                <p>Para operar, el responsable se apoya en estos encargados, que tratan los datos solo por su cuenta y bajo sus instrucciones:</p>
+                <ul>
+                  {config.processors.map((processor) => (
+                    <li key={processor.name}>
+                      <strong>{processor.name}</strong>: {processor.purpose}{processor.location && ` Ubicación: ${processor.location}.`}
+                    </li>
+                  ))}
+                </ul>
+              </>
+            ) : (
+              <p>
+                Para operar, el responsable se apoya en los proveedores técnicos necesarios para el servicio (hospedaje, correo electrónico y
+                almacenamiento de medios), que tratan los datos solo por su cuenta y bajo sus instrucciones.
+              </p>
+            )}
           </>
         ),
       },
@@ -124,28 +137,40 @@ export function privacyDocument(config: LegalConfig = legalConfig): LegalDocumen
         title: 'Derechos ARCO y revocación',
         body: (
           <>
-            <p>
-              Puedes ejercer tus derechos de acceso, rectificación, cancelación y oposición (ARCO), o revocar tu consentimiento,
-              ante {channel} (<LegalValue value={dataProtection.channelName} />):
-            </p>
-            <ul>
-              <li>Correo electrónico: <LegalValue value={dataProtection.email} /></li>
-              {dataProtection.phone && <li>Teléfono: {dataProtection.phone}</li>}
-              <li>Domicilio: <LegalValue value={dataProtection.address ?? controller.address} /></li>
-              {dataProtection.hours && <li>Horario: {dataProtection.hours}</li>}
-            </ul>
+            {dedicatedChannel ? (
+              <>
+                <p>
+                  Puedes ejercer tus derechos de acceso, rectificación, cancelación y oposición (ARCO), o revocar tu consentimiento,
+                  ante {channel}{dataProtection.channelName && ` (${dataProtection.channelName})`}:
+                </p>
+                <ul>
+                  {dataProtection.email && <li>Correo electrónico: {dataProtection.email}</li>}
+                  {dataProtection.phone && <li>Teléfono: {dataProtection.phone}</li>}
+                  {channelAddress && <li>Domicilio: {channelAddress}</li>}
+                  {dataProtection.hours && <li>Horario: {dataProtection.hours}</li>}
+                </ul>
+              </>
+            ) : (
+              <p>
+                Puedes ejercer tus derechos de acceso, rectificación, cancelación y oposición (ARCO), o revocar tu consentimiento. Las
+                solicitudes se atienden a través del responsable, {controller.name}. En el caso de los alumnos, mediante su institución
+                educativa.
+              </p>
+            )}
             <p>Tu solicitud debe incluir:</p>
             <ul>
               <li>tu nombre y un medio para recibir la respuesta;</li>
               <li>un documento que acredite tu identidad o, en su caso, la de tu representante;</li>
               <li>la descripción clara de los datos y del derecho que quieres ejercer.</li>
             </ul>
-            <p>Plazo de respuesta: <LegalValue value={dataProtection.responseTerm} />.</p>
+            {dataProtection.responseTerm && <p>Plazo de respuesta: {dataProtection.responseTerm}.</p>}
             <p>
               Los datos de un alumno los captura y corrige su institución. El alumno, o su madre, padre o tutor, puede pedir a su institución
-              que los corrija o deje de usarlos, o dirigirse al canal anterior.
+              que los corrija o deje de usarlos, o {dedicatedChannel ? 'dirigirse al canal anterior' : 'dirigirse directamente al responsable'}.
             </p>
-            <p>Si consideras que tu derecho no fue atendido, puedes acudir a la autoridad garante: <LegalValue value={authority.name} />{authority.website ? ` (${authority.website})` : ''}.</p>
+            {authority.name && (
+              <p>Si consideras que tu derecho no fue atendido, puedes acudir a la autoridad garante: {authority.name}{authority.website ? ` (${authority.website})` : ''}.</p>
+            )}
           </>
         ),
       },

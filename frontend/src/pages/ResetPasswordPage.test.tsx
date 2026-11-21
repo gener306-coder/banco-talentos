@@ -208,7 +208,7 @@ describe('restablecimiento público de contraseña HU-S1-04', () => {
 describe('aviso simplificado HU-S15-04', () => {
   it('enlaza el Aviso de Privacidad y los Términos con regreso a esta pantalla', async () => {
     renderApp()
-    const notice = screen.getByText(/trata tus datos para administrar tu cuenta/)
+    const notice = screen.getByText(/Responsable de tus datos/)
     expect(within(notice).getByRole('link', { name: 'Aviso de Privacidad' })).toHaveAttribute('href', '/legal/privacidad')
     expect(within(notice).getByRole('link', { name: 'Términos y Condiciones' })).toHaveAttribute('href', '/legal/terminos')
   })
