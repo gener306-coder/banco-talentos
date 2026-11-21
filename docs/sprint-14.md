@@ -178,7 +178,7 @@ Cada historia termina con su reporte y una revisión del responsable antes de in
 
 ## HU-S14-04 — Trazabilidad de cambios en la bitácora
 
-**Estado:** Implementada (19 de noviembre de 2026), sin commit y pendiente de revisión. Pest 1631 en verde, Vitest 1193 en verde más las 3 fallas conocidas de descarga, Playwright 45 de 45.  
+**Estado:** Completada (19 de noviembre de 2026; commit 2bd3c5d, publicada en `main`). Pest 1631 en verde, Vitest 1193 en verde más las 3 fallas conocidas de descarga, Playwright 45 de 45.  
 **Diseño técnico y verificación:** `docs/HU-S14-04.md`  
 **Story Points:** 5  
 **Rol:** `ADMIN` (consulta); todos generan eventos
@@ -209,7 +209,7 @@ Cada historia termina con su reporte y una revisión del responsable antes de in
 
 ### T-S14-01 — Recordatorio del perfil más discreto
 
-**Estado:** Implementada (19 de noviembre de 2026), sin commit. Solicitada por el responsable tras revisar HU-S14-03: el aviso del inicio era grande e invasivo.
+**Estado:** Implementada (19 de noviembre de 2026); publicada en `main` (commit 8285304). Solicitada por el responsable tras revisar HU-S14-03: el aviso del inicio era grande e invasivo.
 
 - **Inicio de la empresa:** el `Callout` de HU-S14-03 CA-04 se sustituye por un recordatorio de una sola línea (`ProfileNudge`). Toda la línea es un enlace de 44 px hacia `/account#organization`, con una barra de avance decorativa y uno de dos textos:
   - «Completa tu perfil para publicar oportunidades y enviar solicitudes.» sin el mínimo M1;
@@ -227,7 +227,7 @@ Cada historia termina con su reporte y una revisión del responsable antes de in
 
 ### T-S14-02 — Corrección: el contacto vaciado se volvía a rellenar
 
-**Estado:** Implementada (19 de noviembre de 2026), sin commit. Reportada por el responsable.
+**Estado:** Implementada (19 de noviembre de 2026); publicada en `main` (commit 8285304). Reportada por el responsable.
 
 - **Falla:** al vaciar el nombre y el correo del contacto en Mi cuenta y guardar, el perfil los mostraba como faltantes. Al regresar, el formulario marcaba «Soy yo» y volvía a rellenar los datos de la cuenta, porque trataba cualquier contacto vacío como si fuera la primera captura.
 - **Corrección:** la sugerencia de «Soy yo» con los datos precargados queda solo para el onboarding (`/welcome`, prop `suggestSelf`). En Mi cuenta, la casilla refleja el contacto guardado: se marca solo si su correo es el de la cuenta, también después de guardar. Un contacto vacío se respeta y la empresa puede marcar «Soy yo» para usar sus datos.
@@ -235,7 +235,7 @@ Cada historia termina con su reporte y una revisión del responsable antes de in
 
 ### T-S14-03 — Rediseño de Mi cuenta: perfil de lectura primero
 
-**Estado:** Implementada (19 de noviembre de 2026) en `chore/ui-polish-account-profile`, sin commit. Solicitada por el responsable. Solo frontend: sin cambios de backend ni de contratos.
+**Estado:** Implementada (19 de noviembre de 2026); publicada en `main` (commit 3fdc2b8). Solicitada por el responsable. Solo frontend: sin cambios de backend ni de contratos.
 
 - **`UserAvatar` (`ui/UserAvatar.tsx`):** iniciales con el tinte de la marca y un anillo de 1 px, en tamaño `sm` para el menú de cuenta y `lg` (72 px) para Mi cuenta. Acepta `src` para una foto futura y es decorativo: el nombre siempre está escrito.
 - **Tarjeta de identidad:**
@@ -257,7 +257,7 @@ Cada historia termina con su reporte y una revisión del responsable antes de in
 
 ### T-S14-04 — Auditoría y refinamiento visual de Mi cuenta
 
-**Estado:** Implementada (19 de noviembre de 2026) en `chore/ui-polish-account-profile`, sin commit. Solicitada por el responsable sobre T-S14-03. Solo frontend.
+**Estado:** Implementada (19 de noviembre de 2026); publicada en `main` (commit 3fdc2b8). Solicitada por el responsable sobre T-S14-03. Solo frontend.
 
 - **Avisos de confirmación:** `ui/Snackbar.tsx` y `ui/useSnackbar.tsx` sustituyen a los textos sueltos dentro de las tarjetas para «Nombre actualizado.», «Perfil actualizado.» y el cambio de contraseña.
   - Superficie invertida centrada abajo, respetando el área segura.
@@ -279,7 +279,7 @@ Cada historia termina con su reporte y una revisión del responsable antes de in
 
 ### T-S14-05 — Corrección: la pastilla flotante de las Historias del Dual quedaba bajo el encabezado
 
-**Estado:** Implementada (19 de noviembre de 2026) en `chore/ui-polish-account-profile`, sin commit. Reportada por el responsable.
+**Estado:** Implementada (19 de noviembre de 2026); publicada en `main` (commit e3afd90). Reportada por el responsable.
 
 - **Falla:** en el feed de Historias del Dual, la pastilla de orden (Más recientes, Al azar y Volver arriba) dejaba de verse al desplazarse en las cuentas de empresa e institución. Seguía flotando, pero a 8 px del borde, escondida bajo el encabezado fijo.
 - **Causa:** `UnreadSummaryProvider` (T-S13-08, commit `a3628a8`) devolvía sus hijos sin proveedor mientras no había sesión y los envolvía en el proveedor al iniciarla. El cambio de tipo de elemento hacía que React volviera a montar todo el árbol: encabezado, contenido y página. `useAppBarHeight` seguía observando el encabezado desmontado y publicaba `--app-bar-height: 0px`. La variable también alinea el desplazamiento suave de las tablas (`stickyTop`), así que ese ajuste tampoco descontaba el encabezado en esas cuentas.
@@ -346,7 +346,7 @@ Cada historia termina con su reporte y una revisión del responsable antes de in
 
 ### T-S14-08 — Auditoría de los listados: esqueletos a la medida, tarjetas en el celular y consistencia
 
-**Estado:** Implementada (19 de noviembre de 2026) en `chore/ui-polish-lists`, sin commit. Solicitada por el responsable. Solo frontend.
+**Estado:** Implementada (19 de noviembre de 2026); publicada en `main` (commit 0bbcaab). Solicitada por el responsable. Solo frontend.
 
 Alcance: los ocho listados principales (instituciones, cuentas de la Secretaría, bitácora, empresas, alumnos, solicitudes recibidas por la institución, oportunidades y solicitudes enviadas por la empresa).
 
@@ -385,7 +385,7 @@ Alcance: los ocho listados principales (instituciones, cuentas de la Secretaría
 
 ### T-S14-09 — Corrección: el nombre de la cuenta volvía al anterior después de cambiarlo
 
-**Estado:** Implementada (19 de noviembre de 2026) en `chore/ui-polish-lists`, sin commit. Reportada por el responsable: un cambio de nombre se veía un momento y después regresaba al anterior.
+**Estado:** Implementada (19 de noviembre de 2026); publicada en `main` (commit 0bbcaab). Reportada por el responsable: un cambio de nombre se veía un momento y después regresaba al anterior.
 
 - **Causa:** el nombre de la persona vive en dos lugares, la cuenta (`users.name`) y el contacto de la empresa (`companies.contact_name`). «Soy yo» los unía en una sola dirección y con una copia vieja:
   - al renombrarse en Tu perfil, solo cambiaba la cuenta; el contacto conservaba el nombre anterior y la ficha de la empresa lo seguía mostrando;
