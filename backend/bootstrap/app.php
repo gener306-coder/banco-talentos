@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Middleware\ApiSecurityHeaders;
 use App\Http\Middleware\EnsureInstitutionMember;
 use App\Http\Middleware\EnsureOrganizationMember;
 use App\Http\Middleware\EnsureRole;
@@ -20,6 +21,8 @@ return Application::configure(basePath: dirname(__DIR__))
     )
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->statefulApi();
+        // Auditoría QA: Cache-Control no-store y cabeceras de seguridad en todas las respuestas, también en los errores.
+        $middleware->append(ApiSecurityHeaders::class);
         // La API responde 401 también a clientes que no solicitan JSON.
         $middleware->redirectGuestsTo(null);
         $middleware->alias([

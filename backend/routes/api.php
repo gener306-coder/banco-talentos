@@ -57,7 +57,7 @@ Route::get('/dashboard', DashboardController::class)
 Route::middleware(['auth:sanctum', 'active', 'role:'.UserRole::ADMIN->value.','.UserRole::SECRETARY->value])
     ->group(function (): void {
         Route::get('/reports/dual-program', [ReportController::class, 'dualProgram']);
-        Route::get('/reports/dual-program/export.csv', [ReportController::class, 'export']);
+        Route::get('/reports/dual-program/export.csv', [ReportController::class, 'export'])->middleware('throttle:exports');
     });
 
 // Bitácora de trazabilidad (HU-S7-03): solo ADMIN, a partir de las columnas de autoría ya registradas.
@@ -141,7 +141,7 @@ Route::middleware(['auth:sanctum', 'active', 'role:'.UserRole::INSTITUTION->valu
         Route::patch('{student}/status', [StudentController::class, 'updateStatus'])->name('status');
         Route::get('{student}/social-security', [StudentSocialSecurityController::class, 'show'])->name('social-security.show');
         Route::put('{student}/social-security', [StudentSocialSecurityController::class, 'update'])->name('social-security.update');
-        Route::post('{student}/social-security/document', [StudentSocialSecurityController::class, 'storeDocument'])->name('social-security.document.store');
+        Route::post('{student}/social-security/document', [StudentSocialSecurityController::class, 'storeDocument'])->middleware('throttle:uploads')->name('social-security.document.store');
         Route::get('{student}/social-security/document', [StudentSocialSecurityController::class, 'downloadDocument'])->name('social-security.document.show');
         Route::get('{student}/cv', [StudentCvController::class, 'show'])->name('cv.show');
         Route::put('{student}/cv/headline', [StudentCvController::class, 'updateHeadline'])->name('cv.headline.update');
@@ -225,7 +225,7 @@ Route::middleware(['auth:sanctum', 'active', 'role:'.UserRole::INSTITUTION->valu
         // Conversaciones con mensajes sin leer, para el aviso del menú (HU-S13-04).
         Route::get('unread-summary', [LinkageMessageController::class, 'summary']);
         // Exportación CSV de la bandeja (HU-S7-02).
-        Route::get('/export.csv', [InstitutionLinkageRequestController::class, 'export']);
+        Route::get('/export.csv', [InstitutionLinkageRequestController::class, 'export'])->middleware('throttle:exports');
         Route::get('{linkageRequest}', [InstitutionLinkageRequestController::class, 'show']);
         // Respuesta institucional (HU-S6-02).
         Route::patch('{linkageRequest}/decision', [InstitutionLinkageRequestController::class, 'decide']);
@@ -243,7 +243,7 @@ Route::middleware(['auth:sanctum', 'active', 'role:'.UserRole::INSTITUTION->valu
     ->prefix('institution/videos')
     ->group(function (): void {
         Route::get('/', [InstitutionVideoController::class, 'index']);
-        Route::post('/', [InstitutionVideoController::class, 'store']);
+        Route::post('/', [InstitutionVideoController::class, 'store'])->middleware('throttle:uploads');
         Route::put('{video}', [InstitutionVideoController::class, 'update']);
         Route::patch('{video}/status', [InstitutionVideoController::class, 'updateStatus']);
         // T-S9-04: elimina los archivos para liberar espacio; no es una ruta DELETE.
