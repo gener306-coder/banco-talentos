@@ -350,6 +350,29 @@ La validación del correo se hace al salir del campo (`ui/validation.ts`); la ob
 - `prefers-reduced-transparency` y `prefers-contrast: more`: encabezado blanco sólido; con más contraste, bordes `neutral-500` y contorno en los botones tintados.
 - Sin `backdrop-filter`, el encabezado es blanco sólido.
 
+## Footer y documentos legales (HU-S15-03)
+
+Adoptado el 20 de noviembre de 2026 (`docs/sprint-15.md`).
+
+**Footer (`ui/AppFooter.tsx`):**
+
+- Mismo ancho que `<main>`: `--page-narrow` en los accesos y `--page-wide` en el resto.
+- Un filete `1px solid var(--border)` arriba, texto `--text-muted` en `--type-sm` y la línea de metadatos en `--type-xs`.
+- Enlaces de al menos 44 px de alto, sin separadores de texto: se reparten con `gap` y saltan de línea a 390 px.
+- `#root` es una columna flexible de `min-height: 100dvh`, así que en las vistas cortas el footer queda al fondo. Lleva `overflow-x: clip` para recortar el desplazamiento de la transición entre vistas.
+- Se oculta en las conversaciones (`100dvh`) y en el feed `/promocion`. La regla vive en `ui/footerRoutes.ts`.
+
+**Documentos (`/legal/*`, `legal/legal.css`):**
+
+- Tarjeta ancha con el artículo limitado a `--content-readable`.
+- Selector de documentos en pastillas: la actual, tintada (`--tint` y `--accent`).
+- Desde 960 px, el índice es una columna de 14 rem, `sticky` bajo la barra (`--app-bar-height`) y con su propio desplazamiento. En pantallas estrechas es un `<details>` «En esta página».
+- Las secciones llevan `scroll-margin-top` con la altura de la barra.
+- El resumen del Aviso de Privacidad usa tarjetas por actor sobre `--surface-muted`.
+- La tabla de cookies se desplaza dentro de su contenedor.
+
+**Aviso simplificado (`.legal-note`):** nota en `--text-muted` y `--type-sm` al pie de la tarjeta de acceso, con enlaces en `--accent`.
+
 ## Criterios de aceptación de esta base
 
 1. El tema Tailwind expone los tres tokens de marca con los valores indicados.

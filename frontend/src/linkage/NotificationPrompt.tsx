@@ -3,7 +3,7 @@ import { BellIcon, CloseIcon } from '../ui/icons'
 import { notificationSupport, requestNotifications } from './browserNotifications'
 import type { NotificationSupport } from './browserNotifications'
 
-const DISMISSED_KEY = 'linkage-notifications-dismissed'
+export const DISMISSED_KEY = 'linkage-notifications-dismissed'
 
 // localStorage puede no estar disponible (navegación privada o datos bloqueados): entonces la franja vuelve a ofrecerse.
 function dismissed(): boolean {

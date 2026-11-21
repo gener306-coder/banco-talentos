@@ -92,7 +92,8 @@ describe('inicio por rol (tarea transversal del Sprint 4)', () => {
     renderApp()
     expect(await screen.findByText(/no está vinculada a una organización/)).toBeInTheDocument()
     expect(screen.queryByRole('navigation', { name: 'Institución' })).not.toBeInTheDocument()
-    expect(screen.queryByRole('link')).not.toBeInTheDocument()
+    // HU-S15-03: el footer siempre trae los documentos legales; el contenido no tiene enlaces.
+    expect(within(screen.getByRole('main')).queryByRole('link')).not.toBeInTheDocument()
   })
 
   describe('atajo de la empresa con el catálogo (T-S12-07)', () => {
@@ -417,7 +418,7 @@ describe('inicio dinámico T-S12-11', () => {
       user = { ...base, role: 'INSTITUTION', institution: { id: 7, name: 'Instituto Dual' } }
       dashboard = () => new Promise<Response>((resolve) => { respond = resolve })
       renderApp()
-      const list = within(await screen.findByRole('navigation', { name: /./ })).getByRole('list')
+      const list = within(await within(screen.getByRole('main')).findByRole('navigation', { name: /./ })).getByRole('list')
       expect(list).toHaveAttribute('data-reveal', 'pending')
       // El esqueleto tiene una tarjeta por indicador del rol, así que la lista ya está en su lugar definitivo.
       const skeleton = screen.getByTestId('home-stats-skeleton')
@@ -439,7 +440,7 @@ describe('inicio dinámico T-S12-11', () => {
     user = { ...base, role: 'COMPANY', ...company }
     dashboard = () => Response.json({ data: { role: 'COMPANY', metrics } })
     renderApp()
-    const cards = within(await screen.findByRole('navigation', { name: /./ })).getAllByRole('listitem')
+    const cards = within(await within(screen.getByRole('main')).findByRole('navigation', { name: /./ })).getAllByRole('listitem')
     cards.forEach((card, index) => expect(card.style.getPropertyValue('--enter-index')).toBe(String(index)))
   })
 })

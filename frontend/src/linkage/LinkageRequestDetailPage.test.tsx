@@ -144,6 +144,19 @@ describe('detalle de la solicitud para la empresa HU-S13-02', () => {
     expect(screen.queryByRole('region', { name: 'Baja de la vinculación' })).not.toBeInTheDocument()
   })
 
+  it('la nota del perfil reconoce que la institución puede compartir datos tras la aceptación (HU-S15-04)', async () => {
+    apiMock.mockResolvedValueOnce(Response.json({ data: pending }))
+    const view = renderApp()
+    expect(await screen.findByRole('region', { name: 'Perfil solicitado' })).toHaveTextContent('Conoces al alumno solo por su perfil anónimo')
+    view.unmount()
+
+    apiMock.mockResolvedValueOnce(Response.json({ data: accepted }))
+    renderApp()
+    const profile = await screen.findByRole('region', { name: 'Perfil solicitado' })
+    expect(profile).toHaveTextContent('La institución puede compartirte en la conversación los datos necesarios para la vinculación')
+    expect(profile).not.toHaveTextContent('Conoces al alumno solo por su perfil anónimo')
+  })
+
   it('responde igual a una solicitud ajena o inexistente', async () => {
     apiMock.mockResolvedValueOnce(Response.json({ message: 'La solicitud no existe.' }, { status: 404 }))
     renderApp('/linkage-requests/999')

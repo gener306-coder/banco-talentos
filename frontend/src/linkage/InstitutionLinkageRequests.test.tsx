@@ -409,6 +409,24 @@ describe('respuesta institucional HU-S6-02', () => {
     expect(within(section).queryByRole('button', { name: 'Dar de baja' })).not.toBeInTheDocument()
   })
 
+  it('la nota de privacidad afirma que la empresa no conoce al alumno solo mientras no hay vinculación (HU-S15-04)', async () => {
+    apiMock.mockResolvedValueOnce(Response.json({ data: detail }))
+    const view = renderApp('/institution/linkage-requests/41')
+    const pendingStudent = await screen.findByRole('region', { name: 'Alumno solicitado' })
+    expect(pendingStudent).toHaveTextContent('La identidad del alumno es de uso exclusivo de tu institución; la empresa no la conoce.')
+    view.unmount()
+
+    for (const status of ['ACEPTADA', 'BAJA']) {
+      apiMock.mockResolvedValueOnce(Response.json({ data: { ...detail, status, responded_at: '2026-10-29T16:00:00Z', responded_by: { name: 'Coordinación dual' },
+        termination: status === 'BAJA' ? { at: '2026-11-02T10:00:00Z', party: 'COMPANY', reason: 'El alumno no se presentó.', by: null } : null } }))
+      const linked = renderApp('/institution/linkage-requests/41')
+      const student = await screen.findByRole('region', { name: 'Alumno solicitado' })
+      expect(student).toHaveTextContent('comparte por la conversación solo los datos necesarios y con el consentimiento del alumno')
+      expect(student).not.toHaveTextContent('la empresa no la conoce')
+      linked.unmount()
+    }
+  })
+
   it('muestra la respuesta registrada al abrir una solicitud ya respondida (CA-05)', async () => {
     apiMock.mockResolvedValueOnce(Response.json({ data: answered }))
     renderApp('/institution/linkage-requests/41')

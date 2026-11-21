@@ -61,7 +61,13 @@ function Detail({ data, onDecided, refresh }: {
 
       <section className="student-section" aria-labelledby="linkage-student-title">
         <h3 id="linkage-student-title">Alumno solicitado</h3>
-        <p className="privacy-note">La identidad del alumno es de uso exclusivo de tu institución; la empresa no la conoce.</p>
+        {/* HU-S15-04: con la vinculación aceptada (o dada de baja después), la institución pudo compartir datos por la
+            conversación; la nota ya no afirma que la empresa no conoce al alumno (Aviso de Privacidad, privacidad progresiva). */}
+        <p className="privacy-note">
+          {data.status === 'ACEPTADA' || data.status === 'BAJA'
+            ? 'La plataforma no muestra la identidad del alumno a la empresa. Si hace falta para coordinar la vinculación, comparte por la conversación solo los datos necesarios y con el consentimiento del alumno.'
+            : 'La identidad del alumno es de uso exclusivo de tu institución; la empresa no la conoce.'}
+        </p>
         <dl className="student-identity">
           <dt>Nombre completo</dt><dd>{fullName(student)}</dd>
           <dt>Matrícula o control interno</dt><dd className="mono">{student.enrollment_number}</dd>

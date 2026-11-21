@@ -1,4 +1,4 @@
-import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { StrictMode } from 'react'
 import { MemoryRouter, Route, Routes, useLocation, useNavigate } from 'react-router'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
@@ -236,5 +236,14 @@ describe('estado de la cuenta al establecer contraseña', () => {
     expect(await screen.findByRole('alert')).toHaveTextContent(message)
     expect(screen.queryByText('No mostrar este texto arbitrario')).not.toBeInTheDocument()
     expect(screen.queryByText('Contraseña establecida. Ya puedes iniciar sesión.')).not.toBeInTheDocument()
+  })
+})
+
+describe('aviso simplificado HU-S15-04', () => {
+  it('enlaza el Aviso de Privacidad y los Términos con regreso a esta pantalla', async () => {
+    renderApp()
+    const notice = screen.getByText(/trata tus datos para administrar tu cuenta/)
+    expect(within(notice).getByRole('link', { name: 'Aviso de Privacidad' })).toHaveAttribute('href', '/legal/privacidad')
+    expect(within(notice).getByRole('link', { name: 'Términos y Condiciones' })).toHaveAttribute('href', '/legal/terminos')
   })
 })
