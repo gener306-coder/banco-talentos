@@ -172,7 +172,7 @@ export function InstitutionVideosPage() {
             <h3 id="video-watch-title">{watching.title}</h3>
             {/* key: al cambiar de video se monta un reproductor nuevo y se detiene el anterior. */}
             {watching.video_url && (
-              <VideoPlayer key={watching.public_id} src={watching.video_url} poster={watching.poster_url} label={watching.title}
+              <VideoPlayer key={watching.public_id} src={watching.video_url} fallbackSrc={watching.webm_url} poster={watching.poster_url} label={watching.title}
                 durationSeconds={watching.duration_seconds} width={watching.width} height={watching.height} />
             )}
             {watching.description && <p>{watching.description}</p>}

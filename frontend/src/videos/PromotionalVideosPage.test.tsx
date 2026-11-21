@@ -178,10 +178,13 @@ describe('Historias del Dual HU-S9-04', () => {
     expect(JSON.parse(String(patch[1]?.body))).toEqual({ is_active: false })
   })
 
-  it('niega las historias a la institución', async () => {
+  it('la institución también ve el feed, sin acciones de empresa ni de moderación (T-S14-19)', async () => {
+    galleryMock.mockImplementation(async () => pageOf([promo]))
     start('INSTITUTION')
-    expect(await screen.findByText('No tienes permiso para consultar las Historias del Dual.')).toBeInTheDocument()
-    expect(galleryMock).not.toHaveBeenCalled()
+    const story = await screen.findByRole('article', { name: 'Mi experiencia en manufactura' })
+    expect(within(story).queryByRole('link', { name: 'Buscar talento' })).not.toBeInTheDocument()
+    expect(within(story).queryByRole('button', { name: /^Inactivar/ })).not.toBeInTheDocument()
+    expect(screen.queryByText('No tienes permiso para consultar las Historias del Dual.')).not.toBeInTheDocument()
   })
 })
 

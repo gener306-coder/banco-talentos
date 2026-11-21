@@ -50,7 +50,7 @@ function Story({ story, enter, muted, onMutedChange, onRetry, company, moderator
   return (
     <article id={`story-${story.public_id}`} className="story" aria-labelledby={titleId} tabIndex={-1}
       data-enter="" style={{ '--enter-delay': `${enter}ms` } as CSSProperties}>
-      <VideoPlayer src={story.video_url} poster={story.poster_url} label={`${story.title}, de ${story.institution.name}`}
+      <VideoPlayer src={story.video_url} fallbackSrc={story.webm_url} poster={story.poster_url} label={`${story.title}, de ${story.institution.name}`}
         durationSeconds={story.duration_seconds} width={story.width} height={story.height}
         autoPlay muted={muted} onMutedChange={onMutedChange} onRetry={onRetry} />
       <div className="story-byline">

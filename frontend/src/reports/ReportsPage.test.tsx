@@ -123,7 +123,7 @@ describe('reporte ejecutivo HU-S7-01', () => {
       expect(this.download).toBe('reporte-educacion-dual-2026-10-28.csv')
     })
     apiMock.mockResolvedValueOnce(Response.json({ data: report }))
-      .mockResolvedValueOnce(new Response(new Blob(['\uFEFFInstitución'], { type: 'text/csv' })))
+      .mockResolvedValueOnce(new Response('\uFEFFInstitución', { headers: { 'Content-Type': 'text/csv' } }))
     renderApp()
     fireEvent.click(await screen.findByRole('button', { name: 'Descargar CSV' }))
     await waitFor(() => expect(click).toHaveBeenCalledOnce())

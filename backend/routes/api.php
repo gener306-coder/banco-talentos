@@ -250,16 +250,17 @@ Route::middleware(['auth:sanctum', 'active', 'role:'.UserRole::INSTITUTION->valu
         Route::patch('{video}/deletion', [InstitutionVideoController::class, 'delete']);
     });
 
-// Galería de promoción dual (HU-S9-03): COMPANY, SECRETARY y ADMIN ven los videos listos de instituciones activas. Solo
+// Galería de promoción dual (HU-S9-03): COMPANY, SECRETARY y ADMIN ven los videos listos de instituciones activas; desde
+// T-S14-19 también INSTITUTION, para el carrusel de su inicio (los videos son promoción pública del programa dual). Solo
 // el Administrador puede inactivar uno (moderación mínima, CA-05); reactivarlo le corresponde a la institución.
 Route::get('/promotional-videos', [PromotionalVideoController::class, 'index'])
-    ->middleware(['auth:sanctum', 'active', 'role:'.UserRole::COMPANY->value.','.UserRole::SECRETARY->value.','.UserRole::ADMIN->value]);
+    ->middleware(['auth:sanctum', 'active', 'role:'.UserRole::COMPANY->value.','.UserRole::SECRETARY->value.','.UserRole::ADMIN->value.','.UserRole::INSTITUTION->value]);
 Route::patch('/promotional-videos/{video}/status', [PromotionalVideoController::class, 'deactivate'])
     ->middleware(['auth:sanctum', 'active', 'role:'.UserRole::ADMIN->value]);
 
 // Videos y pósteres del disco de medios local (HU-S9-02): la URL firmada y temporal es la credencial, como una URL
 // prefirmada de S3. Con MEDIA_DISK=s3 el navegador va directo al bucket y esta ruta no se usa.
 Route::get('/media/{path}', MediaController::class)
-    ->where('path', 'videos/[0-9]+/[0-9a-f-]{36}\\.(mp4|jpg)')
+    ->where('path', 'videos/[0-9]+/[0-9a-f-]{36}\\.(mp4|webm|jpg)')
     ->middleware('signed:relative')
     ->name('media.show');

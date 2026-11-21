@@ -255,7 +255,8 @@ describe('módulo del inicio HU-S9-05', () => {
     expect(skeleton).toHaveAttribute('aria-busy', 'true')
     expect(screen.getByText('Cargando historias del Dual…')).toHaveAttribute('role', 'status')
     respond(pageOf([story(1, 'Historia 1'), story(2, 'Historia 2')]))
-    expect(await screen.findByRole('region', { name: HEADING })).toBeInTheDocument()
+    // Con la máquina cargada (suite completa) el carrusel puede tardar más que el segundo predeterminado.
+    expect(await screen.findByRole('region', { name: HEADING }, { timeout: 3000 })).toBeInTheDocument()
     expect(screen.queryByTestId('spotlight-skeleton')).not.toBeInTheDocument()
   })
 
@@ -268,14 +269,22 @@ describe('módulo del inicio HU-S9-05', () => {
     expect(screen.queryByRole('alert')).not.toBeInTheDocument()
   })
 
-  it.each([
-    ['ADMIN', { id: 1, name: 'Administración', email: 'admin@example.test', role: 'ADMIN' }],
-    ['SECRETARY', { id: 2, name: 'Secretaría', email: 'sec@example.test', role: 'SECRETARY' }],
-  ])('no aparece para %s', async (_role, user) => {
+  it('no aparece para ADMIN', async () => {
     galleryMock.mockImplementation(async () => pageOf(three))
-    start(user)
+    start({ id: 1, name: 'Administración', email: 'admin@example.test', role: 'ADMIN' })
     await screen.findByRole('link', { name: /Historias del Dual/ })
     expect(galleryMock).not.toHaveBeenCalled()
     expect(screen.queryByRole('region', { name: HEADING })).not.toBeInTheDocument()
+  })
+
+  it.each([
+    ['SECRETARY', { id: 2, name: 'Secretaría', email: 'sec@example.test', role: 'SECRETARY' }],
+    ['INSTITUTION', { id: 3, name: 'Coordinación', email: 'dual@ut.test', role: 'INSTITUTION', institution: { id: 1, name: 'UT del Golfo' } }],
+  ])('aparece también en el inicio de %s (T-S14-19)', async (_role, user) => {
+    galleryMock.mockImplementation(async () => pageOf(three))
+    start(user)
+    const region = await screen.findByRole('region', { name: HEADING })
+    expect(within(region).getByRole('link', { name: /Ver todas las historias/ })).toHaveAttribute('href', '/promocion')
+    expect(galleryMock).toHaveBeenCalled()
   })
 })

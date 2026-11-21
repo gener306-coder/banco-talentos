@@ -96,8 +96,9 @@ describe('procesamiento (CA-05)', function () {
             ->and([$video->width, $video->height])->toBe([1280, 720])
             ->and($video->output_bytes)->toBe(2048)
             ->and($video->source_path)->toBeNull()
-            ->and($video->failure_reason)->toBeNull();
-        Storage::disk('media')->assertExists([$base.'.mp4', $base.'.jpg']);
+            ->and($video->failure_reason)->toBeNull()
+            ->and($video->webm_path)->toBe($base.'.webm');
+        Storage::disk('media')->assertExists([$base.'.mp4', $base.'.jpg', $base.'.webm']);
         Storage::disk('local')->assertMissing($source);
     });
 
@@ -221,6 +222,42 @@ describe('fallos (CA-05)', function () {
 });
 
 describe('ffmpeg real (CA-05, CA-08)', function () {
+    it('also encodes a VP9 + Opus WebM from the processed MP4, without metadata (T-S14-18)', function () {
+        $video = processingVideo();
+        fakeTools([probeJson(), probeJson(['width' => 1280, 'height' => 720])]);
+
+        runVideoJob($video);
+
+        Process::assertRan(fn (PendingProcess $process): bool => $process->command[0] === 'nice'
+            && in_array('libvpx-vp9', $process->command, true) && in_array('libopus', $process->command, true)
+            && str_ends_with((string) end($process->command), 'video.webm')
+            && $process->command[array_search('-i', $process->command, true) + 1] === sys_get_temp_dir().'/institution-video-'.$video->public_id.'/video.mp4'
+            && array_slice($process->command, array_search('-map_metadata', $process->command, true), 2) === ['-map_metadata', '-1']);
+    });
+
+    it('keeps the video ready with its MP4 when only the WebM conversion fails (T-S14-18)', function () {
+        $video = processingVideo();
+        $probes = [probeJson(), probeJson(['width' => 1280, 'height' => 720])];
+        Process::fake(function (PendingProcess $process) use (&$probes) {
+            $command = $process->command;
+            if ($command[0] === 'ffprobe') {
+                return Process::result(array_shift($probes));
+            }
+            if (str_ends_with((string) end($command), '.webm')) {
+                return Process::result(errorOutput: 'Encoder libvpx-vp9 not found', exitCode: 1);
+            }
+            file_put_contents(end($command), str_repeat('m', 2048));
+
+            return Process::result();
+        });
+
+        runVideoJob($video);
+
+        $base = 'videos/'.$video->institution_id.'/'.$video->public_id;
+        expect($video->status)->toBe(VideoStatus::READY)->and($video->webm_path)->toBeNull()->and($video->video_path)->toBe($base.'.mp4');
+        Storage::disk('media')->assertMissing($base.'.webm');
+    });
+
     it('turns a vertical phone video with GPS into a 720 px MP4 with faststart and no metadata', function () {
         $video = processingVideo();
         $source = Storage::disk('local')->path($video->source_path);
@@ -249,5 +286,14 @@ describe('ffmpeg real (CA-05, CA-08)', function () {
         expect(strpos($head, 'moov'))->not->toBeFalse()->toBeLessThan(strpos($head, 'mdat') ?: PHP_INT_MAX);
 
         expect(getimagesize(Storage::disk('media')->path($video->poster_path))[2])->toBe(IMAGETYPE_JPEG);
+
+        // T-S14-18: la versión WebM real, VP9 + Opus con las mismas medidas y sin la ubicación.
+        $webm = json_decode(Process::run(['ffprobe', '-v', 'error', '-print_format', 'json', '-show_format', '-show_streams',
+            Storage::disk('media')->path($video->webm_path)])->throw()->output(), true);
+        $webmVideo = collect($webm['streams'])->firstWhere('codec_type', 'video');
+        expect($webmVideo['codec_name'])->toBe('vp9')
+            ->and([$webmVideo['width'], $webmVideo['height']])->toBe([720, 1280])
+            ->and(collect($webm['streams'])->firstWhere('codec_type', 'audio')['codec_name'])->toBe('opus')
+            ->and(array_keys($webm['format']['tags'] ?? []))->not->toContain('location');
     });
 });

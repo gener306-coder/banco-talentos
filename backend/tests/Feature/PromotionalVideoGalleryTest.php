@@ -62,12 +62,17 @@ describe('acceso (CA-06)', function () {
         $this->browserRequest('GET', '/api/promotional-videos')->assertOk()->assertJsonPath('meta.total', 1);
     })->with([UserRole::COMPANY, UserRole::SECRETARY, UserRole::ADMIN]);
 
-    it('rejects visitors and institutions', function () {
+    it('lets institutions browse the stories of every active institution, for the carousel of their home (T-S14-19)', function () {
+        galleryVideo($this->institution, 'Talleres');
+        galleryVideo(Institution::factory()->create(), 'Laboratorios');
+        $this->loginWithCookies(User::factory()->forInstitution(Institution::factory()->create())->create())->assertOk();
+
+        $this->browserRequest('GET', '/api/promotional-videos')->assertOk()->assertJsonPath('meta.total', 2);
+    });
+
+    it('rejects visitors', function () {
         $this->startCookieSession();
         $this->browserRequest('GET', '/api/promotional-videos')->assertUnauthorized();
-
-        $this->loginWithCookies(User::factory()->forInstitution($this->institution)->create())->assertOk();
-        $this->browserRequest('GET', '/api/promotional-videos')->assertForbidden();
     });
 });
 
@@ -110,7 +115,8 @@ describe('galería (CA-01, CA-02)', function () {
         $response = $this->browserRequest('GET', '/api/promotional-videos')->assertOk();
         $item = $response->json('data.0');
 
-        expect(array_keys($item))->toBe(['public_id', 'title', 'description', 'duration_seconds', 'width', 'height', 'institution', 'poster_url', 'video_url'])
+        expect(array_keys($item))->toBe(['public_id', 'title', 'description', 'duration_seconds', 'width', 'height', 'institution', 'poster_url', 'video_url', 'webm_url'])
+            ->and($item['webm_url'])->toBeNull()
             ->and($item['institution'])->toBe(['public_id' => $this->institution->refresh()->public_id, 'name' => 'Instituto Tecnológico Dual'])
             ->and($item['duration_seconds'])->toBe(75)
             ->and([$item['width'], $item['height']])->toBe([1280, 720])
@@ -119,6 +125,20 @@ describe('galería (CA-01, CA-02)', function () {
         expect($response->getContent())->not->toContain('"id"')->not->toContain('institution_id')->not->toContain('created_by')
             ->not->toContain('source_path')->not->toContain('location')->not->toContain('original_bytes');
         $this->get($item['video_url'], ['Range' => 'bytes=0-9'])->assertStatus(206);
+    });
+
+    it('offers the WebM version with its own signed URL, served as video/webm with Range (T-S14-18)', function () {
+        $video = galleryVideo($this->institution, 'Talleres');
+        $webm = preg_replace('/\.mp4$/', '.webm', $video->video_path);
+        Storage::disk('media')->put($webm, str_repeat('w', 2048));
+        $video->forceFill(['webm_path' => $webm])->save();
+        signInToGallery($this, UserRole::COMPANY);
+
+        $url = $this->browserRequest('GET', '/api/promotional-videos')->assertOk()->json('data.0.webm_url');
+        expect($url)->toStartWith('/api/media/'.$webm.'?expires=')->toContain('signature=');
+        $this->get($url, ['Range' => 'bytes=0-9'])->assertStatus(206)->assertHeader('Content-Type', 'video/webm');
+        // Sin firma, nada.
+        $this->get('/api/media/'.$webm)->assertForbidden();
     });
 
     it('filters by institution public_id and paginates by 12', function () {

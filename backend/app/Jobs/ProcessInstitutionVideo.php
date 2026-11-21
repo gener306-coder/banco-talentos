@@ -61,12 +61,14 @@ class ProcessInstitutionVideo implements ShouldQueue
             $base = 'videos/'.$video->institution_id.'/'.$video->public_id;
             $stored[] = $this->store($work.'/video.mp4', $base.'.mp4');
             $stored[] = $this->store($work.'/poster.jpg', $base.'.jpg');
+            $webm = $this->webm($processor, $work, $base, $stored);
 
             $original = $video->source_path;
             $video->forceFill([
                 'status' => VideoStatus::READY,
                 'video_path' => $base.'.mp4',
                 'poster_path' => $base.'.jpg',
+                'webm_path' => $webm,
                 'duration_seconds' => max(1, (int) round($output->duration)),
                 'width' => $output->width,
                 'height' => $output->height,
@@ -81,6 +83,24 @@ class ProcessInstitutionVideo implements ShouldQueue
             $this->discard($video, $stored, self::UNEXPECTED);
         } finally {
             File::deleteDirectory($work);
+        }
+    }
+
+    /**
+     * T-S14-18: la versión WebM es una alternativa de compatibilidad. Si su conversión falla, el video queda listo con su
+     * MP4 (se registra el motivo) en lugar de descartarse.
+     */
+    private function webm(VideoProcessor $processor, string $work, string $base, array &$stored): ?string
+    {
+        try {
+            $processor->webm($work.'/video.mp4', $work.'/video.webm');
+            $stored[] = $this->store($work.'/video.webm', $base.'.webm');
+
+            return $base.'.webm';
+        } catch (VideoProcessingFailed $exception) {
+            Log::warning('Video promocional sin versión WebM.', ['path' => $base, 'reason' => $exception->getMessage()]);
+
+            return null;
         }
     }
 
@@ -135,6 +155,7 @@ class ProcessInstitutionVideo implements ShouldQueue
             'source_path' => null,
             'video_path' => null,
             'poster_path' => null,
+            'webm_path' => null,
         ])->save();
         Log::info('Video promocional descartado.', ['video' => $video->public_id, 'reason' => $reason]);
     }

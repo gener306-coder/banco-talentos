@@ -119,10 +119,11 @@ class InstitutionVideoController extends Controller
                 throw ValidationException::withMessages(['video' => ['Espera a que termine de procesarse para eliminarlo.']]);
             }
 
-            $paths = array_values(array_filter([$locked->video_path, $locked->poster_path]));
+            $paths = array_values(array_filter([$locked->video_path, $locked->poster_path, $locked->webm_path]));
             $locked->forceFill([
                 'video_path' => null,
                 'poster_path' => null,
+                'webm_path' => null,
                 'is_active' => false,
                 'deleted_by' => $request->user()->id,
                 'deleted_at' => now(),
@@ -203,6 +204,8 @@ class InstitutionVideoController extends Controller
             'created_at' => $video->created_at?->toISOString(),
             'poster_url' => $ready ? MediaUrl::temporary($video->poster_path) : null,
             'video_url' => $ready ? MediaUrl::temporary($video->video_path) : null,
+            // T-S14-18: alternativa WebM para los navegadores sin H.264.
+            'webm_url' => $ready && $video->webm_path !== null ? MediaUrl::temporary($video->webm_path) : null,
         ];
     }
 }
