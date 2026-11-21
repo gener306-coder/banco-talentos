@@ -27,7 +27,7 @@ function renderAt(path: string) {
 const route = () => screen.getByRole('status', { name: 'Ruta actual' }).textContent
 const legalNav = () => screen.getByRole('navigation', { name: 'Documentos legales', hidden: false })
 
-afterEach(() => vi.unstubAllGlobals())
+afterEach(() => { vi.unstubAllGlobals(); vi.restoreAllMocks() })
 
 describe('documentos legales públicos HU-S15-03', () => {
   it.each([
@@ -40,8 +40,20 @@ describe('documentos legales públicos HU-S15-03', () => {
     expect(await screen.findByRole('heading', { name: title, level: 2 })).toBeInTheDocument()
     expect(route()).toBe(path)
     expect(screen.getByRole('link', { name: 'Ir al inicio de sesión' })).toHaveAttribute('href', '/login')
-    // Configuración jurídica pendiente (D1): el documento se anuncia como borrador.
-    expect(screen.getByRole('note', { name: 'Documento en borrador' })).toBeInTheDocument()
+    // T-S15-02: con la configuración predeterminada no hay borrador ni marcadores pendientes.
+    expect(screen.queryByRole('note', { name: 'Documento en borrador' })).not.toBeInTheDocument()
+    expect(document.body).not.toHaveTextContent(/Pendiente de definir|Borrador/)
+  })
+
+  it('sin datos jurídicos opcionales, el Aviso usa la redacción operativa sin huecos (T-S15-02)', async () => {
+    stubSession()
+    renderAt('/legal/privacidad')
+    expect(await screen.findByText(/conforme a los principios y la legislación vigentes en México/)).toBeInTheDocument()
+    expect(screen.getByRole('region', { name: 'Responsable' })).toHaveTextContent('Responsable del tratamiento: Administración del Banco de Talentos.')
+    expect(screen.getByRole('region', { name: 'Transferencias y encargados' })).toHaveTextContent('(hospedaje, correo electrónico y almacenamiento de medios)')
+    const rights = screen.getByRole('region', { name: 'Derechos ARCO y revocación' })
+    expect(rights).toHaveTextContent('Las solicitudes se atienden a través del responsable, Administración del Banco de Talentos. En el caso de los alumnos, mediante su institución educativa.')
+    expect(rights).not.toHaveTextContent(/Plazo de respuesta|autoridad garante|Correo electrónico:/)
   })
 
   it('el Aviso de Privacidad abre con el resumen por actor y describe la privacidad progresiva', async () => {
@@ -69,13 +81,13 @@ describe('documentos legales públicos HU-S15-03', () => {
   it('cambia de documento y Volver regresa a la vista de origen, no al documento anterior', async () => {
     stubSession()
     renderAt('/login')
-    const notice = await screen.findByText(/trata tus datos para administrar tu cuenta/)
+    const notice = await screen.findByText(/Responsable de tus datos/)
     fireEvent.click(within(notice).getByRole('link', { name: 'Aviso de Privacidad' }))
     await screen.findByRole('heading', { name: 'Aviso de Privacidad Integral', level: 2 })
 
-    fireEvent.click(within(legalNav()).getByRole('link', { name: 'Términos y Condiciones' }))
+    fireEvent.click(within(legalNav()).getByRole('link', { name: 'Términos' }))
     await screen.findByRole('heading', { name: 'Términos y Condiciones', level: 2 })
-    expect(within(legalNav()).getByRole('link', { name: 'Términos y Condiciones' })).toHaveAttribute('aria-current', 'page')
+    expect(within(legalNav()).getByRole('link', { name: 'Términos' })).toHaveAttribute('aria-current', 'page')
     fireEvent.click(within(legalNav()).getByRole('link', { name: 'Cookies' }))
     await screen.findByRole('heading', { name: 'Cookies y tecnologías técnicas', level: 2 })
 
@@ -128,10 +140,11 @@ describe('aviso simplificado HU-S15-04', () => {
   it('el inicio de sesión enlaza el Aviso de Privacidad y los Términos', async () => {
     stubSession()
     renderAt('/login')
-    const notice = await screen.findByText(/trata tus datos para administrar tu cuenta/)
+    const notice = await screen.findByText(/Responsable de tus datos/)
     expect(within(notice).getByRole('link', { name: 'Aviso de Privacidad' })).toHaveAttribute('href', '/legal/privacidad')
     expect(within(notice).getByRole('link', { name: 'Términos y Condiciones' })).toHaveAttribute('href', '/legal/terminos')
-    // Con el responsable pendiente, la pantalla no muestra el marcador como nombre.
+    // T-S15-02: el responsable operativo se lee como rótulo, sin marcadores.
+    expect(notice).toHaveTextContent('Responsable de tus datos: Administración del Banco de Talentos.')
     expect(notice).not.toHaveTextContent('Pendiente de definir')
   })
 })

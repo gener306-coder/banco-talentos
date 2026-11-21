@@ -364,9 +364,11 @@ Adoptado el 20 de noviembre de 2026 (`docs/sprint-15.md`).
 
 **Documentos (`/legal/*`, `legal/legal.css`):**
 
-- Tarjeta ancha con el artículo limitado a `--content-readable`.
-- Selector de documentos en pastillas: la actual, tintada (`--tint` y `--accent`).
-- Desde 960 px, el índice es una columna de 14 rem, `sticky` bajo la barra (`--app-bar-height`) y con su propio desplazamiento. En pantallas estrechas es un `<details>` «En esta página».
+- Tarjeta ancha con el encabezado y el artículo en una sola columna de lectura (`--content-readable`).
+- Control segmentado de documentos con nombres cortos: pista en `--fill` y el actual en `--surface` con `--accent` (T-S15-01).
+- Desde 960 px, el índice es una columna de 13.5 rem desde el título, `sticky` bajo la barra (`--app-bar-height`). Resalta la sección en lectura con `--tint`.
+- En pantallas estrechas, el índice es una barra translúcida fija bajo el encabezado que nombra la sección actual y se despliega.
+- La tabla de cookies se vuelve una tarjeta por tecnología a 600 px o menos.
 - Las secciones llevan `scroll-margin-top` con la altura de la barra.
 - El resumen del Aviso de Privacidad usa tarjetas por actor sobre `--surface-muted`.
 - La tabla de cookies se desplaza dentro de su contenedor.

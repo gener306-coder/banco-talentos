@@ -10,7 +10,7 @@ Sprint vigente desde el 20 de noviembre de 2026. Sprint anterior: [sprint-14.md]
 
 ## Decisiones del responsable y el Arquitecto (20 de noviembre de 2026)
 
-- **D1. Régimen pendiente:** el régimen (ente público con LGPDPPSO o particular con LFPDPPP) y los datos del responsable se definen con el cliente. `frontend/src/legal/legalConfig.ts` nace con `regime: null` y marcadores visibles. No bloquea el desarrollo ni el despliegue.
+- **D1. Publicable sin datos jurídicos específicos** (redacción actualizada por T-S15-02): el régimen (ente público con LGPDPPSO o particular con LFPDPPP) y los datos jurídicos específicos se definen después con el cliente. `frontend/src/legal/legalConfig.ts` trae valores operativos (responsable: Administración del Banco de Talentos; programa: Banco de Talentos – Educación Dual), y los datos jurídicos opcionales vacíos se omiten o se sustituyen por una redacción operativa. No hay alertas de borrador ni marcadores visibles: la plataforma ya es publicable.
 - **D2.** El footer **sí** se muestra en `/welcome`: es donde la empresa entrega datos y conviene tener a mano el Aviso de Privacidad.
 - **D3.** El aviso simplificado de los accesos es **informativo**: no registra aceptación. Las finalidades secundarias son estadísticas agregadas y disociadas, que no son datos personales.
 - **D4. Sprint solo de frontend:** sin migraciones ni endpoints. Los hallazgos de backend van a las notas previas a producción.
@@ -71,7 +71,7 @@ Auditoría del 20 de noviembre de 2026 sobre `main` (a0b9622):
   - ley aplicable y jurisdicción;
   - encargados;
   - versión y fecha de última actualización.
-- **CA-02.** `missingLegalFields()` lista los campos pendientes y `byRegime()` elige el texto según el régimen. Mientras falte algún dato, cada documento muestra un aviso de borrador y los marcadores se ven en el texto.
+- **CA-02.** `missingLegalFields()` lista los datos jurídicos vacíos y `byRegime()` elige el texto según el régimen. Desde T-S15-02, `missingLegalFields()` es solo una utilidad interna: los datos vacíos se omiten o se redactan de forma operativa, sin avisos de borrador.
 - **CA-03.** `/legal/privacidad` empieza con un resumen tipo «etiquetas de privacidad» por actor: instituciones, empresas, Secretaría y Administración, y alumnos sin cuenta.
 - **CA-04.** El inventario de datos coincide con el sistema real: cuentas de los cuatro roles, perfiles autogestionados de empresas (con RFC y ubicación) e instituciones (con CCT y contacto), expediente y comprobante de seguro de los alumnos, mensajes de vinculación y videos promocionales.
 - **CA-05.** Describe la privacidad progresiva: perfil disociado durante la búsqueda y la solicitud pendiente, sin transferencia automática de identidad, y comunicación de los datos necesarios por decisión de la institución una vez aceptada la vinculación.
@@ -156,11 +156,77 @@ Auditoría del 20 de noviembre de 2026 sobre `main` (a0b9622):
 
 ---
 
+## Tareas técnicas
+
+### T-S15-01 — Auditoría y refinamiento visual del apartado legal
+
+**Estado:** Implementada (20 de noviembre de 2026). Solicitada por el responsable sobre HU-S15-01 a HU-S15-04. Solo frontend.
+
+- **Hallazgos de la auditoría (1440 y 390 px, en claro y oscuro):**
+  - el título y la introducción iban al ancho de la tarjeta, y el artículo empezaba 17 rem más a la derecha, así que la columna de lectura no estaba alineada;
+  - a 390 px el selector de documentos se partía en dos renglones («Aviso de Privacidad» solo y los otros dos debajo);
+  - el índice no decía en qué sección ibas, y en el celular desaparecía al bajar, porque solo existía arriba del artículo;
+  - en el celular, la tabla de cookies se desplazaba de lado y partía los nombres en tres renglones;
+  - los datos jurídicos pendientes se leían como texto («El responsable del tratamiento es Pendiente de definir»);
+  - el aviso de borrador aparecía en Cookies, que no usa datos jurídicos;
+  - «Versión 1.0» quedaba sola en un renglón y la introducción ocupaba ocho renglones grandes en el celular;
+  - el aviso simplificado se pegaba al botón principal.
+- **Esqueletos:** los documentos son estáticos y se pintan al instante, sin consultar la API, así que no llevan esqueleto. Un esqueleto ahí solo agregaría un parpadeo.
+- **Disposición:**
+  - desde 960 px, el índice ocupa la izquierda desde el título y el encabezado comparte la columna de lectura con el artículo;
+  - el regreso y el selector de documentos van en una barra superior.
+- **Control segmentado:** con los nombres cortos (Privacidad, Términos y Cookies), en una sola fila también a 390 px. El documento actual va en una superficie elevada con el acento, y los segmentos miden 44 px.
+- **Índice que sigue la lectura:** la sección en lectura (la última cuyo título pasó el primer tercio de la ventana) lleva `aria-current="location"` y el tinte de la marca.
+  - En el celular es una barra translúcida fija bajo el encabezado que nombra la sección actual y se despliega para saltar a otra.
+  - Se cierra al elegir una sección, con Esc (devolviendo el foco) o al tocar fuera.
+- **Datos pendientes:** `LegalValue` los mostraba como una marca con el tono de estado inactivo, y el aviso de borrador solo aparecía en los documentos que usan `legalConfig` (`usesConfig`). T-S15-02 retiró las marcas, el aviso, `LegalValue` y `usesConfig`.
+- **Cookies en el celular:** una tarjeta por tecnología, con el nombre monoespaciado, el tipo en una pastilla, la finalidad y la duración con su etiqueta. El encabezado de la tabla sigue en el documento para los lectores de pantalla.
+- **Tipografía:**
+  - título del documento en `--type-2xl` (`--type-xl` en el celular) e introducción en `--type-lg` (`--type-base` en el celular);
+  - subtítulos de grupo en mayúsculas espaciadas;
+  - viñetas en `--text-muted`;
+  - fecha y versión sin partirse.
+- **Aviso simplificado:** separado del formulario por un filete.
+- **Pruebas:**
+  - Vitest: borrador solo en privacidad y términos, marcas de pendiente, sección actual marcada y cierre con Esc y al tocar fuera;
+  - E2E: el selector usa los nombres cortos.
+
+  Revisión visual a 1440 y 390 px en claro y oscuro: arriba, a media lectura, al final, con el índice desplegado, y en el inicio de sesión y el restablecimiento.
+
+### T-S15-02 — Apartado legal listo para producción, sin borrador
+
+**Estado:** Implementada (20 de noviembre de 2026) en `feat/s15-legal`. Solicitada por el responsable. Solo frontend.
+
+- **Configuración (`legalConfig.ts`):**
+  - valores operativos: `controller.name` (Administración del Banco de Talentos) y `programName` (Banco de Talentos – Educación Dual);
+  - datos jurídicos específicos opcionales, `null` o `[]` por defecto: `regime`, `controller.address` y `shortName`, canal ARCO (`channelName`, `email`, `phone`, `address`, `hours`, `responseTerm`), `authority`, `jurisdiction` y `processors`;
+  - se elimina `PENDING`;
+  - `missingLegalFields()` queda como utilidad interna, sin efecto en la interfaz;
+  - `footerOwner()` evita repetir el programa en el footer.
+- **Documentos sin borrador:** se retiran el `Callout` de borrador, `LegalValue` (con sus estilos) y `usesConfig`. Cada dato opcional con valor se muestra; sin valor, se omite su línea o se usa una redacción operativa:
+  - sin régimen: «conforme a los principios y la legislación vigentes en México en materia de protección de datos personales»;
+  - sin canal ARCO dedicado: las solicitudes se atienden a través del responsable, Administración del Banco de Talentos, y en el caso de los alumnos, mediante su institución educativa. El plazo y la autoridad garante se omiten;
+  - sin encargados detallados: una mención general a los proveedores técnicos de hospedaje, correo electrónico y almacenamiento de medios;
+  - sin ley ni tribunales: «Estas condiciones se rigen por la legislación mexicana aplicable».
+- **Rótulos en lugar de frases con artículo:** «Responsable del tratamiento: …», «Responsable de tus datos: …» y «cuyo responsable es …». Así se leen igual con el responsable operativo o con una razón social.
+- **Detalles de la revisión visual:**
+  - el párrafo de los alumnos remite al canal anterior solo si existe; si no, «dirigirse directamente al responsable»;
+  - el separador de la fecha y la versión queda pegado a la fecha, así que a 390 px el segundo renglón ya no empieza con «·».
+- **Footer:** «© 2026 Banco de Talentos – Educación Dual». Con un nombre corto distinto del programa: «© 2026 Nombre corto · Banco de Talentos – Educación Dual».
+- **Pruebas:**
+  - Vitest:
+    - con la configuración predeterminada, ni los documentos, ni el aviso simplificado, ni el footer muestran «Pendiente de definir» ni «Borrador»;
+    - la redacción operativa del Aviso;
+    - con una configuración completa (`legal/testing.ts`), los documentos, el aviso simplificado y el footer muestran cada dato (`documents.test.tsx` y `ui/AppFooter.test.tsx`, nuevos);
+  - E2E: el Aviso, sin borrador ni marcadores.
+
+---
+
 ## Notas previas a producción
 
 No se implementan en este Sprint. Se revisan antes del despliegue:
 
-1. Completar `frontend/src/legal/legalConfig.ts` (régimen, responsable, canal ARCO, autoridad, jurisdicción y encargados) hasta que `missingLegalFields()` quede vacío y desaparezca el aviso de borrador.
+1. **Opcional, con el área jurídica:** ampliar `frontend/src/legal/legalConfig.ts` con el régimen, el domicilio, el canal ARCO dedicado, la autoridad garante, los tribunales y la lista de encargados. La plataforma ya es publicable sin alertas de borrador. Cada dato que se capture aparece en los documentos, y `missingLegalFields()` indica cuáles faltan.
 2. Configurar `SESSION_SECURE_COOKIE=true` en producción (`.env.example` lo trae en `false`). El Aviso de Privacidad afirma que, en producción, la sesión viaja solo por HTTPS.
 3. Si cambia `SESSION_COOKIE`, actualizar `frontend/src/legal/technologies.ts`.
 4. Confirmar con el área jurídica quién es responsable de los datos de los alumnos y si la plataforma actúa como encargada de las instituciones.

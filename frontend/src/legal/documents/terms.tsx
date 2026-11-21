@@ -10,8 +10,8 @@ export function termsDocument(config: LegalConfig = legalConfig): LegalDocument 
     shortTitle: 'Términos',
     lead: (
       <>
-        Estas condiciones regulan el uso del Banco de Talentos – Educación Dual, operado por <strong>{controller.name}</strong>.
-        Al usar la plataforma, cada organización y cada persona usuaria las acepta.
+        Estas condiciones regulan el uso del {config.programName}, cuyo responsable es <strong>{controller.name}</strong>. Al usar la
+        plataforma, cada organización y cada persona usuaria las acepta.
       </>
     ),
     sections: [
@@ -129,7 +129,12 @@ export function termsDocument(config: LegalConfig = legalConfig): LegalDocument 
       {
         id: 'jurisdiccion',
         title: 'Ley aplicable y jurisdicción',
-        body: <p>Estas condiciones se rigen por {jurisdiction.governingLaw}. Para cualquier controversia, las partes se someten a {jurisdiction.courts}.</p>,
+        body: (
+          <p>
+            Estas condiciones se rigen por {jurisdiction.governingLaw ?? 'la legislación mexicana aplicable'}.
+            {jurisdiction.courts && ` Para cualquier controversia, las partes se someten a ${jurisdiction.courts}.`}
+          </p>
+        ),
       },
     ],
   }
