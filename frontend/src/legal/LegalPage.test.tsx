@@ -65,6 +65,8 @@ describe('documentos legales públicos HU-S15-03', () => {
     }
     const progressive = screen.getByRole('region', { name: 'Privacidad progresiva del alumno' })
     expect(progressive).toHaveTextContent('La plataforma nunca entrega a la empresa la identidad del alumno')
+    // Auditoría QA: coincide con lo que /api/talent devuelve a la empresa (institución, estado y municipio, sin domicilio).
+    expect(progressive).toHaveTextContent('su institución, el estado y el municipio, y la distancia aproximada en kilómetros. No ve nombre, matrícula, contacto, seguro social ni domicilio.')
     expect(screen.getByRole('region', { name: 'Medidas de seguridad' })).toHaveTextContent('nunca sus valores ni contraseñas')
   })
 

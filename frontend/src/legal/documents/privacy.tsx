@@ -61,7 +61,7 @@ export function privacyDocument(config: LegalConfig = legalConfig): LegalDocumen
           <>
             <p>La identidad del alumno se protege en cada etapa:</p>
             <ol>
-              <li><strong>Búsqueda.</strong> La empresa ve un perfil disociado: un titular, la carrera, el periodo, sus habilidades, idiomas, proyectos y certificaciones, y la distancia aproximada en kilómetros. No ve nombre, matrícula, contacto, seguro social ni ubicación exacta.</li>
+              <li><strong>Búsqueda.</strong> La empresa ve un perfil disociado: un titular, la carrera, el periodo, sus habilidades, idiomas, proyectos y certificaciones, su institución, el estado y el municipio, y la distancia aproximada en kilómetros. No ve nombre, matrícula, contacto, seguro social ni domicilio.</li>
               <li><strong>Solicitud pendiente.</strong> El perfil sigue disociado. El mensaje con el que la empresa acompaña su solicitud no admite datos de contacto.</li>
               <li><strong>Vinculación aceptada.</strong> Solo entonces se abre la conversación entre la empresa y la institución. La plataforma nunca entrega a la empresa la identidad del alumno: la institución, que administra el expediente, decide qué datos estrictamente necesarios comparte por la conversación para coordinar la vinculación, con el consentimiento del alumno o de su tutor.</li>
             </ol>
