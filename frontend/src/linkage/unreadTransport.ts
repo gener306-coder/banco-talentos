@@ -6,7 +6,7 @@ export const UNREAD_VISIBLE_INTERVAL_MS = 10_000
 /** Con la pestaña oculta basta cada 60 s: es lo que necesitan los avisos del navegador (T-S13-08). */
 export const UNREAD_HIDDEN_INTERVAL_MS = 60_000
 
-const CHANNEL = 'bt-unread'
+export const CHANNEL = 'bt-unread'
 
 type ChannelMessage = { type: 'summary'; account: string; summary: UnreadSummary } | { type: 'refresh'; account: string }
 

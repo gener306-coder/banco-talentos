@@ -968,3 +968,21 @@ button.account-action.positive { border-color: color-mix(in srgb, var(--success-
 :root.theme-fading, :root.theme-fading *, :root.theme-fading *::before, :root.theme-fading *::after {
   transition: background-color 400ms ease, color 400ms ease, border-color 400ms ease, fill 400ms ease, stroke 400ms ease, box-shadow 400ms ease; }
 }
+
+/*
+ * HU-S15-03: footer de la aplicación. Mismo ancho que <main> (index.css), texto secundario y un solo filete superior.
+ * #root es una columna de al menos el alto de la ventana: en las vistas cortas (inicio de sesión) el footer queda al fondo.
+ */
+@layer components {
+/* overflow-x: clip recorta el desplazamiento de 24 px de la transición entre vistas (useRouteTransition) sin crear un
+   contenedor de desplazamiento: la barra sticky sigue funcionando. */
+#root { display: flex; flex-direction: column; min-height: 100dvh; overflow-x: clip; }
+.app-footer { width: min(100% - var(--page-gutter), var(--page-narrow)); margin: auto auto 0; padding: 1rem 0 1.5rem;
+  border-top: 1px solid var(--border); color: var(--text-muted); font-size: var(--type-sm); }
+.app-footer.wide { width: min(100% - var(--page-gutter), var(--page-wide)); }
+.app-footer-links { display: flex; flex-wrap: wrap; gap: 0 1.25rem; margin: 0; padding: 0; list-style: none; }
+/* Zona táctil de 44 px sin agrandar el texto. */
+.app-footer-links a { display: inline-flex; align-items: center; min-height: 2.75rem; color: var(--text-muted); text-decoration: none; }
+@media (hover: hover) { .app-footer-links a:hover { color: var(--accent); text-decoration: underline; text-underline-offset: 3px; } }
+.app-footer-meta { display: flex; flex-wrap: wrap; gap: 0.25rem 1.25rem; margin: 0.25rem 0 0; font-size: var(--type-xs); line-height: 1.5; }
+}

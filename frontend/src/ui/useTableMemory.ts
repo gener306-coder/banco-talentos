@@ -13,7 +13,7 @@ import { smoothScrollTo, stickyTop } from './scroll'
  * Se guarda en sessionStorage (solo esta pestaña) y se consume una sola vez; si no está disponible, la tabla abre como
  * siempre. Uso: `<div className="institution-table-wrapper" ref={useTableMemory()}>`; las filas llevan `data-href`.
  */
-const STORAGE_KEY = 'table-memory'
+export const STORAGE_KEY = 'table-memory'
 /** Más allá de este tiempo, volver al listado ya no es «regresar»: se abre desde el inicio. */
 const MAX_AGE_MS = 30 * 60 * 1000
 const FLASH_CLASS = 'row-return'

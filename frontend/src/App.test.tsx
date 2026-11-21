@@ -1,4 +1,4 @@
-import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { StrictMode } from 'react'
 import { MemoryRouter, useLocation } from 'react-router'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
@@ -84,7 +84,8 @@ describe('acceso y sesión', () => {
     if (role === 'ADMIN' || role === 'SECRETARY') {
       expect(screen.getByRole('link', { name: 'Cuentas de la Secretaría' })).toHaveAttribute('href', '/secretary-accounts')
     } else {
-      expect(screen.queryByRole('link')).not.toBeInTheDocument()
+      // HU-S15-03: el footer siempre trae los documentos legales; el contenido no tiene enlaces.
+      expect(within(screen.getByRole('main')).queryByRole('link')).not.toBeInTheDocument()
     }
     expect(fetchMock.mock.calls[0][0]).toBe('/api/me')
   })

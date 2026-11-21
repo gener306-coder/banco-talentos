@@ -93,7 +93,12 @@ function Detail({ data, onCancelled }: { data: LinkageInboxItem; onCancelled: (u
 
       <section className="student-section" aria-labelledby="linkage-profile-title">
         <h3 id="linkage-profile-title">Perfil solicitado</h3>
-        <p className="privacy-note">Conoces al alumno solo por su perfil anónimo; su identidad la resguarda su institución.</p>
+        {/* HU-S15-04: tras la aceptación, la institución puede compartir datos necesarios por la conversación. */}
+        <p className="privacy-note">
+          {data.status === 'ACEPTADA' || data.status === 'BAJA'
+            ? 'La plataforma te muestra solo el perfil anónimo. La institución puede compartirte en la conversación los datos necesarios para la vinculación: trátalos con confidencialidad y solo para este fin.'
+            : 'Conoces al alumno solo por su perfil anónimo; su identidad la resguarda su institución.'}
+        </p>
         <dl className="student-identity">
           <dt>Titular</dt><dd>{headline}</dd>
           <dt>Carrera o programa</dt><dd>{profile.program ?? 'Sin capturar'}</dd>

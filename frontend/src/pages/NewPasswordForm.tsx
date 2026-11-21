@@ -4,6 +4,7 @@ import { Link, useNavigate, useSearchParams } from 'react-router'
 import { accessErrorMessages, ApiError } from '../lib/http'
 import type { ValidationErrors } from '../lib/http'
 import { PendingLabel } from '../ui/forms'
+import { SimplifiedNotice } from '../legal/SimplifiedNotice'
 
 export interface NewPasswordInput {
   email: string
@@ -137,6 +138,7 @@ export function NewPasswordForm({
           <button type="submit" disabled={pending}><PendingLabel pending={pending} label={submitLabel} pendingLabel={pendingLabel} /></button>
         </form>
       </>}
+      <SimplifiedNotice backLabel="Volver" />
     </section>
   )
 }

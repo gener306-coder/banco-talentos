@@ -5,6 +5,7 @@ import { useAuth } from '../auth/useAuth'
 import { PendingLabel } from '../ui/forms'
 import { BrandLogo } from '../ui/BrandLogo'
 import { EyeIcon, EyeOffIcon, LockIcon, MailIcon } from '../ui/icons'
+import { SimplifiedNotice } from '../legal/SimplifiedNotice'
 
 export function LoginPage() {
   const { user, signIn, pending, message } = useAuth()
@@ -56,6 +57,7 @@ export function LoginPage() {
           <PendingLabel pending={pending} label="Iniciar sesión" pendingLabel="Iniciando sesión…" />
         </button>
       </form>
+      <SimplifiedNotice backLabel="Volver al inicio de sesión" />
     </section>
   )
 }

@@ -47,6 +47,9 @@ import { WelcomePage } from './onboarding/WelcomePage'
 import { LinkageNotifier } from './linkage/LinkageNotifier'
 import { UnreadSummaryProvider } from './linkage/UnreadSummaryProvider'
 import { BrandLogo } from './ui/BrandLogo'
+import { AppFooter } from './ui/AppFooter'
+import { showsFooter } from './ui/footerRoutes'
+import { LegalPage } from './legal/LegalPage'
 import { prefersReducedMotion } from './ui/modal'
 import { useMediaQuery } from './ui/useMediaQuery'
 
@@ -249,9 +252,15 @@ function App() {
         <Routes>
           <Route path="/set-initial-password" element={<SetInitialPasswordPage />} />
           <Route path="/reset-password" element={<ResetPasswordPage />} />
+          {/* HU-S15-03: documentos legales públicos. Fuera de AuthRoutes: no esperan la sesión ni redirigen a /login, pero
+              siguen dentro del proveedor, así que con sesión se ven los menús de la barra. */}
+          <Route path="/legal/:document" element={<LegalPage />} />
+          <Route path="/legal" element={<Navigate to="/legal/privacidad" replace />} />
           <Route path="*" element={<AuthRoutes />} />
         </Routes>
       </main>
+      {/* HU-S15-03: último hermano del encabezado y el contenido, para aparecer o desaparecer sin volver a montarlos. */}
+      {showsFooter(pathname) && <AppFooter wide={wide} />}
     </>
   )
 

@@ -29,6 +29,8 @@ const COMPOSER_MAX_HEIGHT_PX = 144
 export const COUNTER_FROM = 1800
 /** Tiempo sin desplazarse tras el que el separador de día fijo se desvanece. */
 export const DAY_LABEL_IDLE_MS = 1200
+/** Prefijo del borrador de cada conversación en sessionStorage (declarado en la política de cookies, HU-S15-02). */
+export const DRAFT_KEY_PREFIX = 'linkage-draft'
 export const SEND_HINT = 'Enter para enviar; Shift + Enter para un salto de línea.'
 
 const isTouch = () => typeof window.matchMedia === 'function' && window.matchMedia('(pointer: coarse)').matches
@@ -99,7 +101,7 @@ export function LinkageConversation({ linkageRequestId, role, status, intro = []
   const { data, loading, failure, refresh, setData } = useApiRequest(load, conversationMessages)
   const mutation = useApiMutation(conversationMessages)
   // El borrador sobrevive a ir al perfil, la oportunidad o la solicitud y volver (solo en esta pestaña).
-  const draftKey = `linkage-draft:${role}:${linkageRequestId}`
+  const draftKey = `${DRAFT_KEY_PREFIX}:${role}:${linkageRequestId}`
   const [body, setBody] = useState(() => readDraft(draftKey))
   useEffect(() => writeDraft(draftKey, body), [draftKey, body])
   const [localError, setLocalError] = useState<string | null>(null)
