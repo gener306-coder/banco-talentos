@@ -70,7 +70,7 @@ for (const viewport of VIEWPORTS) {
         }
 
         const switcher = page.getByRole('navigation', { name: 'Documentos legales' })
-        await switcher.getByRole('link', { name: 'Términos y Condiciones' }).click()
+        await switcher.getByRole('link', { name: 'Términos', exact: true }).click()
         await expect(page.getByRole('heading', { level: 2, name: 'Términos y Condiciones' })).toBeVisible()
         await switcher.getByRole('link', { name: 'Cookies' }).click()
         await expect(page.getByRole('heading', { level: 2, name: 'Cookies y tecnologías técnicas' })).toBeVisible()

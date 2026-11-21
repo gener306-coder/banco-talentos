@@ -156,6 +156,43 @@ Auditoría del 20 de noviembre de 2026 sobre `main` (a0b9622):
 
 ---
 
+## Tareas técnicas
+
+### T-S15-01 — Auditoría y refinamiento visual del apartado legal
+
+**Estado:** Implementada (20 de noviembre de 2026). Solicitada por el responsable sobre HU-S15-01 a HU-S15-04. Solo frontend.
+
+- **Hallazgos de la auditoría (1440 y 390 px, en claro y oscuro):**
+  - el título y la introducción iban al ancho de la tarjeta, y el artículo empezaba 17 rem más a la derecha, así que la columna de lectura no estaba alineada;
+  - a 390 px el selector de documentos se partía en dos renglones («Aviso de Privacidad» solo y los otros dos debajo);
+  - el índice no decía en qué sección ibas, y en el celular desaparecía al bajar, porque solo existía arriba del artículo;
+  - en el celular, la tabla de cookies se desplazaba de lado y partía los nombres en tres renglones;
+  - los datos jurídicos pendientes se leían como texto («El responsable del tratamiento es Pendiente de definir»);
+  - el aviso de borrador aparecía en Cookies, que no usa datos jurídicos;
+  - «Versión 1.0» quedaba sola en un renglón y la introducción ocupaba ocho renglones grandes en el celular;
+  - el aviso simplificado se pegaba al botón principal.
+- **Esqueletos:** los documentos son estáticos y se pintan al instante, sin consultar la API, así que no llevan esqueleto. Un esqueleto ahí solo agregaría un parpadeo.
+- **Disposición:**
+  - desde 960 px, el índice ocupa la izquierda desde el título y el encabezado comparte la columna de lectura con el artículo;
+  - el regreso y el selector de documentos van en una barra superior.
+- **Control segmentado:** con los nombres cortos (Privacidad, Términos y Cookies), en una sola fila también a 390 px. El documento actual va en una superficie elevada con el acento, y los segmentos miden 44 px.
+- **Índice que sigue la lectura:** la sección en lectura (la última cuyo título pasó el primer tercio de la ventana) lleva `aria-current="location"` y el tinte de la marca.
+  - En el celular es una barra translúcida fija bajo el encabezado que nombra la sección actual y se despliega para saltar a otra.
+  - Se cierra al elegir una sección, con Esc (devolviendo el foco) o al tocar fuera.
+- **Datos pendientes:** `LegalValue` los muestra como una marca con el tono de estado inactivo. El aviso de borrador solo aparece en los documentos que usan `legalConfig` (`usesConfig`).
+- **Cookies en el celular:** una tarjeta por tecnología, con el nombre monoespaciado, el tipo en una pastilla, la finalidad y la duración con su etiqueta. El encabezado de la tabla sigue en el documento para los lectores de pantalla.
+- **Tipografía:**
+  - título del documento en `--type-2xl` (`--type-xl` en el celular) e introducción en `--type-lg` (`--type-base` en el celular);
+  - subtítulos de grupo en mayúsculas espaciadas;
+  - viñetas en `--text-muted`;
+  - fecha y versión sin partirse.
+- **Aviso simplificado:** separado del formulario por un filete.
+- **Pruebas:**
+  - Vitest: borrador solo en privacidad y términos, marcas de pendiente, sección actual marcada y cierre con Esc y al tocar fuera;
+  - E2E: el selector usa los nombres cortos.
+
+  Revisión visual a 1440 y 390 px en claro y oscuro: arriba, a media lectura, al final, con el índice desplegado, y en el inicio de sesión y el restablecimiento.
+
 ## Notas previas a producción
 
 No se implementan en este Sprint. Se revisan antes del despliegue:

@@ -1,20 +1,22 @@
 import { byRegime, dataProtectionLaw, legalConfig } from '../legalConfig'
 import type { LegalConfig } from '../legalConfig'
 import type { LegalDocument } from '../types'
+import { LegalValue } from '../LegalValue'
 import { PrivacySummary } from '../PrivacySummary'
 
 export function privacyDocument(config: LegalConfig = legalConfig): LegalDocument {
   const { controller, dataProtection, authority } = config
   const channel = byRegime(config, {
-    public_entity: `la Unidad de Transparencia del responsable (${dataProtection.channelName})`,
-    private_entity: `el área de datos personales del responsable (${dataProtection.channelName})`,
-    pending: `el canal de datos personales del responsable (${dataProtection.channelName})`,
+    public_entity: 'la Unidad de Transparencia del responsable',
+    private_entity: 'el área de datos personales del responsable',
+    pending: 'el canal de datos personales del responsable',
   })
 
   return {
     slug: 'privacidad',
     title: 'Aviso de Privacidad Integral',
     shortTitle: 'Privacidad',
+    usesConfig: true,
     lead: (
       <>
         Este aviso explica cómo el Banco de Talentos – Educación Dual trata los datos personales de las personas usuarias y de los
@@ -28,7 +30,7 @@ export function privacyDocument(config: LegalConfig = legalConfig): LegalDocumen
         title: 'Responsable',
         body: (
           <>
-            <p>El responsable del tratamiento es <strong>{controller.name}</strong>, con domicilio en {controller.address}.</p>
+            <p>El responsable del tratamiento es <strong><LegalValue value={controller.name} /></strong>, con domicilio en <LegalValue value={controller.address} />.</p>
             {controller.website && <p>Sitio web: {controller.website}</p>}
           </>
         ),
@@ -97,7 +99,7 @@ export function privacyDocument(config: LegalConfig = legalConfig): LegalDocumen
             <p>Para operar, el responsable se apoya en estos encargados, que tratan los datos solo por su cuenta y bajo sus instrucciones:</p>
             <ul>
               {config.processors.map((processor) => (
-                <li key={processor.name}><strong>{processor.name}</strong>: {processor.purpose} Ubicación: {processor.location}.</li>
+                <li key={processor.name}><strong>{processor.name}</strong>: {processor.purpose} Ubicación: <LegalValue value={processor.location} />.</li>
               ))}
             </ul>
           </>
@@ -124,12 +126,12 @@ export function privacyDocument(config: LegalConfig = legalConfig): LegalDocumen
           <>
             <p>
               Puedes ejercer tus derechos de acceso, rectificación, cancelación y oposición (ARCO), o revocar tu consentimiento,
-              ante {channel}:
+              ante {channel} (<LegalValue value={dataProtection.channelName} />):
             </p>
             <ul>
-              <li>Correo electrónico: {dataProtection.email}</li>
+              <li>Correo electrónico: <LegalValue value={dataProtection.email} /></li>
               {dataProtection.phone && <li>Teléfono: {dataProtection.phone}</li>}
-              <li>Domicilio: {dataProtection.address ?? controller.address}</li>
+              <li>Domicilio: <LegalValue value={dataProtection.address ?? controller.address} /></li>
               {dataProtection.hours && <li>Horario: {dataProtection.hours}</li>}
             </ul>
             <p>Tu solicitud debe incluir:</p>
@@ -138,12 +140,12 @@ export function privacyDocument(config: LegalConfig = legalConfig): LegalDocumen
               <li>un documento que acredite tu identidad o, en su caso, la de tu representante;</li>
               <li>la descripción clara de los datos y del derecho que quieres ejercer.</li>
             </ul>
-            <p>Plazo de respuesta: {dataProtection.responseTerm}.</p>
+            <p>Plazo de respuesta: <LegalValue value={dataProtection.responseTerm} />.</p>
             <p>
               Los datos de un alumno los captura y corrige su institución. El alumno, o su madre, padre o tutor, puede pedir a su institución
               que los corrija o deje de usarlos, o dirigirse al canal anterior.
             </p>
-            <p>Si consideras que tu derecho no fue atendido, puedes acudir a la autoridad garante: {authority.name}{authority.website ? ` (${authority.website})` : ''}.</p>
+            <p>Si consideras que tu derecho no fue atendido, puedes acudir a la autoridad garante: <LegalValue value={authority.name} />{authority.website ? ` (${authority.website})` : ''}.</p>
           </>
         ),
       },

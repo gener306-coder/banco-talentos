@@ -27,7 +27,7 @@ function renderAt(path: string) {
 const route = () => screen.getByRole('status', { name: 'Ruta actual' }).textContent
 const legalNav = () => screen.getByRole('navigation', { name: 'Documentos legales', hidden: false })
 
-afterEach(() => vi.unstubAllGlobals())
+afterEach(() => { vi.unstubAllGlobals(); vi.restoreAllMocks() })
 
 describe('documentos legales públicos HU-S15-03', () => {
   it.each([
@@ -40,8 +40,37 @@ describe('documentos legales públicos HU-S15-03', () => {
     expect(await screen.findByRole('heading', { name: title, level: 2 })).toBeInTheDocument()
     expect(route()).toBe(path)
     expect(screen.getByRole('link', { name: 'Ir al inicio de sesión' })).toHaveAttribute('href', '/login')
-    // Configuración jurídica pendiente (D1): el documento se anuncia como borrador.
-    expect(screen.getByRole('note', { name: 'Documento en borrador' })).toBeInTheDocument()
+    // Configuración jurídica pendiente (D1): solo los documentos que la usan se anuncian como borrador (T-S15-01).
+    if (path === '/legal/cookies') expect(screen.queryByRole('note', { name: 'Documento en borrador' })).not.toBeInTheDocument()
+    else expect(screen.getByRole('note', { name: 'Documento en borrador' })).toBeInTheDocument()
+  })
+
+  it('los datos jurídicos pendientes se distinguen del texto (T-S15-01)', async () => {
+    stubSession()
+    const view = renderAt('/legal/privacidad')
+    const owner = await screen.findByRole('region', { name: 'Responsable' })
+    expect(within(owner).getAllByText('Pendiente de definir').every((node) => node.tagName === 'MARK')).toBe(true)
+    expect(view.container.querySelectorAll('mark.legal-pending').length).toBeGreaterThan(3)
+  })
+
+  it('el índice marca la sección en lectura y se cierra con Esc (T-S15-01)', async () => {
+    stubSession()
+    // jsdom no calcula posiciones: las secciones quedan debajo del primer tercio de la ventana, salvo la primera.
+    vi.spyOn(Element.prototype, 'getBoundingClientRect').mockImplementation(function (this: Element) {
+      return { top: this.id === 'objeto' ? 0 : 2000 } as DOMRect
+    })
+    const view = renderAt('/legal/terminos')
+    await screen.findByRole('heading', { name: 'Términos y Condiciones', level: 2 })
+    const toc = screen.getByRole('navigation', { name: 'En esta página' })
+    expect(within(toc).getByRole('link', { name: 'Qué es la plataforma' })).toHaveAttribute('aria-current', 'location')
+    const details = view.container.querySelector('details')!
+    expect(details.querySelector('summary')).toHaveTextContent('Qué es la plataforma')
+    details.setAttribute('open', '')
+    fireEvent.keyDown(document, { key: 'Escape' })
+    expect(details).not.toHaveAttribute('open')
+    details.setAttribute('open', '')
+    fireEvent.pointerDown(document.body)
+    expect(details).not.toHaveAttribute('open')
   })
 
   it('el Aviso de Privacidad abre con el resumen por actor y describe la privacidad progresiva', async () => {
@@ -73,9 +102,9 @@ describe('documentos legales públicos HU-S15-03', () => {
     fireEvent.click(within(notice).getByRole('link', { name: 'Aviso de Privacidad' }))
     await screen.findByRole('heading', { name: 'Aviso de Privacidad Integral', level: 2 })
 
-    fireEvent.click(within(legalNav()).getByRole('link', { name: 'Términos y Condiciones' }))
+    fireEvent.click(within(legalNav()).getByRole('link', { name: 'Términos' }))
     await screen.findByRole('heading', { name: 'Términos y Condiciones', level: 2 })
-    expect(within(legalNav()).getByRole('link', { name: 'Términos y Condiciones' })).toHaveAttribute('aria-current', 'page')
+    expect(within(legalNav()).getByRole('link', { name: 'Términos' })).toHaveAttribute('aria-current', 'page')
     fireEvent.click(within(legalNav()).getByRole('link', { name: 'Cookies' }))
     await screen.findByRole('heading', { name: 'Cookies y tecnologías técnicas', level: 2 })
 

@@ -1,67 +1,143 @@
-/* Documentos legales (HU-S15-01 a HU-S15-03): lectura cómoda, índice fijo y solo tokens semánticos. */
+/*
+ * Documentos legales (HU-S15-01 a HU-S15-03; refinamiento visual T-S15-01): lectura cómoda, índice que sigue la
+ * lectura y solo tokens semánticos.
+ */
 @layer components {
 .legal-page { --legal-anchor-offset: calc(var(--app-bar-height, 5rem) + 1.25rem); }
 
-/* Selector de documentos: pastillas planas; la actual, tintada. */
-.legal-switcher { display: flex; flex-wrap: wrap; gap: 0.35rem; margin: 0 0 1.5rem; }
-.legal-switcher a { display: inline-flex; align-items: center; min-height: 2.75rem; padding: 0.4rem 0.95rem; border-radius: 999px;
-  color: var(--text); font-size: var(--type-sm); font-weight: 600; text-decoration: none; transition: background-color 150ms; }
-@media (hover: hover) { .legal-switcher a:hover:not([aria-current='page']) { background: var(--fill); } }
-.legal-switcher a[aria-current='page'] { background: var(--tint); color: var(--accent); }
+/* Regreso a la izquierda y control segmentado a la derecha; en el celular, uno sobre otro. */
+.legal-topbar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 0.75rem 1.5rem; margin-bottom: 1.75rem; }
+.legal-topbar .page-navigation { margin-bottom: 0; }
 
-.legal-updated { margin: -0.5rem 0 1rem; color: var(--text-muted); font-size: var(--type-sm); }
-.legal-lead { max-width: var(--content-readable); font-size: var(--type-lg); color: var(--text); }
-
-/* Retícula: una columna; desde 960 px, índice a la izquierda y artículo de ancho de lectura. */
-.legal-layout { display: grid; gap: 1.5rem; margin-top: 1.5rem; }
-@media (min-width: 960px) {
-  .legal-layout { grid-template-columns: 14rem minmax(0, var(--content-readable)); gap: 3rem; align-items: start; }
+/* Control segmentado: pista con relleno suave; el documento actual, superficie elevada con el acento. */
+.legal-switcher { display: inline-flex; gap: 0.15rem; padding: 0.2rem; border-radius: 999px; background: var(--fill); }
+.legal-switcher a { display: inline-flex; flex: 1 1 0; align-items: center; justify-content: center; min-height: 2.75rem; padding: 0.35rem 1.1rem;
+  border-radius: 999px; color: var(--text); font-size: var(--type-sm); font-weight: 600; text-decoration: none; white-space: nowrap;
+  transition: background-color 150ms, color 150ms, box-shadow 150ms; }
+@media (hover: hover) { .legal-switcher a:hover:not([aria-current='page']) { color: var(--accent); } }
+.legal-switcher a[aria-current='page'] { background: var(--surface); color: var(--accent);
+  box-shadow: 0 1px 3px color-mix(in srgb, var(--shadow) 14%, transparent); }
+@media (max-width: 600px) {
+  .legal-topbar { flex-direction: column; align-items: stretch; }
+  .legal-switcher { display: flex; }
+  .legal-switcher a { padding-inline: 0.5rem; }
 }
 
-.legal-toc { position: sticky; top: var(--legal-anchor-offset); max-height: calc(100dvh - var(--legal-anchor-offset) - 1rem); overflow-y: auto;
-  overscroll-behavior: contain; padding-right: 0.5rem; border-right: 1px solid var(--border); }
-.legal-toc-title { margin: 0 0 0.5rem; color: var(--text-muted); font-size: var(--type-xs); font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; }
-.legal-toc-list { margin: 0; padding: 0; list-style: none; }
-.legal-toc-list a { display: flex; align-items: center; min-height: 2.75rem; padding: 0.3rem 0.6rem; border-radius: 8px;
-  color: var(--text); font-size: var(--type-sm); line-height: 1.35; text-decoration: none; }
-@media (hover: hover) { .legal-toc-list a:hover { background: var(--fill); color: var(--accent); } }
+/* En una columna es flex y no grid: el índice fijo del celular se ancla al contenedor completo y no solo a su fila.
+   Desde 960 px, el índice ocupa la izquierda desde el título hasta el final, y el encabezado y el artículo comparten la
+   columna de lectura. */
+.legal-layout { display: flex; flex-direction: column; gap: 1.25rem; }
+@media (min-width: 960px) {
+  .legal-layout { display: grid; grid-template-columns: 13.5rem minmax(0, var(--content-readable)); grid-template-areas: 'toc header' 'toc content'; column-gap: 3.5rem; row-gap: 0.5rem; }
+}
+.legal-header { grid-area: header; max-width: var(--content-readable); }
+.legal-header h2 { margin-bottom: 0.35rem; font-size: var(--type-2xl); }
+.legal-updated { display: flex; flex-wrap: wrap; gap: 0 0.5rem; margin: 0 0 1.25rem; color: var(--text-muted); font-size: var(--type-sm); }
+/* Fecha y versión no se parten; si no caben juntas, la versión baja completa con su separador. */
+.legal-updated span { white-space: nowrap; }
+.legal-updated span + span::before { content: '·'; margin-right: 0.5rem; }
+.legal-lead { margin: 0 0 1.25rem; color: var(--text); font-size: var(--type-lg); line-height: 1.55; }
+.legal-header .callout { margin-bottom: 0.5rem; }
+@media (max-width: 600px) {
+  .legal-header h2 { font-size: var(--type-xl); }
+  .legal-lead { font-size: var(--type-base); }
+}
 
-.legal-toc-collapsible { border: 1px solid var(--border); border-radius: 0.75rem; background: var(--surface); }
-.legal-toc-collapsible summary { display: flex; align-items: center; min-height: 2.75rem; padding: 0.5rem 1rem; font-weight: 600; cursor: pointer; }
+/* Índice de escritorio: fijo bajo la barra, con la sección en lectura resaltada. */
+.legal-toc { grid-area: toc; align-self: start; position: sticky; margin-top: 0.4rem; top: var(--legal-anchor-offset);
+  max-height: calc(100dvh - var(--legal-anchor-offset) - 1rem); overflow-y: auto; overscroll-behavior: contain; }
+.legal-toc-title { margin: 0 0 0.4rem; padding-left: 0.75rem; color: var(--text-muted); font-size: var(--type-xs); font-weight: 600;
+  text-transform: uppercase; letter-spacing: 0.08em; }
+.legal-toc-list { display: grid; gap: 0.1rem; margin: 0; padding: 0; list-style: none; }
+.legal-toc-list a { display: flex; align-items: center; min-height: 2.75rem; padding: 0.35rem 0.75rem; border-radius: 10px;
+  color: var(--text-muted); font-size: var(--type-sm); line-height: 1.35; text-decoration: none; transition: background-color 150ms, color 150ms; }
+@media (hover: hover) { .legal-toc-list a:hover:not([aria-current]) { background: var(--fill); color: var(--text); } }
+.legal-toc-list a[aria-current='location'] { background: var(--tint); color: var(--accent); font-weight: 600; }
+
+/* Índice del celular: barra translúcida fija bajo el encabezado que nombra la sección en lectura. */
+.legal-toc-collapsible { grid-area: toc; position: sticky; top: calc(var(--app-bar-height, 4.5rem) + 0.5rem); z-index: 5;
+  border: 1px solid var(--border); border-radius: 0.85rem; background: color-mix(in srgb, var(--surface) 92%, transparent);
+  box-shadow: 0 6px 18px color-mix(in srgb, var(--shadow) 8%, transparent);
+  -webkit-backdrop-filter: blur(20px) saturate(180%); backdrop-filter: blur(20px) saturate(180%); }
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) { .legal-toc-collapsible { background: var(--surface); } }
+.legal-toc-collapsible summary { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; column-gap: 0.75rem;
+  min-height: 3rem; padding: 0.4rem 1rem; list-style: none; cursor: pointer; }
+.legal-toc-collapsible summary::-webkit-details-marker { display: none; }
+.legal-toc-summary-label { grid-column: 1; color: var(--text-muted); font-size: var(--type-xs); font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; }
+.legal-toc-current { grid-column: 1; overflow: hidden; color: var(--text); font-size: var(--type-sm); font-weight: 600; text-overflow: ellipsis; white-space: nowrap; }
+/* Chevrón que gira al desplegar. */
+.legal-toc-collapsible summary::after { content: ''; grid-column: 2; grid-row: 1 / span 2; width: 0.5rem; height: 0.5rem; margin-top: -0.25rem;
+  border-right: 2px solid var(--text-muted); border-bottom: 2px solid var(--text-muted); transform: rotate(45deg); transition: transform 200ms; }
+.legal-toc-collapsible[open] summary::after { margin-top: 0.25rem; transform: rotate(-135deg); }
 .legal-toc-collapsible[open] summary { border-bottom: 1px solid var(--border); }
-.legal-toc-collapsible .legal-toc-list { padding: 0.35rem; }
+.legal-toc-collapsible .legal-toc-list { max-height: min(60dvh, 26rem); overflow-y: auto; overscroll-behavior: contain; padding: 0.35rem; }
+@media (prefers-reduced-motion: reduce) { .legal-toc-collapsible summary::after { transition: none; } }
+@media (max-width: 959px) { .legal-page { --legal-anchor-offset: calc(var(--app-bar-height, 4.5rem) + 4.5rem); } }
 
-.legal-article { min-width: 0; max-width: var(--content-readable); color: var(--text); }
-.legal-section { scroll-margin-top: var(--legal-anchor-offset); padding-top: 0.5rem; }
-.legal-section + .legal-section { margin-top: 1.5rem; border-top: 1px solid var(--border); }
-.legal-section h3 { margin: 1rem 0 0.6rem; }
+/* Artículo. */
+.legal-article { grid-area: content; min-width: 0; max-width: var(--content-readable); color: var(--text); }
+.legal-section { scroll-margin-top: var(--legal-anchor-offset); padding-top: 0.25rem; }
+.legal-section + .legal-section { margin-top: 1.75rem; padding-top: 1.5rem; border-top: 1px solid var(--border); }
+.legal-section h3 { margin: 0 0 0.75rem; font-size: var(--type-lg); }
 .legal-section h3:focus { outline: none; }
-.legal-section h4 { margin: 1.1rem 0 0.4rem; color: var(--text-strong); }
-.legal-section :is(ul, ol) { padding-left: 1.25rem; line-height: 1.6; }
-.legal-section li + li { margin-top: 0.4rem; }
+.legal-section h3:focus-visible { outline: 3px solid var(--focus-ring); outline-offset: 4px; border-radius: 4px; }
+.legal-section h4 { margin: 1.25rem 0 0.35rem; color: var(--text-strong); font-size: var(--type-sm); font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; }
+.legal-section p { margin: 0 0 0.85rem; }
+.legal-section :is(ul, ol) { margin: 0 0 0.85rem; padding-left: 1.25rem; line-height: 1.6; }
+.legal-section li + li { margin-top: 0.45rem; }
+.legal-section li::marker { color: var(--text-muted); }
+.legal-section > :last-child { margin-bottom: 0; }
+
+/* Dato jurídico pendiente: tono de estado inactivo, distinto del texto (LegalValue). */
+.legal-pending { padding: 0.05rem 0.4rem; border-radius: 0.35rem; background: var(--status-off-surface); color: var(--status-off-text);
+  font-weight: 600; -webkit-box-decoration-break: clone; box-decoration-break: clone; }
 
 /* Resumen tipo etiquetas de privacidad: una tarjeta por actor. */
-.legal-summary { margin-bottom: 1.5rem; }
-.legal-summary h3 { margin-top: 0; }
+.legal-summary { margin-bottom: 2rem; }
+.legal-summary h3 { margin: 0 0 0.85rem; font-size: var(--type-lg); }
 .legal-labels { display: grid; grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr)); gap: 0.85rem; margin: 0; padding: 0; list-style: none; }
-.legal-label { padding: 1rem 1.1rem; border: 1px solid var(--border); border-radius: 0.85rem; background: var(--surface-muted); }
-.legal-label-actor { display: flex; align-items: center; gap: 0.5rem; margin: 0 0 0.6rem; color: var(--accent); font-weight: 600; }
+.legal-label { padding: 1.1rem 1.15rem; border: 1px solid var(--border); border-radius: 1rem; background: var(--surface-muted); }
+.legal-label-actor { display: flex; align-items: center; gap: 0.55rem; margin: 0 0 0.75rem; color: var(--accent); font-weight: 600; }
 .legal-label-actor svg { flex: none; width: 1.25rem; height: 1.25rem; }
 .legal-label dl { margin: 0; }
 .legal-label dt { color: var(--text-muted); font-size: var(--type-xs); font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; }
-.legal-label dd { margin: 0.1rem 0 0.6rem; font-size: var(--type-sm); line-height: 1.45; }
+.legal-label dd { margin: 0.15rem 0 0.7rem; font-size: var(--type-sm); line-height: 1.45; }
 .legal-label dd:last-child { margin-bottom: 0; }
-.legal-summary-note { margin: 0.85rem 0 0; color: var(--text-muted); font-size: var(--type-sm); }
+.legal-summary-note { margin: 0.9rem 0 0; color: var(--text-muted); font-size: var(--type-sm); }
+@media (max-width: 600px) {
+  .legal-labels { gap: 0.65rem; }
+  .legal-label { padding: 0.95rem 1rem; }
+}
 
-/* Inventario de cookies: la tabla se desplaza dentro de su contenedor, nunca la página. */
-.legal-table-wrapper { overflow-x: auto; border: 1px solid var(--border); border-radius: 0.75rem; }
-.legal-table { width: 100%; min-width: 38rem; border-collapse: collapse; font-size: var(--type-sm); text-align: left; }
-.legal-table :is(th, td) { padding: 0.75rem 0.85rem; border-bottom: 1px solid var(--border); vertical-align: top; line-height: 1.45; }
-.legal-table thead th { color: var(--text-muted); font-size: var(--type-xs); text-transform: uppercase; letter-spacing: 0.06em; }
+/* Inventario de cookies: tabla en pantallas anchas y una tarjeta por tecnología en el celular. */
+.legal-table-wrapper { overflow-x: auto; border: 1px solid var(--border); border-radius: 0.85rem; }
+.legal-table { width: 100%; border-collapse: collapse; font-size: var(--type-sm); text-align: left; }
+.legal-table :is(th, td) { padding: 0.8rem 0.9rem; border-bottom: 1px solid var(--border); vertical-align: top; line-height: 1.45; }
+.legal-table thead th { color: var(--text-muted); font-size: var(--type-xs); font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; white-space: nowrap; }
 .legal-table tbody tr:last-child > * { border-bottom: 0; }
-.legal-table code { overflow-wrap: anywhere; }
+.legal-table code { font-size: var(--type-xs); overflow-wrap: anywhere; }
+.legal-table [data-cell='name'] { width: 11rem; }
+.legal-table [data-cell='duration'] { color: var(--text-muted); }
+.legal-kind { display: inline-block; padding: 0.1rem 0.55rem; border-radius: 999px; background: var(--fill); color: var(--text); font-size: var(--type-xs); font-weight: 600; white-space: nowrap; }
+.legal-cell-label { display: none; }
+@media (max-width: 600px) {
+  .legal-table-wrapper { overflow: visible; border: 0; border-radius: 0; }
+  .legal-table, .legal-table tbody { display: block; }
+  /* El encabezado sigue en el documento para los lectores de pantalla. */
+  .legal-table thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+  .legal-table tbody { display: grid; gap: 0.65rem; }
+  .legal-table tr { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 0.4rem 0.75rem; padding: 0.95rem 1rem;
+    border: 1px solid var(--border); border-radius: 0.85rem; background: var(--surface-muted); }
+  .legal-table :is(th, td) { padding: 0; border: 0; }
+  .legal-table [data-cell='name'] { width: auto; align-self: center; }
+  .legal-table [data-cell='name'] code { font-size: var(--type-sm); }
+  .legal-table [data-cell='kind'] { justify-self: end; align-self: center; }
+  .legal-table :is([data-cell='purpose'], [data-cell='duration']) { grid-column: 1 / -1; }
+  .legal-table [data-cell='duration'] { font-size: var(--type-xs); }
+  .legal-cell-label { display: inline; font-weight: 600; }
+}
 
-/* Aviso simplificado de los accesos (HU-S15-04). */
-.legal-note { margin: 1.25rem 0 0; color: var(--text-muted); font-size: var(--type-sm); line-height: 1.5; }
+/* Aviso simplificado de los accesos (HU-S15-04): separado del formulario por un filete. */
+.legal-note { margin: 1.5rem 0 0; padding-top: 1.1rem; border-top: 1px solid var(--border); color: var(--text-muted); font-size: var(--type-sm); line-height: 1.55; }
 .legal-note a { color: var(--accent); font-weight: 600; }
 }

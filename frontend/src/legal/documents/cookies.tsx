@@ -6,6 +6,7 @@ export function cookiesDocument(): LegalDocument {
     slug: 'cookies',
     title: 'Cookies y tecnologías técnicas',
     shortTitle: 'Cookies',
+    usesConfig: false,
     lead: (
       <>
         El Banco de Talentos <strong>no usa cookies publicitarias, analítica ni rastreadores de terceros</strong>. Solo usa las tecnologías
@@ -31,7 +32,7 @@ export function cookiesDocument(): LegalDocument {
           <>
             <p>Esta es la lista completa. Ninguna sirve para identificarte fuera de la plataforma.</p>
             <div className="legal-table-wrapper">
-              <table className="legal-table">
+              <table className="legal-table stack-mobile-legal">
                 <caption className="visually-hidden">Cookies y almacenamiento del navegador</caption>
                 <thead>
                   <tr><th scope="col">Nombre</th><th scope="col">Tipo</th><th scope="col">Para qué</th><th scope="col">Duración</th></tr>
@@ -39,10 +40,11 @@ export function cookiesDocument(): LegalDocument {
                 <tbody>
                   {browserTechnologies.map((technology) => (
                     <tr key={technology.name}>
-                      <th scope="row"><code>{technology.name}</code></th>
-                      <td>{technology.kind}</td>
-                      <td>{technology.purpose}</td>
-                      <td>{technology.duration}</td>
+                      <th scope="row" data-cell="name"><code>{technology.name}</code></th>
+                      <td data-cell="kind"><span className="legal-kind">{technology.kind}</span></td>
+                      <td data-cell="purpose">{technology.purpose}</td>
+                      {/* En el celular cada fila es una tarjeta; la duración se anuncia con su etiqueta (legal.css). */}
+                      <td data-cell="duration"><span className="legal-cell-label">Duración: </span>{technology.duration}</td>
                     </tr>
                   ))}
                 </tbody>

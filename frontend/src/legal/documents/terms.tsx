@@ -1,6 +1,7 @@
 import { legalConfig } from '../legalConfig'
 import type { LegalConfig } from '../legalConfig'
 import type { LegalDocument } from '../types'
+import { LegalValue } from '../LegalValue'
 
 export function termsDocument(config: LegalConfig = legalConfig): LegalDocument {
   const { controller, jurisdiction } = config
@@ -8,9 +9,10 @@ export function termsDocument(config: LegalConfig = legalConfig): LegalDocument 
     slug: 'terminos',
     title: 'Términos y Condiciones',
     shortTitle: 'Términos',
+    usesConfig: true,
     lead: (
       <>
-        Estas condiciones regulan el uso del Banco de Talentos – Educación Dual, operado por <strong>{controller.name}</strong>.
+        Estas condiciones regulan el uso del Banco de Talentos – Educación Dual, operado por <strong><LegalValue value={controller.name} /></strong>.
         Al usar la plataforma, cada organización y cada persona usuaria las acepta.
       </>
     ),
@@ -129,7 +131,7 @@ export function termsDocument(config: LegalConfig = legalConfig): LegalDocument 
       {
         id: 'jurisdiccion',
         title: 'Ley aplicable y jurisdicción',
-        body: <p>Estas condiciones se rigen por {jurisdiction.governingLaw}. Para cualquier controversia, las partes se someten a {jurisdiction.courts}.</p>,
+        body: <p>Estas condiciones se rigen por <LegalValue value={jurisdiction.governingLaw} />. Para cualquier controversia, las partes se someten a <LegalValue value={jurisdiction.courts} />.</p>,
       },
     ],
   }
