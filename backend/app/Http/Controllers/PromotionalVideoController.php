@@ -80,6 +80,8 @@ class PromotionalVideoController extends Controller
             ],
             'poster_url' => MediaUrl::temporary($video->poster_path),
             'video_url' => MediaUrl::temporary($video->video_path),
+            // T-S14-18: alternativa WebM para los navegadores sin H.264; null en videos sin ella.
+            'webm_url' => $video->webm_path === null ? null : MediaUrl::temporary($video->webm_path),
         ];
     }
 }

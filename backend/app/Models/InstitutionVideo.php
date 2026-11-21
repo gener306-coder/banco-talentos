@@ -19,7 +19,7 @@ class InstitutionVideo extends Model
 
     protected $fillable = ['title', 'description'];
 
-    protected $hidden = ['id', 'institution_id', 'created_by', 'deleted_by', 'source_path', 'video_path', 'poster_path'];
+    protected $hidden = ['id', 'institution_id', 'created_by', 'deleted_by', 'source_path', 'video_path', 'poster_path', 'webm_path'];
 
     // Igual que los DEFAULT de las columnas, para que un video recién creado los refleje sin recargarse.
     protected $attributes = ['status' => 'PROCESSING', 'is_active' => true];

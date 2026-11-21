@@ -58,7 +58,10 @@ beforeEach(() => {
     }
     return apiMock(path, options)
   })
-  vi.stubGlobal('fetch', fetchMock)
+  // T-S14-19: el carrusel de Historias del Dual también pide la galería en el inicio de la Secretaría y de la institución;
+  // se responde aparte para que no consuma las respuestas en orden de fetchMock.
+  vi.stubGlobal('fetch', (path: RequestInfo | URL, options?: RequestInit) => String(path).startsWith('/api/promotional-videos')
+    ? Promise.resolve(Response.json({ data: [], meta: { current_page: 1, last_page: 1, total: 0 } })) : fetchMock(path, options))
 })
 afterEach(() => vi.unstubAllGlobals())
 

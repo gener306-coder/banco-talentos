@@ -20,6 +20,8 @@ export interface InstitutionVideo {
   /** URLs firmadas y temporales (HU-S9-02); solo existen cuando el video está READY. */
   poster_url: string | null
   video_url: string | null
+  /** T-S14-18: versión WebM para los navegadores sin H.264. */
+  webm_url: string | null
 }
 
 export interface VideoInput {
@@ -62,13 +64,15 @@ function video(response: unknown): InstitutionVideo {
       !['PROCESSING', 'READY', 'FAILED'].includes(data.status as string) || typeof data.is_active !== 'boolean' ||
       !isCount(data.duration_seconds) || !isCount(data.width) || !isCount(data.height) ||
       (data.failure_reason !== null && !isText(data.failure_reason)) || !isText(data.created_at) ||
-      (data.poster_url !== null && !isText(data.poster_url)) || (data.video_url !== null && !isText(data.video_url))) throw new ApiError(502)
+      (data.poster_url !== null && !isText(data.poster_url)) || (data.video_url !== null && !isText(data.video_url)) ||
+      (data.webm_url !== undefined && data.webm_url !== null && !isText(data.webm_url))) throw new ApiError(502)
   // Solo se conservan los campos del contrato.
   return {
     public_id: data.public_id, title: data.title, description: data.description, status: data.status as VideoStatus,
     is_active: data.is_active, duration_seconds: data.duration_seconds, width: data.width, height: data.height,
     failure_reason: data.failure_reason,
     created_at: data.created_at, poster_url: data.poster_url, video_url: data.video_url,
+    webm_url: (data.webm_url as string | null | undefined) ?? null,
   }
 }
 

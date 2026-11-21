@@ -3,7 +3,8 @@ import { ApiError, request } from '../lib/http'
 import type { FailureMessages } from '../lib/useApiRequest'
 
 /** Historias del Dual (HU-S9-03, HU-S9-04): testimonios en video para COMPANY, SECRETARY y ADMIN. */
-export const GALLERY_VIEWERS: readonly Role[] = ['COMPANY', 'SECRETARY', 'ADMIN']
+// T-S14-19: también INSTITUTION, que ve en su inicio el carrusel con las historias de todas las instituciones.
+export const GALLERY_VIEWERS: readonly Role[] = ['COMPANY', 'SECRETARY', 'ADMIN', 'INSTITUTION']
 
 export interface PromotionalVideo {
   public_id: string
@@ -15,6 +16,8 @@ export interface PromotionalVideo {
   institution: { public_id: string; name: string }
   poster_url: string
   video_url: string
+  /** T-S14-18: versión WebM para los navegadores sin H.264; null si el video no la tiene. */
+  webm_url: string | null
 }
 
 export interface PromotionalVideoPage {
@@ -38,11 +41,13 @@ function promotionalVideo(item: unknown): PromotionalVideo {
   const institution = data.institution as Record<string, unknown> | null
   if (!isText(data.public_id) || !isText(data.title) || (data.description !== null && !isText(data.description)) ||
       !isCount(data.duration_seconds) || !isCount(data.width) || !isCount(data.height) || typeof institution !== 'object' || institution === null ||
-      !isText(institution.public_id) || !isText(institution.name) || !isText(data.poster_url) || !isText(data.video_url)) throw new ApiError(502)
+      !isText(institution.public_id) || !isText(institution.name) || !isText(data.poster_url) || !isText(data.video_url) ||
+      (data.webm_url !== undefined && data.webm_url !== null && !isText(data.webm_url))) throw new ApiError(502)
   // Solo se conservan los campos del contrato.
   return {
     public_id: data.public_id, title: data.title, description: data.description, duration_seconds: data.duration_seconds,
     width: data.width, height: data.height, institution: { public_id: institution.public_id, name: institution.name }, poster_url: data.poster_url, video_url: data.video_url,
+    webm_url: (data.webm_url as string | null | undefined) ?? null,
   }
 }
 

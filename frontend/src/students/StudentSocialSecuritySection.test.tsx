@@ -180,7 +180,7 @@ describe('seguro facultativo HU-S3-02', () => {
       expect(this.href).toBe('blob:comprobante')
     })
     securityMock.mockResolvedValueOnce(security('12345678903', document))
-      .mockResolvedValueOnce(new Response(new Blob(['%PDF-1.7'], { type: 'application/pdf' })))
+      .mockResolvedValueOnce(new Response('%PDF-1.7', { headers: { 'Content-Type': 'application/pdf' } }))
     const region = await section()
     fireEvent.click(within(region).getByRole('button', { name: 'Descargar comprobante' }))
     await waitFor(() => expect(click).toHaveBeenCalledOnce())

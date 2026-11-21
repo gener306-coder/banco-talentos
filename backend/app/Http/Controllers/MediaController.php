@@ -12,7 +12,7 @@ use Symfony\Component\HttpFoundation\BinaryFileResponse;
  */
 class MediaController extends Controller
 {
-    private const TYPES = ['mp4' => 'video/mp4', 'jpg' => 'image/jpeg'];
+    private const TYPES = ['mp4' => 'video/mp4', 'webm' => 'video/webm', 'jpg' => 'image/jpeg'];
 
     public function __invoke(string $path): BinaryFileResponse
     {

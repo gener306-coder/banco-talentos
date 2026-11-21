@@ -139,6 +139,9 @@ function TalentShortcut() {
   )
 }
 
+/** Roles con el carrusel de Historias del Dual en su inicio (HU-S9-05; T-S14-19 agrega institución y Secretaría). */
+const SPOTLIGHT_ROLES: readonly Role[] = ['COMPANY', 'INSTITUTION', 'SECRETARY']
+
 const count = new Intl.NumberFormat('es-MX')
 const dateFormat = new Intl.DateTimeFormat('es-MX', { weekday: 'long', day: 'numeric', month: 'long' })
 
@@ -321,7 +324,8 @@ export function SessionPage() {
       {user.role === 'COMPANY' && home && <TalentShortcut />}
       {/* Lo accionable antes que lo inspiracional: el resumen va antes que las Historias. */}
       {home && <HomeIndicators role={user.role} onSettled={markIndicators} />}
-      {user.role === 'COMPANY' && home && <DualStoriesSpotlight onSettled={markSpotlight} />}
+      {/* T-S14-19: el carrusel de Historias del Dual también en el inicio de la institución y de la Secretaría. */}
+      {SPOTLIGHT_ROLES.includes(user.role) && home && <DualStoriesSpotlight onSettled={markSpotlight} />}
 
       {home
         ? (

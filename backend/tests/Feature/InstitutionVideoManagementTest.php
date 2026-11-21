@@ -92,7 +92,7 @@ describe('listado (CA-01)', function () {
         expect(collect($response->json('data'))->pluck('title')->all())->toBe(['En proceso', 'Publicado', 'Fallido'])
             ->and(array_keys($response->json('data.0')))->toBe([
                 'public_id', 'title', 'description', 'status', 'is_active', 'duration_seconds', 'width', 'height',
-                'failure_reason', 'created_at', 'poster_url', 'video_url',
+                'failure_reason', 'created_at', 'poster_url', 'video_url', 'webm_url',
             ]);
         $response->assertJsonPath('data.1.status', 'READY')
             ->assertJsonPath('data.1.duration_seconds', 92)
@@ -234,7 +234,13 @@ describe('baja lógica (CA-03)', function () {
 describe('eliminación (T-S9-04)', function () {
     it('deletes the files of a ready or failed video and keeps a hidden record of who deleted it', function (bool $active, VideoStatus $status) {
         $video = managedVideo($this->institution, ['is_active' => $active], $status);
-        $files = array_filter([$video->video_path, $video->poster_path]);
+        // T-S14-18: la versión WebM también se borra.
+        if ($video->video_path !== null) {
+            $webm = preg_replace('/\.mp4$/', '.webm', $video->video_path);
+            Storage::disk('media')->put($webm, 'webm');
+            $video->forceFill(['webm_path' => $webm])->save();
+        }
+        $files = array_filter([$video->video_path, $video->poster_path, $video->webm_path]);
         $this->loginWithCookies($this->account)->assertOk();
 
         $this->browserRequest('PATCH', videoUrl($video, '/deletion'))->assertNoContent()->assertHeader('Cache-Control', 'no-store, private');
@@ -247,6 +253,7 @@ describe('eliminación (T-S9-04)', function () {
             ->and($record->deleted_by)->toBe($this->account->id)
             ->and($record->video_path)->toBeNull()
             ->and($record->poster_path)->toBeNull()
+            ->and($record->webm_path)->toBeNull()
             ->and($record->is_active)->toBeFalse()
             ->and($record->title)->toBe('Talleres')
             ->and($record->consent_confirmed_at)->not->toBeNull();

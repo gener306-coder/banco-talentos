@@ -602,3 +602,47 @@ El responsable pidió auditar la lógica y el flujo de las oportunidades duales.
   - E2E `talent-search.spec.ts`: el mensaje de la institución aparece en la barra de la empresa y su panel lleva a la conversación; al leerla, la barra queda sin pendientes.
 - **Revisión visual** en la simulación (con el resumen simulado para ver la lista y el aviso) a 1440 y 390 px, en claro y oscuro, sin desborde horizontal.
 - **Verificación:** Vitest completo, salvo las descargas conocidas; E2E 47 de 47. Sin cambios en el backend.
+
+### T-S14-18 — Videos que no se reproducían en algunos navegadores: versión WebM de respaldo
+
+**Estado:** Implementada (20 de noviembre de 2026) en `feat/s14-videos-carousel`; publicada en `main`. Reportada por el responsable: con la cuenta de la Secretaría, los videos del feed no se reproducían.
+
+- **Causa (verificada):** no dependía del rol, sino del navegador.
+  - Los videos se procesan en MP4 H.264 (`VideoProcessor`, `libx264`). El Firefox de Fedora del equipo del responsable trae `ffmpeg-free` sin `openh264` y no decodifica H.264: `canPlayType` responde «probably», pero la reproducción falla con `MEDIA_ERR_DECODE` («Failed to decode media»).
+  - En la simulación, con Chromium, el mismo video se reproduce igual con la Secretaría que con la empresa.
+  - Una versión WebM (VP9 y Opus) del mismo video sí se reproduce en ese Firefox, tanto local como servida por la simulación con su URL firmada.
+- **Corrección:**
+  - **Procesamiento:** el job genera, además del MP4, una versión WebM (VP9 CRF 34 y Opus 96k) a partir del MP4 ya procesado, con sus mismas medidas y sin metadatos. Si solo esa conversión falla, el video queda listo con su MP4 (se registra el motivo).
+  - **Migración** `2026_11_20_000003_add_webm_to_institution_videos`: `webm_path` opcional.
+  - **Servicio:** la ruta firmada de medios sirve `.webm` (`video/webm`, con Range). La galería y la gestión de videos de la institución agregan `webm_url` (o `null`). Al eliminar un video también se borra su WebM.
+  - **Reproductor:** usa el MP4, que se decodifica por hardware casi en todos lados, incluido Safari. Si el navegador no puede decodificarlo (error de formato 3 o 4) y hay WebM, cambia a él sin mostrar el error, sigue reproduciendo y lo recuerda para los demás videos de la sesión. Un error de red o de URL vencida conserva su «Reintentar».
+  - **Videos existentes:** el comando `php artisan videos:webm [--limit=N]` genera el WebM de los videos listos que no lo tienen; un fallo no detiene a los demás. Se aplicó en la simulación (10 de 10).
+- **Costo:** el procesamiento tarda más (VP9 es más lento que H.264) y cada video ocupa más espacio en el disco de medios (los dos formatos).
+- **Pruebas:**
+  - Pest:
+    - `ProcessInstitutionVideoTest`: WebM generado con VP9 y Opus, sin metadatos; falla solo del WebM con el video listo; y con ffmpeg real, un WebM VP9 y Opus con las mismas medidas y sin ubicación;
+    - `PromotionalVideoGalleryTest`: `webm_url` firmada, `video/webm` con 206 y 403 sin firma;
+    - `InstitutionVideoManagementTest`: el contrato y el borrado del WebM;
+    - `GenerateVideoWebmTest` (nueva): el comando, sus fallos y `--limit`.
+  - Vitest `VideoPlayerFallback.test.tsx` (nuevo): cambio a WebM ante un error de decodificación y preferencia recordada; sin cambio ante un error de red; sin WebM, o si el WebM también falla, se muestra el error.
+
+### T-S14-19 — Carrusel de Historias del Dual también para la institución y la Secretaría
+
+**Estado:** Implementada (20 de noviembre de 2026) en `feat/s14-videos-carousel`; publicada en `main`. Solicitada por el responsable (opción «Agregarlo en los tres»).
+
+- **Inicio:** el carrusel aparece en el inicio de la empresa, la institución y la Secretaría (no el del administrador).
+- **Institución:** puede consultar la galería (`GET /promotional-videos`) y el feed `/promocion`, con las historias de todas las instituciones activas. Solo lectura: inactivar sigue siendo exclusivo del administrador, y no ve las acciones de la empresa.
+- **Pruebas:**
+  - Pest: la institución consulta la galería con las historias de todas las instituciones;
+  - Vitest: el carrusel en el inicio de la institución y de la Secretaría, y no en el del administrador; la institución ve el feed sin acciones de empresa ni de moderación;
+  - las pruebas del inicio de la Secretaría y de la institución responden la galería aparte.
+
+### T-S14-20 — Las 3 pruebas de descarga que fallaban
+
+**Estado:** Implementada (20 de noviembre de 2026) en `feat/s14-videos-carousel`; publicada en `main`. Solicitada por el responsable.
+
+- **Causa:** las tres pruebas (CSV de la bandeja de la institución, CSV del reporte ejecutivo y comprobante PDF del seguro) armaban la respuesta simulada con `new Response(new Blob([...]))`. El `Blob` de jsdom no tiene `.stream()`, que el `Response` de Node necesita, así que fallaban antes de llegar a la aplicación.
+- **Implicación:** no había un error en la aplicación, pero esas descargas no se verificaban en Vitest (las de CSV sí en la E2E).
+- **Corrección:** el cuerpo va como texto con su `Content-Type`, como lo entrega el servidor. Las tres pasan, y Vitest completo ya no tiene fallas conocidas.
+
+**Verificación de T-S14-18 a T-S14-20:** Pest completo 1663 de 1663, E2E 47 de 47 y Vitest completo sin fallas conocidas. Las migraciones se aplicaron en la simulación y en desarrollo, y `videos:webm` en la simulación.

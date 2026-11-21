@@ -31,7 +31,7 @@ function StoryPreview({ story }: { story: PromotionalVideo }) {
   const titleId = 'spotlight-preview-title'
   return (
     <section className="institution-account spotlight-preview" aria-labelledby={titleId}>
-      <VideoPlayer src={story.video_url} poster={story.poster_url} label={`${story.title}, de ${story.institution.name}`}
+      <VideoPlayer src={story.video_url} fallbackSrc={story.webm_url} poster={story.poster_url} label={`${story.title}, de ${story.institution.name}`}
         durationSeconds={story.duration_seconds} width={story.width} height={story.height} autoPlay />
       {/* El foco inicial va al título: en los controles del video, la barra de tiempo se activaría por accidente. */}
       <h3 id={titleId} tabIndex={-1} data-autofocus>{story.title}</h3>

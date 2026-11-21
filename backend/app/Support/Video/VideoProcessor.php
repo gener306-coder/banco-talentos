@@ -85,6 +85,21 @@ class VideoProcessor
         ]);
     }
 
+    /**
+     * T-S14-18: versión WebM (VP9 + Opus) a partir del MP4 ya procesado, con sus mismas medidas y cuadros por segundo. Es
+     * la alternativa para los navegadores que no decodifican H.264. Calidad constante (CRF 34) y codificación «good» con
+     * cpu-used 4 y filas en paralelo: equilibra tamaño y tiempo de proceso.
+     */
+    public function webm(string $mp4, string $target): void
+    {
+        $this->ffmpeg([
+            '-i', $mp4, '-map', '0:v:0', '-map', '0:a:0?',
+            '-c:v', 'libvpx-vp9', '-crf', '34', '-b:v', '0', '-deadline', 'good', '-cpu-used', '4', '-row-mt', '1',
+            '-c:a', 'libopus', '-b:a', '96k', '-ac', '2',
+            '-map_metadata', '-1', '-map_chapters', '-1', '-threads', '2', $target,
+        ]);
+    }
+
     /** Póster JPG en el segundo 2, o a la mitad de un video más corto. */
     public function poster(string $video, float $duration, string $target): void
     {

@@ -14,6 +14,11 @@ let current: HTMLVideoElement | null = null
 
 interface VideoPlayerProps {
   src: string
+  /**
+   * T-S14-18: versión WebM (VP9). Si el navegador no decodifica el MP4 H.264 (p. ej. Firefox de Fedora sin openh264),
+   * el reproductor cambia a ella solo y lo recuerda para los demás videos de la sesión.
+   */
+  fallbackSrc?: string | null
   poster: string | null
   /** Nombre accesible del video: «Video: {label}». */
   label: string
@@ -39,7 +44,13 @@ interface VideoPlayerProps {
  * nativos. Quita la opción, no impide copiar el archivo con herramientas de desarrollador. `preload="none"`: nada se
  * descarga hasta reproducir.
  */
-export function VideoPlayer({ src, poster, label, durationSeconds, width, height, autoPlay = false, muted: sharedMuted, onMutedChange, onRetry, preload = 'none', onMetadata, onUnplayable }: VideoPlayerProps) {
+/** Este navegador ya falló al decodificar un MP4 H.264: los demás videos arrancan directo con su versión WebM. */
+let preferFallback = false
+
+/** Errores del medio que indican que el navegador no puede con este formato (no un fallo de red ni una URL vencida). */
+const FORMAT_ERRORS = new Set([3, 4])
+
+export function VideoPlayer({ src, fallbackSrc = null, poster, label, durationSeconds, width, height, autoPlay = false, muted: sharedMuted, onMutedChange, onRetry, preload = 'none', onMetadata, onUnplayable }: VideoPlayerProps) {
   const container = useRef<HTMLDivElement>(null)
   const video = useRef<HTMLVideoElement>(null)
   const hideTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
@@ -52,6 +63,10 @@ export function VideoPlayer({ src, poster, label, durationSeconds, width, height
   const [ended, setEnded] = useState(false)
   const [waiting, setWaiting] = useState(false)
   const [failed, setFailed] = useState(false)
+  const [useFallback, setUseFallback] = useState(() => preferFallback && fallbackSrc !== null)
+  const currentSrc = useFallback && fallbackSrc ? fallbackSrc : src
+  // Al cambiar de versión por un error de formato, se reanuda si ya se estaba reproduciendo o el feed lo arrancó solo.
+  const resume = useRef(false)
   const [time, setTime] = useState(0)
   const [total, setTotal] = useState(durationSeconds ?? 0)
   const [controlsShown, setControlsShown] = useState(false)
@@ -194,7 +209,7 @@ export function VideoPlayer({ src, poster, label, durationSeconds, width, height
       onKeyDown={onKeyDown} onPointerMove={(event) => { if (event.pointerType !== 'touch') revealControls() }}
       onPointerDown={(event) => { lastPointer.current = event.pointerType }} onFocus={revealControls}>
       {vertical && poster && <img className="story-player-backdrop" src={poster} alt="" aria-hidden="true" />}
-      <video ref={video} className="story-player-video" src={src} poster={poster ?? undefined} preload={preload} playsInline
+      <video ref={video} className="story-player-video" src={currentSrc} poster={poster ?? undefined} preload={preload} playsInline
         controlsList="nodownload" disablePictureInPicture aria-label={`Video: ${label}`}
         onContextMenu={(event) => event.preventDefault()} onClick={pressVideo}
         onPlay={(event) => {
@@ -205,14 +220,29 @@ export function VideoPlayer({ src, poster, label, durationSeconds, width, height
           setFailed(false)
         }}
         onPause={() => setPlaying(false)} onEnded={() => { pausedByUser.current = true; setPlaying(false); setEnded(true) }}
-        onWaiting={() => setWaiting(true)} onPlaying={() => setWaiting(false)} onCanPlay={() => setWaiting(false)}
+        onWaiting={() => setWaiting(true)} onPlaying={() => setWaiting(false)}
+        onCanPlay={(event) => {
+          setWaiting(false)
+          if (resume.current) {
+            resume.current = false
+            void event.currentTarget.play().catch(() => { /* Queda el botón de reproducir. */ })
+          }
+        }}
         onTimeUpdate={(event) => setTime(event.currentTarget.currentTime)}
         onDurationChange={(event) => { if (Number.isFinite(event.currentTarget.duration)) setTotal(event.currentTarget.duration) }}
         onLoadedMetadata={(event) => {
           const { duration: seconds, videoWidth, videoHeight } = event.currentTarget
           if (Number.isFinite(seconds)) onMetadata?.({ duration: seconds, width: videoWidth, height: videoHeight })
         }}
-        onError={() => {
+        onError={(event) => {
+          const code = event.currentTarget.error?.code ?? 0
+          // T-S14-18: el MP4 no se puede decodificar aquí; si hay versión WebM, se usa sin mostrar el error.
+          if (!useFallback && fallbackSrc && FORMAT_ERRORS.has(code)) {
+            preferFallback = true
+            resume.current = autoPlay || !event.currentTarget.paused || playing
+            setUseFallback(true)
+            return
+          }
           setWaiting(false)
           setPlaying(false)
           if (onUnplayable) onUnplayable()
