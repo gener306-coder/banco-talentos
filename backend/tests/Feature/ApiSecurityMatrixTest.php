@@ -2,9 +2,12 @@
 
 use App\Models\Institution;
 use App\Models\User;
+use App\Http\Middleware\ThrottleApiRequests;
+use Illuminate\Cache\RateLimiter;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Routing\Route as LaravelRoute;
-use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Facades\Route;
 use Tests\Support\InteractsWithCookieSessions;
 
@@ -95,11 +98,9 @@ it('agrega Cache-Control no-store y las cabeceras de seguridad a respuestas aute
     $expectSecure($this->browserRequest('POST', '/api/students', [])->assertUnprocessable());
 });
 
-it('aplica el límite general throttle:api a la API, salvo a los medios firmados (auditoría QA #10)', function () {
-    // throttle:api vive en el grupo de middleware api; gatherMiddleware() no expande los grupos.
-    $apiGroup = collect(app('router')->getMiddlewareGroups()['api'])
-        ->map(fn ($middleware) => is_string($middleware) ? $middleware : $middleware::class);
-    expect($apiGroup->contains(fn (string $middleware) => str_contains($middleware, 'ThrottleRequests') || $middleware === 'throttle:api'))->toBeTrue();
+it('aplica el límite general a la API, salvo a los medios firmados (auditoría QA #10)', function () {
+    $apiGroup = collect(app('router')->getMiddlewareGroups()['api']);
+    expect($apiGroup)->toContain(ThrottleApiRequests::class);
 
     // Las rutas de acceso viven en web.php con su propio límite estricto; todas las demás están en el grupo api.
     $outside = collect(apiRoutes())
@@ -109,28 +110,49 @@ it('aplica el límite general throttle:api a la API, salvo a los medios firmados
     expect($outside)->toBe([]);
 
     $media = collect(apiRoutes())->first(fn (LaravelRoute $route) => $route->getName() === 'media.show');
-    expect($media->excludedMiddleware())->toContain('throttle:api');
+    expect($media->excludedMiddleware())->toContain(ThrottleApiRequests::class);
 });
+
+/** El contador del límite general vive en la caché de archivos, no en la base de datos. */
+function apiLimiter(): RateLimiter
+{
+    return new RateLimiter(Cache::store('file'));
+}
 
 it('el límite general es de 300 escrituras por minuto por cuenta y responde 429 al excederlo (auditoría QA #10)', function () {
     $account = User::factory()->forInstitution(Institution::factory()->create())->create();
     $this->loginWithCookies($account)->assertOk();
     // Se consumen 299 intentos sin peticiones HTTP para que la prueba sea rápida.
     $key = md5('api'.'api:user:'.$account->id);
+    apiLimiter()->clear($key);
     for ($i = 0; $i < 299; $i++) {
-        RateLimiter::hit($key, 60);
+        apiLimiter()->hit($key, 60);
     }
 
     $this->browserRequest('PATCH', '/api/me', ['name' => 'Coordinación'])->assertOk()->assertHeader('X-RateLimit-Limit', '300');
     $this->browserRequest('PATCH', '/api/me', ['name' => 'Coordinación dual'])->assertStatus(429);
+    apiLimiter()->clear($key);
 });
 
-it('las lecturas no pasan por el límite general ni escriben en la caché (auditoría QA #10)', function () {
+it('las lecturas no pasan por el límite general ni escriben en ninguna caché (auditoría QA #10)', function () {
     $account = User::factory()->forInstitution(Institution::factory()->create())->create();
     $this->loginWithCookies($account)->assertOk();
     $key = md5('api'.'api:user:'.$account->id);
 
     $response = $this->browserRequest('GET', '/api/me')->assertOk();
     expect($response->headers->has('X-RateLimit-Limit'))->toBeFalse()
-        ->and(RateLimiter::attempts($key))->toBe(0);
+        ->and(apiLimiter()->attempts($key))->toBe(0)
+        ->and(DB::table('cache')->where('key', 'like', '%'.$key.'%')->exists())->toBeFalse();
+});
+
+it('una escritura cuenta en la caché de archivos y no en la tabla cache (auditoría QA #10)', function () {
+    $account = User::factory()->forInstitution(Institution::factory()->create())->create();
+    $this->loginWithCookies($account)->assertOk();
+    $key = md5('api'.'api:user:'.$account->id);
+    apiLimiter()->clear($key);
+
+    $this->browserRequest('PATCH', '/api/me', ['name' => 'Coordinación'])->assertOk();
+    expect(apiLimiter()->attempts($key))->toBe(1)
+        ->and(DB::table('cache')->where('key', 'like', '%'.$key.'%')->exists())->toBeFalse();
+    apiLimiter()->clear($key);
 });

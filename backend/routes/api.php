@@ -27,6 +27,7 @@ use App\Http\Controllers\StudentController;
 use App\Http\Controllers\StudentCvController;
 use App\Http\Controllers\StudentSocialSecurityController;
 use App\Http\Controllers\TalentController;
+use App\Http\Middleware\ThrottleApiRequests;
 use App\Models\Institution;
 use Illuminate\Support\Facades\Route;
 
@@ -264,5 +265,5 @@ Route::get('/media/{path}', MediaController::class)
     ->where('path', 'videos/[0-9]+/[0-9a-f-]{36}\\.(mp4|webm|jpg)')
     ->middleware('signed:relative')
     // La reproducción hace muchas peticiones por rango (206); la firma temporal ya acota el acceso.
-    ->withoutMiddleware('throttle:api')
+    ->withoutMiddleware(ThrottleApiRequests::class)
     ->name('media.show');
