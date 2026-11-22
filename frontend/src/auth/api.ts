@@ -127,6 +127,17 @@ export interface InitialPasswordInput {
 }
 
 // Ni la cookie CSRF ni el envío exponen la página del enlace (con su token) como Referer.
+/**
+ * HU-S16-03: pide el enlace de restablecimiento. El servidor responde siempre igual (202), exista o no la cuenta; se
+ * devuelve su mensaje neutro para mostrarlo tal cual.
+ */
+export async function requestPasswordReset(email: string): Promise<string> {
+  await request('/sanctum/csrf-cookie', { referrerPolicy: 'no-referrer' })
+  const response = await request('/api/password/forgot', { method: 'POST', referrerPolicy: 'no-referrer', body: JSON.stringify({ email }) })
+  if (typeof response !== 'object' || response === null || !('message' in response) || typeof response.message !== 'string') throw new ApiError(502)
+  return response.message
+}
+
 async function submitNewPassword(path: string, input: InitialPasswordInput): Promise<void> {
   await request('/sanctum/csrf-cookie', { referrerPolicy: 'no-referrer' })
   await request(path, {

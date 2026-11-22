@@ -31,6 +31,18 @@ class AppServiceProvider extends ServiceProvider
             ];
         });
 
+        // HU-S16-03 (D2): 3 por hora por correo y 10 por minuto por IP. El límite por correo aplica exista o no la cuenta,
+        // así que el 429 tampoco revela qué correos están registrados.
+        RateLimiter::for('password-forgot', function (Request $request): array {
+            $email = $request->input('email');
+            $email = is_string($email) ? Str::lower(trim($email)) : '';
+
+            return [
+                Limit::perMinute(10)->by('forgot-ip:'.$request->ip()),
+                Limit::perHour(3)->by('forgot-email:'.hash('sha256', $email)),
+            ];
+        });
+
         RateLimiter::for('password-reset', function (Request $request): array {
             $email = $request->input('email');
             $email = is_string($email) ? Str::lower(trim($email)) : '';

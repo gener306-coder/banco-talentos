@@ -10,6 +10,7 @@ import { LoginPage } from './pages/LoginPage'
 import { SessionPage } from './pages/SessionPage'
 import { ResetPasswordPage } from './pages/ResetPasswordPage'
 import { SetInitialPasswordPage } from './pages/SetInitialPasswordPage'
+import { ForgotPasswordPage } from './pages/ForgotPasswordPage'
 import { InstitutionsPage } from './institutions/InstitutionsPage'
 import { InstitutionCreatePage } from './institutions/InstitutionCreatePage'
 import { InstitutionDetailPage } from './institutions/InstitutionDetailPage'
@@ -214,10 +215,10 @@ function useScrolled() {
  * Pantallas de acceso con una sola tarjeta: usan el ancho angosto. Todas las demás vistas, incluido el inicio,
  * son anchas por defecto (docs/design/identidad-visual.md, «Tamaños y retícula»).
  */
-const NARROW_PATHS = ['/login', '/set-initial-password', '/reset-password']
+const NARROW_PATHS = ['/login', '/set-initial-password', '/reset-password', '/forgot-password']
 
 /** Enlaces de contraseña: funcionan sin sesión y no montan el proveedor de sesión. */
-const PASSWORD_PATHS = ['/set-initial-password', '/reset-password']
+const PASSWORD_PATHS = ['/set-initial-password', '/reset-password', '/forgot-password']
 
 function App() {
   const { pathname } = useLocation()
@@ -259,6 +260,8 @@ function App() {
         <Routes>
           <Route path="/set-initial-password" element={<SetInitialPasswordPage />} />
           <Route path="/reset-password" element={<ResetPasswordPage />} />
+          {/* HU-S16-03: «¿Olvidaste tu contraseña?», sin sesión. */}
+          <Route path="/forgot-password" element={<ForgotPasswordPage />} />
           {/* HU-S15-03: documentos legales públicos. Fuera de AuthRoutes: no esperan la sesión ni redirigen a /login, pero
               siguen dentro del proveedor, así que con sesión se ven los menús de la barra. */}
           <Route path="/legal/:document" element={<LegalPage />} />

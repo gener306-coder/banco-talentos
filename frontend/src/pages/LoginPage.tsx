@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import type { FormEvent } from 'react'
-import { Navigate } from 'react-router'
+import { Link, Navigate } from 'react-router'
 import { useAuth } from '../auth/useAuth'
 import { PendingLabel } from '../ui/forms'
 import { BrandLogo } from '../ui/BrandLogo'
@@ -57,6 +57,8 @@ export function LoginPage() {
           <PendingLabel pending={pending} label="Iniciar sesión" pendingLabel="Iniciando sesión…" />
         </button>
       </form>
+      {/* HU-S16-03: recuperación de contraseña de autoservicio. */}
+      <p className="login-forgot"><Link to="/forgot-password">¿Olvidaste tu contraseña?</Link></p>
       <SimplifiedNotice backLabel="Volver al inicio de sesión" />
     </section>
   )

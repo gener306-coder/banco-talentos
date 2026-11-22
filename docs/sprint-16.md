@@ -160,7 +160,8 @@ Sprint vigente desde el 22 de noviembre de 2026. Sprint anterior: [sprint-15.md]
 
 ## HU-S16-03 — «Olvidé mi contraseña» de autoservicio
 
-**Estado:** Pendiente.  
+**Estado:** Completada (22 de noviembre de 2026) en `feat/s16-admin-and-institutions`.  
+**Diseño técnico y verificación:** [HU-S16-03.md](HU-S16-03.md)  
 **Story Points:** 3  
 **Rol:** público (los 4 roles)
 
