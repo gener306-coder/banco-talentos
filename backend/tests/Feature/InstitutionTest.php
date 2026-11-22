@@ -120,7 +120,11 @@ it('invites an institution with only the account email, active and without a pro
         ->assertJsonPath('data.is_active', true)
         ->json('data.id');
 
-    $institution = Institution::sole();
+    // El cliente exige cada columna del contrato, también las que quedan en null.
+    $this->browserRequest('GET', '/api/institutions/'.$id)->assertOk();
+    $created = $this->browserRequest('POST', '/api/institutions', institutionInvite(['email' => 'otra@example.test']))->assertCreated()->json('data');
+    expect(array_keys($created))->toContain('name', 'cct', 'contact_name', 'contact_position', 'contact_email', 'contact_phone', 'is_active', 'created_at', 'updated_at');
+    $institution = Institution::query()->findOrFail($id);
     expect($institution->id)->toBe($id)
         ->and($institution->is_active)->toBeTrue()
         ->and($institution->missing())->toBe(Institution::MINIMUM)

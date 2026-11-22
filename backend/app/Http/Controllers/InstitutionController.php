@@ -99,7 +99,8 @@ class InstitutionController extends Controller
 
         return response()->json([
             ...$links->deliver($user, $setupUrl, $method, $request->user()->id),
-            'data' => $institution,
+            // Recargada: la respuesta trae cada columna, también las que quedan en null (el cliente las exige).
+            'data' => $institution->refresh(),
         ], 201)->header('Cache-Control', 'no-store, private');
     }
 
