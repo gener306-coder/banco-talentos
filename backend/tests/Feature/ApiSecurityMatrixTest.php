@@ -4,6 +4,7 @@ use App\Models\Institution;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Routing\Route as LaravelRoute;
+use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Facades\Route;
 use Tests\Support\InteractsWithCookieSessions;
 
@@ -92,4 +93,35 @@ it('agrega Cache-Control no-store y las cabeceras de seguridad a respuestas aute
     $expectSecure($this->browserRequest('GET', '/api/companies')->assertForbidden());
     // 422 de validación.
     $expectSecure($this->browserRequest('POST', '/api/students', [])->assertUnprocessable());
+});
+
+it('aplica el límite general throttle:api a la API, salvo a los medios firmados (auditoría QA #10)', function () {
+    // throttle:api vive en el grupo de middleware api; gatherMiddleware() no expande los grupos.
+    $apiGroup = collect(app('router')->getMiddlewareGroups()['api'])
+        ->map(fn ($middleware) => is_string($middleware) ? $middleware : $middleware::class);
+    expect($apiGroup->contains(fn (string $middleware) => str_contains($middleware, 'ThrottleRequests') || $middleware === 'throttle:api'))->toBeTrue();
+
+    // Las rutas de acceso viven en web.php con su propio límite estricto; todas las demás están en el grupo api.
+    $outside = collect(apiRoutes())
+        ->reject(fn (LaravelRoute $route) => in_array($route->uri(), ['api/login', 'api/logout', 'api/institution-accounts/password-setup', 'api/institution-accounts/password-reset'], true))
+        ->reject(fn (LaravelRoute $route) => in_array('api', $route->gatherMiddleware(), true))
+        ->map(fn (LaravelRoute $route) => $route->uri())->values()->all();
+    expect($outside)->toBe([]);
+
+    $media = collect(apiRoutes())->first(fn (LaravelRoute $route) => $route->getName() === 'media.show');
+    expect($media->excludedMiddleware())->toContain('throttle:api');
+});
+
+it('el límite general es de 300 por minuto por cuenta y responde 429 al excederlo (auditoría QA #10)', function () {
+    $account = User::factory()->forInstitution(Institution::factory()->create())->create();
+    $this->loginWithCookies($account)->assertOk();
+    RateLimiter::clear('api:user:'.$account->id);
+    // Se consumen 299 intentos sin peticiones HTTP para que la prueba sea rápida.
+    $key = md5('api'.'api:user:'.$account->id);
+    for ($i = 0; $i < 299; $i++) {
+        RateLimiter::hit($key, 60);
+    }
+
+    $this->browserRequest('GET', '/api/me')->assertOk()->assertHeader('X-RateLimit-Limit', '300');
+    $this->browserRequest('GET', '/api/me')->assertStatus(429);
 });

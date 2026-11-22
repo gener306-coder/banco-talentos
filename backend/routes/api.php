@@ -263,4 +263,6 @@ Route::patch('/promotional-videos/{video}/status', [PromotionalVideoController::
 Route::get('/media/{path}', MediaController::class)
     ->where('path', 'videos/[0-9]+/[0-9a-f-]{36}\\.(mp4|webm|jpg)')
     ->middleware('signed:relative')
+    // La reproducción hace muchas peticiones por rango (206); la firma temporal ya acota el acceso.
+    ->withoutMiddleware('throttle:api')
     ->name('media.show');

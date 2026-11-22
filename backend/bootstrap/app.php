@@ -23,6 +23,8 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->statefulApi();
         // Auditoría QA: Cache-Control no-store y cabeceras de seguridad en todas las respuestas, también en los errores.
         $middleware->append(ApiSecurityHeaders::class);
+        // Auditoría QA (#10): límite general (throttle:api) en el grupo api. Ver AppServiceProvider.
+        $middleware->throttleApi();
         // La API responde 401 también a clientes que no solicitan JSON.
         $middleware->redirectGuestsTo(null);
         $middleware->alias([

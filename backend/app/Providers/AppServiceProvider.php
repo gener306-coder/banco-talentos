@@ -64,6 +64,14 @@ class AppServiceProvider extends ServiceProvider
         RateLimiter::for('organization-profile', fn (Request $request) => Limit::perMinute(10)->by('organization-profile:'.$request->user()->id)
         );
 
+        // Auditoría QA (#10): límite general de la API, además de los específicos (acceso, contraseñas, búsqueda, subidas,
+        // exportaciones…), que siguen aplicando. 300 por minuto por cuenta cubre con holgura la navegación y el sondeo
+        // de mensajes (6 por minuto por pestaña); sin sesión, 120 por minuto por IP.
+        RateLimiter::for('api', fn (Request $request) => $request->user()
+            ? Limit::perMinute(300)->by('api:user:'.$request->user()->id)
+            : Limit::perMinute(120)->by('api:ip:'.$request->ip())
+        );
+
         // Auditoría QA: las subidas (videos y comprobantes) ocupan disco y procesamiento; las exportaciones CSV recorren
         // tablas completas. Un límite por cuenta frena el abuso sin afectar el uso normal.
         RateLimiter::for('uploads', fn (Request $request) => Limit::perMinute(20)->by('uploads:'.$request->user()->id)
