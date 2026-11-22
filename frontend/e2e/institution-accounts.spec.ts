@@ -2,6 +2,7 @@ import { randomBytes } from 'node:crypto'
 import { expect, test } from '@playwright/test'
 import { ADMIN_STATE, NO_SESSION } from './support/admin'
 import { linkFromMail } from './support/mailpit'
+import { postponeWelcome } from './support/institution'
 
 test.use({ storageState: ADMIN_STATE })
 
@@ -100,7 +101,8 @@ test('ADMIN crea una cuenta sin contraseña; su titular la establece y pierde ac
     await holder.getByLabel('Correo electrónico').fill(account.email)
     await holder.getByLabel('Contraseña', { exact: true }).fill(account.password)
     await holder.getByRole('button', { name: 'Iniciar sesión', exact: true }).click()
-    await expect(holder).toHaveURL(`${baseURL}/`)
+    // HU-S16-07: la institución invitada aún no captura su perfil; se pospone su bienvenida.
+    await postponeWelcome(holder, baseURL)
     await expect(holder.getByRole('heading', { name: /^Hola, / })).toBeVisible()
     await expect(holder.getByText('Institución', { exact: true })).toBeVisible()
     // Inicio por rol: la cuenta vinculada ve su sección de alumnos.

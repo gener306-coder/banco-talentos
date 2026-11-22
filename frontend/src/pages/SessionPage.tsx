@@ -2,7 +2,7 @@ import { useCallback, useEffect, useId, useState } from 'react'
 import type { CSSProperties, FormEvent, ReactNode } from 'react'
 import { Link, Navigate, useNavigate } from 'react-router'
 import { roleLabels } from '../auth/api'
-import type { Role, SessionCompany, User } from '../auth/api'
+import type { Role, SessionCompany, SessionInstitution, User } from '../auth/api'
 import { ProfileMeter } from '../account/ProfileProgress'
 import { useAuth } from '../auth/useAuth'
 import { organizationOf } from '../auth/user'
@@ -288,6 +288,20 @@ function ProfileNudge({ company }: { company: SessionCompany }) {
   )
 }
 
+/**
+ * HU-S16-07: el mismo recordatorio para la institución. Sus 4 datos son el mínimo (D6), así que dice qué habilita. Va
+ * antes del resumen, en una sola línea; los pendientes del padrón siguen dentro de los indicadores.
+ */
+function InstitutionProfileNudge({ institution }: { institution: SessionInstitution }) {
+  return (
+    <Link className="profile-nudge" to="/account#organization">
+      <ProfileMeter kind="institution" missing={institution.missing} />
+      <span className="profile-nudge-text">Completa tu perfil para que tus alumnos aparezcan en la búsqueda de talento.</span>
+      <span className="profile-nudge-action">Completar<ChevronRightIcon /></span>
+    </Link>
+  )
+}
+
 export function SessionPage() {
   const { user } = useAuth()
   const titleId = useId()
@@ -299,8 +313,8 @@ export function SessionPage() {
   // se revelan en cascada al entrar en pantalla.
   const [cards, reveal] = useReveal<HTMLUListElement>()
   if (!user) return null
-  // HU-S14-03 CA-02: solo el inicio lleva al onboarding pendiente; los enlaces directos no se interceptan.
-  if (user.company?.onboarding === 'pending') return <Navigate to="/welcome" replace />
+  // HU-S14-03 CA-02 y HU-S16-07: solo el inicio lleva al onboarding pendiente; los enlaces directos no se interceptan.
+  if (user.company?.onboarding === 'pending' || user.institution?.onboarding === 'pending') return <Navigate to="/welcome" replace />
   const home = homeFor(user)
   const organization = organizationOf(user)
 
@@ -322,6 +336,7 @@ export function SessionPage() {
       </div>
 
       {user.company && user.company.missing.length > 0 && <ProfileNudge company={user.company} />}
+      {user.institution && user.institution.missing.length > 0 && <InstitutionProfileNudge institution={user.institution} />}
 
       {user.role === 'COMPANY' && home && <TalentShortcut />}
       {/* Lo accionable antes que lo inspiracional: el resumen va antes que las Historias. */}

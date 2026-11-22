@@ -47,10 +47,13 @@ if (strtolower($accounts[0]['email']) === strtolower($accounts[1]['email'])) {
 }
 
 // La cuenta INSTITUTION queda vinculada a una institución activa para el padrón (HU-S2-02).
+// HU-S16-07 y HU-S16-08: completa (los 4 datos mínimos) y con el onboarding terminado, como una institución existente (D7).
 $institution = Institution::query()->updateOrCreate(['cct' => 'E2E-INSTITUCION'], [
     'name' => 'Institución E2E',
+    'contact_name' => 'Coordinación E2E',
     'contact_email' => 'institucion-e2e@example.test',
 ]);
+$institution->forceFill(['onboarding_dismissed_at' => $institution->onboarding_dismissed_at ?? now()])->save();
 
 foreach ($accounts as $account) {
     User::query()->updateOrCreate(['email' => $account['email']], [

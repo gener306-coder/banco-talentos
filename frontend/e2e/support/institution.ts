@@ -1,3 +1,5 @@
+import { expect } from '@playwright/test'
+import type { Page } from '@playwright/test'
 import { randomInt } from 'node:crypto'
 
 /**
@@ -13,4 +15,15 @@ export const INSTITUTION_STATE = 'playwright/.auth/institution.json'
 export function randomCct(): string {
   const letter = () => String.fromCharCode(65 + randomInt(26))
   return `28${letter()}${letter()}${letter()}${String(randomInt(10000)).padStart(4, '0')}${letter()}`
+}
+
+/**
+ * HU-S16-07: la primera vez que entra una cuenta de una institución invitada, el inicio la lleva a `/welcome`. Pospone
+ * el onboarding y vuelve al inicio, como haría la persona con «Completar más tarde».
+ */
+export async function postponeWelcome(page: Page, baseURL: string | undefined): Promise<void> {
+  await expect(page).toHaveURL(`${baseURL}/welcome`)
+  await expect(page.getByRole('heading', { name: 'Completa el perfil de tu institución', exact: true })).toBeVisible()
+  await page.getByRole('button', { name: 'Completar más tarde', exact: true }).click()
+  await expect(page).toHaveURL(`${baseURL}/`)
 }

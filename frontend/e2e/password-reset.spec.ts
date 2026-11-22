@@ -3,6 +3,7 @@ import { expect, test } from '@playwright/test'
 import type { BrowserContext, Page } from '@playwright/test'
 import { ADMIN_STATE, NO_SESSION } from './support/admin'
 import { linkFromMail } from './support/mailpit'
+import { postponeWelcome } from './support/institution'
 
 const mailpitUrl = process.env.MAILPIT_URL
 
@@ -71,6 +72,8 @@ test('ADMIN inicia el restablecimiento → la persona titular establece su nueva
     await oldPage.goto(new URL(setupUrl, baseURL).toString())
     expect((await choosePassword(oldPage, account.initialPassword, 'Establecer contraseña', '/api/institution-accounts/password-setup')).status()).toBe(204)
     await signIn(oldPage, account.email, account.initialPassword)
+    // HU-S16-07: la institución invitada aún no captura su perfil; se pospone su bienvenida.
+    await postponeWelcome(oldPage, baseURL)
     await expect(oldPage.getByRole('heading', { name: /^Hola, / })).toBeVisible()
     expect(await me(oldSession, baseURL!)).toBe(200)
 

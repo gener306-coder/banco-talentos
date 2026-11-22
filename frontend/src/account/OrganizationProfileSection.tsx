@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useLocation } from 'react-router'
+import { sessionInstitution } from '../auth/api'
 import { useAuth } from '../auth/useAuth'
 import type { FormEvent, ReactNode } from 'react'
 import { sectorLabel } from '../companies/catalogs'
@@ -13,7 +14,7 @@ import { prefersReducedMotion } from '../ui/modal'
 import { LoadingState } from '../ui/StateMessage'
 import { CompanyProfileForm } from './CompanyProfileForm'
 import { ProfileProgress, ProfileScore } from './ProfileProgress'
-import { PROFILE_FIELDS } from './profileGaps'
+import { INSTITUTION_PROFILE_FIELDS, PROFILE_FIELDS } from './profileGaps'
 import { useSelfContact } from './useSelfContact'
 import { cctError, normalizeCct } from '../institutions/cct'
 import { getOrganizationProfile, updateOrganizationProfile } from './organizationApi'
@@ -56,14 +57,23 @@ function FactGroup({ title, empty, emptyText, children }: { title: string; empty
   )
 }
 
-/** Perfil de empresa sin ningún dato: un estado vacío con la siguiente acción, no una ficha llena de huecos. */
-function ProfileEmpty({ onStart }: { onStart: () => void }) {
+/** Perfil sin ningún dato: un estado vacío con la siguiente acción, no una ficha llena de huecos. */
+function ProfileEmpty({ kind = 'company', onStart }: { kind?: 'company' | 'institution'; onStart: () => void }) {
   return (
     <div className="profile-empty">
       <span className="profile-empty-icon" aria-hidden="true"><BuildingIcon /></span>
       <div>
-        <p className="profile-empty-title">Tu empresa aún no tiene perfil</p>
-        <p className="profile-empty-text">Con su nombre y un contacto, las instituciones sabrán quién las busca y podrás publicar y vincular.</p>
+        {kind === 'institution' ? (
+          <>
+            <p className="profile-empty-title">Tu institución aún no tiene perfil</p>
+            <p className="profile-empty-text">Con su nombre oficial, su CCT y un responsable, las empresas sabrán con quién vincularse y tus alumnos aparecerán en la búsqueda de talento.</p>
+          </>
+        ) : (
+          <>
+            <p className="profile-empty-title">Tu empresa aún no tiene perfil</p>
+            <p className="profile-empty-text">Con su nombre y un contacto, las instituciones sabrán quién las busca y podrás publicar y vincular.</p>
+          </>
+        )}
       </div>
       <button type="button" onClick={onStart}>Completar perfil</button>
     </div>
@@ -90,7 +100,9 @@ function CompanyFacts({ profile }: { profile: CompanyProfile }) {
 
 function ContactFacts({ title, profile }: { title: string; profile: CompanyProfile | InstitutionProfile }) {
   return (
-    <FactGroup title={title} emptyText="Aún no hay contacto. Las instituciones lo necesitan para responder a tus solicitudes."
+    <FactGroup title={title} emptyText={profile.type === 'institution'
+      ? 'Aún no hay responsable. Las empresas lo necesitan para vincularse con tus alumnos.'
+      : 'Aún no hay contacto. Las instituciones lo necesitan para responder a tus solicitudes.'}
       empty={!profile.contact_name && !profile.contact_position && !profile.contact_email && !profile.contact_phone}>
       <Fact label="Nombre" value={profile.contact_name} />
       <Fact label="Puesto" value={profile.contact_position} />
@@ -113,14 +125,33 @@ function Field({ id, label, error, children }: { id: string; label: ReactNode; e
 /**
  * T-S14-15: la institución controla sus datos con las mismas reglas que la empresa. Corrige su nombre oficial y su CCT
  * (el formato solo se exige a un CCT nuevo) y el responsable de su programa dual, con «Soy yo» y la sincronización con
- * el nombre de su cuenta (T-S14-09).
+ * el nombre de su cuenta (T-S14-09). HU-S16-07: todo es opcional y lo usa también el onboarding (`/welcome`).
  */
-function InstitutionProfileForm({ profile, onSaved, onCancel }: { profile: InstitutionProfile; onSaved: (profile: InstitutionProfile) => void; onCancel: () => void }) {
+export function InstitutionProfileForm({ profile, submitLabel = 'Guardar cambios', pendingLabel = 'Guardando cambios…', suggestSelf = false, secondary, onSaved }: {
+  profile: InstitutionProfile
+  submitLabel?: string
+  pendingLabel?: string
+  /**
+   * Solo en el onboarding: con el contacto vacío, propone a la persona de la sesión («Soy yo» marcado y sus datos
+   * precargados). En Mi cuenta, un contacto vacío se respeta tal cual (T-S14-02).
+   */
+  suggestSelf?: boolean
+  /** Acción secundaria junto al botón principal: «Cancelar» o «Completar más tarde». */
+  secondary: ReactNode
+  onSaved: (profile: InstitutionProfile) => void
+}) {
   const { user, updateUser } = useAuth()
-  const [values, setValues] = useState(() => valuesOf(profile))
+  const emptyContact = profile.contact_name === null && profile.contact_email === null
+  const suggest = suggestSelf && emptyContact
+  const [values, setValues] = useState(() => {
+    const initial = valuesOf(profile)
+    // M3: el nombre provisional de la cuenta es su correo; no se propone como nombre de nadie.
+    if (suggest && user) return { ...initial, contact_name: user.name !== user.email ? user.name : '', contact_email: user.email }
+    return initial
+  })
   const [localErrors, setLocalErrors] = useState<Partial<Record<InstitutionField, string>>>({})
   const contact = useSelfContact({
-    savedEmail: profile.contact_email, initialName: values.contact_name, currentName: values.contact_name,
+    savedEmail: profile.contact_email, initialName: values.contact_name, currentName: values.contact_name, suggest,
     fill: ({ name, email }) => setValues((current) => ({ ...current, ...(name !== undefined ? { contact_name: name } : {}), ...(email !== undefined ? { contact_email: email } : {}) })),
   })
   const mutation = useApiMutation(profileMessages)
@@ -153,26 +184,29 @@ function InstitutionProfileForm({ profile, onSaved, onCancel }: { profile: Insti
   function submit(event: FormEvent) {
     event.preventDefault()
     if (mutation.pending) return
+    // HU-S16-07: guardado parcial; solo se valida el formato de lo capturado.
     const found: Partial<Record<InstitutionField, string>> = {}
-    if (!values.name.trim()) found.name = 'El nombre oficial es obligatorio.'
-    if (!values.cct.trim()) found.cct = 'La Clave de Centro de Trabajo es obligatoria.'
-    else { const message = cctError(values.cct, profile.cct); if (message) found.cct = message }
+    const cctMessage = values.cct.trim() ? cctError(values.cct, profile.cct) : null
+    if (cctMessage) found.cct = cctMessage
     setLocalErrors(found)
     if (Object.keys(found).length) return
-    const contactName = values.contact_name.trim()
-    const accountRename = contact.accountNameFor(contactName || null)
+    const contactName = optional(values.contact_name)
+    const accountRename = contact.accountNameFor(contactName)
     const payload = {
-      name: values.name.trim(), cct: normalizeCct(values.cct),
+      name: optional(values.name), cct: values.cct.trim() ? normalizeCct(values.cct) : null,
       contact_name: contactName, contact_position: optional(values.contact_position),
-      contact_email: values.contact_email.trim(), contact_phone: optional(values.contact_phone),
+      contact_email: optional(values.contact_email)?.toLowerCase() ?? null, contact_phone: optional(values.contact_phone),
       // Con «Soy yo», corregir aquí el nombre del responsable corrige el de la cuenta.
       ...(accountRename ? { account_name: accountRename } : {}),
     }
     void mutation.submit(() => updateOrganizationProfile(payload), (updated) => {
       if (updated.type !== 'institution') return
       contact.saved({ name: updated.contact_name, email: updated.contact_email })
-      // La sesión refleja el nombre de la institución y, si cambió, el de la cuenta, sin volver a cargarse.
-      if (user?.institution) updateUser({ ...user, name: accountRename ?? user.name, institution: { ...user.institution, name: updated.name } })
+      // La sesión refleja el nombre, lo que falta y, si cambió, el nombre de la cuenta, sin volver a cargarse. Guardar,
+      // aunque sea en parcial, termina el onboarding (HU-S16-07).
+      if (user?.institution) {
+        updateUser({ ...user, name: accountRename ?? user.name, institution: sessionInstitution(user.institution.id, updated.name, updated.missing, 'done') })
+      }
       onSaved(updated)
     })
   }
@@ -208,8 +242,8 @@ function InstitutionProfileForm({ profile, onSaved, onCancel }: { profile: Insti
           </div>
         </fieldset>
         <div className="profile-actions">
-          <button type="submit" disabled={mutation.pending}><PendingLabel pending={mutation.pending} label="Guardar cambios" pendingLabel="Guardando cambios…" /></button>
-          <button type="button" className="secondary" disabled={mutation.pending} onClick={onCancel}>Cancelar</button>
+          <button type="submit" disabled={mutation.pending}><PendingLabel pending={mutation.pending} label={submitLabel} pendingLabel={pendingLabel} /></button>
+          {secondary}
         </div>
       </form>
     </>
@@ -228,9 +262,9 @@ export function OrganizationProfileSection({ notify }: { notify: (message: strin
   const { hash } = useLocation()
   const section = useRef<HTMLElement>(null)
   const edit = useRef<HTMLButtonElement>(null)
-  // null: aún sin decidir. Con #organization y un perfil de empresa incompleto, se abre en edición.
+  // null: aún sin decidir. Con #organization y un perfil incompleto, se abre en edición (HU-S16-07: también la institución).
   const [chosen, setChosen] = useState<boolean | null>(null)
-  const editing = chosen ?? (hash === '#organization' && data?.type === 'company' && data.missing.length > 0)
+  const editing = chosen ?? (hash === '#organization' && data !== null && data.missing.length > 0)
   const ready = data !== null
 
   // T-S14-09: al renombrarse en Tu perfil, el servidor también renombra el contacto si es la misma persona («Soy yo»).
@@ -262,6 +296,7 @@ export function OrganizationProfileSection({ notify }: { notify: (message: strin
   }
 
   const company = data?.type === 'company' ? data : null
+  const institution = data?.type === 'institution' ? data : null
   const title = company ? 'Perfil de la empresa' : data ? 'Perfil de la institución' : 'Perfil de la organización'
 
   return (
@@ -271,9 +306,10 @@ export function OrganizationProfileSection({ notify }: { notify: (message: strin
           <h3 id="account-organization-title">{title}</h3>
           {/* T-S14-04: la barra de avance vuelve a la vista, en la cabecera y siempre a la mano. */}
           {company && <ProfileScore missing={company.missing} />}
+          {institution && <ProfileScore kind="institution" missing={institution.missing} />}
         </div>
         {/* Con el perfil vacío, «Completar perfil» del estado vacío es la acción: no se duplica. */}
-        {data && !editing && !(company && company.missing.length === PROFILE_FIELDS) && (
+        {data && !editing && !(company && company.missing.length === PROFILE_FIELDS) && !(institution && institution.missing.length === INSTITUTION_PROFILE_FIELDS) && (
           <button ref={edit} type="button" className="secondary account-card-edit" onClick={open}><PencilIcon />Editar</button>
         )}
       </div>
@@ -297,19 +333,29 @@ export function OrganizationProfileSection({ notify }: { notify: (message: strin
             </div>
           )
         )
-        : data?.type === 'institution' && (
+        : institution && (
           editing ? (
             <div className="content-enter" key="edit">
-              <InstitutionProfileForm profile={data} onSaved={(saved) => close(saved)} onCancel={() => close()} />
+              {/* HU-S16-07: lo que falta del mínimo, a la vista mientras se completa. */}
+              <ProfileProgress kind="institution" missing={institution.missing} compact />
+              <InstitutionProfileForm profile={institution} onSaved={(saved) => close(saved)}
+                secondary={<button type="button" className="secondary" onClick={() => close()}>Cancelar</button>} />
             </div>
           ) : (
             <div className="content-enter" key="read">
-              {/* T-S14-15: la institución corrige sus datos oficiales desde «Editar», como la empresa. */}
-              <FactGroup title="Datos de la institución">
-                <Fact label="Nombre oficial" value={data.name} />
-                <Fact label="Clave de Centro de Trabajo" value={data.cct} />
-              </FactGroup>
-              <ContactFacts title="Contacto del programa dual" profile={data} />
+              {institution.missing.length > 0 && institution.missing.length < INSTITUTION_PROFILE_FIELDS && <ProfileProgress kind="institution" missing={institution.missing} compact />}
+              {institution.missing.length === INSTITUTION_PROFILE_FIELDS
+                ? <ProfileEmpty kind="institution" onStart={open} />
+                : (
+                  <>
+                    {/* T-S14-15: la institución corrige sus datos oficiales desde «Editar», como la empresa. */}
+                    <FactGroup title="Datos de la institución">
+                      <Fact label="Nombre oficial" value={institution.name} />
+                      <Fact label="Clave de Centro de Trabajo" value={institution.cct} />
+                    </FactGroup>
+                    <ContactFacts title="Contacto del programa dual" profile={institution} />
+                  </>
+                )}
             </div>
           )
         )}

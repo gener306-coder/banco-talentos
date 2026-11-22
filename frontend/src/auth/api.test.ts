@@ -116,7 +116,15 @@ describe('cliente de sesión', () => {
 describe('contraseña inicial e institución en la sesión', () => {
   it('conserva únicamente el identificador y nombre de la institución vinculada', async () => {
     fetchMock.mockResolvedValueOnce(Response.json({ user: { ...user, role: 'INSTITUTION', institution: { id: 7, name: 'Instituto Dual', private: 'omitido' }, password: 'nunca mostrar' } }))
-    await expect(currentUser()).resolves.toEqual({ ...user, role: 'INSTITUTION', institution: { id: 7, name: 'Instituto Dual' } })
+    await expect(currentUser()).resolves.toEqual({ ...user, role: 'INSTITUTION', institution: { id: 7, name: 'Instituto Dual', missing: [], onboarding: 'done', canOperate: true } })
+  })
+
+  it('lee lo que le falta a la institución invitada, su onboarding y si puede operar (HU-S16-07)', async () => {
+    fetchMock.mockResolvedValueOnce(Response.json({ user: { ...user, role: 'INSTITUTION', institution: { id: 7, name: null, missing: ['name', 'cct', 'contact_name', 'contact_email'], onboarding: 'pending', can_operate: true } } }))
+    // canOperate se deriva de lo que falta, no del valor enviado.
+    await expect(currentUser()).resolves.toMatchObject({ institution: { id: 7, name: null, missing: ['name', 'cct', 'contact_name', 'contact_email'], onboarding: 'pending', canOperate: false } })
+    fetchMock.mockResolvedValueOnce(Response.json({ user: { ...user, role: 'INSTITUTION', institution: { id: 7, name: 'X', missing: ['rfc'] } } }))
+    await expect(currentUser()).rejects.toMatchObject({ status: 502 })
   })
 
   it('conserva únicamente el identificador y nombre de la empresa vinculada (HU-S4-03 CA-05)', async () => {

@@ -88,8 +88,8 @@ function AuthRoutes() {
         {/* HU-S14-01: Mi cuenta, para todos los roles. */}
         <Route path="/account" element={<AccountPage />} />
       </Route>
-      {/* HU-S14-03: onboarding de la empresa invitada. */}
-      <Route element={<ProtectedRoute role="COMPANY" deniedMessage="Solo las empresas completan este perfil." />}>
+      {/* HU-S14-03 y HU-S16-07: onboarding de la empresa o la institución invitada. */}
+      <Route element={<ProtectedRoute role={['COMPANY', 'INSTITUTION']} deniedMessage="Solo las empresas y las instituciones completan este perfil." />}>
         <Route path="/welcome" element={<WelcomePage />} />
       </Route>
       <Route element={<ProtectedRoute role="ADMIN" />}>

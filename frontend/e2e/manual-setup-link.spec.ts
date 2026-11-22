@@ -2,6 +2,7 @@ import { randomBytes } from 'node:crypto'
 import { expect, test } from '@playwright/test'
 import { ADMIN_STATE, NO_SESSION } from './support/admin'
 import { mailCount } from './support/mailpit'
+import { postponeWelcome } from './support/institution'
 
 const mailpitUrl = process.env.MAILPIT_URL
 
@@ -80,7 +81,8 @@ test('HU-S2-01: ADMIN genera el enlace manual sin correo → la persona titular 
     await holder.getByLabel('Correo electrónico').fill(account.email)
     await holder.getByLabel('Contraseña', { exact: true }).fill(account.password)
     await holder.getByRole('button', { name: 'Iniciar sesión', exact: true }).click()
-    await expect(holder).toHaveURL(`${baseURL}/`)
+    // HU-S16-07: la institución invitada aún no captura su perfil; se pospone su bienvenida.
+    await postponeWelcome(holder, baseURL)
     await expect(holder.getByRole('heading', { name: /^Hola, / })).toBeVisible()
   } finally {
     await holderContext.close()

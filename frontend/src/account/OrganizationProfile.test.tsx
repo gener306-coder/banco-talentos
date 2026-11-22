@@ -29,7 +29,7 @@ const emptyProfile = {
   municipality: null, contact_name: null, contact_position: null, contact_email: null, contact_phone: null, missing: ALL_GAPS, can_operate: false,
 }
 const institutionProfile = {
-  type: 'institution', name: 'Universidad Tecnológica del Golfo', cct: '28EUT0001A', contact_name: 'Laura Méndez', contact_position: 'Coordinación Dual', contact_email: 'dual@ut.test', contact_phone: null,
+  type: 'institution', name: 'Universidad Tecnológica del Golfo', cct: '28EUT0001A', contact_name: 'Laura Méndez', contact_position: 'Coordinación Dual', contact_email: 'dual@ut.test', contact_phone: null, missing: [],
 }
 const puts = () => apiMock.mock.calls.filter(([, init]) => init?.method === 'PUT')
 const body = (index = 0) => JSON.parse(String(puts()[index][1]?.body)) as Record<string, unknown>

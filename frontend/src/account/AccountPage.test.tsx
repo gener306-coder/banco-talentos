@@ -13,7 +13,7 @@ const adminUser = { id: 1, name: 'Administración', email: 'admin@bt.test', role
 const secretaryUser = { id: 2, name: 'Analista Económica', email: 'analista@economia.test', role: 'SECRETARY', institution: null, company: null }
 const institutionUser = { id: 3, name: 'Laura Méndez', email: 'dual@ut.test', role: 'INSTITUTION', institution: { id: 1, name: 'UT del Golfo' }, company: null }
 const institutionProfile = {
-  type: 'institution', name: 'Universidad Tecnológica del Golfo', cct: '28EUT0001A', contact_name: 'Laura Méndez', contact_position: 'Coordinación Dual', contact_email: 'dual@ut.test', contact_phone: null,
+  type: 'institution', name: 'Universidad Tecnológica del Golfo', cct: '28EUT0001A', contact_name: 'Laura Méndez', contact_position: 'Coordinación Dual', contact_email: 'dual@ut.test', contact_phone: null, missing: [],
 }
 let profile: Record<string, unknown>
 const companyProfile = {
