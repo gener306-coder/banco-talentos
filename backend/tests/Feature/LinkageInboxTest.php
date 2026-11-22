@@ -124,7 +124,8 @@ describe('bandeja (CA-01, CA-02)', function () {
             'status' => 'PENDIENTE_INSTITUCION',
             'created_at' => $linkage->created_at->toISOString(),
             'message' => 'Nos interesa su perfil.',
-            'opportunity' => ['id' => $this->opportunity->id, 'title' => 'Tableros de producción'],
+            // T-S15-03: estado de la oportunidad, para avisar a la empresa que la institución no puede aceptar.
+            'opportunity' => ['id' => $this->opportunity->id, 'title' => 'Tableros de producción', 'is_active' => true],
             'profile' => [
                 'public_id' => $this->student->public_id, 'headline' => 'Analista de datos', 'program' => 'Ingeniería en Datos',
                 'period_type' => 'semester', 'period_number' => 6,
@@ -203,6 +204,15 @@ describe('cancelación (CA-03)', function () {
             ->assertJsonValidationErrors(['status' => 'Solo puedes cancelar solicitudes pendientes de la institución.']);
         expect($linkage->refresh()->status->value)->toBe($status);
     })->with(['ACEPTADA', 'RECHAZADA', 'CANCELADA']);
+
+    it('reports that its opportunity is inactive, in the detail and in the inbox (T-S15-03)', function () {
+        $linkage = inboxLinkage($this->company, $this->opportunity, $this->student);
+        $this->opportunity->forceFill(['is_active' => false])->save();
+        $this->loginWithCookies($this->account)->assertOk();
+
+        $this->browserRequest('GET', '/api/linkage-requests/'.$linkage->id)->assertOk()->assertJsonPath('data.opportunity.is_active', false);
+        $this->browserRequest('GET', '/api/linkage-requests')->assertOk()->assertJsonPath('data.0.opportunity.is_active', false);
+    });
 
     it('answers 404 for another company request exactly like a missing one', function () {
         $foreign = inboxLinkage($other = Company::factory()->create(), inboxOpportunity($other, 'Ajena'), $this->student);

@@ -55,7 +55,7 @@ class LinkageRequestController extends Controller
             ->tap(fn ($query) => $this->search($query, $filters['q'] ?? null))
             ->withUnreadCount(LinkageParty::COMPANY)
             ->with([
-                'opportunity:id,title',
+                'opportunity:id,title,is_active',
                 'student:id,public_id,headline,program,period_type,period_number',
                 'institution:id,name,contact_name,contact_position,contact_email,contact_phone',
                 'terminator:id,name',
@@ -84,7 +84,7 @@ class LinkageRequestController extends Controller
             ->where('company_id', $request->user()->company_id)
             ->withUnreadCount(LinkageParty::COMPANY)
             ->with([
-                'opportunity:id,title',
+                'opportunity:id,title,is_active',
                 'student:id,public_id,headline,program,period_type,period_number',
                 'institution:id,name,contact_name,contact_position,contact_email,contact_phone',
                 'terminator:id,name',
@@ -117,7 +117,7 @@ class LinkageRequestController extends Controller
             return $linkage;
         });
 
-        $linkage->load(['opportunity:id,title', 'student:id,public_id,headline,program,period_type,period_number', 'institution:id,name,contact_name,contact_position,contact_email,contact_phone', 'terminator:id,name']);
+        $linkage->load(['opportunity:id,title,is_active', 'student:id,public_id,headline,program,period_type,period_number', 'institution:id,name,contact_name,contact_position,contact_email,contact_phone', 'terminator:id,name']);
 
         return response()->json(['data' => $this->item($linkage)])->header('Cache-Control', 'no-store, private');
     }
@@ -239,7 +239,9 @@ class LinkageRequestController extends Controller
             'status' => $linkage->status->value,
             'created_at' => $linkage->created_at?->toISOString(),
             'message' => $linkage->message,
-            'opportunity' => ['id' => $linkage->opportunity->id, 'title' => $linkage->opportunity->title],
+            // T-S15-03: con la oportunidad inactiva, la institución no puede aceptar la solicitud (auditoría QA #6); la
+            // empresa lo ve en el detalle. Mismo campo en la bandeja y el detalle (HU-S13-02 CA-01).
+            'opportunity' => ['id' => $linkage->opportunity->id, 'title' => $linkage->opportunity->title, 'is_active' => (bool) $linkage->opportunity->is_active],
             'profile' => [
                 'public_id' => $student->public_id,
                 'headline' => $student->headline,

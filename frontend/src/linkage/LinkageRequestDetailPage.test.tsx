@@ -157,6 +157,28 @@ describe('detalle de la solicitud para la empresa HU-S13-02', () => {
     expect(profile).not.toHaveTextContent('Conoces al alumno solo por su perfil anónimo')
   })
 
+  it('con la oportunidad inactiva avisa que la institución no puede aceptar y enlaza a la oportunidad (T-S15-03)', async () => {
+    apiMock.mockResolvedValueOnce(Response.json({ data: { ...pending, opportunity: { ...pending.opportunity, is_active: false } } }))
+    renderApp()
+    const note = await screen.findByRole('note', { name: 'Estado de la solicitud' })
+    expect(note).toHaveTextContent('Tu oportunidad Tableros de producción está inactiva: mientras siga así, la institución no puede aceptar esta solicitud. Reactívala para que pueda responderla, o cancela la solicitud.')
+    expect(within(note).getByRole('link', { name: /Ver oportunidad/ })).toHaveAttribute('href', '/opportunities/12')
+    // Cancelar sigue disponible.
+    expect(screen.getByRole('button', { name: 'Cancelar solicitud' })).toBeEnabled()
+  })
+
+  it('con la oportunidad activa conserva el aviso de siempre (T-S15-03)', async () => {
+    apiMock.mockResolvedValueOnce(Response.json({ data: { ...pending, opportunity: { ...pending.opportunity, is_active: true } } }))
+    renderApp()
+    expect(await screen.findByRole('note', { name: 'Estado de la solicitud' })).toHaveTextContent('La institución aún no responde. Mientras siga pendiente, puedes cancelarla.')
+  })
+
+  it('una solicitud ya respondida no repite el aviso aunque la oportunidad esté inactiva (T-S15-03)', async () => {
+    apiMock.mockResolvedValueOnce(Response.json({ data: { ...accepted, opportunity: { ...accepted.opportunity, is_active: false } } }))
+    renderApp()
+    expect(await screen.findByRole('note', { name: 'Estado de la solicitud' })).not.toHaveTextContent('está inactiva')
+  })
+
   it('responde igual a una solicitud ajena o inexistente', async () => {
     apiMock.mockResolvedValueOnce(Response.json({ message: 'La solicitud no existe.' }, { status: 404 }))
     renderApp('/linkage-requests/999')
