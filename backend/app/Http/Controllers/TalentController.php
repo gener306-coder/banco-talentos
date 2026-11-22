@@ -228,7 +228,7 @@ class TalentController extends Controller
             'period_type' => $student->period_type->value,
             'period_number' => $student->period_number,
             // Decisión del responsable (nota de privacidad de sprint-4.md): la tarjeta muestra la institución.
-            'institution' => $student->institution->name,
+            'institution' => $student->institution->label(),
             'state_code' => $student->state_code->value,
             'municipality' => $student->municipality?->name,
             'distance_km' => $student->distance_m === null ? null : self::roundedDistance((float) $student->distance_m),

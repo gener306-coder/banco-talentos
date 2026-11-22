@@ -79,12 +79,13 @@ class ReportController extends Controller
             ->keyBy('institution_id');
 
         return Institution::query()
-            ->orderBy('name')
+            // HU-S16-05: las invitadas sin nombre van al final.
+            ->orderByRaw('lower(name) ASC NULLS LAST')
             ->orderBy('id')
             ->get(['id', 'name', 'is_active'])
             ->map(fn (Institution $institution): array => [
                 'id' => $institution->id,
-                'name' => $institution->name,
+                'name' => $institution->label(),
                 'is_active' => $institution->is_active,
                 'active_students' => (int) ($students[$institution->id]->active ?? 0),
                 'searchable_profiles' => (int) ($students[$institution->id]->searchable ?? 0),

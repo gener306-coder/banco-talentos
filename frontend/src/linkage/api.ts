@@ -104,7 +104,8 @@ export interface LinkageInboxItem {
   opportunity: { id: number; title: string; is_active: boolean }
   profile: { public_id: string; headline: string | null; program: string | null; period_type: PeriodType | null; period_number: number | null }
   /** El teléfono es opcional (T-S8-11). */
-  institution: { name: string; contact_name: string | null; contact_position: string | null; contact_email: string; contact_phone: string | null }
+  /** HU-S16-05: el nombre llega con respaldo (label()); el correo del contacto puede faltar mientras la institución lo captura. */
+  institution: { name: string; contact_name: string | null; contact_position: string | null; contact_email: string | null; contact_phone: string | null }
   /** Respuesta de la institución (HU-S6-02 CA-04), sin la cuenta que respondió. */
   responded_at: string | null
   response_message: string | null
@@ -132,7 +133,7 @@ function inboxItem(data: unknown): LinkageInboxItem {
       !isObject(data.profile) || typeof data.profile.public_id !== 'string' || !isOptionalText(data.profile.headline) ||
       !isOptionalText(data.profile.program) || (data.profile.period_type !== null && !isPeriodType(data.profile.period_type)) ||
       (data.profile.period_number !== null && !isPositiveInt(data.profile.period_number)) ||
-      !isObject(data.institution) || typeof data.institution.name !== 'string' || typeof data.institution.contact_email !== 'string' ||
+      !isObject(data.institution) || typeof data.institution.name !== 'string' || !isOptionalText(data.institution.contact_email) ||
       !isOptionalText(data.institution.contact_name) || !isOptionalText(data.institution.contact_position) ||
       !isOptionalText(data.institution.contact_phone) ||
       !isOptionalText(data.responded_at) || !isOptionalText(data.response_message) ||

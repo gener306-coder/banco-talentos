@@ -23,11 +23,12 @@ function csrfResponse() {
 describe('cliente de instituciones', () => {
   it('lee listado y detalle desde data con cookies y permite cancelar las consultas', async () => {
     const controller = new AbortController()
-    fetchMock.mockResolvedValueOnce(Response.json({ data: [record] }))
+    const row = { ...record, account_email: 'cuenta@example.test', profile_status: 'complete' }
+    fetchMock.mockResolvedValueOnce(Response.json({ data: [row], meta: { current_page: 1, last_page: 1, total: 1 } }))
       .mockResolvedValueOnce(Response.json({ data: record }))
-    await expect(listInstitutions(controller.signal)).resolves.toEqual([record])
+    await expect(listInstitutions(1, 'alfa', controller.signal)).resolves.toEqual({ institutions: [row], page: 1, lastPage: 1, total: 1 })
     await expect(getInstitution('7', controller.signal)).resolves.toEqual(record)
-    expect(fetchMock.mock.calls.map(([path]) => path)).toEqual(['/api/institutions', '/api/institutions/7'])
+    expect(fetchMock.mock.calls.map(([path]) => path)).toEqual(['/api/institutions?page=1&q=alfa', '/api/institutions/7'])
     for (const [, options] of fetchMock.mock.calls) {
       expect(options).toMatchObject({ credentials: 'include', signal: controller.signal, referrerPolicy: 'origin' })
       expect(new Headers(options?.headers).get('Accept')).toBe('application/json')
@@ -35,9 +36,12 @@ describe('cliente de instituciones', () => {
     }
   })
 
-  it('acepta un listado vacío', async () => {
-    fetchMock.mockResolvedValueOnce(Response.json({ data: [] }))
-    await expect(listInstitutions()).resolves.toEqual([])
+  it('acepta un listado vacío y una institución invitada sin perfil (HU-S16-05)', async () => {
+    fetchMock.mockResolvedValueOnce(Response.json({ data: [], meta: { current_page: 1, last_page: 1, total: 0 } }))
+      .mockResolvedValueOnce(Response.json({ data: [{ ...record, name: null, cct: null, contact_name: null, contact_email: null, account_email: 'invitada@example.test', profile_status: 'pending_access' }], meta: { current_page: 1, last_page: 1, total: 1 } }))
+    await expect(listInstitutions(1, '')).resolves.toEqual({ institutions: [], page: 1, lastPage: 1, total: 0 })
+    const page = await listInstitutions(1, '')
+    expect(page.institutions[0]).toMatchObject({ name: null, cct: null, contact_email: null, profile_status: 'pending_access' })
   })
 
   it.each([
@@ -127,10 +131,11 @@ describe('cliente de instituciones', () => {
   })
 
   it.each([
-    {}, { data: null }, { data: record }, { data: [{ ...record, is_active: 'false' }] },
+    {}, { data: null }, { data: record }, { data: [{ ...record, is_active: 'false' }], meta: { current_page: 1, last_page: 1, total: 1 } },
+    { data: [{ ...record, account_email: null, profile_status: 'otro' }], meta: { current_page: 1, last_page: 1, total: 1 } },
   ])('rechaza una respuesta de listado incompatible con el contrato', async (body) => {
     fetchMock.mockResolvedValueOnce(Response.json(body))
-    await expect(listInstitutions()).rejects.toMatchObject({ status: 502 })
+    await expect(listInstitutions(1, '')).rejects.toMatchObject({ status: 502 })
   })
 
   it('rechaza un detalle incompleto y conserva los errores 404', async () => {

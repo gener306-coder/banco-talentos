@@ -112,7 +112,7 @@ class AuditEventController extends Controller
             $subject = match ($change->subject_type) {
                 'user' => ['name' => $changedUsers[$change->subject_id]->name, 'role' => $changedUsers[$change->subject_id]->role->value],
                 'company' => ['name' => $changedCompanies[$change->subject_id]->label()],
-                default => ['name' => $changedInstitutions[$change->subject_id]->name],
+                default => ['name' => $changedInstitutions[$change->subject_id]->label()],
             };
 
             // Solo los nombres de los campos, en su orden; nunca sus valores.
@@ -150,7 +150,7 @@ class AuditEventController extends Controller
         return [
             'id' => $linkage->id,
             'status' => $linkage->status->value,
-            'institution' => $linkage->institution->name,
+            'institution' => $linkage->institution->label(),
             'company' => $linkage->company->label(),
         ];
     }

@@ -38,7 +38,8 @@ export interface User {
   name: string
   email: string
   role: Role
-  institution: { id: number; name: string } | null
+  /** HU-S16-05: `name` es null mientras la institución invitada no capture su nombre oficial. */
+  institution: { id: number; name: string | null } | null
   /**
    * Empresa vinculada a una cuenta COMPANY (HU-S4-03 CA-05): solo su nombre visible, null mientras la empresa
    * invitada no capture ninguno (HU-S14-02).
@@ -66,14 +67,14 @@ function sessionUser(data: unknown): User {
     throw new ApiError(502)
   }
 
-  const organization = (key: 'institution'): { id: number; name: string } | null => {
+  const organization = (key: 'institution'): { id: number; name: string | null } | null => {
     if (!(key in user)) return null
     const linked: unknown = (user as Record<string, unknown>)[key]
     if (linked === null || linked === undefined) return null
     if (typeof linked !== 'object' || !('id' in linked) || typeof linked.id !== 'number' ||
         !Number.isSafeInteger(linked.id) || linked.id <= 0 ||
-        !('name' in linked) || typeof linked.name !== 'string') throw new ApiError(502)
-    return { id: linked.id, name: linked.name }
+        !('name' in linked) || (linked.name !== null && typeof linked.name !== 'string')) throw new ApiError(502)
+    return { id: linked.id, name: linked.name as string | null }
   }
 
   // HU-S14-02: la empresa invitada puede no tener nombre todavía.

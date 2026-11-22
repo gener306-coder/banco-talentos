@@ -65,19 +65,24 @@ dataset('invalid institution fields', [
     ]), ['contact_email']],
 ]);
 
-it('allows an administrator to list every institution including inactive ones in id order', function () {
+it('allows an administrator to list every institution, paginated, by name and with the unnamed ones last (HU-S16-05)', function () {
     $this->loginWithCookies(User::factory()->role(UserRole::ADMIN)->create())->assertOk();
-    $this->browserRequest('GET', '/api/institutions')->assertOk()->assertExactJson(['data' => []]);
-    $first = Institution::factory()->inactive()->create(['name' => 'Zeta']);
-    $second = Institution::factory()->create(['name' => 'Alfa']);
+    $this->browserRequest('GET', '/api/institutions')->assertOk()
+        ->assertExactJson(['data' => [], 'meta' => ['current_page' => 1, 'last_page' => 1, 'total' => 0]]);
+    $zeta = Institution::factory()->inactive()->create(['name' => 'Zeta']);
+    $alfa = Institution::factory()->create(['name' => 'Alfa']);
+    $unnamed = Institution::factory()->create(['name' => null, 'cct' => null, 'contact_email' => null]);
 
     $this->browserRequest('GET', '/api/institutions')
-        ->assertOk()
-        ->assertJsonCount(2, 'data')
-        ->assertJsonPath('data.0.id', $first->id)
-        ->assertJsonPath('data.0.is_active', false)
-        ->assertJsonPath('data.1.id', $second->id)
-        ->assertJsonPath('data.1.is_active', true);
+        ->assertOk()->assertHeader('Cache-Control', 'no-store, private')
+        ->assertJsonCount(3, 'data')
+        ->assertJsonPath('meta.total', 3)
+        ->assertJsonPath('data.0.id', $alfa->id)
+        ->assertJsonPath('data.1.id', $zeta->id)
+        ->assertJsonPath('data.1.is_active', false)
+        ->assertJsonPath('data.2.id', $unnamed->id)
+        ->assertJsonPath('data.2.name', null)
+        ->assertJsonPath('data.2.profile_status', 'pending_access');
 });
 
 it('allows an administrator to create an institution with its default active state', function () {
@@ -471,16 +476,28 @@ it('enforces unique cct values directly in PostgreSQL independently of request v
     $this->assertDatabaseCount('institutions', 1);
 });
 
-it('enforces non-null institution fields directly in PostgreSQL', function (string $field) {
+it('keeps is_active required directly in PostgreSQL', function () {
     try {
-        DB::transaction(fn () => DB::table('institutions')->insert(institutionPayload([$field => null])));
-        $this->fail('PostgreSQL accepted null for the required institution field '.$field.'.');
+        DB::transaction(fn () => DB::table('institutions')->insert(institutionPayload(['is_active' => null])));
+        $this->fail('PostgreSQL accepted null for is_active.');
     } catch (QueryException $exception) {
         expect((string) $exception->getCode())->toBe('23502');
     }
 
     $this->assertDatabaseCount('institutions', 0);
-})->with(['name', 'cct', 'contact_email', 'is_active']);
+});
+
+it('accepts a missing name, CCT or contact email but never a blank one directly in PostgreSQL (HU-S16-05)', function (string $field) {
+    DB::table('institutions')->insert(institutionPayload([$field => null, 'cct' => $field === 'cct' ? null : '09DIT0001A']));
+    try {
+        DB::transaction(fn () => DB::table('institutions')->insert(institutionPayload([$field => '   ', 'cct' => $field === 'cct' ? '   ' : '09DIT0002B'])));
+        $this->fail('PostgreSQL accepted a blank '.$field.'.');
+    } catch (QueryException $exception) {
+        expect((string) $exception->getCode())->toBe('23514');
+    }
+
+    $this->assertDatabaseCount('institutions', 1);
+})->with(['name', 'cct', 'contact_email']);
 
 it('defaults institutions to active directly in PostgreSQL', function () {
     $id = DB::table('institutions')->insertGetId(institutionPayload());

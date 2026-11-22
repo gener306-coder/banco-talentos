@@ -154,7 +154,7 @@ export function LinkageRequestsPage() {
                                     sus mensajes sin leer. */}
                                 <ConversationLink to={`/linkage-requests/${item.id}/chat`} state={back} counterpart={item.institution.name} count={item.unread_count} />
                                 {/* T-S12-06: mailto: falla sin cliente de correo; el ícono ofrece copiar, webmail o la app. */}
-                                <EmailMenu email={item.institution.contact_email} />
+                                {item.institution.contact_email && <EmailMenu email={item.institution.contact_email} />}
                                 {item.institution.contact_phone && (
                                   <a href={`tel:${item.institution.contact_phone.replace(/[^\d+]/g, '')}`}
                                     aria-label={`Llamar al ${item.institution.contact_phone}`} title={item.institution.contact_phone}><PhoneIcon /></a>

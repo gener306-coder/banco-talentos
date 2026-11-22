@@ -26,7 +26,7 @@ const profileMessages: FailureMessages = {
 type InstitutionField = 'name' | 'cct' | 'contact_name' | 'contact_position' | 'contact_email' | 'contact_phone'
 
 const valuesOf = (profile: InstitutionProfile): Record<InstitutionField, string> => ({
-  name: profile.name, cct: profile.cct,
+  name: profile.name ?? '', cct: profile.cct ?? '',
   contact_name: profile.contact_name ?? '', contact_position: profile.contact_position ?? '',
   contact_email: profile.contact_email ?? '', contact_phone: profile.contact_phone ?? '',
 })

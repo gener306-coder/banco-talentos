@@ -22,6 +22,11 @@ const fields = {
   contact_email: institution.contact_email,
 }
 const institutionPaths = ['/institutions', '/institutions/new', '/institutions/27', '/institutions/27/edit']
+/** HU-S16-05: listado paginado; cada fila trae el correo de su cuenta y el estado del perfil. */
+const listOf = (items: Record<string, unknown>[]) => Response.json({
+  data: items.map((item) => ({ account_email: null, profile_status: 'complete', ...item })),
+  meta: { current_page: 1, last_page: 1, total: items.length },
+})
 const otherRoles = ['INSTITUTION', 'COMPANY', 'SECRETARY']
 const fetchMock = vi.fn<typeof fetch>()
 const apiMock = vi.fn<typeof fetch>()
@@ -94,7 +99,7 @@ afterEach(() => vi.unstubAllGlobals())
 
 describe('acceso administrativo a instituciones', () => {
   it('ofrece al ADMIN la navegación desde su sesión al listado', async () => {
-    apiMock.mockResolvedValueOnce(Response.json({ data: [institution] }))
+    apiMock.mockResolvedValueOnce(listOf([institution]))
     renderApp('/')
     fireEvent.click(await screen.findByRole('link', { name: 'Instituciones' }))
     expect(await screen.findByRole('heading', { name: 'Instituciones' })).toBeInTheDocument()
@@ -139,7 +144,7 @@ describe('consulta de instituciones', () => {
     renderApp()
     expect(await screen.findByText('Cargando instituciones…')).toHaveAttribute('role', 'status')
     expect(screen.queryByText('No hay instituciones registradas.')).not.toBeInTheDocument()
-    await act(async () => { response.resolve(Response.json({ data: [institution, inactive] })) })
+    await act(async () => { response.resolve(listOf([institution, inactive])) })
 
     const activeRow = screen.getByRole('row', { name: new RegExp(institution.name) })
     expect(within(activeRow).getByText(institution.cct)).toBeInTheDocument()
@@ -149,12 +154,12 @@ describe('consulta de instituciones', () => {
     const inactiveRow = screen.getByRole('row', { name: /Instituto del Sur/ })
     expect(within(inactiveRow).getByText('INACTIVA')).toBeInTheDocument()
     expect(screen.getByRole('link', { name: 'Nueva institución' })).toHaveAttribute('href', '/institutions/new')
-    expect(apiMock.mock.calls[0][0]).toBe('/api/institutions')
+    expect(apiMock.mock.calls[0][0]).toBe('/api/institutions?page=1')
     expect(screen.queryByRole('button', { name: /eliminar/i })).not.toBeInTheDocument()
   })
 
   it('muestra un listado vacío y permite abrir el formulario de registro', async () => {
-    apiMock.mockResolvedValueOnce(Response.json({ data: [] }))
+    apiMock.mockResolvedValueOnce(listOf([]))
     renderApp()
     expect(await screen.findByText('No hay instituciones registradas.')).toBeInTheDocument()
     expect(screen.queryByRole('alert')).not.toBeInTheDocument()
@@ -166,7 +171,7 @@ describe('consulta de instituciones', () => {
   it.each(['red', 'servidor'])('permite reintentar la consulta ante un error de %s', async (failure) => {
     if (failure === 'red') apiMock.mockRejectedValueOnce(new TypeError('Network error'))
     else apiMock.mockResolvedValueOnce(new Response(null, { status: 500 }))
-    apiMock.mockResolvedValueOnce(Response.json({ data: [institution] }))
+    apiMock.mockResolvedValueOnce(listOf([institution]))
     renderApp()
     expect(await screen.findByRole('alert')).toHaveTextContent(failure === 'red' ? 'No pudimos conectar' : 'No pudimos completar')
     expect(screen.queryByText('No hay instituciones registradas.')).not.toBeInTheDocument()
@@ -177,7 +182,7 @@ describe('consulta de instituciones', () => {
   })
 
   it('consulta los datos individuales y ofrece edición y cambio de estado sin eliminación', async () => {
-    apiMock.mockResolvedValueOnce(Response.json({ data: [institution] }))
+    apiMock.mockResolvedValueOnce(listOf([institution]))
       .mockResolvedValueOnce(Response.json({ data: institution }))
     renderApp()
     fireEvent.click(await screen.findByRole('link', { name: `Ver detalle de ${institution.name}` }))
@@ -543,25 +548,25 @@ describe('estados y navegación del listado (apple-design)', () => {
     expect(await screen.findByText('Cargando instituciones…')).toHaveAttribute('role', 'status')
     expect(screen.queryByTestId('skeleton')).not.toBeInTheDocument()
     expect(await screen.findByTestId('skeleton', {}, { timeout: 1000 })).toHaveAttribute('aria-hidden', 'true')
-    await act(async () => { response.resolve(Response.json({ data: [institution] })) })
+    await act(async () => { response.resolve(listOf([institution])) })
     expect(screen.queryByTestId('skeleton')).not.toBeInTheDocument()
     expect(screen.getByText(institution.name)).toBeInTheDocument()
     // T-S14-08: en el celular la fila se apila como tarjeta; cada celda declara su papel.
     const table = screen.getByRole('table')
     expect(table).toHaveClass('stack-mobile')
     const cells = [...table.querySelectorAll('tbody tr > *')]
-    expect(cells.map((cell) => cell.getAttribute('data-cell'))).toEqual(['title', 'inline', 'meta', 'status', 'open'])
+    expect(cells.map((cell) => cell.getAttribute('data-cell'))).toEqual(['title', 'inline', 'meta', 'status', 'status', 'open'])
   })
 
   it('no muestra el esqueleto cuando la respuesta llega antes de 300 ms', async () => {
-    apiMock.mockResolvedValueOnce(Response.json({ data: [institution] }))
+    apiMock.mockResolvedValueOnce(listOf([institution]))
     renderApp()
     expect(await screen.findByText(institution.name)).toBeInTheDocument()
     expect(screen.queryByTestId('skeleton')).not.toBeInTheDocument()
   })
 
   it('ofrece en el estado vacío la acción de registrar la primera institución', async () => {
-    apiMock.mockResolvedValueOnce(Response.json({ data: [] }))
+    apiMock.mockResolvedValueOnce(listOf([]))
     renderApp()
     const heading = await screen.findByRole('heading', { name: 'No hay instituciones registradas.' })
     const empty = heading.closest<HTMLElement>('[role="status"]')!
@@ -588,7 +593,7 @@ describe('estados y navegación del listado (apple-design)', () => {
   })
 
   it('abre el detalle al pulsar cualquier parte de la fila, sin perder el enlace accesible', async () => {
-    apiMock.mockResolvedValueOnce(Response.json({ data: [institution] }))
+    apiMock.mockResolvedValueOnce(listOf([institution]))
       .mockResolvedValueOnce(Response.json({ data: institution }))
     renderApp()
     fireEvent.click(await screen.findByText(institution.cct))
@@ -597,11 +602,35 @@ describe('estados y navegación del listado (apple-design)', () => {
   })
 
   it('usa botones planos de regreso que conservan sus nombres accesibles', async () => {
-    apiMock.mockResolvedValueOnce(Response.json({ data: [institution] }))
+    apiMock.mockResolvedValueOnce(listOf([institution]))
     renderApp()
     const nav = await screen.findByRole('navigation', { name: 'Navegación de instituciones' })
     expect(within(nav).getByRole('link', { name: 'Volver al inicio' })).toHaveTextContent('Inicio')
     // T-S13-17: el listado no repite un enlace a sí mismo; el único regreso es el del inicio.
     expect(within(nav).getAllByRole('link')).toHaveLength(1)
+  })
+})
+
+describe('instituciones invitadas y búsqueda (HU-S16-05)', () => {
+  it('muestra la institución invitada sin perfil con su respaldo, el correo de su cuenta y Acceso pendiente', async () => {
+    apiMock.mockResolvedValueOnce(listOf([{ ...institution, id: 31, name: null, cct: null, contact_name: null, contact_email: null,
+      account_email: 'coordinacion@invitada.test', profile_status: 'pending_access' }]))
+    renderApp()
+    const row = await screen.findByRole('row', { name: /Institución sin nombre/ })
+    expect(row).toHaveTextContent('coordinacion@invitada.test')
+    expect(row).toHaveTextContent('Sin capturar')
+    expect(row).toHaveTextContent('Contacto sin capturar')
+    expect(row).toHaveTextContent('Acceso pendiente')
+    expect(within(row).getByRole('link', { name: 'Ver detalle de Institución sin nombre' })).toHaveAttribute('href', '/institutions/31')
+  })
+
+  it('busca por nombre, CCT o correo de la cuenta y conserva la búsqueda en la URL', async () => {
+    apiMock.mockResolvedValueOnce(listOf([institution])).mockResolvedValueOnce(listOf([]))
+    renderApp()
+    await screen.findByRole('row', { name: /Instituto Tecnológico del Norte/ })
+    fireEvent.change(screen.getByLabelText('Buscar institución'), { target: { value: ' invitada ' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Buscar' }))
+    expect(await screen.findByText('Ninguna institución coincide con la búsqueda.')).toBeInTheDocument()
+    expect(apiMock.mock.calls[1][0]).toBe('/api/institutions?page=1&q=invitada')
   })
 })

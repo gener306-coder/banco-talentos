@@ -152,3 +152,17 @@ it('el listado de cuentas de Administración no crece en consultas con el númer
 
     expect($many)->toBe($few);
 });
+
+it('el listado de instituciones de Administración no crece en consultas con el número de instituciones (HU-S16-05)', function () {
+    $admin = User::factory()->role(UserRole::ADMIN)->create();
+    Institution::factory()->count(1)->create();
+    $this->loginWithCookies($admin)->assertOk();
+    $few = queriesFor($this, '/api/institutions');
+
+    Institution::factory()->count(4)->create();
+    $many = queriesFor($this, '/api/institutions');
+    // La institución del beforeEach más las 5 nuevas.
+    expect($this->browserRequest('GET', '/api/institutions')->json('meta.total'))->toBe(6);
+
+    expect($many)->toBe($few);
+});

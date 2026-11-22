@@ -30,8 +30,9 @@ export interface CompanyProfile extends OrganizationContact {
 
 export interface InstitutionProfile extends OrganizationContact {
   type: 'institution'
-  name: string
-  cct: string
+  /** HU-S16-05: null mientras la institución invitada no los captura. */
+  name: string | null
+  cct: string | null
 }
 
 export type OrganizationProfile = CompanyProfile | InstitutionProfile
@@ -55,7 +56,6 @@ export type InstitutionProfileInput = OrganizationContact & {
 }
 
 const isObject = (value: unknown): value is Record<string, unknown> => typeof value === 'object' && value !== null && !Array.isArray(value)
-const isText = (value: unknown): value is string => typeof value === 'string'
 const isOptionalText = (value: unknown): value is string | null => value === null || typeof value === 'string'
 
 function profile(data: unknown): OrganizationProfile {
@@ -63,7 +63,7 @@ function profile(data: unknown): OrganizationProfile {
       !isOptionalText(data.contact_email) || !isOptionalText(data.contact_phone)) throw new ApiError(502)
   const contact = { contact_name: data.contact_name, contact_position: data.contact_position, contact_email: data.contact_email, contact_phone: data.contact_phone }
   if (data.type === 'institution') {
-    if (!isText(data.name) || !isText(data.cct)) throw new ApiError(502)
+    if (!isOptionalText(data.name) || !isOptionalText(data.cct)) throw new ApiError(502)
     return { type: 'institution', name: data.name, cct: data.cct, ...contact }
   }
   if (data.type !== 'company' || !isOptionalText(data.legal_name) || !isOptionalText(data.rfc) || !isOptionalText(data.trade_name) ||

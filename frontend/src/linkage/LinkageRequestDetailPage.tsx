@@ -135,7 +135,9 @@ function Detail({ data, onCancelled }: { data: LinkageInboxItem; onCancelled: (u
           {institution.contact_name && <><dt>Contacto</dt><dd>{institution.contact_name}</dd></>}
           {institution.contact_position && <><dt>Puesto o departamento</dt><dd>{institution.contact_position}</dd></>}
           {/* T-S12-06: el correo queda visible y seleccionable; su ícono ofrece copiarlo, webmail o la app del sistema. */}
-          <dt>Correo</dt><dd><span className="cell-meta">{institution.contact_email}<span className="cell-actions"><EmailMenu email={institution.contact_email} /></span></span></dd>
+          <dt>Correo</dt><dd>{institution.contact_email
+            ? <span className="cell-meta">{institution.contact_email}<span className="cell-actions"><EmailMenu email={institution.contact_email} /></span></span>
+            : 'Sin correo'}</dd>
           <dt>Teléfono</dt><dd>{institution.contact_phone ? <a href={`tel:${institution.contact_phone.replace(/[^\d+]/g, '')}`}>{institution.contact_phone}</a> : 'Sin teléfono'}</dd>
         </dl>
       </section>

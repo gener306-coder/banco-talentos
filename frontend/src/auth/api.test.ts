@@ -194,3 +194,13 @@ describe('restablecimiento de contraseña HU-S1-04', () => {
     await expect(resetPassword(input)).rejects.toMatchObject({ status: 403, code: 'INSTITUTION_INACTIVE' })
   })
 })
+
+describe('institución invitada sin nombre (HU-S16-05)', () => {
+  it('organizationOf usa el respaldo cuando el nombre de la institución llega en null', async () => {
+    const { organizationOf } = await import('./user')
+    expect(organizationOf({ id: 1, name: 'Cuenta', email: 'c@example.test', role: 'INSTITUTION', institution: { id: 2, name: null }, company: null } as never))
+      .toBe('Institución sin nombre')
+    expect(organizationOf({ id: 1, name: 'Cuenta', email: 'c@example.test', role: 'INSTITUTION', institution: { id: 2, name: 'UT del Golfo' }, company: null } as never))
+      .toBe('UT del Golfo')
+  })
+})

@@ -2,7 +2,9 @@ import type { User } from './api'
 
 /** Organización visible de la cuenta: su institución o empresa vinculada, si tiene. */
 export function organizationOf(user: User): string | null {
-  return user.institution?.name ?? user.company?.name ?? null
+  // HU-S16-05: la institución invitada aún sin nombre se nombra con el respaldo, como en el servidor (label()).
+  if (user.institution) return user.institution.name ?? 'Institución sin nombre'
+  return user.company?.name ?? null
 }
 
 /** Hasta dos iniciales del nombre, para el botón del menú. */

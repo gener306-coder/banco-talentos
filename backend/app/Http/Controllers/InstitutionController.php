@@ -8,21 +8,66 @@ use App\Http\Requests\UpdateInstitutionRequest;
 use App\Http\Requests\UpdateInstitutionStatusRequest;
 use App\Models\AccountAuditEvent;
 use App\Models\Institution;
+use App\Models\User;
 use App\Services\InitialPasswordLink;
 use App\Services\InstitutionAccounts;
 use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
 class InstitutionController extends Controller
 {
-    public function index(): JsonResponse
+    private const PER_PAGE = 50;
+
+    /**
+     * HU-S16-05: listado paginado con búsqueda literal por nombre, CCT o correo de sus cuentas (% y _ no son comodines;
+     * un campo en null no coincide). Las invitadas sin nombre van al final. Cada fila agrega el estado de su perfil.
+     */
+    public function index(Request $request): JsonResponse
     {
+        $validated = $request->validate(
+            ['q' => ['nullable', 'string', 'max:200']],
+            ['q.string' => 'La búsqueda no es válida.', 'q.max' => 'La búsqueda no debe superar 200 caracteres.'],
+        );
+        $term = trim((string) ($validated['q'] ?? ''));
+        $pattern = '%'.addcslashes(mb_strtolower($term), '\\%_').'%';
+
+        $page = Institution::query()
+            ->withExists(['users as accessed' => fn ($users) => $users->where('password_setup_required', false)])
+            // Correo de la primera cuenta: identifica a la invitada mientras no captura su nombre.
+            ->addSelect(['account_email' => User::query()->select('email')->whereColumn('users.institution_id', 'institutions.id')->orderBy('id')->limit(1)])
+            ->when($term !== '', fn ($query) => $query->where(fn ($match) => $match
+                ->whereRaw('lower(name) LIKE ?', [$pattern])
+                ->orWhereRaw('lower(cct) LIKE ?', [$pattern])
+                ->orWhereExists(fn ($account) => $account->selectRaw('1')->from('users')
+                    ->whereColumn('users.institution_id', 'institutions.id')->whereRaw('lower(users.email) LIKE ?', [$pattern]))))
+            ->orderByRaw('lower(name) ASC NULLS LAST')
+            ->orderBy('id')
+            ->paginate(self::PER_PAGE);
+
         return response()->json([
-            'data' => Institution::query()->orderBy('id')->get(),
-        ]);
+            'data' => $page->getCollection()->map(fn (Institution $institution): array => $this->summary($institution))->values(),
+            'meta' => [
+                'current_page' => $page->currentPage(),
+                'last_page' => $page->lastPage(),
+                'total' => $page->total(),
+            ],
+        ])->header('Cache-Control', 'no-store, private');
+    }
+
+    /** Fila del listado: los datos de la institución y el estado de su perfil (HU-S16-05). */
+    private function summary(Institution $institution): array
+    {
+        $accessed = (bool) $institution->getAttribute('accessed');
+
+        return [
+            ...Arr::except($institution->toArray(), ['accessed', 'account_email']),
+            'account_email' => $institution->getAttribute('account_email'),
+            'profile_status' => $institution->profileStatus($accessed),
+        ];
     }
 
     /**
