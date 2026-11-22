@@ -110,7 +110,8 @@ test('HU-S16-06: ADMIN invita a una institución y comparte el enlace de su cuen
 
   await page.getByRole('link', { name: 'Ver la institución', exact: true }).click()
   await expect(page).toHaveURL(/\/institutions\/\d+$/)
-  // Sin nombre de referencia, la institución se muestra con el respaldo (HU-S16-05) y su cuenta con la persona.
+  // Sin nombre de referencia, la institución se muestra con el respaldo (HU-S16-05). El nombre de la persona solo nombra
+  // su cuenta: el responsable de la institución queda pendiente hasta el onboarding (D5).
   await expect(page.getByText('Institución sin nombre', { exact: true })).toBeVisible()
-  await expect(page.getByText('Responsable enlace', { exact: true })).toBeVisible()
+  await expect(page.getByText('Sin capturar', { exact: true })).toHaveCount(3)
 })
