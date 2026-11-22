@@ -9,11 +9,21 @@ export const accessErrorMessages = {
 
 export type AccessErrorCode = keyof typeof accessErrorMessages
 
+/** HU-S14-03 (M1) y HU-S16-08 (D6): la organización de la sesión aún no tiene el mínimo para esta acción. */
+const PROFILE_INCOMPLETE_CODES: readonly string[] = ['COMPANY_PROFILE_INCOMPLETE', 'INSTITUTION_PROFILE_INCOMPLETE']
+
+/** Si el cuerpo de un 422 es el del perfil incompleto de la empresa o de la institución. */
+export const isProfileIncomplete = (status: number, body: object): boolean =>
+  status === 422 && 'code' in body && typeof body.code === 'string' && PROFILE_INCOMPLETE_CODES.includes(body.code)
+
 export class ApiError extends Error {
   readonly status: number
   readonly errors: ValidationErrors
   readonly code?: AccessErrorCode
-  /** HU-S14-03 (M1): la empresa aún no tiene el mínimo para publicar oportunidades ni enviar solicitudes. */
+  /**
+   * HU-S14-03 (M1) y HU-S16-08: la organización aún no tiene el mínimo (la empresa, para publicar y solicitar; la
+   * institución, para publicar alumnos, subir videos y aceptar solicitudes).
+   */
   readonly profileIncomplete: boolean
 
   constructor(status: number, errors: ValidationErrors = {}, code?: AccessErrorCode, profileIncomplete = false) {
@@ -47,7 +57,7 @@ async function responseError(response: Response): Promise<ApiError> {
       if ('code' in body && typeof body.code === 'string' && Object.hasOwn(accessErrorMessages, body.code)) {
         code = body.code as AccessErrorCode
       }
-      profileIncomplete = response.status === 422 && 'code' in body && body.code === 'COMPANY_PROFILE_INCOMPLETE'
+      profileIncomplete = isProfileIncomplete(response.status, body)
       if (response.status === 422 && 'errors' in body && typeof body.errors === 'object' &&
           body.errors !== null && !Array.isArray(body.errors)) {
         errors = Object.fromEntries(Object.entries(body.errors).filter((entry): entry is [string, string[]] =>

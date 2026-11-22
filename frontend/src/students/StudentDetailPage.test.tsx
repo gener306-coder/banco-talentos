@@ -141,6 +141,18 @@ describe('expediente del alumno HU-S2-03', () => {
     expect(writes()).toHaveLength(0)
   })
 
+  it('explica el perfil mínimo de la institución si el servidor rechaza hacer buscable al alumno (HU-S16-08)', async () => {
+    apiMock.mockResolvedValueOnce(Response.json(detail()))
+      .mockResolvedValueOnce(Response.json({ message: 'Completa…', code: 'INSTITUTION_PROFILE_INCOMPLETE', missing: ['cct', 'contact_name'] }, { status: 422 }))
+    renderApp()
+    const form = await profileForm()
+    await fillProfile(form)
+    fireEvent.click(within(form).getByRole('button', { name: 'Guardar expediente' }))
+    expect(await within(form).findByRole('note', { name: 'Perfil de la institución incompleto' })).toBeInTheDocument()
+    expect(within(form).getByRole('link', { name: 'Completar perfil' })).toHaveAttribute('href', '/account#organization')
+    expect(within(form).getByText(/para que tus alumnos aparezcan en la búsqueda de talento/)).toBeInTheDocument()
+  })
+
   it('muestra los errores del servidor junto a su campo', async () => {
     apiMock.mockResolvedValueOnce(Response.json(detail()))
       .mockResolvedValueOnce(Response.json({ errors: { state_code: ['El estado no es válido.'] } }, { status: 422 }))

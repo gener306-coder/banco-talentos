@@ -1,5 +1,7 @@
 import { useRef, useState } from 'react'
 import type { FormEvent } from 'react'
+import { ProfileIncompleteNotice } from '../account/ProfileIncompleteNotice'
+import { useAuth } from '../auth/useAuth'
 import { InstitutionRequestError } from '../institutions/InstitutionLayout'
 import { useApiMutation } from '../lib/useApiRequest'
 import { hasContactInformation } from '../students/cvCatalogs'
@@ -41,6 +43,8 @@ export function VideoUploadForm({ open, onUploaded }: { open: boolean; onUploade
   const [inputKey, setInputKey] = useState(0)
   const controller = useRef<AbortController | null>(null)
   const mutation = useApiMutation(videoMessages)
+  // HU-S16-08 (D6): sin el perfil mínimo, se explica qué falta en lugar de dejar elegir un archivo que no se aceptará.
+  const canOperate = useAuth().user?.institution?.canOperate ?? true
   const serverErrors = cancelled ? {} : mutation.failure?.errors ?? {}
   const error = (field: string) => localErrors[field] ?? serverErrors[field]?.join(' ')
   const failure = !cancelled && mutation.failure && mutation.failure.status !== 422 ? mutation.failure : null
@@ -114,6 +118,7 @@ export function VideoUploadForm({ open, onUploaded }: { open: boolean; onUploade
       </header>
       {failure && <InstitutionRequestError failure={failure} />}
       {cancelled && !mutation.pending && <p className="notice" role="status">Subida cancelada. Tus datos se conservaron.</p>}
+      {!canOperate || (!cancelled && mutation.failure?.profileIncomplete) ? <ProfileIncompleteNotice /> : (
       <form onSubmit={(event) => { void submit(event) }} aria-busy={mutation.pending} noValidate>
         <div className="video-form-grid">
           <div className="video-form-media">
@@ -164,6 +169,7 @@ export function VideoUploadForm({ open, onUploaded }: { open: boolean; onUploade
           </button>
         </div>
       </form>
+      )}
     </section>
   )
 }

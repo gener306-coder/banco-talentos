@@ -47,7 +47,10 @@ class FakeXhr {
   respond(status: number, body: unknown) { this.status = status; this.responseText = JSON.stringify(body); this.onload?.() }
 }
 
+let sessionUser: Record<string, unknown> = institutionUser
+
 beforeEach(() => {
+  sessionUser = institutionUser
   URL.createObjectURL = vi.fn(() => 'blob:local')
   URL.revokeObjectURL = vi.fn()
   FakeXhr.last = null
@@ -55,7 +58,7 @@ beforeEach(() => {
   videosMock.mockReset()
   videosMock.mockImplementation(async () => Response.json({ data: [] }))
   fetchMock.mockImplementation(async (path, options) => {
-    if (path === '/api/me') return Response.json({ user: institutionUser })
+    if (path === '/api/me') return Response.json({ user: sessionUser })
     if (path === '/sanctum/csrf-cookie') {
       window.document.cookie = 'XSRF-TOKEN=csrf; Path=/'
       return new Response(null, { status: 204 })
@@ -155,6 +158,23 @@ describe('videos promocionales HU-S9-01', () => {
     act(() => FakeXhr.last!.respond(422, { errors: { video: ['Tu institución ya tiene 5 videos activos.'] } }))
     expect(await within(form).findByText('Tu institución ya tiene 5 videos activos.')).toBeInTheDocument()
     expect(within(form).getByLabelText('Archivo de video')).toHaveAttribute('aria-invalid', 'true')
+  })
+
+  it('sin el perfil mínimo explica qué falta en lugar del formulario (HU-S16-08)', async () => {
+    sessionUser = { ...institutionUser, institution: { id: 7, name: null, missing: ['name'], onboarding: 'done' } }
+    const form = await openForm()
+    expect(within(form).getByRole('note', { name: 'Perfil de la institución incompleto' })).toBeInTheDocument()
+    expect(within(form).getByRole('link', { name: 'Completar perfil' })).toHaveAttribute('href', '/account#organization')
+    expect(within(form).queryByLabelText('Archivo de video')).not.toBeInTheDocument()
+  })
+
+  it('si el servidor rechaza la subida por el perfil incompleto, lo explica (HU-S16-08)', async () => {
+    const form = await openForm()
+    fill(form)
+    submit(form)
+    await waitFor(() => expect(FakeXhr.last).not.toBeNull())
+    act(() => FakeXhr.last!.respond(422, { message: 'Completa…', code: 'INSTITUTION_PROFILE_INCOMPLETE', missing: ['cct'] }))
+    expect(await within(form).findByRole('note', { name: 'Perfil de la institución incompleto' })).toBeInTheDocument()
   })
 
   it('cancela la subida y conserva los datos', async () => {

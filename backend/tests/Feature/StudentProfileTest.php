@@ -8,6 +8,7 @@ use App\Models\StudentIdentity;
 use App\Models\User;
 use Illuminate\Database\QueryException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use Tests\Support\InteractsWithCookieSessions;
@@ -410,4 +411,63 @@ it('supports radius searches in meters with ST_DWithin', function () {
 
     expect($within(100_000))->toBe([$this->student->id]);
     expect($within(400_000))->toBe([$this->student->id, $monterrey->id]);
+});
+
+describe('mínimo para operar de la institución (HU-S16-08)', function () {
+    beforeEach(function () {
+        // Institución invitada que aún no captura su CCT ni su responsable.
+        $this->institution->forceFill(['cct' => null, 'contact_name' => null])->save();
+    });
+
+    it('lets an incomplete institution register students but not make one searchable, and allows it once complete', function () {
+        signInProfileInstitution($this);
+        $uri = '/api/students/'.$this->student->id.'/profile';
+
+        // Registrar alumnos sigue permitido: un alumno recién registrado no tiene expediente público (borrador).
+        $this->browserRequest('POST', '/api/students', identityPayload(['enrollment_number' => 'A2026-777']))->assertCreated();
+        // El expediente completo de un alumno activo lo haría buscable: se rechaza sin guardar nada.
+        $this->browserRequest('PUT', $uri, profilePayload())
+            ->assertUnprocessable()
+            ->assertHeader('Cache-Control', 'no-store, private')
+            ->assertExactJson([
+                'message' => 'Completa el nombre oficial, el CCT y el nombre y correo del responsable en Mi cuenta para publicar alumnos en la búsqueda de talento, subir videos y aceptar solicitudes.',
+                'code' => 'INSTITUTION_PROFILE_INCOMPLETE',
+                'missing' => ['cct', 'contact_name'],
+            ]);
+        expect($this->student->refresh()->state_code)->toBeNull()
+            ->and(Student::query()->whereKey($this->student->id)->searchable()->exists())->toBeFalse();
+
+        $this->institution->forceFill(['cct' => '28EUT0042K', 'contact_name' => 'Laura Méndez'])->save();
+        $this->browserRequest('PUT', $uri, profilePayload())->assertOk();
+        expect(Student::query()->whereKey($this->student->id)->searchable()->exists())->toBeTrue();
+    });
+
+    it('saves the profile of an inactive student as a draft while the institution is incomplete', function () {
+        $this->student->forceFill(['is_active' => false])->save();
+        signInProfileInstitution($this);
+
+        $this->browserRequest('PUT', '/api/students/'.$this->student->id.'/profile', profilePayload())->assertOk();
+        expect($this->student->refresh()->program)->toBe('Ingeniería en Sistemas Computacionales')
+            ->and(Student::query()->whereKey($this->student->id)->searchable()->exists())->toBeFalse();
+    });
+
+    it('blocks reactivating a complete student while the institution is incomplete, but allows deactivating it', function () {
+        DB::table('students')->where('id', $this->student->id)->update([...Arr::except(profilePayload(), ['municipality_code']), 'is_active' => false]);
+        DB::update('UPDATE students SET municipality_code = ?, location = (SELECT location FROM municipalities WHERE code = ?) WHERE id = ?', ['28041', '28041', $this->student->id]);
+        signInProfileInstitution($this);
+        $uri = '/api/students/'.$this->student->id.'/status';
+
+        $this->browserRequest('PATCH', $uri, ['is_active' => true])->assertUnprocessable()->assertJsonPath('code', 'INSTITUTION_PROFILE_INCOMPLETE');
+        expect($this->student->refresh()->is_active)->toBeFalse();
+        $this->browserRequest('PATCH', $uri, ['is_active' => false])->assertOk();
+    });
+
+    it('keeps editing a student that was already searchable before the profile became incomplete', function () {
+        DB::table('students')->where('id', $this->student->id)->update(Arr::except(profilePayload(), ['municipality_code']));
+        DB::update('UPDATE students SET municipality_code = ?, location = (SELECT location FROM municipalities WHERE code = ?) WHERE id = ?', ['28041', '28041', $this->student->id]);
+        signInProfileInstitution($this);
+
+        $this->browserRequest('PUT', '/api/students/'.$this->student->id.'/profile', profilePayload(['period_number' => 7]))->assertOk();
+        expect($this->student->refresh()->period_number)->toBe(7);
+    });
 });

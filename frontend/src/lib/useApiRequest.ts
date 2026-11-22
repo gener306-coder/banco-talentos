@@ -6,12 +6,15 @@ export interface ApiFailure {
   status: number
   message: string
   errors: Record<string, string[]>
-  /** HU-S14-03 (M1): falta el mínimo del perfil de la empresa; la vista enlaza a Mi cuenta. */
+  /** HU-S14-03 (M1) y HU-S16-08: falta el mínimo del perfil de la organización; la vista enlaza a Mi cuenta. */
   profileIncomplete?: boolean
 }
 
 /** HU-S14-03 (M1): lo que falta para publicar oportunidades y enviar solicitudes. */
 export const PROFILE_INCOMPLETE_MESSAGE = 'Completa el nombre de tu empresa y el nombre y correo del contacto para publicar oportunidades y enviar solicitudes.'
+
+/** HU-S16-08 (D6): lo que le falta a la institución para publicar alumnos, subir videos y aceptar solicitudes. */
+export const INSTITUTION_PROFILE_INCOMPLETE_MESSAGE = 'Completa el nombre oficial, el CCT y el nombre y correo del responsable para que tus alumnos aparezcan en la búsqueda de talento, subir videos y aceptar solicitudes.'
 
 /** Mensajes por código HTTP propios de cada módulo (por ejemplo, qué significa un 404). Debe ser una constante del módulo. */
 export type FailureMessages = Partial<Record<number, string>>
@@ -30,7 +33,8 @@ const baseMessages: Record<number, string> = {
 const NO_OVERRIDES: FailureMessages = {}
 
 function useFailure(overrides: FailureMessages) {
-  const { expireSession } = useAuth()
+  const { user, expireSession } = useAuth()
+  const incompleteMessage = user?.role === 'INSTITUTION' ? INSTITUTION_PROFILE_INCOMPLETE_MESSAGE : PROFILE_INCOMPLETE_MESSAGE
 
   return useCallback((error: unknown): ApiFailure => {
     const status = error instanceof ApiError ? error.status : 500
@@ -38,14 +42,14 @@ function useFailure(overrides: FailureMessages) {
 
     const messages = { ...baseMessages, ...overrides }
 
-    if (error instanceof ApiError && error.profileIncomplete) return { status, message: PROFILE_INCOMPLETE_MESSAGE, errors: {}, profileIncomplete: true }
+    if (error instanceof ApiError && error.profileIncomplete) return { status, message: incompleteMessage, errors: {}, profileIncomplete: true }
     return {
       status,
       message: error instanceof ApiError && error.code ? accessErrorMessages[error.code]
         : messages[status] ?? 'No pudimos completar la solicitud. Inténtalo de nuevo.',
       errors: error instanceof ApiError ? error.errors : {},
     }
-  }, [expireSession, overrides])
+  }, [expireSession, overrides, incompleteMessage])
 }
 
 export function useApiRequest<T>(load: (signal: AbortSignal) => Promise<T>, messages: FailureMessages = NO_OVERRIDES) {

@@ -329,3 +329,27 @@ describe('oportunidad inactiva (auditoría QA #6)', function () {
             ->assertJsonPath('data.opportunity.is_active', false);
     });
 });
+
+describe('mínimo para operar de la institución (HU-S16-08)', function () {
+    it('blocks accepting while the institution profile is incomplete, still allows rejecting, and accepts once complete', function () {
+        $this->institution->forceFill(['cct' => null])->save();
+        $other = decisionLinkage($this->company, $this->opportunity, decisionStudent($this->institution));
+        $this->loginWithCookies($this->account)->assertOk();
+
+        decide($this, $this->linkage, ['status' => 'ACEPTADA'])
+            ->assertUnprocessable()->assertJsonPath('code', 'INSTITUTION_PROFILE_INCOMPLETE')->assertJsonPath('missing', ['cct']);
+        expect($this->linkage->refresh()->status->value)->toBe('PENDIENTE_INSTITUCION');
+        decide($this, $other, ['status' => 'RECHAZADA', 'response_message' => 'Sin cupo en este periodo.'])->assertOk()->assertJsonPath('data.status', 'RECHAZADA');
+
+        $this->institution->forceFill(['cct' => '28EUT0042K'])->save();
+        decide($this, $this->linkage, ['status' => 'ACEPTADA'])->assertOk()->assertJsonPath('data.status', 'ACEPTADA');
+    });
+
+    it('reports an inactive opportunity before the incomplete profile, keeping the T-S14-11 order', function () {
+        $this->institution->forceFill(['cct' => null])->save();
+        $this->opportunity->forceFill(['is_active' => false])->save();
+        $this->loginWithCookies($this->account)->assertOk();
+
+        decide($this, $this->linkage, ['status' => 'ACEPTADA'])->assertUnprocessable()->assertJsonValidationErrors(['status' => Opportunity::INACTIVE_MESSAGE]);
+    });
+});
