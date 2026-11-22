@@ -29,6 +29,7 @@ enum AuditEventType: string
     case PASSWORD_RESET_ISSUED = 'password_reset_issued';
     case EMAIL_CHANGED = 'email_changed';
     case ACCOUNT_STATUS_CHANGED = 'account_status_changed';
+    case INSTITUTION_INVITED = 'institution_invited';
 
     public static function values(): array
     {

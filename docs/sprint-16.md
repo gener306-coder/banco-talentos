@@ -191,7 +191,8 @@ Sprint vigente desde el 22 de noviembre de 2026. Sprint anterior: [sprint-15.md]
 
 ## HU-S16-05 — Esquema con nulos seguros y consumidores
 
-**Estado:** Pendiente.  
+**Estado:** Completada (22 de noviembre de 2026) en `feat/s16-admin-and-institutions`.  
+**Diseño técnico y verificación:** [HU-S16-05.md](HU-S16-05.md)  
 **Story Points:** 8  
 **Rol:** todos
 
@@ -210,7 +211,8 @@ Sprint vigente desde el 22 de noviembre de 2026. Sprint anterior: [sprint-15.md]
 
 ## HU-S16-06 — Alta ligera de instituciones
 
-**Estado:** Pendiente.  
+**Estado:** Completada (22 de noviembre de 2026) en `feat/s16-admin-and-institutions`.  
+**Diseño técnico y verificación:** [HU-S16-06.md](HU-S16-06.md)  
 **Story Points:** 3  
 **Rol:** `ADMIN`
 

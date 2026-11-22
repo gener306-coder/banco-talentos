@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { createInstitution, createInstitutionAccount, getInstitution, listInstitutions, resendInstitutionAccountSetup, setInstitutionStatus, startInstitutionPasswordReset, updateInstitution } from './api'
 
 const input = { name: 'Instituto Dual', cct: '09DIT0001A', contact_name: 'María López', contact_position: null, contact_email: 'contacto@example.test', contact_phone: null }
-const newInput = { ...input, delivery_method: 'email' as const }
+const newInput = { email: 'contacto@example.test', name: null, person_name: null, delivery_method: 'email' as const }
 const setupUrl = 'http://localhost:5173/set-initial-password?email=contacto%40example.test&token=abc'
 const record = { ...input, id: 7, is_active: true, created_at: '2026-09-30T12:00:00Z', updated_at: '2026-09-30T12:00:00Z' }
 const fetchMock = vi.fn<typeof fetch>()
@@ -59,13 +59,15 @@ describe('cliente de instituciones', () => {
     expect(new Headers(options?.headers).get('Content-Type')).toBe('application/json')
   })
 
-  it('registra la institución con su responsable y devuelve si se envió el enlace (T-S8-11)', async () => {
+  it('invita solo con el correo y los nombres opcionales, y devuelve si se envió el enlace (HU-S16-06)', async () => {
+    const invited = { ...record, name: 'UT del Golfo', cct: null, contact_name: null, contact_email: null }
     fetchMock.mockImplementationOnce(csrfResponse)
-      .mockResolvedValueOnce(Response.json({ data: { ...record, contact_phone: '834 123 4567' }, setup_delivery: 'sent', setup_url: 'https://ignorado' }))
-    await expect(createInstitution({ ...newInput, contact_phone: '834 123 4567', ...{ is_active: false, id: 999 } }))
-      .resolves.toEqual({ institution: { ...record, contact_phone: '834 123 4567' }, setupDelivery: 'sent' })
+      .mockResolvedValueOnce(Response.json({ data: invited, setup_delivery: 'sent', setup_url: 'https://ignorado' }))
+    await expect(createInstitution({ ...newInput, name: 'UT del Golfo', person_name: '', ...{ cct: '09DIT0001A', is_active: false, id: 999 } }))
+      .resolves.toEqual({ institution: invited, setupDelivery: 'sent' })
     expect(fetchMock.mock.calls[1][0]).toBe('/api/institutions')
-    expect(JSON.parse(fetchMock.mock.calls[1][1]?.body as string)).toEqual({ ...newInput, contact_phone: '834 123 4567' })
+    expect(JSON.parse(fetchMock.mock.calls[1][1]?.body as string))
+      .toEqual({ email: 'contacto@example.test', name: 'UT del Golfo', person_name: null, delivery_method: 'email' })
   })
 
   it('devuelve el enlace para compartir solo con la entrega manual (HU-S2-01, T-S8-11)', async () => {
@@ -76,10 +78,10 @@ describe('cliente de instituciones', () => {
     expect(JSON.parse(fetchMock.mock.calls[1][1]?.body as string)).toMatchObject({ delivery_method: 'manual' })
   })
 
-  it('envía un puesto y un teléfono vacíos como null', async () => {
+  it('envía cualquier dato vacío de la edición como null (HU-S16-06)', async () => {
     fetchMock.mockImplementationOnce(csrfResponse).mockResolvedValueOnce(Response.json({ data: record }))
-    await updateInstitution('7', { ...input, contact_position: '', contact_phone: '' })
-    expect(JSON.parse(fetchMock.mock.calls[1][1]?.body as string)).toMatchObject({ contact_position: null, contact_phone: null })
+    await updateInstitution('7', { ...input, cct: '', contact_email: '', contact_position: '', contact_phone: '' })
+    expect(JSON.parse(fetchMock.mock.calls[1][1]?.body as string)).toMatchObject({ cct: null, contact_email: null, contact_position: null, contact_phone: null })
   })
 
   it.each([

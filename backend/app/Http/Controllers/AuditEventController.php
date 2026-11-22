@@ -38,7 +38,7 @@ class AuditEventController extends Controller
     /** HU-S14-04: eventos de la tabla inmutable; su subject_id en la unión es el id del evento. */
     private const ACCOUNT_EVENTS = [
         'account_updated', 'password_changed', 'organization_profile_updated', 'company_invited',
-        'admin_bootstrapped', 'password_reset_issued', 'email_changed', 'account_status_changed',
+        'admin_bootstrapped', 'password_reset_issued', 'email_changed', 'account_status_changed', 'institution_invited',
     ];
 
     /** CA-02: de la más reciente a la más antigua, de 30 en 30, con filtro opcional por tipo. */
@@ -132,7 +132,7 @@ class AuditEventController extends Controller
                     'company_registered' => ['id' => $event->subject_id, 'name' => $companies[$event->subject_id]->label()],
                     'opportunity_created' => ['id' => $event->subject_id, 'title' => $opportunities[$event->subject_id]->title],
                     'account_updated', 'password_changed', 'organization_profile_updated', 'company_invited',
-                    'admin_bootstrapped', 'password_reset_issued', 'email_changed', 'account_status_changed' => $change($changes[$event->subject_id]),
+                    'admin_bootstrapped', 'password_reset_issued', 'email_changed', 'account_status_changed', 'institution_invited' => $change($changes[$event->subject_id]),
                     default => $this->linkage($linkages[$event->subject_id]),
                 },
             ];

@@ -3,7 +3,6 @@ import { expect, test } from '@playwright/test'
 import type { BrowserContext, Page } from '@playwright/test'
 import { ADMIN_STATE, NO_SESSION } from './support/admin'
 import { linkFromMail } from './support/mailpit'
-import { randomCct } from './support/institution'
 
 const mailpitUrl = process.env.MAILPIT_URL
 
@@ -38,7 +37,7 @@ async function me(context: BrowserContext, baseURL: string) {
 
 test('ADMIN inicia el restablecimiento → la persona titular establece su nueva contraseña → login exitoso', async ({ page, browser, baseURL, request }) => {
   const suffix = randomBytes(8).toString('hex')
-  const institution = { name: `Instituto reset E2E ${suffix}`, cct: randomCct(), email: `contacto-reset-${suffix}@example.test` }
+  const institution = { name: `Instituto reset E2E ${suffix}`, email: `contacto-reset-${suffix}@example.test` }
   const account = {
     name: `Titular reset ${suffix}`,
     email: `reset-${suffix}@example.test`,
@@ -51,11 +50,9 @@ test('ADMIN inicia el restablecimiento → la persona titular establece su nueva
   await page.goto('/')
   await page.getByRole('link', { name: 'Instituciones', exact: true }).click()
   await page.getByRole('link', { name: 'Nueva institución', exact: true }).click()
-  await page.getByLabel('Nombre', { exact: true }).fill(institution.name)
-  await page.getByLabel('CCT', { exact: true }).fill(institution.cct)
-  await page.getByLabel('Nombre de la persona responsable', { exact: true }).fill('Responsable reset')
-  await page.getByLabel('Correo de la persona responsable', { exact: true }).fill(institution.email)
-  await page.getByRole('button', { name: 'Crear institución', exact: true }).click()
+  await page.getByLabel('Correo de la cuenta', { exact: true }).fill(institution.email)
+  await page.getByLabel('Nombre de la institución (opcional)', { exact: true }).fill(institution.name)
+  await page.getByRole('button', { name: 'Enviar invitación', exact: true }).click()
   await expect(page).toHaveURL(/\/institutions\/\d+$/)
   // La preparación usa la entrega manual (HU-S2-01) para obtener el enlace sin correo.
   await page.getByRole('button', { name: 'Nueva cuenta institucional', exact: true }).click()

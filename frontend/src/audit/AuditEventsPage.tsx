@@ -42,6 +42,7 @@ function describe(event: AuditEvent): ReactNode {
     case 'linkage_responded':
       return `Solicitud #${event.resource.id} de ${event.resource.company} a ${event.resource.institution}: ${event.resource.status === 'ACEPTADA' ? 'aceptada' : 'rechazada'}`
     case 'company_invited':
+    case 'institution_invited':
     case 'password_changed':
     case 'admin_bootstrapped':
     case 'password_reset_issued':

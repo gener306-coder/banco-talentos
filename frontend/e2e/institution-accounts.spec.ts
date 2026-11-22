@@ -2,7 +2,6 @@ import { randomBytes } from 'node:crypto'
 import { expect, test } from '@playwright/test'
 import { ADMIN_STATE, NO_SESSION } from './support/admin'
 import { linkFromMail } from './support/mailpit'
-import { randomCct } from './support/institution'
 
 test.use({ storageState: ADMIN_STATE })
 
@@ -16,7 +15,6 @@ test('ADMIN crea una cuenta sin contraseña; su titular la establece y pierde ac
   const suffix = randomBytes(8).toString('hex')
   const institution = {
     name: `Instituto cuentas E2E ${suffix}`,
-    cct: randomCct(),
     email: `contacto-${suffix}@example.test`,
   }
   const account = {
@@ -30,11 +28,10 @@ test('ADMIN crea una cuenta sin contraseña; su titular la establece y pierde ac
   await page.goto('/')
   await page.getByRole('link', { name: 'Instituciones', exact: true }).click()
   await page.getByRole('link', { name: 'Nueva institución', exact: true }).click()
-  await page.getByLabel('Nombre', { exact: true }).fill(institution.name)
-  await page.getByLabel('CCT', { exact: true }).fill(institution.cct)
-  await page.getByLabel('Nombre de la persona responsable', { exact: true }).fill('Responsable cuentas')
-  await page.getByLabel('Correo de la persona responsable', { exact: true }).fill(institution.email)
-  await page.getByRole('button', { name: 'Crear institución', exact: true }).click()
+  // HU-S16-06: la invitación solo pide el correo de la cuenta y, opcional, un nombre de referencia.
+  await page.getByLabel('Correo de la cuenta', { exact: true }).fill(institution.email)
+  await page.getByLabel('Nombre de la institución (opcional)', { exact: true }).fill(institution.name)
+  await page.getByRole('button', { name: 'Enviar invitación', exact: true }).click()
   await expect(page).toHaveURL(/\/institutions\/\d+$/)
   await expect(page.getByText(institution.name, { exact: true })).toBeVisible()
 

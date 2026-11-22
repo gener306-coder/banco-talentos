@@ -1,19 +1,23 @@
 import { ApiError, request } from '../lib/http'
 
-/** Persona responsable (T-S8-11): su nombre también nombra la cuenta que se crea con el correo de contacto. */
+/** Edición de Administración (HU-S16-06): todos los datos son opcionales; un valor vacío se guarda como faltante. */
 export interface InstitutionInput {
-  name: string
-  cct: string
-  contact_name: string
-  /** Opcional (T-S8-11). */
+  name: string | null
+  cct: string | null
+  contact_name: string | null
   contact_position: string | null
-  contact_email: string
-  /** Opcional (T-S8-11). */
+  contact_email: string | null
   contact_phone: string | null
 }
 
-/** Alta (T-S8-11): el enlace de la cuenta del responsable se envía por correo o se genera para compartirlo (HU-S2-01). */
-export interface NewInstitutionInput extends InstitutionInput {
+/**
+ * Invitación (HU-S16-06): solo el correo de la cuenta y, opcionales, un nombre de referencia y el de la persona. El
+ * enlace se envía por correo o se genera para compartirlo (HU-S2-01); el perfil lo captura la institución al entrar.
+ */
+export interface NewInstitutionInput {
+  email: string
+  name: string | null
+  person_name: string | null
   delivery_method: DeliveryMethod
 }
 
@@ -24,13 +28,8 @@ export interface CreatedInstitution {
   setupLink?: string
 }
 
-export interface Institution extends Omit<InstitutionInput, 'name' | 'cct' | 'contact_name' | 'contact_email'> {
-  /** HU-S16-05: null mientras la institución invitada no captura su perfil. */
-  name: string | null
-  cct: string | null
-  /** null en las instituciones registradas antes de pedir al responsable, o invitadas sin perfil. */
-  contact_name: string | null
-  contact_email: string | null
+/** HU-S16-05: los datos del perfil llegan en null mientras la institución invitada no los captura. */
+export interface Institution extends InstitutionInput {
   id: number
   is_active: boolean
   created_at: string
@@ -130,17 +129,19 @@ async function writeInstitution(path: string, method: string, body: InstitutionI
 
 function fields(input: InstitutionInput): InstitutionInput {
   return {
-    name: input.name, cct: input.cct, contact_name: input.contact_name, contact_position: input.contact_position || null,
-    contact_email: input.contact_email, contact_phone: input.contact_phone || null,
+    name: input.name || null, cct: input.cct || null, contact_name: input.contact_name || null, contact_position: input.contact_position || null,
+    contact_email: input.contact_email || null, contact_phone: input.contact_phone || null,
   }
 }
 
 /**
- * Registra la institución y la cuenta de su responsable (T-S8-11). Con correo, el enlace nunca vuelve; con la entrega
+ * Invita a la institución y crea la cuenta de su persona (HU-S16-06). Con correo, el enlace nunca vuelve; con la entrega
  * manual se valida como en «Nueva cuenta institucional» y solo vive en la memoria de quien lo pidió.
  */
 export async function createInstitution(input: NewInstitutionInput): Promise<CreatedInstitution> {
-  const response = await send('/api/institutions', 'POST', { ...fields(input), delivery_method: input.delivery_method })
+  const response = await send('/api/institutions', 'POST', {
+    email: input.email, name: input.name || null, person_name: input.person_name || null, delivery_method: input.delivery_method,
+  })
   const delivery = setupDelivery(response, true)!
   const setupLink = manualSetupLink(response, delivery)
   return { institution: institution(responseData(response)), setupDelivery: delivery, ...(setupLink ? { setupLink } : {}) }

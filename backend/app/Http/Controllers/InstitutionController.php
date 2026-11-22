@@ -3,7 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Enums\SetupDeliveryMethod;
-use App\Http\Requests\StoreInstitutionRequest;
+use App\Http\Requests\InviteInstitutionRequest;
 use App\Http\Requests\UpdateInstitutionRequest;
 use App\Http\Requests\UpdateInstitutionStatusRequest;
 use App\Models\AccountAuditEvent;
@@ -71,27 +71,30 @@ class InstitutionController extends Controller
     }
 
     /**
-     * T-S8-11: el registro crea también la cuenta de la persona responsable con el correo de contacto, en la misma
-     * transacción. Después del commit le envía el enlace por correo o, con la entrega manual (HU-S2-01), lo devuelve
-     * para que el Administrador lo comparta; con correo, el enlace nunca vuelve en la respuesta.
+     * HU-S16-06: la invitación crea la institución sin perfil (con el nombre de referencia, si llega) y la cuenta de su
+     * persona en una transacción, y registra `institution_invited`. Sin nombre de la persona, la cuenta guarda el correo
+     * como nombre provisional (M3). El contacto queda vacío hasta el onboarding (D5). Después del commit envía el enlace
+     * por correo o, con la entrega manual (HU-S2-01), lo devuelve; con correo, el enlace nunca vuelve en la respuesta.
      */
-    public function store(StoreInstitutionRequest $request, InstitutionAccounts $accounts, InitialPasswordLink $links): JsonResponse
+    public function store(InviteInstitutionRequest $request, InstitutionAccounts $accounts, InitialPasswordLink $links): JsonResponse
     {
-        $method = SetupDeliveryMethod::from($request->validated('delivery_method') ?? SetupDeliveryMethod::EMAIL->value);
-        $institution = new Institution(Arr::except($request->validated(), ['delivery_method']));
+        $data = $request->validated();
+        $method = SetupDeliveryMethod::from($data['delivery_method'] ?? SetupDeliveryMethod::EMAIL->value);
+        $institution = new Institution(['name' => $data['name'] ?? null]);
 
         try {
-            [$user, $setupUrl] = DB::transaction(function () use ($institution, $accounts, $request): array {
+            [$user, $setupUrl] = DB::transaction(function () use ($institution, $accounts, $request, $data): array {
                 $this->saveDetails($institution);
+                AccountAuditEvent::record($request->user(), AccountAuditEvent::INSTITUTION_INVITED, $institution);
 
-                return $accounts->create($institution, $request->validated('contact_name'), $institution->contact_email, $request->user());
+                return $accounts->create($institution, $data['person_name'] ?? $data['email'], $data['email'], $request->user());
             });
         } catch (UniqueConstraintViolationException $exception) {
             // Dos registros simultáneos con el mismo correo: la restricción es la última garantía.
             if ($exception->index !== 'users_email_unique') {
                 throw $exception;
             }
-            throw ValidationException::withMessages(['contact_email' => ['El correo ya está registrado en otra cuenta.']]);
+            throw ValidationException::withMessages(['email' => ['El correo ya está registrado en otra cuenta.']]);
         }
 
         return response()->json([

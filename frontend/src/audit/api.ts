@@ -18,6 +18,7 @@ export const AUDIT_EVENT_TYPES = [
   { value: 'linkage_responded', label: 'Vinculación respondida' },
   // HU-S14-04: cambios de cuentas y organizaciones (account_audit_events).
   { value: 'company_invited', label: 'Empresa invitada' },
+  { value: 'institution_invited', label: 'Institución invitada' },
   { value: 'organization_profile_updated', label: 'Perfil de organización actualizado' },
   { value: 'account_updated', label: 'Cuenta actualizada' },
   { value: 'password_changed', label: 'Contraseña cambiada' },
@@ -50,7 +51,7 @@ type Actor = { id: number; name: string; role: Role } | null
 interface LinkageResource { id: number; status: LinkageStatus; institution: string; company: string }
 export type ChangeSubject = 'user' | 'company' | 'institution'
 /** Eventos de account_audit_events: el sujeto afectado y los campos que cambiaron. */
-export type ChangeEventType = 'company_invited' | 'organization_profile_updated' | 'account_updated' | 'password_changed'
+export type ChangeEventType = 'company_invited' | 'institution_invited' | 'organization_profile_updated' | 'account_updated' | 'password_changed'
   | 'account_status_changed' | 'admin_bootstrapped' | 'password_reset_issued' | 'email_changed'
 /** HU-S14-04: la cuenta, empresa o institución afectada y solo los nombres de los campos que cambiaron. */
 export interface ChangeResource { subjectType: ChangeSubject; id: number; name: string; role: Role | null; fields: string[] }
@@ -106,6 +107,7 @@ function event(value: unknown): AuditEvent {
       if (!isStatus(resource.status) || !isString(resource.institution) || !isString(resource.company)) break
       return { ...base, type: value.type, resource: { id, status: resource.status, institution: resource.institution, company: resource.company } }
     case 'company_invited':
+    case 'institution_invited':
     case 'organization_profile_updated':
     case 'account_updated':
     case 'password_changed':

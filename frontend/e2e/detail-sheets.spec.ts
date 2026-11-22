@@ -2,7 +2,6 @@ import { randomBytes } from 'node:crypto'
 import { expect, test } from '@playwright/test'
 import type { Locator, Page } from '@playwright/test'
 import { ADMIN_STATE } from './support/admin'
-import { randomCct } from './support/institution'
 
 test.use({ viewport: { width: 375, height: 812 }, storageState: ADMIN_STATE })
 
@@ -24,11 +23,9 @@ test('en móvil, los formularios del detalle se abren en hojas arrastrables que 
   await page.goto('/')
   await page.getByRole('link', { name: 'Instituciones', exact: true }).click()
   await page.getByRole('link', { name: 'Nueva institución', exact: true }).click()
-  await page.getByLabel('Nombre', { exact: true }).fill(`Instituto hojas E2E ${suffix}`)
-  await page.getByLabel('CCT', { exact: true }).fill(randomCct())
-  await page.getByLabel('Nombre de la persona responsable', { exact: true }).fill('Responsable hojas')
-  await page.getByLabel('Correo de la persona responsable', { exact: true }).fill(`contacto-hojas-${suffix}@example.test`)
-  await page.getByRole('button', { name: 'Crear institución', exact: true }).click()
+  await page.getByLabel('Correo de la cuenta', { exact: true }).fill(`contacto-hojas-${suffix}@example.test`)
+  await page.getByLabel('Nombre de la institución (opcional)', { exact: true }).fill(`Instituto hojas E2E ${suffix}`)
+  await page.getByRole('button', { name: 'Enviar invitación', exact: true }).click()
   await expect(page).toHaveURL(/\/institutions\/\d+$/)
 
   // El detalle solo muestra datos y acciones; los formularios están en hojas cerradas.

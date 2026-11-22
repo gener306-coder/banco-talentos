@@ -4,7 +4,7 @@ import { Link, useLocation, useParams } from 'react-router'
 import { InstitutionAccountForm } from './InstitutionAccountForm'
 import { InstitutionAccountPasswordResetForm } from './InstitutionAccountPasswordResetForm'
 import { InstitutionAccountSetupLinkForm } from './InstitutionAccountSetupLinkForm'
-import { getInstitution, setInstitutionStatus } from './api'
+import { getInstitution, setInstitutionStatus, UNNAMED_INSTITUTION } from './api'
 import { InstitutionLayout, InstitutionRequestError, InstitutionStatus } from './InstitutionLayout'
 import { useInstitutionMutation, useInstitutionRequest } from './useInstitutionRequest'
 import { useBackLink } from '../ui/backLink'
@@ -12,6 +12,10 @@ import { ConfirmDialog } from '../ui/ConfirmDialog'
 import { PlusIcon } from '../ui/icons'
 import { Sheet } from '../ui/Sheet'
 import { LoadingState } from '../ui/StateMessage'
+import '../companies/companies.css'
+
+/** HU-S16-05: los datos que la institución invitada aún no captura se distinguen del resto, como en las empresas. */
+const value = (text: string | null) => text || <span className="company-pending-value">Sin capturar</span>
 
 function InstitutionDetail({ id }: { id: string }) {
   const load = useCallback((signal: AbortSignal) => getInstitution(id, signal), [id])
@@ -57,11 +61,11 @@ function InstitutionDetail({ id }: { id: string }) {
             {notice && <p className="institution-success" role="status">{notice}</p>}
             {mutation.failure && <InstitutionRequestError failure={mutation.failure} />}
             <dl className="institution-details">
-              <dt>Nombre</dt><dd>{data.name}</dd>
-              <dt>CCT</dt><dd>{data.cct}</dd>
-              <dt>Responsable</dt><dd>{data.contact_name ?? 'Sin registrar'}</dd>
+              <dt>Nombre</dt><dd>{data.name ?? <span className="company-pending-value">{UNNAMED_INSTITUTION}</span>}</dd>
+              <dt>CCT</dt><dd>{value(data.cct)}</dd>
+              <dt>Responsable</dt><dd>{value(data.contact_name)}</dd>
               <dt>Puesto o departamento</dt><dd>{data.contact_position ?? 'Sin registrar'}</dd>
-              <dt>Correo de contacto</dt><dd>{data.contact_email}</dd>
+              <dt>Correo de contacto</dt><dd>{value(data.contact_email)}</dd>
               <dt>Teléfono</dt><dd>{data.contact_phone ? <a href={`tel:${data.contact_phone.replace(/[^\d+]/g, '')}`}>{data.contact_phone}</a> : 'Sin registrar'}</dd>
               <dt>Estado</dt><dd><InstitutionStatus active={data.is_active} /></dd>
             </dl>

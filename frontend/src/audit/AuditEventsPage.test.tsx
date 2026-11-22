@@ -152,7 +152,7 @@ describe('cambios de cuentas y organizaciones HU-S14-04', () => {
     const filter = screen.getByLabelText('Tipo de evento')
     expect(within(filter).getAllByRole('option').map((option) => option.textContent)).toEqual([
       'Todos los eventos', 'Cuenta creada', 'Empresa registrada', 'Oportunidad registrada', 'Vinculación solicitada', 'Vinculación respondida',
-      'Empresa invitada', 'Perfil de organización actualizado', 'Cuenta actualizada', 'Contraseña cambiada',
+      'Empresa invitada', 'Institución invitada', 'Perfil de organización actualizado', 'Cuenta actualizada', 'Contraseña cambiada',
       'Estado de cuenta cambiado', 'Primer Administrador creado', 'Restablecimiento de contraseña emitido', 'Correo de acceso cambiado',
     ])
     fireEvent.change(filter, { target: { value: 'password_changed' } })

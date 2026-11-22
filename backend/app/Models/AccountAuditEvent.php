@@ -23,6 +23,9 @@ class AccountAuditEvent extends Model
     /** HU-S14-02: la Secretaría invitó a una empresa (alta ligera con la cuenta de su operador). */
     public const COMPANY_INVITED = 'company_invited';
 
+    /** HU-S16-06: Administración invitó a una institución (alta ligera con la cuenta de su persona). */
+    public const INSTITUTION_INVITED = 'institution_invited';
+
     /** HU-S16-01: primer Administrador creado desde la consola del servidor. */
     public const ADMIN_BOOTSTRAPPED = 'admin_bootstrapped';
 
