@@ -42,6 +42,9 @@ export function LinkageDecisionSection({ data, onDecided, refresh }: {
 
   // T-S14-11: con el cupo lleno ya no se puede aceptar; rechazar sigue disponible. El servidor decide de forma atómica.
   const full = isFull(data.opportunity)
+  // Auditoría QA (#6): la empresa inactivó la oportunidad; tampoco se puede aceptar. Tiene prioridad sobre el cupo.
+  const inactive = !data.opportunity.is_active
+  const blockedNote = inactive ? 'linkage-inactive-note' : full ? 'linkage-full-note' : undefined
   const messageError = localError ?? mutation.failure?.errors.response_message?.join(' ')
   const statusError = mutation.failure?.errors.status?.join(' ')
 
@@ -92,7 +95,10 @@ export function LinkageDecisionSection({ data, onDecided, refresh }: {
                 <p>Considera su disponibilidad antes de aceptar otra.</p>
               </div>
             )}
-            {full && !statusError && (
+            {inactive && !statusError && (
+              <p className="notice-muted" id="linkage-inactive-note">La empresa inactivó esta oportunidad. Ya no puedes aceptar esta solicitud; puedes rechazarla con un mensaje para la empresa.</p>
+            )}
+            {!inactive && full && !statusError && (
               <p className="notice-muted" id="linkage-full-note">La oportunidad ya cubrió sus lugares ({placesLabel(data.opportunity)}). Ya no puedes aceptar esta solicitud; puedes rechazarla con un mensaje para la empresa.</p>
             )}
             <form className="linkage-decision" onSubmit={(event) => event.preventDefault()} aria-busy={mutation.pending} noValidate>
@@ -106,7 +112,7 @@ export function LinkageDecisionSection({ data, onDecided, refresh }: {
                 <p className="field-hint" id="linkage-response-count">{message.length} de {LINKAGE_MESSAGE_LIMIT} caracteres · sin enlaces, correos ni teléfonos</p>
                 {messageError && <p className="field-error" id="linkage-response-error">{messageError}</p>}
                 <div className="actions">
-                  <button type="button" disabled={full} aria-describedby={full ? 'linkage-full-note' : undefined}
+                  <button type="button" disabled={blockedNote !== undefined} aria-describedby={blockedNote}
                     onClick={(event) => request('ACEPTADA', event.currentTarget)}>
                     <PendingLabel pending={mutation.pending} label={decisions.ACEPTADA.label} pendingLabel="Guardando respuesta…" />
                   </button>

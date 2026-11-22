@@ -48,6 +48,7 @@ import { LinkageNotifier } from './linkage/LinkageNotifier'
 import { UnreadSummaryProvider } from './linkage/UnreadSummaryProvider'
 import { BrandLogo } from './ui/BrandLogo'
 import { AppFooter } from './ui/AppFooter'
+import { RouteErrorBoundary } from './ui/RouteErrorBoundary'
 import { showsFooter } from './ui/footerRoutes'
 import { LegalPage } from './legal/LegalPage'
 import { prefersReducedMotion } from './ui/modal'
@@ -249,6 +250,7 @@ function App() {
         </div>
       </header>
       <main ref={main} className={wide ? 'page-wide' : undefined}>
+        <RouteErrorBoundary pathname={pathname}>
         <Routes>
           <Route path="/set-initial-password" element={<SetInitialPasswordPage />} />
           <Route path="/reset-password" element={<ResetPasswordPage />} />
@@ -258,6 +260,7 @@ function App() {
           <Route path="/legal" element={<Navigate to="/legal/privacidad" replace />} />
           <Route path="*" element={<AuthRoutes />} />
         </Routes>
+        </RouteErrorBoundary>
       </main>
       {/* HU-S15-03: último hermano del encabezado y el contenido, para aparecer o desaparecer sin volver a montarlos. */}
       {showsFooter(pathname) && <AppFooter wide={wide} />}

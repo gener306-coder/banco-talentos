@@ -63,6 +63,11 @@ describe('memoria de la tabla', () => {
   it('vuelve al principio y baja animado hasta dejar la fila donde estaba; luego parpadea (T-S13-13)', async () => {
     const scrollTo = vi.fn()
     vi.stubGlobal('scrollTo', scrollTo)
+    // Auditoría QA: cuadros controlados por la prueba. Antes se esperaba la animación en tiempo real (hasta 4 s) y
+    // fallaba de forma intermitente con la suite completa bajo carga.
+    const frames: FrameRequestCallback[] = []
+    vi.stubGlobal('requestAnimationFrame', vi.fn((callback: FrameRequestCallback) => frames.push(callback)))
+    vi.stubGlobal('cancelAnimationFrame', vi.fn())
     const { unmount } = renderApp()
     vi.spyOn(row(3), 'getBoundingClientRect').mockReturnValue({ top: 80 } as DOMRect)
     fireEvent.click(row(3).querySelector('th')!)
@@ -72,7 +77,11 @@ describe('memoria de la tabla', () => {
     expect(scrollTo).toHaveBeenNthCalledWith(1, 0, 0)
     // Mientras baja, la fila aún no parpadea; al llegar (destino 900 - 80 = 820), sí.
     expect(row(3)).not.toHaveClass('row-return')
-    await waitFor(() => expect(row(3)).toHaveClass('row-return'), { timeout: 4000 })
+    // Un cuadro a mitad del recorrido y otro después de su duración máxima.
+    await act(async () => { frames.splice(0).forEach((frame) => frame(performance.now() + 50)) })
+    expect(row(3)).not.toHaveClass('row-return')
+    await act(async () => { frames.splice(0).forEach((frame) => frame(performance.now() + 10_000)) })
+    await waitFor(() => expect(row(3)).toHaveClass('row-return'))
     expect(scrollTo).toHaveBeenLastCalledWith(0, 820)
     vi.restoreAllMocks()
   })

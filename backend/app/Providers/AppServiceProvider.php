@@ -64,6 +64,13 @@ class AppServiceProvider extends ServiceProvider
         RateLimiter::for('organization-profile', fn (Request $request) => Limit::perMinute(10)->by('organization-profile:'.$request->user()->id)
         );
 
+        // Auditoría QA: las subidas (videos y comprobantes) ocupan disco y procesamiento; las exportaciones CSV recorren
+        // tablas completas. Un límite por cuenta frena el abuso sin afectar el uso normal.
+        RateLimiter::for('uploads', fn (Request $request) => Limit::perMinute(20)->by('uploads:'.$request->user()->id)
+        );
+        RateLimiter::for('exports', fn (Request $request) => Limit::perMinute(10)->by('exports:'.$request->user()->id)
+        );
+
         // HU-S13-01: la conversación es entre personas; el límite frena el envío automatizado.
         RateLimiter::for('linkage-messages', fn (Request $request) => Limit::perMinute(30)->by('linkage-messages:'.$request->user()->id)
         );

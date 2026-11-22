@@ -283,3 +283,49 @@ describe('cupo de la oportunidad (T-S14-11)', function () {
     });
 });
 
+
+describe('oportunidad inactiva (auditoría QA #6)', function () {
+    it('answers 422 without changes when accepting a request whose opportunity the company deactivated', function () {
+        $this->opportunity->forceFill(['is_active' => false])->save();
+        $this->loginWithCookies($this->account)->assertOk();
+
+        decide($this, $this->linkage, ['status' => 'ACEPTADA', 'response_message' => 'Coordinemos.'])->assertUnprocessable()
+            ->assertJsonPath('errors.status.0', 'La oportunidad fue inactivada por la empresa. Puedes rechazar la solicitud.');
+
+        $linkage = $this->linkage->refresh();
+        expect($linkage->status->value)->toBe('PENDIENTE_INSTITUCION')
+            ->and($linkage->responded_at)->toBeNull()
+            ->and($linkage->responded_by)->toBeNull()
+            ->and($linkage->response_message)->toBeNull();
+    });
+
+    it('still allows rejecting it', function () {
+        $this->opportunity->forceFill(['is_active' => false])->save();
+        $this->loginWithCookies($this->account)->assertOk();
+
+        decide($this, $this->linkage, ['status' => 'RECHAZADA'])->assertOk()->assertJsonPath('data.status', 'RECHAZADA');
+        expect($this->linkage->refresh()->status->value)->toBe('RECHAZADA');
+    });
+
+    it('checks the status with the opportunity already locked (FOR UPDATE), before the request lock', function () {
+        $this->opportunity->forceFill(['is_active' => false])->save();
+        $this->loginWithCookies($this->account)->assertOk();
+        $queries = [];
+        DB::listen(function ($query) use (&$queries): void { $queries[] = strtolower($query->sql); });
+
+        decide($this, $this->linkage, ['status' => 'ACEPTADA'])->assertUnprocessable();
+
+        $position = fn (callable $match): int|false => array_search(true, array_map($match, $queries), true);
+        $lockOpportunity = $position(fn (string $sql): bool => str_contains($sql, 'from "opportunities"') && str_contains($sql, 'for update'));
+        $lockRequest = $position(fn (string $sql): bool => str_contains($sql, 'from "linkage_requests"') && str_contains($sql, 'for update'));
+        expect($lockOpportunity)->not->toBeFalse()->and($lockRequest)->not->toBeFalse()->and($lockOpportunity)->toBeLessThan($lockRequest);
+    });
+
+    it('exposes opportunity.is_active in the institution detail so the screen can explain it', function () {
+        $this->opportunity->forceFill(['is_active' => false])->save();
+        $this->loginWithCookies($this->account)->assertOk();
+
+        $this->browserRequest('GET', "/api/institution/linkage-requests/{$this->linkage->id}")->assertOk()
+            ->assertJsonPath('data.opportunity.is_active', false);
+    });
+});

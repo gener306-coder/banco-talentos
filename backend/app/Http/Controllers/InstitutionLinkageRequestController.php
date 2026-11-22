@@ -147,6 +147,11 @@ class InstitutionLinkageRequestController extends Controller
             if ($linkage->status !== LinkageRequestStatus::PENDING_INSTITUTION) {
                 throw ValidationException::withMessages(['status' => ['Solo puedes responder solicitudes pendientes.']]);
             }
+            // Auditoría QA (#6): una oportunidad que la empresa inactivó no admite nuevas vinculaciones. Se revisa con la
+            // oportunidad ya bloqueada, así que una inactivación concurrente no se cuela. Rechazar sigue permitido.
+            if ($opportunity !== null && ! $opportunity->is_active) {
+                throw ValidationException::withMessages(['status' => [Opportunity::INACTIVE_MESSAGE]]);
+            }
             if ($opportunity !== null && $opportunity->acceptedCount() >= $opportunity->vacancies) {
                 throw ValidationException::withMessages(['status' => [Opportunity::fullMessage($opportunity->vacancies).' Puedes rechazar la solicitud.']]);
             }

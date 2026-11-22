@@ -1,9 +1,11 @@
 <?php
 
+use App\Http\Middleware\ApiSecurityHeaders;
 use App\Http\Middleware\EnsureInstitutionMember;
 use App\Http\Middleware\EnsureOrganizationMember;
 use App\Http\Middleware\EnsureRole;
 use App\Http\Middleware\EnsureUserIsActive;
+use App\Http\Middleware\ThrottleApiRequests;
 use Illuminate\Auth\AuthenticationException;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
@@ -20,6 +22,10 @@ return Application::configure(basePath: dirname(__DIR__))
     )
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->statefulApi();
+        // Auditoría QA: Cache-Control no-store y cabeceras de seguridad en todas las respuestas, también en los errores.
+        $middleware->append(ApiSecurityHeaders::class);
+        // Auditoría QA (#10): límite general de escrituras en el grupo api, con su contador en la caché de archivos.
+        $middleware->api(append: [ThrottleApiRequests::class]);
         // La API responde 401 también a clientes que no solicitan JSON.
         $middleware->redirectGuestsTo(null);
         $middleware->alias([
