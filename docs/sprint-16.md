@@ -77,7 +77,8 @@ Sprint vigente desde el 22 de noviembre de 2026. Sprint anterior: [sprint-15.md]
 
 ## HU-S16-01 — Arranque seguro del primer ADMIN
 
-**Estado:** Pendiente.  
+**Estado:** Completada (22 de noviembre de 2026) en `feat/s16-admin-and-institutions`.  
+**Diseño técnico y verificación:** [HU-S16-01.md](HU-S16-01.md)  
 **Story Points:** 3  
 **Rol:** operación (consola del servidor)
 

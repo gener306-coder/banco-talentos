@@ -36,7 +36,10 @@ class AuditEventController extends Controller
     ];
 
     /** HU-S14-04: eventos de la tabla inmutable; su subject_id en la unión es el id del evento. */
-    private const ACCOUNT_EVENTS = ['account_updated', 'password_changed', 'organization_profile_updated', 'company_invited'];
+    private const ACCOUNT_EVENTS = [
+        'account_updated', 'password_changed', 'organization_profile_updated', 'company_invited',
+        'admin_bootstrapped', 'password_reset_issued', 'email_changed', 'account_status_changed',
+    ];
 
     /** CA-02: de la más reciente a la más antigua, de 30 en 30, con filtro opcional por tipo. */
     public function index(ListAuditEventsRequest $request): JsonResponse
@@ -90,7 +93,7 @@ class AuditEventController extends Controller
     {
         $ids = fn (string ...$types) => $events->whereIn('type', $types)->pluck('subject_id')->unique()->values();
 
-        $actors = User::query()->whereIn('id', $events->pluck('actor_id')->unique())->get(['id', 'name', 'role'])->keyBy('id');
+        $actors = User::query()->whereIn('id', $events->pluck('actor_id')->filter()->unique())->get(['id', 'name', 'role'])->keyBy('id');
         $accounts = User::query()->whereIn('id', $ids('account_created'))->get(['id', 'name', 'email', 'role'])->keyBy('id');
         $companies = Company::query()->whereIn('id', $ids('company_registered'))->get(['id', 'legal_name', 'trade_name'])->keyBy('id');
         $opportunities = Opportunity::query()->whereIn('id', $ids('opportunity_created'))->get(['id', 'title'])->keyBy('id');
@@ -117,17 +120,19 @@ class AuditEventController extends Controller
         };
 
         return $events->map(function (object $event) use ($actors, $accounts, $companies, $opportunities, $linkages, $changes, $change): array {
-            $actor = $actors[$event->actor_id];
+            // D3: los eventos de la consola del servidor no tienen cuenta como actor.
+            $actor = $event->actor_id === null ? null : $actors[$event->actor_id];
 
             return [
                 'type' => $event->type,
                 'occurred_at' => Carbon::parse($event->occurred_at)->toISOString(),
-                'actor' => ['id' => $actor->id, 'name' => $actor->name, 'role' => $actor->role->value],
+                'actor' => $actor === null ? null : ['id' => $actor->id, 'name' => $actor->name, 'role' => $actor->role->value],
                 'resource' => match ($event->type) {
                     'account_created' => $this->account($accounts[$event->subject_id]),
                     'company_registered' => ['id' => $event->subject_id, 'name' => $companies[$event->subject_id]->label()],
                     'opportunity_created' => ['id' => $event->subject_id, 'title' => $opportunities[$event->subject_id]->title],
-                    'account_updated', 'password_changed', 'organization_profile_updated', 'company_invited' => $change($changes[$event->subject_id]),
+                    'account_updated', 'password_changed', 'organization_profile_updated', 'company_invited',
+                    'admin_bootstrapped', 'password_reset_issued', 'email_changed', 'account_status_changed' => $change($changes[$event->subject_id]),
                     default => $this->linkage($linkages[$event->subject_id]),
                 },
             ];

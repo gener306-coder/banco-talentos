@@ -72,6 +72,8 @@ class InitialPasswordController extends Controller
             UserRole::INSTITUTION => $user->institution_id !== null && $user->company_id === null,
             UserRole::SECRETARY => $user->institution_id === null && $user->company_id === null,
             UserRole::COMPANY => $user->company_id !== null && $user->institution_id === null,
+            // HU-S16-01 y HU-S16-02: Administradores creados por la consola o invitados por otro Administrador.
+            UserRole::ADMIN => $user->institution_id === null && $user->company_id === null,
             default => false,
         };
     }
