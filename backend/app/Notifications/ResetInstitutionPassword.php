@@ -12,6 +12,9 @@ class ResetInstitutionPassword extends Notification
 
     public const SECRETARY_INITIATOR = 'La Secretaría de Economía inició el restablecimiento de la contraseña de tu cuenta.';
 
+    /** HU-S16-04: restablecimiento de emergencia de una cuenta de Administración desde la consola del servidor. */
+    public const CONSOLE_INITIATOR = 'El equipo de operación de la plataforma inició el restablecimiento de la contraseña de tu cuenta de Administración. Tus sesiones abiertas se cerraron.';
+
     public function __construct(public readonly string $resetUrl, public readonly string $initiator = self::ADMIN_INITIATOR) {}
 
     public function via(object $notifiable): array
