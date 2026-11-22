@@ -363,6 +363,36 @@ describe('respuesta institucional HU-S6-02', () => {
     await waitFor(() => expect(within(screen.getByRole('region', { name: 'Responder solicitud' })).getByRole('button', { name: 'Aceptar solicitud' })).toBeDisabled())
   })
 
+  it('con la oportunidad inactiva no deja aceptar, explica por qué y sigue permitiendo rechazar (auditoría QA #6)', async () => {
+    const inactive = { ...detail, opportunity: { ...detail.opportunity, is_active: false } }
+    apiMock.mockResolvedValueOnce(Response.json({ data: inactive }))
+      .mockResolvedValueOnce(Response.json({ data: { ...inactive, status: 'RECHAZADA', responded_at: '2026-10-29T16:00:00Z', responded_by: { name: 'Coordinación dual' } } }))
+    renderApp('/institution/linkage-requests/41')
+    const section = await screen.findByRole('region', { name: 'Responder solicitud' })
+    const accept = within(section).getByRole('button', { name: 'Aceptar solicitud' })
+    expect(accept).toBeDisabled()
+    expect(accept).toHaveAccessibleDescription('La empresa inactivó esta oportunidad. Ya no puedes aceptar esta solicitud; puedes rechazarla con un mensaje para la empresa.')
+    const reject = within(section).getByRole('button', { name: 'Rechazar solicitud' })
+    expect(reject).toBeEnabled()
+    fireEvent.click(reject)
+    fireEvent.click(within(await screen.findByRole('alertdialog')).getByRole('button', { name: 'Rechazar solicitud' }))
+    expect(await screen.findByRole('region', { name: 'Respuesta' })).toHaveTextContent('Rechazada')
+  })
+
+  it('si la empresa inactivó la oportunidad mientras decidía, muestra el aviso del servidor y permite actualizar (auditoría QA #6)', async () => {
+    apiMock.mockResolvedValueOnce(Response.json({ data: detail }))
+      .mockResolvedValueOnce(Response.json({ message: 'Invalid', errors: { status: ['La oportunidad fue inactivada por la empresa. Puedes rechazar la solicitud.'] } }, { status: 422 }))
+      .mockResolvedValueOnce(Response.json({ data: { ...detail, opportunity: { ...detail.opportunity, is_active: false } } }))
+    renderApp('/institution/linkage-requests/41')
+    const section = await screen.findByRole('region', { name: 'Responder solicitud' })
+    fireEvent.click(within(section).getByRole('button', { name: 'Aceptar solicitud' }))
+    fireEvent.click(within(await screen.findByRole('alertdialog')).getByRole('button', { name: 'Aceptar solicitud' }))
+    expect(await within(section).findByRole('alert')).toHaveTextContent('La oportunidad fue inactivada por la empresa. Puedes rechazar la solicitud.')
+    fireEvent.click(within(section).getByRole('button', { name: 'Actualizar solicitud' }))
+    await waitFor(() => expect(within(screen.getByRole('region', { name: 'Responder solicitud' })).getByRole('button', { name: 'Aceptar solicitud' })).toBeDisabled())
+    expect(screen.getByRole('region', { name: 'Oportunidad' })).toHaveTextContent('INACTIVA')
+  })
+
   it('avisa si el alumno ya tiene otras vinculaciones aceptadas, sin impedir responder (T-S14-12)', async () => {
     apiMock.mockResolvedValueOnce(Response.json({ data: { ...detail, student_accepted_elsewhere: [{ id: 77, company: 'Taller Norteño', opportunity: 'Soldadura', responded_at: '2026-10-20T10:00:00Z' }] } }))
     renderApp('/institution/linkage-requests/41')

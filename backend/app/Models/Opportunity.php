@@ -85,6 +85,9 @@ class Opportunity extends Model
         return (int) ($this->getAttribute('accepted_count') ?? $this->acceptedCount());
     }
 
+    /** Auditoría QA (#6): al aceptar una solicitud de una oportunidad que la empresa inactivó. */
+    public const INACTIVE_MESSAGE = 'La oportunidad fue inactivada por la empresa. Puedes rechazar la solicitud.';
+
     public static function fullMessage(int $vacancies): string
     {
         return $vacancies === 1 ? 'La oportunidad ya cubrió su único lugar.' : "La oportunidad ya cubrió sus {$vacancies} lugares.";
