@@ -1,5 +1,6 @@
 <?php
 
+use App\Enums\UserRole;
 use App\Models\Company;
 use App\Models\Institution;
 use App\Models\LinkageRequest;
@@ -135,6 +136,33 @@ it('la búsqueda de talento no crece en consultas con el número de perfiles', f
     $many = queriesFor($this, '/api/talent');
     // Solo cuentan los perfiles buscables; deben ser más que al medir la primera vez.
     expect($this->browserRequest('GET', '/api/talent')->json('meta.total'))->toBe(6);
+
+    expect($many)->toBe($few);
+});
+
+it('el listado de cuentas de Administración no crece en consultas con el número de cuentas (HU-S16-02)', function () {
+    $admin = User::factory()->role(UserRole::ADMIN)->create();
+    User::factory()->role(UserRole::ADMIN)->create();
+    $this->loginWithCookies($admin)->assertOk();
+    $few = queriesFor($this, '/api/admin-accounts');
+
+    User::factory()->role(UserRole::ADMIN)->count(4)->create();
+    $many = queriesFor($this, '/api/admin-accounts');
+    expect($this->browserRequest('GET', '/api/admin-accounts')->json('meta.total'))->toBe(6);
+
+    expect($many)->toBe($few);
+});
+
+it('el listado de instituciones de Administración no crece en consultas con el número de instituciones (HU-S16-05)', function () {
+    $admin = User::factory()->role(UserRole::ADMIN)->create();
+    Institution::factory()->count(1)->create();
+    $this->loginWithCookies($admin)->assertOk();
+    $few = queriesFor($this, '/api/institutions');
+
+    Institution::factory()->count(4)->create();
+    $many = queriesFor($this, '/api/institutions');
+    // La institución del beforeEach más las 5 nuevas.
+    expect($this->browserRequest('GET', '/api/institutions')->json('meta.total'))->toBe(6);
 
     expect($many)->toBe($few);
 });

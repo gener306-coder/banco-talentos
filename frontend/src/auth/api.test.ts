@@ -116,7 +116,15 @@ describe('cliente de sesión', () => {
 describe('contraseña inicial e institución en la sesión', () => {
   it('conserva únicamente el identificador y nombre de la institución vinculada', async () => {
     fetchMock.mockResolvedValueOnce(Response.json({ user: { ...user, role: 'INSTITUTION', institution: { id: 7, name: 'Instituto Dual', private: 'omitido' }, password: 'nunca mostrar' } }))
-    await expect(currentUser()).resolves.toEqual({ ...user, role: 'INSTITUTION', institution: { id: 7, name: 'Instituto Dual' } })
+    await expect(currentUser()).resolves.toEqual({ ...user, role: 'INSTITUTION', institution: { id: 7, name: 'Instituto Dual', missing: [], onboarding: 'done', canOperate: true } })
+  })
+
+  it('lee lo que le falta a la institución invitada, su onboarding y si puede operar (HU-S16-07)', async () => {
+    fetchMock.mockResolvedValueOnce(Response.json({ user: { ...user, role: 'INSTITUTION', institution: { id: 7, name: null, missing: ['name', 'cct', 'contact_name', 'contact_email'], onboarding: 'pending', can_operate: true } } }))
+    // canOperate se deriva de lo que falta, no del valor enviado.
+    await expect(currentUser()).resolves.toMatchObject({ institution: { id: 7, name: null, missing: ['name', 'cct', 'contact_name', 'contact_email'], onboarding: 'pending', canOperate: false } })
+    fetchMock.mockResolvedValueOnce(Response.json({ user: { ...user, role: 'INSTITUTION', institution: { id: 7, name: 'X', missing: ['rfc'] } } }))
+    await expect(currentUser()).rejects.toMatchObject({ status: 502 })
   })
 
   it('conserva únicamente el identificador y nombre de la empresa vinculada (HU-S4-03 CA-05)', async () => {
@@ -192,5 +200,15 @@ describe('restablecimiento de contraseña HU-S1-04', () => {
       .mockResolvedValueOnce(Response.json({ code: 'INSTITUTION_INACTIVE' }, { status: 403 }))
     await expect(resetPassword(input)).rejects.toMatchObject({ status: 422, errors: { token: ['El enlace de restablecimiento no es válido o ha expirado.'] } })
     await expect(resetPassword(input)).rejects.toMatchObject({ status: 403, code: 'INSTITUTION_INACTIVE' })
+  })
+})
+
+describe('institución invitada sin nombre (HU-S16-05)', () => {
+  it('organizationOf usa el respaldo cuando el nombre de la institución llega en null', async () => {
+    const { organizationOf } = await import('./user')
+    expect(organizationOf({ id: 1, name: 'Cuenta', email: 'c@example.test', role: 'INSTITUTION', institution: { id: 2, name: null }, company: null } as never))
+      .toBe('Institución sin nombre')
+    expect(organizationOf({ id: 1, name: 'Cuenta', email: 'c@example.test', role: 'INSTITUTION', institution: { id: 2, name: 'UT del Golfo' }, company: null } as never))
+      .toBe('UT del Golfo')
   })
 })

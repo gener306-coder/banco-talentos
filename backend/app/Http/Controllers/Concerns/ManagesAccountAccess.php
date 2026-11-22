@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Concerns;
 
+use App\Models\AccountAuditEvent;
 use App\Models\User;
 use App\Services\InstitutionPasswordResetLink;
 use Closure;
@@ -39,8 +40,13 @@ trait ManagesAccountAccess
             if ($account->password_setup_required) {
                 throw ValidationException::withMessages(['is_active' => [self::PENDING_SETUP]]);
             }
+            $changed = $account->is_active !== $active;
             $account->is_active = $active;
             $account->save();
+            // D8 (HU-S16-02): el cambio de estado queda en la bitácora, solo con el estado nuevo como marcador.
+            if ($changed) {
+                AccountAuditEvent::record($request->user(), AccountAuditEvent::ACCOUNT_STATUS_CHANGED, $account, [$active ? 'activated' : 'deactivated']);
+            }
 
             return $account;
         });

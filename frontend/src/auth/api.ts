@@ -33,12 +33,31 @@ export function sessionCompany(id: number, name: string | null, missing: Company
   return { id, name, missing, onboarding, canOperate: !missing.some((gap) => OPERATING_MINIMUM.includes(gap)) }
 }
 
+/** HU-S16-07: los 4 datos mínimos de la institución (D6); sin ellos no opera (HU-S16-08). */
+export type InstitutionGap = 'name' | 'cct' | 'contact_name' | 'contact_email'
+const INSTITUTION_GAPS: readonly string[] = ['name', 'cct', 'contact_name', 'contact_email']
+export const isInstitutionGap = (value: unknown): value is InstitutionGap => typeof value === 'string' && INSTITUTION_GAPS.includes(value)
+
+export interface SessionInstitution {
+  id: number
+  /** HU-S16-05: null mientras la institución invitada no capture su nombre oficial. */
+  name: string | null
+  missing: InstitutionGap[]
+  onboarding: 'pending' | 'done'
+  canOperate: boolean
+}
+
+/** La institución de la sesión con lo que falta: todos sus datos son el mínimo, así que opera con el perfil completo. */
+export function sessionInstitution(id: number, name: string | null, missing: InstitutionGap[], onboarding: SessionInstitution['onboarding']): SessionInstitution {
+  return { id, name, missing, onboarding, canOperate: missing.length === 0 }
+}
+
 export interface User {
   id: number
   name: string
   email: string
   role: Role
-  institution: { id: number; name: string } | null
+  institution: SessionInstitution | null
   /**
    * Empresa vinculada a una cuenta COMPANY (HU-S4-03 CA-05): solo su nombre visible, null mientras la empresa
    * invitada no capture ninguno (HU-S14-02).
@@ -66,14 +85,19 @@ function sessionUser(data: unknown): User {
     throw new ApiError(502)
   }
 
-  const organization = (key: 'institution'): { id: number; name: string } | null => {
-    if (!(key in user)) return null
-    const linked: unknown = (user as Record<string, unknown>)[key]
+  const institution = (): User['institution'] => {
+    if (!('institution' in user)) return null
+    const linked: unknown = user.institution
     if (linked === null || linked === undefined) return null
     if (typeof linked !== 'object' || !('id' in linked) || typeof linked.id !== 'number' ||
         !Number.isSafeInteger(linked.id) || linked.id <= 0 ||
-        !('name' in linked) || typeof linked.name !== 'string') throw new ApiError(502)
-    return { id: linked.id, name: linked.name }
+        !('name' in linked) || (linked.name !== null && typeof linked.name !== 'string')) throw new ApiError(502)
+    // HU-S16-07: sin estos datos (respuestas anteriores), la institución se trata como completa y con el onboarding hecho.
+    const missing = 'missing' in linked ? linked.missing : []
+    if (!Array.isArray(missing) || !missing.every(isInstitutionGap)) throw new ApiError(502)
+    const onboarding = 'onboarding' in linked ? linked.onboarding : 'done'
+    if (onboarding !== 'pending' && onboarding !== 'done') throw new ApiError(502)
+    return sessionInstitution(linked.id, linked.name as string | null, missing, onboarding)
   }
 
   // HU-S14-02: la empresa invitada puede no tener nombre todavía.
@@ -91,7 +115,7 @@ function sessionUser(data: unknown): User {
 
   return {
     id: user.id, name: user.name, email: user.email, role: user.role as Role,
-    institution: organization('institution'), company: company(),
+    institution: institution(), company: company(),
   }
 }
 
@@ -127,6 +151,17 @@ export interface InitialPasswordInput {
 }
 
 // Ni la cookie CSRF ni el envío exponen la página del enlace (con su token) como Referer.
+/**
+ * HU-S16-03: pide el enlace de restablecimiento. El servidor responde siempre igual (202), exista o no la cuenta; se
+ * devuelve su mensaje neutro para mostrarlo tal cual.
+ */
+export async function requestPasswordReset(email: string): Promise<string> {
+  await request('/sanctum/csrf-cookie', { referrerPolicy: 'no-referrer' })
+  const response = await request('/api/password/forgot', { method: 'POST', referrerPolicy: 'no-referrer', body: JSON.stringify({ email }) })
+  if (typeof response !== 'object' || response === null || !('message' in response) || typeof response.message !== 'string') throw new ApiError(502)
+  return response.message
+}
+
 async function submitNewPassword(path: string, input: InitialPasswordInput): Promise<void> {
   await request('/sanctum/csrf-cookie', { referrerPolicy: 'no-referrer' })
   await request(path, {

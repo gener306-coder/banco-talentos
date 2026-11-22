@@ -53,7 +53,7 @@ class InstitutionAccountController extends Controller
                 'is_active' => $user->is_active,
                 'institution' => [
                     'id' => $user->institution->id,
-                    'name' => $user->institution->name,
+                    'name' => $user->institution->label(),
                 ],
             ],
         ];

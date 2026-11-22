@@ -250,7 +250,7 @@ class LinkageRequestController extends Controller
                 'period_number' => $student->period_number,
             ],
             'institution' => [
-                'name' => $linkage->institution->name,
+                'name' => $linkage->institution->label(),
                 // T-S8-11: responsable de la institución; null en las registradas antes de pedirlo.
                 'contact_name' => $linkage->institution->contact_name,
                 'contact_position' => $linkage->institution->contact_position,

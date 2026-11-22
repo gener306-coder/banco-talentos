@@ -1,4 +1,4 @@
-import { accessErrorMessages, ApiError, csrfToken, request } from '../lib/http'
+import { accessErrorMessages, ApiError, csrfToken, isProfileIncomplete, request } from '../lib/http'
 import type { AccessErrorCode, ValidationErrors } from '../lib/http'
 import type { FailureMessages } from '../lib/useApiRequest'
 import { prefersReducedMotion } from '../ui/modal'
@@ -113,12 +113,15 @@ export function duration(seconds: number): string {
 function xhrError(xhr: XMLHttpRequest): ApiError {
   let errors: ValidationErrors = {}
   let code: AccessErrorCode | undefined
+  let profileIncomplete = false
   try {
     const body: unknown = JSON.parse(xhr.responseText)
     if (typeof body === 'object' && body !== null) {
       if ('code' in body && typeof body.code === 'string' && Object.hasOwn(accessErrorMessages, body.code)) {
         code = body.code as AccessErrorCode
       }
+      // HU-S16-08: sin el perfil mínimo de la institución, la vista enlaza a Mi cuenta.
+      profileIncomplete = isProfileIncomplete(xhr.status, body)
       if (xhr.status === 422 && 'errors' in body && typeof body.errors === 'object' && body.errors !== null && !Array.isArray(body.errors)) {
         errors = Object.fromEntries(Object.entries(body.errors).filter((entry): entry is [string, string[]] =>
           Array.isArray(entry[1]) && entry[1].every((message: unknown) => typeof message === 'string')))
@@ -127,7 +130,7 @@ function xhrError(xhr: XMLHttpRequest): ApiError {
   } catch {
     // Un cuerpo vacío o inválido conserva el código HTTP.
   }
-  return new ApiError(xhr.status, errors, code)
+  return new ApiError(xhr.status, errors, code, profileIncomplete)
 }
 
 /**

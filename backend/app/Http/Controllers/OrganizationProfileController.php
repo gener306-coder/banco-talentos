@@ -43,9 +43,9 @@ class OrganizationProfileController extends Controller
                 if ($organization->isDirty('municipality_code')) {
                     $organization->location = $organization->municipality_code === null ? null : Municipality::locationOf($organization->municipality_code);
                 }
-                // HU-S14-03 CA-02: guardar el perfil, aunque sea en parcial, termina el onboarding.
-                $organization->onboarding_dismissed_at ??= now();
             }
+            // HU-S14-03 CA-02 y HU-S16-07: guardar el perfil, aunque sea en parcial, termina el onboarding.
+            $organization->onboarding_dismissed_at ??= now();
             if ($organization->isDirty()) {
                 $organization->save();
             }
@@ -71,12 +71,19 @@ class OrganizationProfileController extends Controller
         return $this->respond($organization->refresh());
     }
 
-    /** HU-S14-03 CA-02: «Completar más tarde» termina el onboarding sin guardar datos ni registrar un evento. */
+    /**
+     * HU-S14-03 CA-02 y HU-S16-07: «Completar más tarde» termina el onboarding de la empresa o la institución sin guardar
+     * datos ni registrar un evento.
+     */
     public function postpone(Request $request): Response
     {
         $user = $request->user();
-        abort_if($user->role !== UserRole::COMPANY, 403, 'Solo las empresas tienen un perfil por completar.');
-        Company::query()->whereKey($user->company_id)->whereNull('onboarding_dismissed_at')->update(['onboarding_dismissed_at' => now()]);
+        $query = match ($user->role) {
+            UserRole::COMPANY => Company::query()->whereKey($user->company_id),
+            UserRole::INSTITUTION => Institution::query()->whereKey($user->institution_id),
+            default => abort(403, 'Solo las empresas y las instituciones tienen un perfil por completar.'),
+        };
+        $query->whereNull('onboarding_dismissed_at')->update(['onboarding_dismissed_at' => now()]);
 
         return response()->noContent()->header('Cache-Control', 'no-store, private');
     }
@@ -122,6 +129,9 @@ class OrganizationProfileController extends Controller
                 'name' => $organization->name,
                 'cct' => $organization->cct,
                 ...$contact,
+                // HU-S16-07: lo que falta del mínimo (D6) y si ya puede operar, para actualizar la sesión.
+                'missing' => $organization->missing(),
+                'can_operate' => $organization->missing() === [],
             ];
 
         return response()->json(['data' => $data])->header('Cache-Control', 'no-store, private');

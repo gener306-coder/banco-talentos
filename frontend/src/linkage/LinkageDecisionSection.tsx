@@ -1,5 +1,7 @@
 import { PendingLabel } from '../ui/forms'
 import { useRef, useState } from 'react'
+import { ProfileIncompleteNotice } from '../account/ProfileIncompleteNotice'
+import { useAuth } from '../auth/useAuth'
 import { InstitutionRequestError } from '../institutions/InstitutionLayout'
 import { useApiMutation } from '../lib/useApiRequest'
 import { hasContactInformation } from '../students/cvCatalogs'
@@ -44,7 +46,9 @@ export function LinkageDecisionSection({ data, onDecided, refresh }: {
   const full = isFull(data.opportunity)
   // Auditoría QA (#6): la empresa inactivó la oportunidad; tampoco se puede aceptar. Tiene prioridad sobre el cupo.
   const inactive = !data.opportunity.is_active
-  const blockedNote = inactive ? 'linkage-inactive-note' : full ? 'linkage-full-note' : undefined
+  // HU-S16-08 (D6): aceptar exige el perfil mínimo de la institución; rechazar sigue disponible.
+  const incomplete = useAuth().user?.institution?.canOperate === false || mutation.failure?.profileIncomplete === true
+  const blockedNote = inactive ? 'linkage-inactive-note' : full ? 'linkage-full-note' : incomplete ? 'linkage-profile-note' : undefined
   const messageError = localError ?? mutation.failure?.errors.response_message?.join(' ')
   const statusError = mutation.failure?.errors.status?.join(' ')
 
@@ -100,6 +104,9 @@ export function LinkageDecisionSection({ data, onDecided, refresh }: {
             )}
             {!inactive && full && !statusError && (
               <p className="notice-muted" id="linkage-full-note">La oportunidad ya cubrió sus lugares ({placesLabel(data.opportunity)}). Ya no puedes aceptar esta solicitud; puedes rechazarla con un mensaje para la empresa.</p>
+            )}
+            {!inactive && !full && incomplete && !statusError && (
+              <div id="linkage-profile-note"><ProfileIncompleteNotice /></div>
             )}
             <form className="linkage-decision" onSubmit={(event) => event.preventDefault()} aria-busy={mutation.pending} noValidate>
               <fieldset disabled={mutation.pending}>

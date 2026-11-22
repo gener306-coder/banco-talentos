@@ -2,6 +2,7 @@
 
 use App\Enums\UserRole;
 use App\Http\Controllers\AccountController;
+use App\Http\Controllers\AdminAccountController;
 use App\Http\Controllers\AuditEventController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\CompanyAccountController;
@@ -104,6 +105,18 @@ Route::middleware(['auth:sanctum', 'active', 'role:'.UserRole::ADMIN->value.','.
         // Estado y restablecimiento de contraseña (HU-S6-04).
         Route::patch('{account}/status', [SecretaryAccountController::class, 'updateStatus'])->where('account', '[1-9][0-9]{0,17}');
         Route::post('/password-reset/start', [SecretaryAccountController::class, 'startPasswordReset'])->middleware('throttle:account-password-reset');
+    });
+
+// Cuentas de Administración (HU-S16-02): solo ADMIN las lista, invita, activa o inactiva e inicia su restablecimiento.
+// Nadie se inactiva a sí mismo y siempre queda al menos un Administrador activo.
+Route::middleware(['auth:sanctum', 'active', 'role:'.UserRole::ADMIN->value])
+    ->prefix('admin-accounts')
+    ->group(function (): void {
+        Route::get('/', [AdminAccountController::class, 'index']);
+        Route::post('/', [AdminAccountController::class, 'store']);
+        Route::post('/resend-setup', [AdminAccountController::class, 'resendSetup'])->middleware('throttle:admin-setup-resend');
+        Route::patch('{account}/status', [AdminAccountController::class, 'updateStatus'])->where('account', '[1-9][0-9]{0,17}');
+        Route::post('/password-reset/start', [AdminAccountController::class, 'startPasswordReset'])->middleware('throttle:account-password-reset');
     });
 
 // Empresas validadas por la Secretaría de Economía (HU-S4-02) y sus cuentas (HU-S4-03); sin DELETE.

@@ -1,19 +1,23 @@
 import { ApiError, request } from '../lib/http'
 
-/** Persona responsable (T-S8-11): su nombre también nombra la cuenta que se crea con el correo de contacto. */
+/** Edición de Administración (HU-S16-06): todos los datos son opcionales; un valor vacío se guarda como faltante. */
 export interface InstitutionInput {
-  name: string
-  cct: string
-  contact_name: string
-  /** Opcional (T-S8-11). */
+  name: string | null
+  cct: string | null
+  contact_name: string | null
   contact_position: string | null
-  contact_email: string
-  /** Opcional (T-S8-11). */
+  contact_email: string | null
   contact_phone: string | null
 }
 
-/** Alta (T-S8-11): el enlace de la cuenta del responsable se envía por correo o se genera para compartirlo (HU-S2-01). */
-export interface NewInstitutionInput extends InstitutionInput {
+/**
+ * Invitación (HU-S16-06): solo el correo de la cuenta y, opcionales, un nombre de referencia y el de la persona. El
+ * enlace se envía por correo o se genera para compartirlo (HU-S2-01); el perfil lo captura la institución al entrar.
+ */
+export interface NewInstitutionInput {
+  email: string
+  name: string | null
+  person_name: string | null
   delivery_method: DeliveryMethod
 }
 
@@ -24,9 +28,8 @@ export interface CreatedInstitution {
   setupLink?: string
 }
 
-export interface Institution extends Omit<InstitutionInput, 'contact_name'> {
-  /** null en las instituciones registradas antes de pedir al responsable. */
-  contact_name: string | null
+/** HU-S16-05: los datos del perfil llegan en null mientras la institución invitada no los captura. */
+export interface Institution extends InstitutionInput {
   id: number
   is_active: boolean
   created_at: string
@@ -43,11 +46,11 @@ function responseData(response: unknown): unknown {
 function institution(data: unknown): Institution {
   if (typeof data !== 'object' || data === null ||
       !('id' in data) || typeof data.id !== 'number' || !Number.isSafeInteger(data.id) || data.id <= 0 ||
-      !('name' in data) || typeof data.name !== 'string' ||
-      !('cct' in data) || typeof data.cct !== 'string' ||
+      !('name' in data) || (data.name !== null && typeof data.name !== 'string') ||
+      !('cct' in data) || (data.cct !== null && typeof data.cct !== 'string') ||
       !('contact_name' in data) || (data.contact_name !== null && typeof data.contact_name !== 'string') ||
       !('contact_position' in data) || (data.contact_position !== null && typeof data.contact_position !== 'string') ||
-      !('contact_email' in data) || typeof data.contact_email !== 'string' ||
+      !('contact_email' in data) || (data.contact_email !== null && typeof data.contact_email !== 'string') ||
       !('contact_phone' in data) || (data.contact_phone !== null && typeof data.contact_phone !== 'string') ||
       !('is_active' in data) || typeof data.is_active !== 'boolean' ||
       !('created_at' in data) || typeof data.created_at !== 'string' ||
@@ -56,8 +59,8 @@ function institution(data: unknown): Institution {
   }
 
   return {
-    id: data.id, name: data.name, cct: data.cct, contact_name: data.contact_name, contact_position: data.contact_position,
-    contact_email: data.contact_email, contact_phone: data.contact_phone,
+    id: data.id, name: data.name as string | null, cct: data.cct as string | null, contact_name: data.contact_name, contact_position: data.contact_position,
+    contact_email: data.contact_email as string | null, contact_phone: data.contact_phone,
     is_active: data.is_active, created_at: data.created_at, updated_at: data.updated_at,
   }
 }
@@ -66,11 +69,48 @@ function institutionPath(id: string): string {
   return `/api/institutions/${encodeURIComponent(id)}`
 }
 
-export async function listInstitutions(signal?: AbortSignal): Promise<Institution[]> {
-  const data = responseData(await request('/api/institutions', { signal }))
-  if (!Array.isArray(data)) throw new ApiError(502)
-  return data.map(institution)
+/** HU-S16-05: estado del perfil en el listado, como en las empresas. */
+export type InstitutionProfileStatus = 'pending_access' | 'incomplete' | 'complete'
+
+export interface InstitutionSummary extends Institution {
+  account_email: string | null
+  profile_status: InstitutionProfileStatus
 }
+
+export interface InstitutionPage {
+  institutions: InstitutionSummary[]
+  page: number
+  lastPage: number
+  total: number
+}
+
+const PROFILE_STATUSES: readonly InstitutionProfileStatus[] = ['pending_access', 'incomplete', 'complete']
+
+function summary(data: unknown): InstitutionSummary {
+  const base = institution(data)
+  const row = data as Record<string, unknown>
+  if ((row.account_email !== null && typeof row.account_email !== 'string') ||
+      !PROFILE_STATUSES.includes(row.profile_status as InstitutionProfileStatus)) throw new ApiError(502)
+  return { ...base, account_email: row.account_email as string | null, profile_status: row.profile_status as InstitutionProfileStatus }
+}
+
+const isPositiveInt = (value: unknown): value is number => typeof value === 'number' && Number.isSafeInteger(value) && value > 0
+
+/** HU-S16-05: listado paginado con búsqueda por nombre, CCT o correo de la cuenta. */
+export async function listInstitutions(page: number, query: string, signal?: AbortSignal): Promise<InstitutionPage> {
+  const params = new URLSearchParams({ page: String(page) })
+  if (query) params.set('q', query)
+  const response = await request(`/api/institutions?${params.toString()}`, { signal })
+  if (typeof response !== 'object' || response === null || !('data' in response) || !Array.isArray(response.data) ||
+      !('meta' in response) || typeof response.meta !== 'object' || response.meta === null) throw new ApiError(502)
+  const meta = response.meta
+  if (!('current_page' in meta) || !isPositiveInt(meta.current_page) || !('last_page' in meta) || !isPositiveInt(meta.last_page) ||
+      !('total' in meta) || typeof meta.total !== 'number' || !Number.isSafeInteger(meta.total) || meta.total < 0) throw new ApiError(502)
+  return { institutions: response.data.map(summary), page: meta.current_page, lastPage: meta.last_page, total: meta.total }
+}
+
+/** Nombre para mostrar en las vistas de Administración: el oficial o el respaldo. */
+export const UNNAMED_INSTITUTION = 'Institución sin nombre'
 
 export async function getInstitution(id: string, signal?: AbortSignal): Promise<Institution> {
   return institution(responseData(await request(institutionPath(id), { signal })))
@@ -89,17 +129,19 @@ async function writeInstitution(path: string, method: string, body: InstitutionI
 
 function fields(input: InstitutionInput): InstitutionInput {
   return {
-    name: input.name, cct: input.cct, contact_name: input.contact_name, contact_position: input.contact_position || null,
-    contact_email: input.contact_email, contact_phone: input.contact_phone || null,
+    name: input.name || null, cct: input.cct || null, contact_name: input.contact_name || null, contact_position: input.contact_position || null,
+    contact_email: input.contact_email || null, contact_phone: input.contact_phone || null,
   }
 }
 
 /**
- * Registra la institución y la cuenta de su responsable (T-S8-11). Con correo, el enlace nunca vuelve; con la entrega
+ * Invita a la institución y crea la cuenta de su persona (HU-S16-06). Con correo, el enlace nunca vuelve; con la entrega
  * manual se valida como en «Nueva cuenta institucional» y solo vive en la memoria de quien lo pidió.
  */
 export async function createInstitution(input: NewInstitutionInput): Promise<CreatedInstitution> {
-  const response = await send('/api/institutions', 'POST', { ...fields(input), delivery_method: input.delivery_method })
+  const response = await send('/api/institutions', 'POST', {
+    email: input.email, name: input.name || null, person_name: input.person_name || null, delivery_method: input.delivery_method,
+  })
   const delivery = setupDelivery(response, true)!
   const setupLink = manualSetupLink(response, delivery)
   return { institution: institution(responseData(response)), setupDelivery: delivery, ...(setupLink ? { setupLink } : {}) }

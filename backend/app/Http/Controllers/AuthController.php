@@ -86,7 +86,12 @@ class AuthController extends Controller
         if ($user->institution) {
             $data['institution'] = [
                 'id' => $user->institution->id,
-                'name' => $user->institution->name,
+                // HU-S16-05: null mientras la institución invitada no captura su nombre (respaldo visual en auth/user.ts).
+                'name' => $user->institution->displayName(),
+                // HU-S16-07: como en la empresa, claves de lo que falta (sin valores), el onboarding y el mínimo (D6).
+                'missing' => $user->institution->missing(),
+                'onboarding' => $user->institution->onboarding_dismissed_at !== null || $user->institution->missing() === [] ? 'done' : 'pending',
+                'can_operate' => $user->institution->missing() === [],
             ];
         }
 

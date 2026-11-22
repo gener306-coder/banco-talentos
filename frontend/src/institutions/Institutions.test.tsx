@@ -22,6 +22,11 @@ const fields = {
   contact_email: institution.contact_email,
 }
 const institutionPaths = ['/institutions', '/institutions/new', '/institutions/27', '/institutions/27/edit']
+/** HU-S16-05: listado paginado; cada fila trae el correo de su cuenta y el estado del perfil. */
+const listOf = (items: Record<string, unknown>[]) => Response.json({
+  data: items.map((item) => ({ account_email: null, profile_status: 'complete', ...item })),
+  meta: { current_page: 1, last_page: 1, total: items.length },
+})
 const otherRoles = ['INSTITUTION', 'COMPANY', 'SECRETARY']
 const fetchMock = vi.fn<typeof fetch>()
 const apiMock = vi.fn<typeof fetch>()
@@ -42,8 +47,14 @@ function deferredResponse() {
 }
 
 const RESPONSIBLE = 'María López'
-// El alta lo llama «Correo de la persona responsable»; la edición, «Correo de contacto» (T-S8-11).
-const EMAIL = /^Correo de /
+const EMAIL = 'Correo de contacto'
+/** HU-S16-06: la invitación solo pide el correo de la cuenta. */
+const INVITE_EMAIL = 'Correo de la cuenta'
+const INVITE = 'Enviar invitación'
+
+function fillInvite(email = 'coordinacion@invitada.test') {
+  fireEvent.change(screen.getByLabelText(INVITE_EMAIL), { target: { value: email } })
+}
 /** Respuesta del alta: la cuenta del responsable se creó y su enlace salió por correo (T-S8-11). */
 const created = (delivery = 'sent') => Response.json({ data: institution, setup_delivery: delivery }, { status: 201 })
 
@@ -94,7 +105,7 @@ afterEach(() => vi.unstubAllGlobals())
 
 describe('acceso administrativo a instituciones', () => {
   it('ofrece al ADMIN la navegación desde su sesión al listado', async () => {
-    apiMock.mockResolvedValueOnce(Response.json({ data: [institution] }))
+    apiMock.mockResolvedValueOnce(listOf([institution]))
     renderApp('/')
     fireEvent.click(await screen.findByRole('link', { name: 'Instituciones' }))
     expect(await screen.findByRole('heading', { name: 'Instituciones' })).toBeInTheDocument()
@@ -139,7 +150,7 @@ describe('consulta de instituciones', () => {
     renderApp()
     expect(await screen.findByText('Cargando instituciones…')).toHaveAttribute('role', 'status')
     expect(screen.queryByText('No hay instituciones registradas.')).not.toBeInTheDocument()
-    await act(async () => { response.resolve(Response.json({ data: [institution, inactive] })) })
+    await act(async () => { response.resolve(listOf([institution, inactive])) })
 
     const activeRow = screen.getByRole('row', { name: new RegExp(institution.name) })
     expect(within(activeRow).getByText(institution.cct)).toBeInTheDocument()
@@ -149,24 +160,24 @@ describe('consulta de instituciones', () => {
     const inactiveRow = screen.getByRole('row', { name: /Instituto del Sur/ })
     expect(within(inactiveRow).getByText('INACTIVA')).toBeInTheDocument()
     expect(screen.getByRole('link', { name: 'Nueva institución' })).toHaveAttribute('href', '/institutions/new')
-    expect(apiMock.mock.calls[0][0]).toBe('/api/institutions')
+    expect(apiMock.mock.calls[0][0]).toBe('/api/institutions?page=1')
     expect(screen.queryByRole('button', { name: /eliminar/i })).not.toBeInTheDocument()
   })
 
   it('muestra un listado vacío y permite abrir el formulario de registro', async () => {
-    apiMock.mockResolvedValueOnce(Response.json({ data: [] }))
+    apiMock.mockResolvedValueOnce(listOf([]))
     renderApp()
     expect(await screen.findByText('No hay instituciones registradas.')).toBeInTheDocument()
     expect(screen.queryByRole('alert')).not.toBeInTheDocument()
     fireEvent.click(screen.getByRole('link', { name: 'Nueva institución' }))
-    expect(await screen.findByRole('button', { name: 'Crear institución' })).toBeInTheDocument()
+    expect(await screen.findByRole('button', { name: 'Enviar invitación' })).toBeInTheDocument()
     expect(screen.getByLabelText('Ruta actual').textContent).toBe('/institutions/new')
   })
 
   it.each(['red', 'servidor'])('permite reintentar la consulta ante un error de %s', async (failure) => {
     if (failure === 'red') apiMock.mockRejectedValueOnce(new TypeError('Network error'))
     else apiMock.mockResolvedValueOnce(new Response(null, { status: 500 }))
-    apiMock.mockResolvedValueOnce(Response.json({ data: [institution] }))
+    apiMock.mockResolvedValueOnce(listOf([institution]))
     renderApp()
     expect(await screen.findByRole('alert')).toHaveTextContent(failure === 'red' ? 'No pudimos conectar' : 'No pudimos completar')
     expect(screen.queryByText('No hay instituciones registradas.')).not.toBeInTheDocument()
@@ -177,7 +188,7 @@ describe('consulta de instituciones', () => {
   })
 
   it('consulta los datos individuales y ofrece edición y cambio de estado sin eliminación', async () => {
-    apiMock.mockResolvedValueOnce(Response.json({ data: [institution] }))
+    apiMock.mockResolvedValueOnce(listOf([institution]))
       .mockResolvedValueOnce(Response.json({ data: institution }))
     renderApp()
     fireEvent.click(await screen.findByRole('link', { name: `Ver detalle de ${institution.name}` }))
@@ -224,67 +235,80 @@ describe('consulta de instituciones', () => {
 })
 
 describe('registro y edición de instituciones', () => {
-  it('exige los campos obligatorios y un correo válido antes de enviar el formulario', async () => {
+  it('la invitación solo exige un correo válido y no pide el perfil (HU-S16-06)', async () => {
     renderApp('/institutions/new')
-    const submit = await screen.findByRole('button', { name: 'Crear institución' })
+    const submit = await screen.findByRole('button', { name: INVITE })
+    expect(screen.queryByLabelText('CCT')).not.toBeInTheDocument()
+    expect(screen.queryByLabelText(EMAIL)).not.toBeInTheDocument()
+    expect(screen.getByLabelText('Nombre de la institución (opcional)')).not.toBeRequired()
+    expect(screen.getByLabelText('Nombre de la persona (opcional)')).not.toBeRequired()
     fireEvent.click(submit)
-    expect(screen.getByLabelText('Nombre')).toBeInvalid()
-    expect(screen.getByLabelText('CCT')).toBeInvalid()
-    expect(screen.getByLabelText('Nombre de la persona responsable')).toBeInvalid()
-    expect(screen.getByLabelText('Teléfono (opcional)')).toBeValid()
-    expect(screen.getByLabelText(EMAIL)).toBeInvalid()
-    expect(apiMock).not.toHaveBeenCalled()
-    fillForm({ ...fields, contact_email: 'sin-arroba' })
+    expect(await screen.findByText('El correo de la cuenta es obligatorio.')).toBeInTheDocument()
+    expect(screen.getByLabelText(INVITE_EMAIL)).toHaveAttribute('aria-invalid', 'true')
+    fillInvite('sin-arroba')
+    fireEvent.blur(screen.getByLabelText(INVITE_EMAIL))
     fireEvent.click(submit)
-    expect(screen.getByLabelText(EMAIL)).toBeInvalid()
     expect(apiMock).not.toHaveBeenCalled()
   })
 
-  it('registra únicamente los campos acordados y muestra el estado activo devuelto por el servidor', async () => {
+  it('invita solo con el correo y los nombres opcionales y lleva al detalle con el aviso de envío', async () => {
     apiMock.mockResolvedValueOnce(created())
       .mockResolvedValueOnce(Response.json({ data: institution }))
     renderApp('/institutions/new')
-    await screen.findByRole('button', { name: 'Crear institución' })
-    fillForm()
-    fireEvent.click(screen.getByRole('button', { name: 'Crear institución' }))
+    await screen.findByRole('button', { name: INVITE })
+    fillInvite(' coordinacion@invitada.test ')
+    fireEvent.change(screen.getByLabelText('Nombre de la institución (opcional)'), { target: { value: ' UT del Golfo ' } })
+    fireEvent.click(screen.getByRole('button', { name: INVITE }))
     expect(await screen.findByText(institution.name)).toBeInTheDocument()
     expect(screen.getByText('ACTIVA')).toBeInTheDocument()
-    expect(screen.getByText('Institución registrada. Enviamos a contacto@example.test el enlace para establecer su contraseña.')).toHaveAttribute('role', 'status')
+    expect(screen.getByText(`Invitación enviada. coordinacion@invitada.test recibirá el enlace para crear su contraseña y completar el perfil de ${institution.name}.`)).toHaveAttribute('role', 'status')
     expect(screen.getByLabelText('Ruta actual').textContent).toBe('/institutions/27')
     expect(writes()).toHaveLength(1)
     const [path, options] = writes()[0]
     expect(path).toBe('/api/institutions')
     expect(options?.method).toBe('POST')
-    expect(JSON.parse(options?.body as string)).toEqual({ ...fields, contact_name: RESPONSIBLE, contact_position: null, contact_phone: null, delivery_method: 'email' })
+    expect(JSON.parse(options?.body as string)).toEqual({ email: 'coordinacion@invitada.test', name: 'UT del Golfo', person_name: null, delivery_method: 'email' })
   })
 
   it('avisa que hay que reenviar el enlace si no se pudo enviar (T-S8-11)', async () => {
     apiMock.mockResolvedValueOnce(created('pending')).mockResolvedValueOnce(Response.json({ data: institution }))
     renderApp('/institutions/new')
-    await screen.findByRole('button', { name: 'Crear institución' })
-    fillForm()
-    fireEvent.click(screen.getByRole('button', { name: 'Crear institución' }))
-    expect(await screen.findByText('Institución registrada, pero no pudimos enviar el enlace. Usa “Reenviar enlace”.')).toHaveAttribute('role', 'status')
+    await screen.findByRole('button', { name: INVITE })
+    fillInvite()
+    fireEvent.click(screen.getByRole('button', { name: INVITE }))
+    expect(await screen.findByText('Institución invitada, pero no pudimos enviar el enlace. Usa “Reenviar enlace”.')).toHaveAttribute('role', 'status')
   })
 
   it('con la entrega manual muestra el enlace para copiar en la misma página, sin guardarlo en el historial (T-S8-11)', async () => {
-    const link = 'http://localhost:5173/set-initial-password?email=contacto%40example.test&token=abc'
-    apiMock.mockResolvedValueOnce(Response.json({ data: institution, setup_delivery: 'manual', setup_url: link }, { status: 201 }))
+    const link = 'http://localhost:5173/set-initial-password?email=coordinacion%40invitada.test&token=abc'
+    apiMock.mockResolvedValueOnce(Response.json({ data: { ...institution, name: null, cct: null, contact_name: null, contact_email: null }, setup_delivery: 'manual', setup_url: link }, { status: 201 }))
     renderApp('/institutions/new')
-    await screen.findByRole('button', { name: 'Crear institución' })
-    fillForm()
-    fireEvent.change(screen.getByLabelText('Puesto o departamento (opcional)'), { target: { value: ' Vinculación ' } })
+    await screen.findByRole('button', { name: INVITE })
+    fillInvite()
+    fireEvent.change(screen.getByLabelText('Nombre de la persona (opcional)'), { target: { value: ' Luis Pérez ' } })
     fireEvent.click(screen.getByRole('radio', { name: /Generar un enlace para compartirlo/ }))
-    expect(screen.getByLabelText(EMAIL)).toHaveAccessibleDescription('Será el correo con el que inicie sesión. Recibirás un enlace para compartírselo.')
-    fireEvent.click(screen.getByRole('button', { name: 'Crear institución' }))
+    expect(screen.getByLabelText(INVITE_EMAIL)).toHaveAccessibleDescription('Será el correo con el que inicie sesión. Recibirás un enlace para compartírselo.')
+    fireEvent.click(screen.getByRole('button', { name: INVITE }))
 
-    expect(await screen.findByText('Institución registrada. Copia el enlace y compártelo con María López para que establezca su contraseña.')).toHaveAttribute('role', 'status')
+    expect(await screen.findByText('Invitación lista. Copia el enlace y compártelo con coordinacion@invitada.test para que cree su contraseña y complete el perfil de su institución.')).toHaveAttribute('role', 'status')
     expect(screen.getByLabelText('Enlace de configuración')).toHaveValue(link)
     expect(screen.getByRole('button', { name: 'Copiar enlace' })).toBeInTheDocument()
     expect(screen.getByRole('link', { name: 'Ver la institución' })).toHaveAttribute('href', '/institutions/27')
     expect(screen.getByLabelText('Ruta actual').textContent).toBe('/institutions/new')
     expect(JSON.stringify(window.history.state)).not.toContain('token=abc')
-    expect(JSON.parse(writes()[0][1]?.body as string)).toMatchObject({ contact_position: 'Vinculación', delivery_method: 'manual' })
+    expect(JSON.parse(writes()[0][1]?.body as string)).toMatchObject({ person_name: 'Luis Pérez', delivery_method: 'manual' })
+  })
+
+  it('presenta el error 422 del correo junto al campo sin perder lo escrito', async () => {
+    apiMock.mockResolvedValueOnce(Response.json({ message: 'Validation failed', errors: { email: ['El correo ya está registrado en otra cuenta.'] } }, { status: 422 }))
+    renderApp('/institutions/new')
+    await screen.findByRole('button', { name: INVITE })
+    fillInvite()
+    fireEvent.click(screen.getByRole('button', { name: INVITE }))
+    expect(await screen.findByText('El correo ya está registrado en otra cuenta.')).toBeInTheDocument()
+    expect(screen.getByLabelText(INVITE_EMAIL)).toHaveAttribute('aria-invalid', 'true')
+    expect(screen.getByLabelText(INVITE_EMAIL)).toHaveValue('coordinacion@invitada.test')
+    expect(screen.getByRole('button', { name: INVITE })).toBeEnabled()
   })
 
   it('muestra al responsable y su puesto en el detalle (T-S8-11)', async () => {
@@ -341,24 +365,24 @@ describe('registro y edición de instituciones', () => {
       cct: ['La clave indicada no es válida.'],
       contact_email: ['El correo indicado no es válido.'],
     }
-    apiMock.mockResolvedValueOnce(Response.json({ message: 'Validation failed', errors }, { status: 422 }))
-    renderApp('/institutions/new')
-    await screen.findByRole('button', { name: 'Crear institución' })
+    apiMock.mockResolvedValueOnce(Response.json({ data: institution }))
+      .mockResolvedValueOnce(Response.json({ message: 'Validation failed', errors }, { status: 422 }))
+    renderApp('/institutions/27/edit')
+    await screen.findByRole('button', { name: 'Guardar cambios' })
     fillForm()
-    fireEvent.click(screen.getByRole('button', { name: 'Crear institución' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Guardar cambios' }))
     expect(await screen.findByRole('alert')).toHaveTextContent('Revisa los campos indicados.')
     expectFormValues()
     for (const [label, field] of [['Nombre', 'name'], ['CCT', 'cct'], [EMAIL, 'contact_email']] as const) {
       expect(screen.getByLabelText(label)).toHaveAttribute('aria-invalid', 'true')
       expect(screen.getByLabelText(label)).toHaveAccessibleDescription(expect.stringContaining(errors[field][0]))
     }
-    expect(screen.getByRole('button', { name: 'Crear institución' })).toBeEnabled()
-    expect(screen.getByLabelText('Ruta actual').textContent).toBe('/institutions/new')
+    expect(screen.getByRole('button', { name: 'Guardar cambios' })).toBeEnabled()
+    expect(screen.getByLabelText('Ruta actual').textContent).toBe('/institutions/27/edit')
     expect(writes()).toHaveLength(1)
   })
 
   it.each([
-    ['/institutions/new', 'Crear institución'],
     ['/institutions/27/edit', 'Guardar cambios'],
   ])('explica un CCT duplicado y conserva los datos en %s', async (path, submitLabel) => {
     if (path.endsWith('/edit')) apiMock.mockResolvedValueOnce(Response.json({ data: institution }))
@@ -380,13 +404,13 @@ describe('registro y edición de instituciones', () => {
     apiMock.mockReturnValueOnce(response.promise)
       .mockResolvedValueOnce(Response.json({ data: institution }))
     renderApp('/institutions/new')
-    const submit = await screen.findByRole('button', { name: 'Crear institución' })
-    fillForm()
+    const submit = await screen.findByRole('button', { name: INVITE })
+    fillInvite()
     fireEvent.click(submit)
     fireEvent.click(submit)
     await waitFor(() => expect(writes()).toHaveLength(1))
-    expect(screen.getByRole('button', { name: 'Guardando…' })).toBeDisabled()
-    expect(screen.queryByText(/^Institución registrada/)).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Enviando invitación…' })).toBeDisabled()
+    expect(screen.queryByText(/^Invitación enviada/)).not.toBeInTheDocument()
     expect(screen.getByLabelText('Ruta actual').textContent).toBe('/institutions/new')
     await act(async () => { response.resolve(created()) })
     expect(await screen.findByText(institution.name)).toBeInTheDocument()
@@ -398,14 +422,14 @@ describe('registro y edición de instituciones', () => {
       .mockResolvedValueOnce(created())
       .mockResolvedValueOnce(Response.json({ data: institution }))
     renderApp('/institutions/new')
-    await screen.findByRole('button', { name: 'Crear institución' })
-    fillForm()
-    fireEvent.click(screen.getByRole('button', { name: 'Crear institución' }))
+    await screen.findByRole('button', { name: INVITE })
+    fillInvite()
+    fireEvent.click(screen.getByRole('button', { name: INVITE }))
     expect(await screen.findByRole('alert')).toHaveTextContent('No pudimos validar la solicitud.')
-    expectFormValues()
+    expect(screen.getByLabelText(INVITE_EMAIL)).toHaveValue('coordinacion@invitada.test')
     expect(screen.queryByRole('heading', { name: 'Iniciar sesión' })).not.toBeInTheDocument()
     expect(writes()).toHaveLength(1)
-    fireEvent.click(screen.getByRole('button', { name: 'Crear institución' }))
+    fireEvent.click(screen.getByRole('button', { name: INVITE }))
     expect(await screen.findByText(institution.name)).toBeInTheDocument()
     expect(writes()).toHaveLength(2)
   })
@@ -415,25 +439,25 @@ describe('registro y edición de instituciones', () => {
       .mockResolvedValueOnce(created())
       .mockResolvedValueOnce(Response.json({ data: institution }))
     renderApp('/institutions/new')
-    await screen.findByRole('button', { name: 'Crear institución' })
-    fillForm()
-    fireEvent.click(screen.getByRole('button', { name: 'Crear institución' }))
+    await screen.findByRole('button', { name: INVITE })
+    fillInvite()
+    fireEvent.click(screen.getByRole('button', { name: INVITE }))
     expect(await screen.findByRole('alert')).toHaveTextContent('No pudimos conectar')
-    expectFormValues()
-    expect(screen.queryByText(/^Institución registrada/)).not.toBeInTheDocument()
-    fireEvent.click(screen.getByRole('button', { name: 'Crear institución' }))
+    expect(screen.getByLabelText(INVITE_EMAIL)).toHaveValue('coordinacion@invitada.test')
+    expect(screen.queryByText(/^Invitación enviada/)).not.toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: INVITE }))
     expect(await screen.findByText(institution.name)).toBeInTheDocument()
   })
 
   it('cierra la sesión local cuando la API rechaza una escritura con 401', async () => {
     apiMock.mockResolvedValueOnce(new Response(null, { status: 401 }))
     renderApp('/institutions/new')
-    await screen.findByRole('button', { name: 'Crear institución' })
-    fillForm()
-    fireEvent.click(screen.getByRole('button', { name: 'Crear institución' }))
+    await screen.findByRole('button', { name: INVITE })
+    fillInvite()
+    fireEvent.click(screen.getByRole('button', { name: INVITE }))
     expect(await screen.findByRole('heading', { name: 'Iniciar sesión' })).toBeInTheDocument()
     expect(screen.getByRole('alert')).toHaveTextContent('Tu sesión terminó')
-    expect(screen.queryByLabelText('CCT')).not.toBeInTheDocument()
+    expect(screen.queryByLabelText(INVITE_EMAIL)).not.toBeInTheDocument()
     expect(screen.getByLabelText('Ruta actual').textContent).toBe('/login')
   })
 })
@@ -543,25 +567,25 @@ describe('estados y navegación del listado (apple-design)', () => {
     expect(await screen.findByText('Cargando instituciones…')).toHaveAttribute('role', 'status')
     expect(screen.queryByTestId('skeleton')).not.toBeInTheDocument()
     expect(await screen.findByTestId('skeleton', {}, { timeout: 1000 })).toHaveAttribute('aria-hidden', 'true')
-    await act(async () => { response.resolve(Response.json({ data: [institution] })) })
+    await act(async () => { response.resolve(listOf([institution])) })
     expect(screen.queryByTestId('skeleton')).not.toBeInTheDocument()
     expect(screen.getByText(institution.name)).toBeInTheDocument()
     // T-S14-08: en el celular la fila se apila como tarjeta; cada celda declara su papel.
     const table = screen.getByRole('table')
     expect(table).toHaveClass('stack-mobile')
     const cells = [...table.querySelectorAll('tbody tr > *')]
-    expect(cells.map((cell) => cell.getAttribute('data-cell'))).toEqual(['title', 'inline', 'meta', 'status', 'open'])
+    expect(cells.map((cell) => cell.getAttribute('data-cell'))).toEqual(['title', 'inline', 'meta', 'status', 'status', 'open'])
   })
 
   it('no muestra el esqueleto cuando la respuesta llega antes de 300 ms', async () => {
-    apiMock.mockResolvedValueOnce(Response.json({ data: [institution] }))
+    apiMock.mockResolvedValueOnce(listOf([institution]))
     renderApp()
     expect(await screen.findByText(institution.name)).toBeInTheDocument()
     expect(screen.queryByTestId('skeleton')).not.toBeInTheDocument()
   })
 
   it('ofrece en el estado vacío la acción de registrar la primera institución', async () => {
-    apiMock.mockResolvedValueOnce(Response.json({ data: [] }))
+    apiMock.mockResolvedValueOnce(listOf([]))
     renderApp()
     const heading = await screen.findByRole('heading', { name: 'No hay instituciones registradas.' })
     const empty = heading.closest<HTMLElement>('[role="status"]')!
@@ -588,7 +612,7 @@ describe('estados y navegación del listado (apple-design)', () => {
   })
 
   it('abre el detalle al pulsar cualquier parte de la fila, sin perder el enlace accesible', async () => {
-    apiMock.mockResolvedValueOnce(Response.json({ data: [institution] }))
+    apiMock.mockResolvedValueOnce(listOf([institution]))
       .mockResolvedValueOnce(Response.json({ data: institution }))
     renderApp()
     fireEvent.click(await screen.findByText(institution.cct))
@@ -597,11 +621,42 @@ describe('estados y navegación del listado (apple-design)', () => {
   })
 
   it('usa botones planos de regreso que conservan sus nombres accesibles', async () => {
-    apiMock.mockResolvedValueOnce(Response.json({ data: [institution] }))
+    apiMock.mockResolvedValueOnce(listOf([institution]))
     renderApp()
     const nav = await screen.findByRole('navigation', { name: 'Navegación de instituciones' })
     expect(within(nav).getByRole('link', { name: 'Volver al inicio' })).toHaveTextContent('Inicio')
     // T-S13-17: el listado no repite un enlace a sí mismo; el único regreso es el del inicio.
     expect(within(nav).getAllByRole('link')).toHaveLength(1)
+  })
+})
+
+describe('instituciones invitadas y búsqueda (HU-S16-05)', () => {
+  it('muestra la institución invitada sin perfil con su respaldo, el correo de su cuenta y Acceso pendiente', async () => {
+    apiMock.mockResolvedValueOnce(listOf([{ ...institution, id: 31, name: null, cct: null, contact_name: null, contact_email: null,
+      account_email: 'coordinacion@invitada.test', profile_status: 'pending_access' }]))
+    renderApp()
+    const row = await screen.findByRole('row', { name: /Institución sin nombre/ })
+    expect(row).toHaveTextContent('coordinacion@invitada.test')
+    expect(row).toHaveTextContent('Sin capturar')
+    expect(row).toHaveTextContent('Contacto sin capturar')
+    expect(row).toHaveTextContent('Acceso pendiente')
+    expect(within(row).getByRole('link', { name: 'Ver detalle de Institución sin nombre' })).toHaveAttribute('href', '/institutions/31')
+  })
+
+  it('el detalle distingue los datos que la institución invitada aún no captura', async () => {
+    apiMock.mockResolvedValueOnce(Response.json({ data: { ...institution, name: null, cct: null, contact_name: null, contact_email: null } }))
+    renderApp('/institutions/27')
+    expect(await screen.findByText('Institución sin nombre')).toHaveClass('company-pending-value')
+    expect(screen.getAllByText('Sin capturar')).toHaveLength(3)
+  })
+
+  it('busca por nombre, CCT o correo de la cuenta y conserva la búsqueda en la URL', async () => {
+    apiMock.mockResolvedValueOnce(listOf([institution])).mockResolvedValueOnce(listOf([]))
+    renderApp()
+    await screen.findByRole('row', { name: /Instituto Tecnológico del Norte/ })
+    fireEvent.change(screen.getByLabelText('Buscar institución'), { target: { value: ' invitada ' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Buscar' }))
+    expect(await screen.findByText('Ninguna institución coincide con la búsqueda.')).toBeInTheDocument()
+    expect(apiMock.mock.calls[1][0]).toBe('/api/institutions?page=1&q=invitada')
   })
 })

@@ -986,3 +986,9 @@ button.account-action.positive { border-color: color-mix(in srgb, var(--success-
 @media (hover: hover) { .app-footer-links a:hover { color: var(--accent); text-decoration: underline; text-underline-offset: 3px; } }
 .app-footer-meta { display: flex; flex-wrap: wrap; gap: 0.25rem 1.25rem; margin: 0.25rem 0 0; font-size: var(--type-xs); line-height: 1.5; }
 }
+
+/* HU-S16-03: enlace a «¿Olvidaste tu contraseña?» bajo el formulario de acceso, con zona táctil de 44 px. */
+@layer components {
+.login-forgot { margin: 0.75rem 0 0; text-align: center; font-size: var(--type-sm); }
+.login-forgot a { display: inline-flex; align-items: center; min-height: 2.75rem; color: var(--accent); font-weight: 600; }
+}

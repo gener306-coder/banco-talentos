@@ -24,6 +24,12 @@ enum AuditEventType: string
     case PASSWORD_CHANGED = 'password_changed';
     case ORGANIZATION_PROFILE_UPDATED = 'organization_profile_updated';
     case COMPANY_INVITED = 'company_invited';
+    // Sprint 16 (HU-S16-01 a HU-S16-04)
+    case ADMIN_BOOTSTRAPPED = 'admin_bootstrapped';
+    case PASSWORD_RESET_ISSUED = 'password_reset_issued';
+    case EMAIL_CHANGED = 'email_changed';
+    case ACCOUNT_STATUS_CHANGED = 'account_status_changed';
+    case INSTITUTION_INVITED = 'institution_invited';
 
     public static function values(): array
     {

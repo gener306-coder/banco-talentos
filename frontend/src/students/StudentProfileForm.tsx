@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import type { FormEvent } from 'react'
+import { ProfileIncompleteNotice } from '../account/ProfileIncompleteNotice'
 import { InstitutionRequestError } from '../institutions/InstitutionLayout'
 import { useApiMutation } from '../lib/useApiRequest'
 import { Callout } from '../ui/Callout'
@@ -109,6 +110,8 @@ export function StudentProfileForm({ student, onSaved }: { student: StudentDetai
   return (
     <form className="student-profile" onSubmit={(event) => { void submit(event) }} aria-busy={mutation.pending} noValidate>
       {mutation.failure && mutation.failure.status !== 422 && <InstitutionRequestError failure={mutation.failure} />}
+      {/* HU-S16-08: guardar el expediente completo de un alumno activo lo haría buscable; exige el perfil mínimo. */}
+      {mutation.failure?.profileIncomplete && <ProfileIncompleteNotice />}
       <fieldset disabled={mutation.pending}>
         <legend className="visually-hidden">Expediente público</legend>
         <h4>Académico</h4>

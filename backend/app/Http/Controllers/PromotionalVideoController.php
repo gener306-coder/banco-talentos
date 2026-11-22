@@ -76,7 +76,7 @@ class PromotionalVideoController extends Controller
             'height' => $video->height,
             'institution' => [
                 'public_id' => $video->institution->public_id,
-                'name' => $video->institution->name,
+                'name' => $video->institution->label(),
             ],
             'poster_url' => MediaUrl::temporary($video->poster_path),
             'video_url' => MediaUrl::temporary($video->video_path),

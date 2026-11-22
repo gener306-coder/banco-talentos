@@ -19,7 +19,8 @@ use Illuminate\Validation\Validator;
  * - la empresa captura y corrige todo su perfil (M1 a M4): todo opcional, solo se valida el formato de lo capturado y
  *   un texto vacío se guarda como null. `account_name` actualiza además el nombre de la cuenta de la sesión;
  * - la institución, su nombre oficial, su CCT y el contacto de su programa dual (T-S14-15, las mismas reglas que la
- *   empresa: corrige sus datos y `account_name` con «Soy yo»). Su nombre, su CCT y el contacto siguen siendo obligatorios.
+ *   empresa: corrige sus datos y `account_name` con «Soy yo»). Desde HU-S16-07 también es opcional (guardado parcial
+ *   del onboarding); el mínimo se exige al operar (HU-S16-08).
  * Los ids, el folio de validación, el estado, la autoría y cualquier otro campo se rechazan por nombre.
  */
 class UpdateOrganizationProfileRequest extends FormRequest
@@ -72,19 +73,18 @@ class UpdateOrganizationProfileRequest extends FormRequest
     public function rules(): array
     {
         if (! $this->isCompany()) {
-            // T-S14-15: el nombre oficial y el CCT son obligatorios; el formato del CCT solo se exige si cambia. El
-            // responsable conserva su nombre y correo obligatorios (HU-S14-02).
+            // HU-S16-07: todo opcional, como en la empresa; el formato del CCT solo se exige si cambia (T-S14-15).
             $institution = $this->user()->institution_id;
 
             return [
-                'name' => ['sometimes', 'required', 'string', 'max:255'],
-                'cct' => ['bail', 'sometimes', 'required', 'string',
+                'name' => ['nullable', 'string', 'max:255'],
+                'cct' => ['bail', 'nullable', 'string',
                     new WorkCenterKey(Institution::query()->whereKey($institution)->value('cct')),
                     Rule::unique('institutions', 'cct')->ignore($institution)],
                 'account_name' => ['nullable', 'string', 'max:120'],
-                'contact_name' => ['required', 'string', 'max:120'],
+                'contact_name' => ['nullable', 'string', 'max:120'],
                 'contact_position' => ['nullable', 'string', 'max:120'],
-                'contact_email' => ['required', 'string', 'email', 'max:254'],
+                'contact_email' => ['nullable', 'string', 'email', 'max:254'],
                 'contact_phone' => ['nullable', 'string', 'max:20', new PhoneNumber],
             ];
         }
@@ -123,10 +123,8 @@ class UpdateOrganizationProfileRequest extends FormRequest
     public function messages(): array
     {
         return [
-            'name.required' => 'El nombre oficial es obligatorio.',
             'name.string' => 'El nombre oficial no es válido.',
             'name.max' => 'El nombre oficial no debe superar 255 caracteres.',
-            'cct.required' => 'La Clave de Centro de Trabajo es obligatoria.',
             'cct.string' => 'La Clave de Centro de Trabajo no es válida.',
             'cct.unique' => 'Esa Clave de Centro de Trabajo ya está registrada en otra institución.',
             'trade_name.string' => 'El nombre comercial no es válido.',
@@ -144,12 +142,10 @@ class UpdateOrganizationProfileRequest extends FormRequest
             'municipality_code.string' => 'El municipio no es válido.',
             'municipality_code.regex' => 'El municipio no es válido.',
             'municipality_code.exists' => 'El municipio no pertenece al estado seleccionado.',
-            'contact_name.required' => 'El nombre del contacto es obligatorio.',
             'contact_name.string' => 'El nombre del contacto no es válido.',
             'contact_name.max' => 'El nombre del contacto no debe superar 120 caracteres.',
             'contact_position.string' => 'El puesto o departamento no es válido.',
             'contact_position.max' => 'El puesto o departamento no debe superar 120 caracteres.',
-            'contact_email.required' => 'El correo del contacto es obligatorio.',
             'contact_email.string' => 'Ingresa un correo de contacto válido.',
             'contact_email.email' => 'Ingresa un correo de contacto válido.',
             'contact_email.max' => 'El correo del contacto no debe superar 254 caracteres.',

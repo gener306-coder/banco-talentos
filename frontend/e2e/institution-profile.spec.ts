@@ -23,9 +23,6 @@ test('T-S14-15: la institución corrige su nombre oficial y su CCT en Mi cuenta 
 
   await card.getByLabel('Nombre oficial').fill(name)
   await cctField.fill(cct.toLowerCase())
-  // El contacto del seed no tiene nombre: es obligatorio para guardar.
-  const contact = card.getByLabel(/Nombre del responsable|Tu nombre/)
-  if (!(await contact.inputValue())) await contact.fill('Coordinación E2E')
   await card.getByRole('button', { name: 'Guardar cambios' }).click()
   await expect(page.locator('.snackbar')).toContainText('Perfil actualizado.')
   await expect(card).toContainText(name)
@@ -36,7 +33,8 @@ test('T-S14-15: la institución corrige su nombre oficial y su CCT en Mi cuenta 
   const admin = await browser.newContext({ baseURL, storageState: ADMIN_STATE })
   try {
     const adminPage = await admin.newPage()
-    await adminPage.goto('/institutions')
+    // HU-S16-05: el listado se pagina; la búsqueda por nombre la encuentra en cualquier página.
+    await adminPage.goto(`/institutions?q=${encodeURIComponent(name)}`)
     await expect(adminPage.getByRole('row', { name: new RegExp(name) })).toContainText(cct)
   } finally {
     await admin.close()

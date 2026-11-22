@@ -1,8 +1,8 @@
 import { ApiError, csrfToken, request } from '../lib/http'
 import { isSectorCode } from '../companies/catalogs'
 import type { SectorCode } from '../companies/catalogs'
-import { isCompanyGap } from '../auth/api'
-import type { CompanyGap } from '../auth/api'
+import { isCompanyGap, isInstitutionGap } from '../auth/api'
+import type { CompanyGap, InstitutionGap } from '../auth/api'
 
 /** Contacto del programa dual: editable por la empresa y por la institución (HU-S14-02). */
 export interface OrganizationContact {
@@ -30,8 +30,11 @@ export interface CompanyProfile extends OrganizationContact {
 
 export interface InstitutionProfile extends OrganizationContact {
   type: 'institution'
-  name: string
-  cct: string
+  /** HU-S16-05: null mientras la institución invitada no los captura. */
+  name: string | null
+  cct: string | null
+  /** HU-S16-07: lo que falta de los 4 datos mínimos (D6), en el orden del servidor. */
+  missing: InstitutionGap[]
 }
 
 export type OrganizationProfile = CompanyProfile | InstitutionProfile
@@ -47,15 +50,17 @@ export type CompanyProfileInput = OrganizationContact & {
   account_name?: string | null
 }
 
-/** T-S14-15: la institución corrige su nombre oficial, su CCT y su contacto; `account_name` con «Soy yo». */
+/**
+ * T-S14-15: la institución corrige su nombre oficial, su CCT y su contacto; `account_name` con «Soy yo». Desde HU-S16-07
+ * todo es opcional (guardado parcial).
+ */
 export type InstitutionProfileInput = OrganizationContact & {
-  name: string
-  cct: string
+  name: string | null
+  cct: string | null
   account_name?: string | null
 }
 
 const isObject = (value: unknown): value is Record<string, unknown> => typeof value === 'object' && value !== null && !Array.isArray(value)
-const isText = (value: unknown): value is string => typeof value === 'string'
 const isOptionalText = (value: unknown): value is string | null => value === null || typeof value === 'string'
 
 function profile(data: unknown): OrganizationProfile {
@@ -63,8 +68,8 @@ function profile(data: unknown): OrganizationProfile {
       !isOptionalText(data.contact_email) || !isOptionalText(data.contact_phone)) throw new ApiError(502)
   const contact = { contact_name: data.contact_name, contact_position: data.contact_position, contact_email: data.contact_email, contact_phone: data.contact_phone }
   if (data.type === 'institution') {
-    if (!isText(data.name) || !isText(data.cct)) throw new ApiError(502)
-    return { type: 'institution', name: data.name, cct: data.cct, ...contact }
+    if (!isOptionalText(data.name) || !isOptionalText(data.cct) || !Array.isArray(data.missing) || !data.missing.every(isInstitutionGap)) throw new ApiError(502)
+    return { type: 'institution', name: data.name, cct: data.cct, ...contact, missing: data.missing as InstitutionGap[] }
   }
   if (data.type !== 'company' || !isOptionalText(data.legal_name) || !isOptionalText(data.rfc) || !isOptionalText(data.trade_name) ||
       (data.sector_code !== null && !isSectorCode(data.sector_code)) || !isOptionalText(data.state_code) || !isOptionalText(data.municipality_code) ||

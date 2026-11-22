@@ -72,7 +72,7 @@ class NotifyLinkageMessage implements ShouldQueue
         }
 
         $sender = $this->recipient === LinkageParty::COMPANY
-            ? $linkage->institution->name
+            ? $linkage->institution->label()
             : $linkage->company->label();
         $path = $this->recipient === LinkageParty::COMPANY ? '/linkage-requests/' : '/institution/linkage-requests/';
 

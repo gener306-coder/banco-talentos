@@ -140,6 +140,7 @@ describe('campos permitidos', function () {
             ->assertExactJson(['data' => [
                 'type' => 'institution', 'name' => 'Universidad Tecnológica del Golfo', 'cct' => '28EUT0001A',
                 'contact_name' => 'Laura Méndez', 'contact_position' => 'Coordinación Dual', 'contact_email' => 'dual@ut.test', 'contact_phone' => null,
+                'missing' => [], 'can_operate' => true,
             ]]);
     });
 
@@ -215,8 +216,9 @@ describe('perfil autogestionado y onboarding (HU-S14-03)', function () {
         $this->loginWithCookies($this->institutionAccount)->assertOk();
         $this->browserRequest('PUT', '/api/organization/profile', institutionProfile(['legal_name' => 'X', 'rfc' => 'MGO150320AB1']))
             ->assertUnprocessable()->assertJsonValidationErrors(['legal_name', 'rfc']);
-        // Su contacto sigue siendo obligatorio, como en HU-S14-02.
-        $this->browserRequest('PUT', '/api/organization/profile', institutionProfile(['contact_name' => '']))->assertUnprocessable()->assertJsonValidationErrors(['contact_name']);
+        // HU-S16-07: como la empresa, puede dejar un dato vacío; entonces deja de poder operar (HU-S16-08).
+        $this->browserRequest('PUT', '/api/organization/profile', institutionProfile(['contact_name' => '']))->assertOk()
+            ->assertJsonPath('data.contact_name', null)->assertJsonPath('data.missing', ['contact_name'])->assertJsonPath('data.can_operate', false);
     });
 
     it('starts the onboarding for an invited company and ends it when the profile is saved, even partially', function () {
@@ -242,7 +244,7 @@ describe('perfil autogestionado y onboarding (HU-S14-03)', function () {
             ->and(AccountAuditEvent::query()->count())->toBe(0);
         $this->browserRequest('GET', '/api/me')->assertJsonPath('user.company.onboarding', 'done')->assertJsonPath('user.company.missing.0', 'name');
 
-        $this->loginWithCookies($this->institutionAccount)->assertOk();
+        $this->loginWithCookies(User::factory()->role(UserRole::SECRETARY)->create())->assertOk();
         $this->browserRequest('POST', '/api/organization/profile/postpone')->assertForbidden();
         $this->browserRequest('POST', '/api/organization/profile/postpone', csrf: false)->assertStatus(419);
     });
@@ -337,7 +339,7 @@ describe('control de la institución sobre sus datos (T-S14-15)', function () {
         $this->browserRequest('GET', '/api/me')->assertJsonPath('user.institution.name', 'Universidad Tecnológica de Tamaulipas');
     });
 
-    it('validates the official data: required name, CCT format only when it changes, and CCT uniqueness', function () {
+    it('validates the official data: CCT format only when it changes, CCT uniqueness, and a blank name saved as missing', function () {
         Institution::factory()->create(['cct' => '28EUT0009Z']);
         DB::table('institutions')->where('id', $this->institution->id)->update(['cct' => 'CLAVE-ANTERIOR']);
         $this->loginWithCookies($this->institutionAccount)->assertOk();
@@ -348,8 +350,8 @@ describe('control de la institución sobre sus datos (T-S14-15)', function () {
             ->assertUnprocessable()->assertJsonPath('errors.cct.0', \App\Rules\WorkCenterKey::MESSAGE);
         $this->browserRequest('PUT', '/api/organization/profile', institutionProfile(['cct' => '28eut0009z']))
             ->assertUnprocessable()->assertJsonPath('errors.cct.0', 'Esa Clave de Centro de Trabajo ya está registrada en otra institución.');
-        $this->browserRequest('PUT', '/api/organization/profile', institutionProfile(['name' => '   ']))->assertUnprocessable()->assertJsonValidationErrors(['name']);
         expect($this->institution->refresh()->cct)->toBe('CLAVE-ANTERIOR');
+        $this->browserRequest('PUT', '/api/organization/profile', institutionProfile(['cct' => 'CLAVE-ANTERIOR', 'name' => '   ']))->assertOk()->assertJsonPath('data.name', null);
     });
 
     it('renames the account with Soy yo only when the contact name changes here, like the company', function () {
@@ -366,3 +368,44 @@ describe('control de la institución sobre sus datos (T-S14-15)', function () {
     });
 });
 
+describe('onboarding de la institución invitada (HU-S16-07)', function () {
+    it('starts the onboarding for an invited institution, saves partially and ends it, keeping the minimum pending', function () {
+        $account = User::factory()->forInstitution($invited = Institution::factory()->invited()->create())->create();
+        $this->loginWithCookies($account)->assertOk()
+            ->assertJsonPath('user.institution.name', null)
+            ->assertJsonPath('user.institution.missing', ['name', 'cct', 'contact_name', 'contact_email'])
+            ->assertJsonPath('user.institution.onboarding', 'pending')
+            ->assertJsonPath('user.institution.can_operate', false);
+
+        $this->browserRequest('PUT', '/api/organization/profile', ['name' => 'UT del Golfo'])->assertOk()
+            ->assertJsonPath('data.missing', ['cct', 'contact_name', 'contact_email'])->assertJsonPath('data.can_operate', false);
+        expect($invited->refresh()->onboarding_dismissed_at)->not->toBeNull();
+        $this->browserRequest('GET', '/api/me')->assertJsonPath('user.institution.onboarding', 'done')
+            ->assertJsonPath('user.institution.name', 'UT del Golfo')->assertJsonPath('user.institution.can_operate', false);
+
+        $this->browserRequest('PUT', '/api/organization/profile', ['cct' => '28eut0042k', 'contact_name' => 'Laura Méndez', 'contact_email' => 'dual@ut.test'])
+            ->assertOk()->assertJsonPath('data.missing', [])->assertJsonPath('data.can_operate', true);
+        $this->browserRequest('GET', '/api/me')->assertJsonPath('user.institution.missing', [])->assertJsonPath('user.institution.can_operate', true);
+    });
+
+    it('postpones the institution onboarding once, without saving data nor recording an event', function () {
+        $account = User::factory()->forInstitution($invited = Institution::factory()->invited()->create())->create();
+        $this->loginWithCookies($account)->assertOk();
+
+        $this->browserRequest('POST', '/api/organization/profile/postpone')->assertNoContent();
+        $first = $invited->refresh()->onboarding_dismissed_at;
+        $this->travel(5)->minutes();
+        $this->browserRequest('POST', '/api/organization/profile/postpone')->assertNoContent();
+        expect($invited->refresh()->onboarding_dismissed_at->equalTo($first))->toBeTrue()
+            ->and($invited->name)->toBeNull()
+            ->and(AccountAuditEvent::query()->count())->toBe(0);
+        $this->browserRequest('GET', '/api/me')->assertJsonPath('user.institution.onboarding', 'done')->assertJsonPath('user.institution.can_operate', false);
+    });
+
+    it('treats existing complete institutions as already onboarded (D7)', function () {
+        $this->loginWithCookies($this->institutionAccount)->assertOk()
+            ->assertJsonPath('user.institution.onboarding', 'done')
+            ->assertJsonPath('user.institution.missing', [])
+            ->assertJsonPath('user.institution.can_operate', true);
+    });
+});

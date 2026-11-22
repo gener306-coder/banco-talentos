@@ -18,9 +18,15 @@ export const AUDIT_EVENT_TYPES = [
   { value: 'linkage_responded', label: 'Vinculación respondida' },
   // HU-S14-04: cambios de cuentas y organizaciones (account_audit_events).
   { value: 'company_invited', label: 'Empresa invitada' },
+  { value: 'institution_invited', label: 'Institución invitada' },
   { value: 'organization_profile_updated', label: 'Perfil de organización actualizado' },
   { value: 'account_updated', label: 'Cuenta actualizada' },
   { value: 'password_changed', label: 'Contraseña cambiada' },
+  // Sprint 16: estados de cuentas y acciones de la consola del servidor.
+  { value: 'account_status_changed', label: 'Estado de cuenta cambiado' },
+  { value: 'admin_bootstrapped', label: 'Primer Administrador creado' },
+  { value: 'password_reset_issued', label: 'Restablecimiento de contraseña emitido' },
+  { value: 'email_changed', label: 'Correo de acceso cambiado' },
 ] as const
 
 /** Etiqueta legible de un campo que cambió; uno desconocido no expone su nombre técnico. */
@@ -40,9 +46,13 @@ export type AuditEventType = (typeof AUDIT_EVENT_TYPES)[number]['value']
 
 export const auditEventLabel = (type: AuditEventType) => AUDIT_EVENT_TYPES.find((item) => item.value === type)?.label ?? type
 
-interface Actor { id: number; name: string; role: Role }
+/** D3 (Sprint 16): null cuando el evento viene de la consola del servidor. */
+type Actor = { id: number; name: string; role: Role } | null
 interface LinkageResource { id: number; status: LinkageStatus; institution: string; company: string }
 export type ChangeSubject = 'user' | 'company' | 'institution'
+/** Eventos de account_audit_events: el sujeto afectado y los campos que cambiaron. */
+export type ChangeEventType = 'company_invited' | 'institution_invited' | 'organization_profile_updated' | 'account_updated' | 'password_changed'
+  | 'account_status_changed' | 'admin_bootstrapped' | 'password_reset_issued' | 'email_changed'
 /** HU-S14-04: la cuenta, empresa o institución afectada y solo los nombres de los campos que cambiaron. */
 export interface ChangeResource { subjectType: ChangeSubject; id: number; name: string; role: Role | null; fields: string[] }
 
@@ -52,7 +62,7 @@ export type AuditEvent = { occurred_at: string; actor: Actor } & (
   | { type: 'company_registered'; resource: { id: number; name: string } }
   | { type: 'opportunity_created'; resource: { id: number; title: string } }
   | { type: 'linkage_requested' | 'linkage_responded'; resource: LinkageResource }
-  | { type: 'company_invited' | 'organization_profile_updated' | 'account_updated' | 'password_changed'; resource: ChangeResource }
+  | { type: ChangeEventType; resource: ChangeResource }
 )
 
 export interface AuditEventPage {
@@ -69,6 +79,7 @@ const isString = (value: unknown): value is string => typeof value === 'string'
 const isStatus = (value: unknown): value is LinkageStatus => LINKAGE_STATUSES.some((item) => item.value === value)
 
 function actor(value: unknown): Actor {
+  if (value === null) return null
   if (!isObject(value) || !isPositiveInt(value.id) || !isString(value.name) || !isRole(value.role)) throw new ApiError(502)
   return { id: value.id, name: value.name, role: value.role }
 }
@@ -96,9 +107,14 @@ function event(value: unknown): AuditEvent {
       if (!isStatus(resource.status) || !isString(resource.institution) || !isString(resource.company)) break
       return { ...base, type: value.type, resource: { id, status: resource.status, institution: resource.institution, company: resource.company } }
     case 'company_invited':
+    case 'institution_invited':
     case 'organization_profile_updated':
     case 'account_updated':
-    case 'password_changed': {
+    case 'password_changed':
+    case 'account_status_changed':
+    case 'admin_bootstrapped':
+    case 'password_reset_issued':
+    case 'email_changed': {
       const subject = resource.subject_type
       if ((subject !== 'user' && subject !== 'company' && subject !== 'institution') || !isString(resource.name) ||
           (subject === 'user' && !isRole(resource.role)) || !Array.isArray(resource.fields) || !resource.fields.every(isString)) break

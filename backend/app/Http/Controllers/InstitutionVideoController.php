@@ -3,6 +3,8 @@
 namespace App\Http\Controllers;
 
 use App\Enums\VideoStatus;
+use App\Exceptions\InstitutionProfileIncomplete;
+use App\Http\Controllers\Concerns\RequiresOperableInstitution;
 use App\Http\Requests\StoreInstitutionVideoRequest;
 use App\Http\Requests\UpdateInstitutionVideoRequest;
 use App\Http\Requests\UpdateInstitutionVideoStatusRequest;
@@ -27,6 +29,8 @@ use Throwable;
  */
 class InstitutionVideoController extends Controller
 {
+    use RequiresOperableInstitution;
+
     /** Videos activos (en proceso o listos) por institución (CA-03). */
     public const MAX_ACTIVE = 5;
 
@@ -46,6 +50,11 @@ class InstitutionVideoController extends Controller
     {
         $user = $request->user();
         $file = $request->file('video');
+        // HU-S16-08 (D6): sin el perfil mínimo no se guarda el archivo. La revisión con bloqueo se repite en la transacción.
+        $missing = Institution::query()->find($user->institution_id)?->missing() ?? [];
+        if ($missing !== []) {
+            throw new InstitutionProfileIncomplete($missing);
+        }
 
         $video = new InstitutionVideo($request->safe()->only(['title', 'description']));
         // La institución, la autoría y el identificador los asigna el servidor, nunca la petición.
@@ -63,7 +72,9 @@ class InstitutionVideoController extends Controller
 
         try {
             DB::transaction(function () use ($video): void {
-                // Dos subidas simultáneas de la misma institución se ordenan aquí: ninguna rebasa la cuota.
+                // Dos subidas simultáneas de la misma institución se ordenan aquí: ninguna rebasa la cuota. El mismo
+                // bloqueo ordena la subida con un guardado del perfil que lo vacíe (HU-S16-08).
+                $this->ensureOperableInstitution($video->institution_id);
                 $this->ensureQuota($video, 'video');
                 $video->save();
                 // En la cola de PostgreSQL el trabajo se confirma junto con el video: nunca queda uno sin el otro.

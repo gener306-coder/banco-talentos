@@ -3,6 +3,7 @@
 use App\Enums\UserRole;
 use App\Models\Institution;
 use App\Models\User;
+use Illuminate\Database\QueryException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
@@ -113,16 +114,12 @@ it('does not turn setup into password recovery for an existing account', functio
     expect($this->pendingUser->fresh()->getAttributes())->toBe($original);
 });
 
-it('does not set passwords for roles outside account creation with a setup link', function (UserRole $role) {
-    // HU-S4-03 CA-03: ADMIN no tiene organización; SECRETARY y COMPANY tienen sus propias pruebas.
-    $this->pendingUser->update(['role' => $role, 'institution_id' => null]);
-    $original = $this->pendingUser->fresh()->getAttributes();
-
-    $this->browserRequest('POST', '/api/institution-accounts/password-setup', $this->setupPayload)
-        ->assertUnprocessable()->assertJsonValidationErrors('token');
-
-    expect($this->pendingUser->fresh()->getAttributes())->toBe($original);
-})->with([UserRole::ADMIN]);
+it('never lets a setup link turn an institution account into an ADMIN', function () {
+    // HU-S4-03 CA-03 y HU-S16-01: un ADMIN se configura con enlace solo sin organización (AdminBootstrapTest). La base de
+    // datos impide que una cuenta de institución se vuelva ADMIN, así que ese cruce de roles no puede existir.
+    expect(fn () => DB::transaction(fn () => $this->pendingUser->update(['role' => UserRole::ADMIN])))->toThrow(QueryException::class);
+    expect($this->pendingUser->fresh()->role)->toBe(UserRole::INSTITUTION);
+});
 
 it('preserves the token and pending credential when the institution or account is inactive', function (string $target, string $code) {
     if ($target === 'institution') {

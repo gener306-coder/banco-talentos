@@ -225,3 +225,22 @@ describe('restricciones en PostgreSQL (CA-01)', function () {
         'fallido sin motivo' => [['status' => 'FAILED']],
     ]);
 });
+
+describe('mínimo para operar de la institución (HU-S16-08)', function () {
+    it('rejects the upload without storing the file while the institution profile is incomplete, and accepts it once complete', function () {
+        $this->institution->forceFill(['name' => null, 'contact_email' => null])->save();
+        $this->loginWithCookies($this->account)->assertOk();
+
+        uploadVideo($this, file: videoUpload())
+            ->assertUnprocessable()
+            ->assertJsonPath('code', 'INSTITUTION_PROFILE_INCOMPLETE')
+            ->assertJsonPath('missing', ['name', 'contact_email']);
+        expect(InstitutionVideo::query()->count())->toBe(0)
+            ->and(Storage::disk('local')->allFiles())->toBe([]);
+        Queue::assertNothingPushed();
+
+        $this->institution->forceFill(['name' => 'UT del Golfo', 'contact_email' => 'dual@ut.test'])->save();
+        uploadVideo($this, file: videoUpload())->assertStatus(202);
+        expect(InstitutionVideo::query()->count())->toBe(1);
+    });
+});

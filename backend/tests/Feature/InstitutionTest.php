@@ -6,7 +6,6 @@ use App\Models\User;
 use App\Notifications\SetInitialPassword;
 use Illuminate\Database\QueryException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Route;
@@ -29,6 +28,22 @@ function institutionPayload(array $overrides = []): array
     ], $overrides);
 }
 
+/** HU-S16-06: la invitación solo lleva el correo de la cuenta y, opcionales, el nombre y el de la persona. */
+function institutionInvite(array $overrides = []): array
+{
+    return array_replace(['email' => 'contacto@example.test'], $overrides);
+}
+
+/** Cuerpo válido de cada acción: la invitación es ligera; la edición acepta el perfil completo. */
+function institutionWritePayload(string $method): array
+{
+    return match ($method) {
+        'POST' => institutionInvite(),
+        'PATCH' => ['is_active' => false],
+        default => institutionPayload(),
+    };
+}
+
 dataset('institution endpoints', [
     'list' => ['GET', '/api/institutions'],
     'create' => ['POST', '/api/institutions'],
@@ -43,76 +58,100 @@ dataset('institution unauthorized roles', [
     'secretary' => [UserRole::SECRETARY],
 ]);
 
-dataset('invalid institution fields', [
-    'missing fields' => [[], ['name', 'cct', 'contact_email']],
-    'missing name' => [['cct' => '09DIT0001A', 'contact_email' => 'contacto@example.test'], ['name']],
-    'missing cct' => [['name' => 'Instituto', 'contact_email' => 'contacto@example.test'], ['cct']],
-    'missing contact email' => [['name' => 'Instituto', 'cct' => '09DIT0001A'], ['contact_email']],
-    'null name' => [institutionPayload(['name' => null]), ['name']],
-    'blank name' => [institutionPayload(['name' => '   ']), ['name']],
+dataset('invalid institution invitations', [
+    'missing email' => [[], ['email']],
+    'null email' => [institutionInvite(['email' => null]), ['email']],
+    'blank email' => [institutionInvite(['email' => '   ']), ['email']],
+    'non-string email' => [institutionInvite(['email' => ['invalid']]), ['email']],
+    'malformed email' => [institutionInvite(['email' => 'not-an-email']), ['email']],
+    'long email' => [institutionInvite([
+        'email' => str_repeat('a', 64).'@'.str_repeat('b', 62).'.'.str_repeat('c', 62).'.'.str_repeat('d', 59).'.test',
+    ]), ['email']],
+    'non-string name' => [institutionInvite(['name' => ['invalid']]), ['name']],
+    'long name' => [institutionInvite(['name' => str_repeat('n', 256)]), ['name']],
+    'long person name' => [institutionInvite(['person_name' => str_repeat('p', 121)]), ['person_name']],
+    // D5: el perfil lo captura la institución; la invitación no lo acepta.
+    'profile field' => [institutionInvite(['cct' => '09DIT0001A']), ['cct']],
+    'contact field' => [institutionInvite(['contact_email' => 'otro@example.test']), ['contact_email']],
+]);
+
+dataset('invalid institution updates', [
     'non-string name' => [institutionPayload(['name' => ['invalid']]), ['name']],
     'long name' => [institutionPayload(['name' => str_repeat('n', 256)]), ['name']],
-    'null cct' => [institutionPayload(['cct' => null]), ['cct']],
-    'blank cct' => [institutionPayload(['cct' => '']), ['cct']],
     'numeric cct' => [institutionPayload(['cct' => 12345]), ['cct']],
     'long cct' => [institutionPayload(['cct' => str_repeat('c', 256)]), ['cct']],
-    'null contact email' => [institutionPayload(['contact_email' => null]), ['contact_email']],
-    'blank contact email' => [institutionPayload(['contact_email' => '']), ['contact_email']],
     'non-string contact email' => [institutionPayload(['contact_email' => ['invalid']]), ['contact_email']],
     'malformed contact email' => [institutionPayload(['contact_email' => 'not-an-email']), ['contact_email']],
     'long contact email' => [institutionPayload([
         'contact_email' => str_repeat('a', 64).'@'.str_repeat('b', 62).'.'.str_repeat('c', 62).'.'.str_repeat('d', 59).'.test',
     ]), ['contact_email']],
+    'long contact name' => [institutionPayload(['contact_name' => str_repeat('r', 121)]), ['contact_name']],
 ]);
 
-it('allows an administrator to list every institution including inactive ones in id order', function () {
+it('allows an administrator to list every institution, paginated, by name and with the unnamed ones last (HU-S16-05)', function () {
     $this->loginWithCookies(User::factory()->role(UserRole::ADMIN)->create())->assertOk();
-    $this->browserRequest('GET', '/api/institutions')->assertOk()->assertExactJson(['data' => []]);
-    $first = Institution::factory()->inactive()->create(['name' => 'Zeta']);
-    $second = Institution::factory()->create(['name' => 'Alfa']);
+    $this->browserRequest('GET', '/api/institutions')->assertOk()
+        ->assertExactJson(['data' => [], 'meta' => ['current_page' => 1, 'last_page' => 1, 'total' => 0]]);
+    $zeta = Institution::factory()->inactive()->create(['name' => 'Zeta']);
+    $alfa = Institution::factory()->create(['name' => 'Alfa']);
+    $unnamed = Institution::factory()->create(['name' => null, 'cct' => null, 'contact_email' => null]);
 
     $this->browserRequest('GET', '/api/institutions')
-        ->assertOk()
-        ->assertJsonCount(2, 'data')
-        ->assertJsonPath('data.0.id', $first->id)
-        ->assertJsonPath('data.0.is_active', false)
-        ->assertJsonPath('data.1.id', $second->id)
-        ->assertJsonPath('data.1.is_active', true);
+        ->assertOk()->assertHeader('Cache-Control', 'no-store, private')
+        ->assertJsonCount(3, 'data')
+        ->assertJsonPath('meta.total', 3)
+        ->assertJsonPath('data.0.id', $alfa->id)
+        ->assertJsonPath('data.1.id', $zeta->id)
+        ->assertJsonPath('data.1.is_active', false)
+        ->assertJsonPath('data.2.id', $unnamed->id)
+        ->assertJsonPath('data.2.name', null)
+        ->assertJsonPath('data.2.profile_status', 'pending_access');
 });
 
-it('allows an administrator to create an institution with its default active state', function () {
+it('invites an institution with only the account email, active and without a profile (HU-S16-06)', function () {
     $this->loginWithCookies(User::factory()->role(UserRole::ADMIN)->create())->assertOk();
 
-    $response = $this->browserRequest('POST', '/api/institutions', institutionPayload())
+    $id = $this->browserRequest('POST', '/api/institutions', institutionInvite())
         ->assertCreated()
-        ->assertJsonPath('data.name', 'Instituto de Educación Dual')
-        ->assertJsonPath('data.cct', '09DIT0001A')
-        ->assertJsonPath('data.contact_email', 'contacto@example.test')
-        ->assertJsonPath('data.is_active', true);
+        ->assertJsonPath('data.name', null)
+        ->assertJsonPath('data.cct', null)
+        ->assertJsonPath('data.contact_name', null)
+        ->assertJsonPath('data.contact_email', null)
+        ->assertJsonPath('data.is_active', true)
+        ->json('data.id');
 
-    $this->assertDatabaseCount('institutions', 1);
-    $this->assertDatabaseHas('institutions', institutionPayload([
-        'id' => $response->json('data.id'),
-        'is_active' => true,
-    ]));
-    expect(Institution::sole()->is_active)->toBeTrue();
+    // El cliente exige cada columna del contrato, también las que quedan en null.
+    $this->browserRequest('GET', '/api/institutions/'.$id)->assertOk();
+    $created = $this->browserRequest('POST', '/api/institutions', institutionInvite(['email' => 'otra@example.test']))->assertCreated()->json('data');
+    expect(array_keys($created))->toContain('name', 'cct', 'contact_name', 'contact_position', 'contact_email', 'contact_phone', 'is_active', 'created_at', 'updated_at');
+    $institution = Institution::query()->findOrFail($id);
+    expect($institution->id)->toBe($id)
+        ->and($institution->is_active)->toBeTrue()
+        ->and($institution->missing())->toBe(Institution::MINIMUM)
+        // D7 solo aplica a las existentes: la invitada ve su bienvenida al entrar (HU-S16-07).
+        ->and($institution->onboarding_dismissed_at)->toBeNull();
 });
 
-it('accepts field values at their supported length limits', function () {
+it('accepts invitation and edition values at their supported length limits', function () {
+    Notification::fake();
     $this->loginWithCookies(User::factory()->role(UserRole::ADMIN)->create())->assertOk();
+    $email = str_repeat('a', 64).'@'.str_repeat('b', 62).'.'.str_repeat('c', 62).'.'.str_repeat('d', 58).'.test';
+    $id = $this->browserRequest('POST', '/api/institutions', ['email' => $email, 'name' => str_repeat('n', 255), 'person_name' => str_repeat('p', 120)])
+        ->assertCreated()->json('data.id');
+    expect(User::query()->where('institution_id', $id)->sole()->name)->toBe(str_repeat('p', 120));
+
     $payload = institutionPayload([
-        'name' => str_repeat('n', 255),
+        'name' => str_repeat('m', 255),
         // T-S14-15: el CCT tiene un formato fijo de 10 caracteres.
         'cct' => '09DIT0010Z',
         'contact_name' => str_repeat('r', 120),
         'contact_position' => str_repeat('p', 120),
-        'contact_email' => str_repeat('a', 64).'@'.str_repeat('b', 62).'.'.str_repeat('c', 62).'.'.str_repeat('d', 58).'.test',
+        'contact_email' => $email,
         'contact_phone' => '+52 (834) 123-4567 8',
     ]);
+    $this->browserRequest('PUT', '/api/institutions/'.$id, $payload)->assertOk();
 
-    $this->browserRequest('POST', '/api/institutions', $payload)->assertCreated();
-
-    $this->assertDatabaseHas('institutions', $payload);
+    $this->assertDatabaseHas('institutions', ['id' => $id, ...$payload]);
 });
 
 it('allows an administrator to view an institution including when it is inactive', function () {
@@ -145,7 +184,7 @@ it('allows an administrator to update institution data while preserving its stat
     $this->assertDatabaseHas('institutions', array_replace(institutionPayload(), ['id' => $institution->id, 'is_active' => false]));
 });
 
-it('rejects invalid institution creation without inserting a partial record', function (array $payload, array $fields) {
+it('rejects an invalid invitation without inserting a partial record', function (array $payload, array $fields) {
     $existing = Institution::factory()->create();
     $original = $existing->refresh()->getAttributes();
     $this->loginWithCookies(User::factory()->role(UserRole::ADMIN)->create())->assertOk();
@@ -155,10 +194,11 @@ it('rejects invalid institution creation without inserting a partial record', fu
         ->assertJsonValidationErrors($fields);
 
     $this->assertDatabaseCount('institutions', 1);
+    $this->assertDatabaseCount('users', 1);
     expect($existing->fresh()->getAttributes())->toBe($original);
-})->with('invalid institution fields');
+})->with('invalid institution invitations');
 
-it('rejects invalid full updates without persisting any changed field', function (array $payload, array $fields) {
+it('rejects invalid updates without persisting any changed field', function (array $payload, array $fields) {
     $institution = Institution::factory()->create();
     $original = $institution->refresh()->getAttributes();
     $this->loginWithCookies(User::factory()->role(UserRole::ADMIN)->create())->assertOk();
@@ -169,24 +209,36 @@ it('rejects invalid full updates without persisting any changed field', function
 
     $this->assertDatabaseCount('institutions', 1);
     expect($institution->fresh()->getAttributes())->toBe($original);
-})->with('invalid institution fields');
+})->with('invalid institution updates');
 
-it('rejects a cct already used by an active or inactive institution on creation and update', function (bool $active) {
+it('lets the administrator edit any subset of the data and saves a blank value as missing (HU-S16-06)', function () {
+    $institution = Institution::factory()->create(institutionPayload(['contact_position' => 'Vinculación']));
+    $this->loginWithCookies(User::factory()->role(UserRole::ADMIN)->create())->assertOk();
+
+    $this->browserRequest('PUT', '/api/institutions/'.$institution->id, [])->assertOk()->assertJsonPath('data.name', 'Instituto de Educación Dual');
+    $this->browserRequest('PUT', '/api/institutions/'.$institution->id, ['name' => 'Nuevo nombre', 'contact_position' => '  '])
+        ->assertOk()
+        ->assertJsonPath('data.name', 'Nuevo nombre')
+        ->assertJsonPath('data.contact_position', null)
+        ->assertJsonPath('data.cct', '09DIT0001A');
+    $this->browserRequest('PUT', '/api/institutions/'.$institution->id, ['cct' => null, 'contact_email' => ''])
+        ->assertOk()->assertJsonPath('data.cct', null)->assertJsonPath('data.contact_email', null);
+});
+
+it('rejects a cct already used by an active or inactive institution on update', function (bool $active) {
     $existing = Institution::factory()->create(['cct' => '09DIT0001A', 'is_active' => $active]);
     $target = Institution::factory()->create();
     $originalExisting = $existing->refresh()->getAttributes();
     $originalTarget = $target->refresh()->getAttributes();
     $this->loginWithCookies(User::factory()->role(UserRole::ADMIN)->create())->assertOk();
 
-    foreach ([['POST', '/api/institutions'], ['PUT', '/api/institutions/'.$target->id]] as [$method, $uri]) {
-        $this->browserRequest($method, $uri, institutionPayload())
-            ->assertUnprocessable()
-            ->assertJsonValidationErrors('cct');
+    $this->browserRequest('PUT', '/api/institutions/'.$target->id, institutionPayload())
+        ->assertUnprocessable()
+        ->assertJsonValidationErrors('cct');
 
-        $this->assertDatabaseCount('institutions', 2);
-        expect($existing->fresh()->getAttributes())->toBe($originalExisting);
-        expect($target->fresh()->getAttributes())->toBe($originalTarget);
-    }
+    $this->assertDatabaseCount('institutions', 2);
+    expect($existing->fresh()->getAttributes())->toBe($originalExisting);
+    expect($target->fresh()->getAttributes())->toBe($originalTarget);
 })->with(['active' => [true], 'inactive' => [false]]);
 
 it('allows an update to retain the institutions own cct', function () {
@@ -200,7 +252,7 @@ it('allows an update to retain the institutions own cct', function () {
     $this->assertDatabaseHas('institutions', institutionPayload(['id' => $institution->id]));
 });
 
-it('returns a validation error and rolls back when a cct becomes occupied after request validation', function (string $method) {
+it('returns a validation error and rolls back when a cct becomes occupied after request validation', function () {
     $institution = Institution::factory()->create();
     $original = $institution->refresh()->getAttributes();
     $this->loginWithCookies(User::factory()->role(UserRole::ADMIN)->create())->assertOk();
@@ -217,14 +269,9 @@ it('returns a validation error and rolls back when a cct becomes occupied after 
             ]));
         };
 
-        if ($method === 'POST') {
-            Institution::creating($occupyCct);
-        } else {
-            Institution::updating($occupyCct);
-        }
+        Institution::updating($occupyCct);
 
-        $uri = '/api/institutions'.($method === 'PUT' ? '/'.$institution->id : '');
-        $this->browserRequest($method, $uri, institutionPayload())
+        $this->browserRequest('PUT', '/api/institutions/'.$institution->id, institutionPayload())
             ->assertUnprocessable()
             ->assertJsonValidationErrors('cct');
     } finally {
@@ -234,20 +281,22 @@ it('returns a validation error and rolls back when a cct becomes occupied after 
     $this->assertDatabaseCount('institutions', 1);
     expect($institution->fresh()->getAttributes())->toBe($original);
     $this->assertDatabaseMissing('institutions', ['cct' => '09DIT0001A']);
-})->with(['POST', 'PUT']);
+});
 
 // T-S14-15: el CCT se normaliza (mayúsculas, sin espacios ni guiones) y sigue el formato SEP; la unicidad se aplica al
 // valor normalizado. Antes se guardaba tal cual y «exact-cct» y «Exact-Cct» convivían.
 it('normalizes the cct, requires the SEP format and applies uniqueness to the normalized value, without making names and emails unique', function () {
     Institution::factory()->create(institutionPayload(['cct' => '09DIT0005B']));
+    $target = Institution::factory()->invited()->create();
     $this->loginWithCookies(User::factory()->role(UserRole::ADMIN)->create())->assertOk();
+    $uri = '/api/institutions/'.$target->id;
 
-    $this->browserRequest('POST', '/api/institutions', institutionPayload(['cct' => '09dit-0005 b', 'contact_email' => 'otra@example.test']))
+    $this->browserRequest('PUT', $uri, institutionPayload(['cct' => '09dit-0005 b']))
         ->assertUnprocessable()->assertJsonValidationErrors(['cct' => 'La Clave de Centro de Trabajo ya está registrada.']);
-    $this->browserRequest('POST', '/api/institutions', institutionPayload(['cct' => 'EXACT-CCT', 'contact_email' => 'otra@example.test']))
+    $this->browserRequest('PUT', $uri, institutionPayload(['cct' => 'EXACT-CCT']))
         ->assertUnprocessable()->assertJsonValidationErrors(['cct' => \App\Rules\WorkCenterKey::MESSAGE]);
-    $this->browserRequest('POST', '/api/institutions', institutionPayload(['cct' => '09dit 0006 c', 'contact_email' => 'otra@example.test']))
-        ->assertCreated()->assertJsonPath('data.cct', '09DIT0006C');
+    $this->browserRequest('PUT', $uri, institutionPayload(['cct' => '09dit 0006 c']))
+        ->assertOk()->assertJsonPath('data.cct', '09DIT0006C');
 
     $this->assertDatabaseCount('institutions', 2);
 });
@@ -268,7 +317,7 @@ it('only permits status changes through the dedicated action', function (string 
     $this->loginWithCookies(User::factory()->role(UserRole::ADMIN)->create())->assertOk();
     $uri = '/api/institutions'.($method === 'PUT' ? '/'.$institution->id : '');
 
-    $this->browserRequest($method, $uri, institutionPayload(['is_active' => $state]))
+    $this->browserRequest($method, $uri, [...institutionWritePayload($method), 'is_active' => $state])
         ->assertUnprocessable()
         ->assertJsonValidationErrors('is_active');
 
@@ -335,12 +384,12 @@ it('rejects institution data in the status action even when the field is null', 
 it('does not persist unvalidated fields from creation update or status requests', function () {
     $this->loginWithCookies(User::factory()->role(UserRole::ADMIN)->create())->assertOk();
     $extra = ['id' => 99999999, 'created_at' => '2000-01-01 00:00:00', 'role' => 'ADMIN', 'deleted_at' => '2000-01-01'];
-    $response = $this->browserRequest('POST', '/api/institutions', institutionPayload($extra))->assertCreated();
-    $institution = Institution::findOrFail($response->json('data.id'));
-    $createdAt = $institution->getRawOriginal('created_at');
-
-    expect($institution->id)->not->toBe($extra['id']);
-    expect($createdAt)->not->toBe($extra['created_at']);
+    // HU-S16-06: la invitación rechaza cualquier campo que no sea suyo.
+    $this->browserRequest('POST', '/api/institutions', institutionInvite($extra))
+        ->assertUnprocessable()->assertJsonValidationErrors(['id', 'created_at', 'role', 'deleted_at']);
+    $this->assertDatabaseCount('institutions', 0);
+    $institution = Institution::factory()->create();
+    $createdAt = $institution->refresh()->getRawOriginal('created_at');
 
     foreach ([
         ['PUT', '/api/institutions/'.$institution->id, institutionPayload($extra)],
@@ -362,7 +411,7 @@ it('rejects anonymous access to every administrative institution endpoint', func
     $institution = Institution::factory()->create();
     $original = $institution->refresh()->getAttributes();
     $this->startCookieSession();
-    $payload = $method === 'PATCH' ? ['is_active' => false] : institutionPayload();
+    $payload = institutionWritePayload($method);
 
     $this->browserRequest($method, str_replace('{id}', (string) $institution->id, $uri), $payload)
         ->assertUnauthorized()
@@ -376,7 +425,7 @@ it('rejects each non-administrator role on every institution endpoint despite fo
     $institution = Institution::factory()->create();
     $original = $institution->refresh()->getAttributes();
     $this->loginWithCookies(User::factory()->role($role)->create())->assertOk();
-    $payload = $method === 'PATCH' ? ['is_active' => false] : institutionPayload();
+    $payload = institutionWritePayload($method);
     $payload['role'] = 'ADMIN';
 
     $this->browserRequest($method, str_replace('{id}', (string) $institution->id, $uri).'?role=ADMIN', $payload, headers: ['X-Role' => 'ADMIN'])
@@ -393,7 +442,7 @@ it('rejects a previously authenticated administrator after the account is deacti
     $admin = User::factory()->role(UserRole::ADMIN)->create();
     $this->loginWithCookies($admin)->assertOk();
     $admin->update(['is_active' => false]);
-    $payload = $method === 'PATCH' ? ['is_active' => false] : institutionPayload();
+    $payload = institutionWritePayload($method);
 
     $this->browserRequest($method, str_replace('{id}', (string) $institution->id, $uri), $payload)->assertUnauthorized();
 
@@ -410,7 +459,7 @@ it('preserves institution data when a write has missing or invalid csrf protecti
         'PUT' => '/api/institutions/'.$institution->id,
         'PATCH' => '/api/institutions/'.$institution->id.'/status',
     };
-    $payload = $method === 'PATCH' ? ['is_active' => false] : institutionPayload();
+    $payload = institutionWritePayload($method);
 
     $this->browserRequest($method, $uri, $payload, csrf: false, headers: $token === null ? [] : ['X-XSRF-TOKEN' => $token])
         ->assertStatus(419);
@@ -424,7 +473,7 @@ it('returns not found for an unknown or invalid institution id without changing 
     $original = $institution->refresh()->getAttributes();
     $this->loginWithCookies(User::factory()->role(UserRole::ADMIN)->create())->assertOk();
     $uri = '/api/institutions/'.$id.($method === 'PATCH' ? '/status' : '');
-    $payload = $method === 'PATCH' ? ['is_active' => false] : institutionPayload();
+    $payload = institutionWritePayload($method);
 
     $this->browserRequest($method, $uri, $payload)->assertNotFound();
 
@@ -471,16 +520,28 @@ it('enforces unique cct values directly in PostgreSQL independently of request v
     $this->assertDatabaseCount('institutions', 1);
 });
 
-it('enforces non-null institution fields directly in PostgreSQL', function (string $field) {
+it('keeps is_active required directly in PostgreSQL', function () {
     try {
-        DB::transaction(fn () => DB::table('institutions')->insert(institutionPayload([$field => null])));
-        $this->fail('PostgreSQL accepted null for the required institution field '.$field.'.');
+        DB::transaction(fn () => DB::table('institutions')->insert(institutionPayload(['is_active' => null])));
+        $this->fail('PostgreSQL accepted null for is_active.');
     } catch (QueryException $exception) {
         expect((string) $exception->getCode())->toBe('23502');
     }
 
     $this->assertDatabaseCount('institutions', 0);
-})->with(['name', 'cct', 'contact_email', 'is_active']);
+});
+
+it('accepts a missing name, CCT or contact email but never a blank one directly in PostgreSQL (HU-S16-05)', function (string $field) {
+    DB::table('institutions')->insert(institutionPayload([$field => null, 'cct' => $field === 'cct' ? null : '09DIT0001A']));
+    try {
+        DB::transaction(fn () => DB::table('institutions')->insert(institutionPayload([$field => '   ', 'cct' => $field === 'cct' ? '   ' : '09DIT0002B'])));
+        $this->fail('PostgreSQL accepted a blank '.$field.'.');
+    } catch (QueryException $exception) {
+        expect((string) $exception->getCode())->toBe('23514');
+    }
+
+    $this->assertDatabaseCount('institutions', 1);
+})->with(['name', 'cct', 'contact_email']);
 
 it('defaults institutions to active directly in PostgreSQL', function () {
     $id = DB::table('institutions')->insertGetId(institutionPayload());
@@ -489,48 +550,70 @@ it('defaults institutions to active directly in PostgreSQL', function () {
     $this->assertDatabaseHas('institutions', ['id' => $id, 'is_active' => true]);
 });
 
-describe('cuenta de la persona responsable (T-S8-11)', function () {
-    it('creates the institution account with the contact email and sends the setup link', function () {
+describe('invitación de la institución (HU-S16-06)', function () {
+    it('creates the account with the email as provisional name, sends the setup link and records institution_invited', function () {
         Notification::fake();
         $admin = User::factory()->role(UserRole::ADMIN)->create();
         $this->loginWithCookies($admin)->assertOk();
 
-        $response = $this->browserRequest('POST', '/api/institutions', institutionPayload(['contact_email' => '  Contacto@Example.TEST ', 'contact_phone' => '834 123 4567']))
+        $id = $this->browserRequest('POST', '/api/institutions', institutionInvite(['email' => '  Contacto@Example.TEST ', 'name' => '  ', 'person_name' => '']))
             ->assertCreated()
             ->assertHeader('Cache-Control', 'no-store, private')
-            ->assertJsonPath('data.contact_email', 'contacto@example.test')
-            ->assertJsonPath('data.contact_phone', '834 123 4567')
-            ->assertJsonPath('data.contact_name', 'María Fernanda López')
-            ->assertJsonPath('data.contact_position', null)
+            ->assertJsonPath('data.name', null)
             ->assertJsonPath('setup_delivery', 'sent')
-            ->assertJsonMissingPath('setup_url');
+            ->assertJsonMissingPath('setup_url')
+            ->json('data.id');
 
         $account = User::query()->where('email', 'contacto@example.test')->sole();
         expect($account->role)->toBe(UserRole::INSTITUTION)
-            ->and($account->institution_id)->toBe($response->json('data.id'))
-            ->and($account->name)->toBe('María Fernanda López')
+            ->and($account->institution_id)->toBe($id)
+            // M3: sin nombre de la persona, la cuenta guarda el correo como nombre provisional.
+            ->and($account->name)->toBe('contacto@example.test')
             ->and($account->is_active)->toBeTrue()
             ->and($account->password_setup_required)->toBeTrue()
             ->and($account->created_by)->toBe($admin->id);
         Notification::assertSentTo($account, SetInitialPassword::class);
         Notification::assertCount(1);
+        $this->assertDatabaseHas('account_audit_events', [
+            'actor_id' => $admin->id, 'actor_kind' => 'user', 'event' => 'institution_invited', 'subject_type' => 'institution', 'subject_id' => $id,
+        ]);
+        // La bitácora la nombra con el respaldo mientras no captura su nombre (HU-S16-05).
+        $this->browserRequest('GET', '/api/audit-events?type=institution_invited')->assertOk()
+            ->assertJsonCount(1, 'data')
+            ->assertJsonPath('data.0.actor.id', $admin->id)
+            ->assertJsonPath('data.0.resource', ['subject_type' => 'institution', 'id' => $id, 'name' => 'Institución sin nombre', 'fields' => []]);
     });
 
-    it('registers nothing when the contact email already belongs to an account, ignoring case', function () {
+    it('keeps the reference name and the person name, but leaves the contact for the onboarding (D5)', function () {
+        Notification::fake();
+        $this->loginWithCookies(User::factory()->role(UserRole::ADMIN)->create())->assertOk();
+
+        $id = $this->browserRequest('POST', '/api/institutions', institutionInvite(['name' => ' UT del Golfo ', 'person_name' => ' Luis Pérez ']))
+            ->assertCreated()
+            ->assertJsonPath('data.name', 'UT del Golfo')
+            ->assertJsonPath('data.contact_name', null)
+            ->assertJsonPath('data.contact_email', null)
+            ->json('data.id');
+
+        expect(User::query()->where('institution_id', $id)->sole()->name)->toBe('Luis Pérez')
+            ->and(Institution::findOrFail($id)->missing())->toBe(['cct', 'contact_name', 'contact_email']);
+    });
+
+    it('registers nothing when the email already belongs to an account, ignoring case', function () {
         Notification::fake();
         User::factory()->role(UserRole::SECRETARY)->create(['email' => 'contacto@example.test']);
         $this->loginWithCookies(User::factory()->role(UserRole::ADMIN)->create())->assertOk();
 
-        $this->browserRequest('POST', '/api/institutions', institutionPayload(['contact_email' => 'CONTACTO@example.test']))
+        $this->browserRequest('POST', '/api/institutions', institutionInvite(['email' => 'CONTACTO@example.test']))
             ->assertUnprocessable()
-            ->assertJsonValidationErrors(['contact_email' => 'El correo ya está registrado en otra cuenta.']);
+            ->assertJsonValidationErrors(['email' => 'El correo ya está registrado en otra cuenta.']);
 
         $this->assertDatabaseCount('institutions', 0);
-        expect(User::query()->where('role', UserRole::INSTITUTION->value)->count())->toBe(0);
+        $this->assertDatabaseMissing('account_audit_events', ['event' => 'institution_invited']);
         Notification::assertNothingSent();
     });
 
-    it('rolls the institution back when the email is taken after validation', function () {
+    it('rolls the institution and its audit event back when the email is taken after validation', function () {
         Notification::fake();
         $this->loginWithCookies(User::factory()->role(UserRole::ADMIN)->create())->assertOk();
         $dispatcher = Institution::getEventDispatcher();
@@ -539,49 +622,23 @@ describe('cuenta de la persona responsable (T-S8-11)', function () {
         try {
             // El FormRequest ya pasó: solo la restricción de la base puede detectar este choque.
             Institution::created(fn () => User::factory()->create(['email' => 'contacto@example.test']));
-            $this->browserRequest('POST', '/api/institutions', institutionPayload())
+            $this->browserRequest('POST', '/api/institutions', institutionInvite())
                 ->assertUnprocessable()
-                ->assertJsonValidationErrors(['contact_email' => 'El correo ya está registrado en otra cuenta.']);
+                ->assertJsonValidationErrors(['email' => 'El correo ya está registrado en otra cuenta.']);
         } finally {
             Institution::setEventDispatcher($dispatcher);
         }
 
         $this->assertDatabaseCount('institutions', 0);
+        $this->assertDatabaseMissing('account_audit_events', ['event' => 'institution_invited']);
         Notification::assertNothingSent();
-    });
-
-    it('requires the name of the responsible person on creation and update', function () {
-        $institution = Institution::factory()->create();
-        $this->loginWithCookies(User::factory()->role(UserRole::ADMIN)->create())->assertOk();
-
-        foreach (['missing' => null, 'blank' => '  ', 'long' => str_repeat('r', 121)] as $value) {
-            $payload = $value === null ? Arr::except(institutionPayload(), ['contact_name']) : institutionPayload(['contact_name' => $value]);
-            $this->browserRequest('POST', '/api/institutions', $payload)->assertUnprocessable()->assertJsonValidationErrors('contact_name');
-            $this->browserRequest('PUT', '/api/institutions/'.$institution->id, $payload)->assertUnprocessable()->assertJsonValidationErrors('contact_name');
-        }
-        $this->assertDatabaseCount('institutions', 1);
-        expect(User::query()->where('role', UserRole::INSTITUTION->value)->count())->toBe(0);
-    });
-
-    it('saves the responsible person and an optional position on the institution', function () {
-        Notification::fake();
-        $this->loginWithCookies(User::factory()->role(UserRole::ADMIN)->create())->assertOk();
-        $id = $this->browserRequest('POST', '/api/institutions', institutionPayload(['contact_position' => 'Jefatura de Vinculación']))
-            ->assertCreated()->assertJsonPath('data.contact_position', 'Jefatura de Vinculación')->json('data.id');
-
-        $this->browserRequest('PUT', '/api/institutions/'.$id, institutionPayload(['contact_name' => 'Luis Pérez', 'contact_position' => '']))
-            ->assertOk()->assertJsonPath('data.contact_name', 'Luis Pérez')->assertJsonPath('data.contact_position', null);
-        $this->browserRequest('POST', '/api/institutions', institutionPayload(['cct' => '09DIT0007D', 'contact_email' => 'otro@example.test', 'contact_position' => str_repeat('p', 121)]))
-            ->assertUnprocessable()->assertJsonValidationErrors(['contact_position' => 'El puesto o departamento no debe superar 120 caracteres.']);
-        // La cuenta conserva el nombre con el que se creó.
-        expect(User::query()->where('institution_id', $id)->sole()->name)->toBe('María Fernanda López');
     });
 
     it('returns the setup link to share instead of emailing it with manual delivery (HU-S2-01)', function () {
         Notification::fake();
         $this->loginWithCookies(User::factory()->role(UserRole::ADMIN)->create())->assertOk();
 
-        $response = $this->browserRequest('POST', '/api/institutions', institutionPayload(['delivery_method' => 'manual']))
+        $response = $this->browserRequest('POST', '/api/institutions', institutionInvite(['delivery_method' => 'manual']))
             ->assertCreated()
             ->assertHeader('Cache-Control', 'no-store, private')
             ->assertJsonPath('setup_delivery', 'manual')
@@ -596,43 +653,40 @@ describe('cuenta de la persona responsable (T-S8-11)', function () {
         $institution = Institution::factory()->create();
         $this->loginWithCookies(User::factory()->role(UserRole::ADMIN)->create())->assertOk();
 
-        $this->browserRequest('POST', '/api/institutions', institutionPayload(['delivery_method' => 'whatsapp']))
+        $this->browserRequest('POST', '/api/institutions', institutionInvite(['delivery_method' => 'whatsapp']))
             ->assertUnprocessable()->assertJsonValidationErrors(['delivery_method' => 'El método de entrega debe ser email o manual.']);
         $this->browserRequest('PUT', '/api/institutions/'.$institution->id, institutionPayload(['delivery_method' => 'manual']))
             ->assertUnprocessable()->assertJsonValidationErrors(['delivery_method' => 'Editar la institución no envía enlaces: usa “Reenviar enlace”.']);
         $this->assertDatabaseCount('institutions', 1);
     });
 
-    it('keeps the account email when the contact email is edited', function () {
+    it('keeps the account email and name when the administrator edits the contact', function () {
         Notification::fake();
         $this->loginWithCookies(User::factory()->role(UserRole::ADMIN)->create())->assertOk();
-        $id = $this->browserRequest('POST', '/api/institutions', institutionPayload())->assertCreated()->json('data.id');
+        $id = $this->browserRequest('POST', '/api/institutions', institutionInvite(['person_name' => 'María Fernanda López']))->assertCreated()->json('data.id');
 
-        $this->browserRequest('PUT', '/api/institutions/'.$id, institutionPayload(['contact_email' => 'nuevo@example.test']))
-            ->assertOk()->assertJsonPath('data.contact_email', 'nuevo@example.test');
-        expect(User::query()->where('institution_id', $id)->sole()->email)->toBe('contacto@example.test');
+        $this->browserRequest('PUT', '/api/institutions/'.$id, institutionPayload(['contact_name' => 'Luis Pérez', 'contact_email' => 'nuevo@example.test']))
+            ->assertOk()->assertJsonPath('data.contact_email', 'nuevo@example.test')->assertJsonPath('data.contact_name', 'Luis Pérez');
+        $account = User::query()->where('institution_id', $id)->sole();
+        expect($account->email)->toBe('contacto@example.test')->and($account->name)->toBe('María Fernanda López');
     });
 });
 
 describe('teléfono de la institución (T-S8-11)', function () {
-    it('saves an optional phone on creation and update', function () {
-        Notification::fake();
-        $this->loginWithCookies(User::factory()->role(UserRole::ADMIN)->create())->assertOk();
-        $id = $this->browserRequest('POST', '/api/institutions', institutionPayload())->assertCreated()
-            ->assertJsonPath('data.contact_phone', null)->json('data.id');
-
-        $this->browserRequest('PUT', '/api/institutions/'.$id, institutionPayload(['contact_phone' => '+52 834 318 1800']))
-            ->assertOk()->assertJsonPath('data.contact_phone', '+52 834 318 1800');
-        $this->browserRequest('PUT', '/api/institutions/'.$id, institutionPayload(['contact_phone' => '']))
-            ->assertOk()->assertJsonPath('data.contact_phone', null);
-    });
-
-    it('rejects an invalid phone on creation and update', function (mixed $phone, string $message) {
+    it('saves an optional phone when editing and clears it with a blank value', function () {
         $institution = Institution::factory()->create();
         $this->loginWithCookies(User::factory()->role(UserRole::ADMIN)->create())->assertOk();
 
-        $this->browserRequest('POST', '/api/institutions', institutionPayload(['contact_phone' => $phone]))
-            ->assertUnprocessable()->assertJsonValidationErrors(['contact_phone' => $message]);
+        $this->browserRequest('PUT', '/api/institutions/'.$institution->id, institutionPayload(['contact_phone' => '+52 834 318 1800']))
+            ->assertOk()->assertJsonPath('data.contact_phone', '+52 834 318 1800');
+        $this->browserRequest('PUT', '/api/institutions/'.$institution->id, institutionPayload(['contact_phone' => '']))
+            ->assertOk()->assertJsonPath('data.contact_phone', null);
+    });
+
+    it('rejects an invalid phone when editing', function (mixed $phone, string $message) {
+        $institution = Institution::factory()->create();
+        $this->loginWithCookies(User::factory()->role(UserRole::ADMIN)->create())->assertOk();
+
         $this->browserRequest('PUT', '/api/institutions/'.$institution->id, institutionPayload(['contact_phone' => $phone]))
             ->assertUnprocessable()->assertJsonValidationErrors(['contact_phone' => $message]);
         $this->assertDatabaseCount('institutions', 1);

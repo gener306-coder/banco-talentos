@@ -379,6 +379,29 @@ describe('respuesta institucional HU-S6-02', () => {
     expect(await screen.findByRole('region', { name: 'Respuesta' })).toHaveTextContent('Rechazada')
   })
 
+  it('sin el perfil mínimo no deja aceptar, enlaza a Mi cuenta y sigue permitiendo rechazar (HU-S16-08)', async () => {
+    user = { ...institutionUser, institution: { id: 2, name: null, missing: ['name', 'cct'], onboarding: 'done' } }
+    apiMock.mockResolvedValueOnce(Response.json({ data: detail }))
+    renderApp('/institution/linkage-requests/41')
+    const section = await screen.findByRole('region', { name: 'Responder solicitud' })
+    const accept = within(section).getByRole('button', { name: 'Aceptar solicitud' })
+    expect(accept).toBeDisabled()
+    expect(accept).toHaveAccessibleDescription(/Completa el nombre oficial, el CCT y el nombre y correo del responsable/)
+    expect(within(section).getByRole('link', { name: 'Completar perfil' })).toHaveAttribute('href', '/account#organization')
+    expect(within(section).getByRole('button', { name: 'Rechazar solicitud' })).toBeEnabled()
+  })
+
+  it('si el servidor rechaza la aceptación por el perfil incompleto, lo explica en lugar del error genérico (HU-S16-08)', async () => {
+    apiMock.mockResolvedValueOnce(Response.json({ data: detail }))
+      .mockResolvedValueOnce(Response.json({ message: 'Completa…', code: 'INSTITUTION_PROFILE_INCOMPLETE', missing: ['cct'] }, { status: 422 }))
+    renderApp('/institution/linkage-requests/41')
+    const section = await screen.findByRole('region', { name: 'Responder solicitud' })
+    fireEvent.click(within(section).getByRole('button', { name: 'Aceptar solicitud' }))
+    fireEvent.click(within(await screen.findByRole('alertdialog')).getByRole('button', { name: 'Aceptar solicitud' }))
+    expect(await within(section).findByRole('note', { name: 'Perfil de la institución incompleto' })).toBeInTheDocument()
+    expect(within(section).getByRole('button', { name: 'Aceptar solicitud' })).toBeDisabled()
+  })
+
   it('si la empresa inactivó la oportunidad mientras decidía, muestra el aviso del servidor y permite actualizar (auditoría QA #6)', async () => {
     apiMock.mockResolvedValueOnce(Response.json({ data: detail }))
       .mockResolvedValueOnce(Response.json({ message: 'Invalid', errors: { status: ['La oportunidad fue inactivada por la empresa. Puedes rechazar la solicitud.'] } }, { status: 422 }))

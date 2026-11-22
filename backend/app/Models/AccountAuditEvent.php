@@ -23,6 +23,26 @@ class AccountAuditEvent extends Model
     /** HU-S14-02: la Secretaría invitó a una empresa (alta ligera con la cuenta de su operador). */
     public const COMPANY_INVITED = 'company_invited';
 
+    /** HU-S16-06: Administración invitó a una institución (alta ligera con la cuenta de su persona). */
+    public const INSTITUTION_INVITED = 'institution_invited';
+
+    /** HU-S16-01: primer Administrador creado desde la consola del servidor. */
+    public const ADMIN_BOOTSTRAPPED = 'admin_bootstrapped';
+
+    /** HU-S16-04: enlace de restablecimiento emitido desde la consola. */
+    public const PASSWORD_RESET_ISSUED = 'password_reset_issued';
+
+    /** HU-S16-04: correo de acceso de un Administrador corregido desde la consola (sin los valores). */
+    public const EMAIL_CHANGED = 'email_changed';
+
+    /** HU-S16-02 (D8): cuenta inactivada o reactivada; el campo que cambió es is_active. */
+    public const ACCOUNT_STATUS_CHANGED = 'account_status_changed';
+
+    /** D3: quién originó el evento: una cuenta desde la interfaz o la consola del servidor (sin cuenta). */
+    public const ACTOR_USER = 'user';
+
+    public const ACTOR_CLI = 'cli';
+
     protected $fillable = [];
 
     protected function casts(): array
@@ -44,8 +64,25 @@ class AccountAuditEvent extends Model
      */
     public static function record(User $actor, string $event, User|Company|Institution $subject, array $fields = []): self
     {
+        return self::write($actor, $event, $subject, $fields);
+    }
+
+    /**
+     * D3: evento de la consola del servidor, sin cuenta como actor. La bitácora lo muestra como «Consola del servidor».
+     *
+     * @param  list<string>  $fields
+     */
+    public static function recordFromConsole(string $event, User|Company|Institution $subject, array $fields = []): self
+    {
+        return self::write(null, $event, $subject, $fields);
+    }
+
+    /** @param  list<string>  $fields */
+    private static function write(?User $actor, string $event, User|Company|Institution $subject, array $fields): self
+    {
         $entry = new self;
-        $entry->actor_id = $actor->id;
+        $entry->actor_id = $actor?->id;
+        $entry->actor_kind = $actor === null ? self::ACTOR_CLI : self::ACTOR_USER;
         $entry->event = $event;
         $entry->subject_type = match (true) {
             $subject instanceof User => 'user',

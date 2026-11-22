@@ -42,8 +42,17 @@ function describe(event: AuditEvent): ReactNode {
     case 'linkage_responded':
       return `Solicitud #${event.resource.id} de ${event.resource.company} a ${event.resource.institution}: ${event.resource.status === 'ACEPTADA' ? 'aceptada' : 'rechazada'}`
     case 'company_invited':
+    case 'institution_invited':
     case 'password_changed':
+    case 'admin_bootstrapped':
+    case 'password_reset_issued':
+    case 'email_changed':
       return describeChange(event.resource)
+    case 'account_status_changed': {
+      // D8: el estado nuevo se registra como activated o deactivated, sin otros datos.
+      const state = event.resource.fields.includes('deactivated') ? 'inactivada' : 'reactivada'
+      return `${describeChange(event.resource)} (${state})`
+    }
     case 'account_updated':
     case 'organization_profile_updated': {
       const resource = event.resource
@@ -127,8 +136,8 @@ export function AuditEventsPage() {
                         <td data-cell="meta"><time dateTime={event.occurred_at}>{dateFormat.format(new Date(event.occurred_at))}</time></td>
                         <th scope="row" data-cell="title">{auditEventLabel(event.type)}</th>
                         <td data-cell="block">
-                          {event.actor.name}
-                          <span className="linkage-profile-meta">{roleLabels[event.actor.role]}</span>
+                          {event.actor ? event.actor.name : 'Consola del servidor'}
+                          <span className="linkage-profile-meta">{event.actor ? roleLabels[event.actor.role] : 'Comando de operación'}</span>
                         </td>
                         <td data-cell="block">{describe(event)}</td>
                       </tr>

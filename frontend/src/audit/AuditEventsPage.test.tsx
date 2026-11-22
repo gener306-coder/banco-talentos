@@ -152,10 +152,25 @@ describe('cambios de cuentas y organizaciones HU-S14-04', () => {
     const filter = screen.getByLabelText('Tipo de evento')
     expect(within(filter).getAllByRole('option').map((option) => option.textContent)).toEqual([
       'Todos los eventos', 'Cuenta creada', 'Empresa registrada', 'Oportunidad registrada', 'Vinculación solicitada', 'Vinculación respondida',
-      'Empresa invitada', 'Perfil de organización actualizado', 'Cuenta actualizada', 'Contraseña cambiada',
+      'Empresa invitada', 'Institución invitada', 'Perfil de organización actualizado', 'Cuenta actualizada', 'Contraseña cambiada',
+      'Estado de cuenta cambiado', 'Primer Administrador creado', 'Restablecimiento de contraseña emitido', 'Correo de acceso cambiado',
     ])
     fireEvent.change(filter, { target: { value: 'password_changed' } })
     await waitFor(() => expect(apiMock.mock.calls[1][0]).toBe('/api/audit-events?page=1&type=password_changed'))
+  })
+
+  it('muestra los eventos de la consola del servidor sin cuenta como actor (HU-S16-01, D3)', async () => {
+    apiMock.mockResolvedValueOnce(page([
+      { type: 'admin_bootstrapped', occurred_at: '2026-11-22T10:00:00Z', actor: null,
+        resource: { subject_type: 'user', id: 1, name: 'Dirección General', role: 'ADMIN', fields: [] } },
+    ]))
+    renderApp()
+    const table = await screen.findByRole('table', { name: 'Eventos de la bitácora' })
+    const row = within(table).getAllByRole('row')[1]
+    expect(row).toHaveTextContent('Primer Administrador creado')
+    expect(row).toHaveTextContent('Consola del servidor')
+    expect(row).toHaveTextContent('Comando de operación')
+    expect(row).toHaveTextContent('Cuenta de Administrador: Dirección General')
   })
 
   it('descarta datos ajenos al contrato y rechaza un sujeto desconocido', async () => {

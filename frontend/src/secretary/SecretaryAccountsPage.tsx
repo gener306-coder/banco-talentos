@@ -1,128 +1,28 @@
-import { TableHead, TableSkeleton } from '../ui/TableSkeleton'
-import type { TableColumn } from '../ui/TableSkeleton'
-import { useCallback, useState } from 'react'
-import { Link, useLocation } from 'react-router'
-import { useAccountAccess } from '../accounts/useAccountAccess'
-import { useAuth } from '../auth/useAuth'
-import { InstitutionRequestError } from '../institutions/InstitutionLayout'
-import { useApiRequest } from '../lib/useApiRequest'
-import { ChevronLeftIcon, ChevronRightIcon, MailIcon, PlusIcon } from '../ui/icons'
-import { Sheet } from '../ui/Sheet'
-import { useTableMemory } from '../ui/useTableMemory'
-import { rowIndex } from '../ui/tableMotion'
-
-import { useListParams } from '../ui/useListParams'
+import { RoleAccountsPage } from '../accounts/RoleAccountsPage'
+import type { RoleAccountsConfig } from '../accounts/RoleAccountsPage'
 import { listSecretaryAccounts, SECRETARY_PASSWORD_RESET_PATH, secretaryAccountStatusPath, secretaryMessages } from './api'
-import type { SecretaryAccountStatus } from './api'
 import { SecretaryAccountForm, SecretarySetupLinkForm } from './SecretaryAccountForms'
-import '../institutions/institutions.css'
-
-const statusLabels: Record<SecretaryAccountStatus, string> = { active: 'ACTIVA', pending: 'PENDIENTE', inactive: 'INACTIVA' }
-const dateFormat = new Intl.DateTimeFormat('es-MX', { dateStyle: 'medium' })
 
 /**
- * Cuentas de la Secretaría de Economía (HU-S4-01 CA-05, CA-08): listado con su estado, alta y reenvío del enlace
- * en hojas, e inactivación, activación y restablecimiento de contraseña (HU-S6-04 CA-04). Disponible para ADMIN y
- * SECRETARY.
+ * Cuentas de la Secretaría de Economía (HU-S4-01 CA-05, CA-08; HU-S6-04 CA-04), disponibles para ADMIN y SECRETARY. Desde
+ * HU-S16-02 comparten la página con las cuentas de Administración (`RoleAccountsPage`).
  */
-/** Totales del pie con separador de miles (T-S14-08): «2,369 alumnos». */
-const countFormat = new Intl.NumberFormat('es-MX')
-
-/** Columnas del listado (T-S14-08): las comparten la tabla y su esqueleto. */
-const columns: readonly TableColumn[] = [
-  { label: 'Nombre', role: 'title', bone: 'text' },
-  { label: 'Correo de acceso', role: 'meta', bone: 'text' },
-  { label: 'Estado', role: 'status', bone: 'status' },
-  { label: 'Alta', role: 'meta', bone: 'short' },
-  { label: 'Acciones', role: 'actions', bone: 'actions' },
-]
+const config: RoleAccountsConfig = {
+  id: 'secretary-accounts',
+  title: 'Cuentas de la Secretaría',
+  noun: 'de la Secretaría',
+  intro: 'Personal de la Secretaría de Economía que valida y registra a las empresas.',
+  createLabel: 'Nueva cuenta de la Secretaría',
+  messages: secretaryMessages,
+  list: listSecretaryAccounts,
+  statusPath: secretaryAccountStatusPath,
+  resetPath: SECRETARY_PASSWORD_RESET_PATH,
+  createForm: (onCreated) => <SecretaryAccountForm onCreated={onCreated} />,
+  resendForm: (initialEmail) => <SecretarySetupLinkForm initialEmail={initialEmail} />,
+  createTitleId: 'secretary-account-title',
+  resendTitleId: 'secretary-setup-link-title',
+}
 
 export function SecretaryAccountsPage() {
-  // T-S12-05: la página vive en la URL; recargar o compartir la vista la conserva.
-  const { page, setPage } = useListParams()
-  const load = useCallback((signal: AbortSignal) => listSecretaryAccounts(page, signal), [page])
-  const { data, loading, failure, refresh, setData, pending } = useApiRequest(load, secretaryMessages)
-  // T-S13-18: con un resultado a la vista, una consulta nueva lo atenúa en lugar de desmontarlo.
-  const refreshing = pending && data !== null
-  const tableMemory = useTableMemory(page)
-  const location = useLocation()
-  const { user } = useAuth()
-  const access = useAccountAccess({
-    statusPath: (account) => secretaryAccountStatusPath(account.id),
-    resetPath: SECRETARY_PASSWORD_RESET_PATH,
-    messages: secretaryMessages,
-    selfId: user?.id,
-    onUpdated: (updated) => setData((current) => current && { ...current, accounts: current.accounts.map((account) => account.id === updated.id ? updated : account) }),
-  })
-  const [sheet, setSheet] = useState<{ kind: 'create' } | { kind: 'resend'; email: string } | null>(null)
-  const closeSheet = useCallback(() => setSheet(null), [])
-
-  return (
-    <section className="card institutions" aria-labelledby="secretary-accounts-title">
-      <nav className="institution-navigation" aria-label="Navegación de cuentas de la Secretaría">
-        <Link className="plain" to="/" aria-label="Volver al inicio"><ChevronLeftIcon />Inicio</Link>
-      </nav>
-      <h2 id="secretary-accounts-title">Cuentas de la Secretaría</h2>
-      <div className="institution-toolbar">
-        <p>Personal de la Secretaría de Economía que valida y registra a las empresas.</p>
-        <div className="actions">
-          <button type="button" onClick={() => setSheet({ kind: 'create' })}><PlusIcon />Nueva cuenta de la Secretaría</button>
-          <button type="button" className="secondary" onClick={() => setSheet({ kind: 'resend', email: '' })}>Reenviar enlace</button>
-        </div>
-      </div>
-      {access.feedback}
-      {loading && !data ? <TableSkeleton label="Cargando cuentas…" columns={columns} tableClass="institution-table has-actions" />
-        : failure ? <InstitutionRequestError failure={failure} retry={refresh} page />
-        : data && (
-          <>
-            <div className={`table-card${refreshing ? ' is-refreshing' : ''}`}>
-              {/* T-S13-18: al filtrar o paginar, la tabla anterior se queda atenuada mientras llega la nueva. */}
-              {refreshing && <p className="visually-hidden" role="status">Actualizando resultados…</p>}
-              <div className="institution-table-wrapper" ref={tableMemory} aria-busy={refreshing} role="region" aria-label="Listado de cuentas de la Secretaría" tabIndex={0}>
-                <table className="institution-table has-actions stack-mobile">
-                  <caption className="visually-hidden">Cuentas de la Secretaría</caption>
-                  <TableHead columns={columns} />
-                  <tbody key={location.search} className="rows-enter">
-                    {data.accounts.map((account, index) => (
-                      <tr key={account.id} style={rowIndex(index)}>
-                        <th scope="row" data-cell="title">{account.name}</th>
-                        <td data-cell="meta">{account.email}</td>
-                        <td data-cell="status"><span className={`institution-status ${account.status}`}>{statusLabels[account.status]}</span></td>
-                        <td data-cell="meta"><span className="unit">Alta: </span>{dateFormat.format(new Date(account.created_at))}</td>
-                        <td data-cell="actions">
-                          <div className="actions">
-                            {account.status === 'pending' && (
-                              <button type="button" className="account-action" aria-label={`Reenviar enlace a ${account.name}`}
-                                onClick={() => setSheet({ kind: 'resend', email: account.email })}><MailIcon />Reenviar enlace</button>
-                            )}
-                            {access.rowActions(account)}
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-              {data.lastPage > 1 && (
-                <div className="pager">
-                  <p>Página {data.page} de {countFormat.format(data.lastPage)} · {countFormat.format(data.total)} cuentas</p>
-                  <div className="actions">
-                    <button type="button" className="secondary" disabled={data.page <= 1} onClick={() => setPage(data.page - 1)}><ChevronLeftIcon />Anterior</button>
-                    <button type="button" className="secondary" disabled={data.page >= data.lastPage} onClick={() => setPage(data.page + 1)}>Siguiente<ChevronRightIcon /></button>
-                  </div>
-                </div>
-              )}
-            </div>
-          </>
-        )}
-      {access.dialog}
-      <Sheet open={sheet?.kind === 'create'} onClose={closeSheet} labelledBy="secretary-account-title">
-        <SecretaryAccountForm onCreated={() => { void refresh() }} />
-      </Sheet>
-      <Sheet open={sheet?.kind === 'resend'} onClose={closeSheet} labelledBy="secretary-setup-link-title">
-        {/* key: cada apertura parte del correo de la fila elegida. */}
-        {sheet?.kind === 'resend' && <SecretarySetupLinkForm key={sheet.email} initialEmail={sheet.email} />}
-      </Sheet>
-    </section>
-  )
+  return <RoleAccountsPage config={config} />
 }

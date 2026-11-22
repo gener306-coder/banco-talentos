@@ -1,6 +1,7 @@
 import { PendingLabel } from '../ui/forms'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link, useLocation, useParams } from 'react-router'
+import { ProfileIncompleteNotice } from '../account/ProfileIncompleteNotice'
 import { InstitutionRequestError } from '../institutions/InstitutionLayout'
 import { useApiMutation, useApiRequest } from '../lib/useApiRequest'
 import { useBackLink } from '../ui/backLink'
@@ -114,7 +115,8 @@ function StudentDetailView({ id }: { id: string }) {
 
             <section className="student-section" aria-labelledby="student-status-title">
               <h3 id="student-status-title">Estado en el Banco de Talentos</h3>
-              {mutation.failure && <InstitutionRequestError failure={mutation.failure} />}
+              {/* HU-S16-08: reactivar a un alumno con expediente completo lo haría buscable; exige el perfil mínimo. */}
+              {mutation.failure && (mutation.failure.profileIncomplete ? <ProfileIncompleteNotice /> : <InstitutionRequestError failure={mutation.failure} />)}
               <dl className="student-identity">
                 <dt>Estado</dt><dd><StudentStatus active={data.is_active} /></dd>
               </dl>

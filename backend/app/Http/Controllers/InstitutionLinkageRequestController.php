@@ -8,6 +8,7 @@ use App\Enums\LinkageRequestStatus;
 use App\Http\Requests\DecideLinkageRequestRequest;
 use App\Http\Requests\ListInstitutionLinkageRequestsRequest;
 use App\Http\Requests\TerminateLinkageRequestRequest;
+use App\Http\Controllers\Concerns\RequiresOperableInstitution;
 use App\Http\Controllers\Concerns\TerminatesLinkage;
 use App\Models\Company;
 use App\Models\LinkageRequest;
@@ -33,7 +34,7 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
  */
 class InstitutionLinkageRequestController extends Controller
 {
-    use TerminatesLinkage;
+    use RequiresOperableInstitution, TerminatesLinkage;
 
     private const PER_PAGE = 20;
 
@@ -154,6 +155,11 @@ class InstitutionLinkageRequestController extends Controller
             }
             if ($opportunity !== null && $opportunity->acceptedCount() >= $opportunity->vacancies) {
                 throw ValidationException::withMessages(['status' => [Opportunity::fullMessage($opportunity->vacancies).' Puedes rechazar la solicitud.']]);
+            }
+            // HU-S16-08 (D6): aceptar exige el perfil mínimo de la institución; se revisa al final, tras los bloqueos de la
+            // oportunidad y la solicitud (T-S14-11). Rechazar sigue permitido.
+            if ($accepting) {
+                $this->ensureOperableInstitution($request->user()->institution_id);
             }
             $linkage->status = LinkageRequestStatus::from($validated['status']);
             $linkage->response_message = $validated['response_message'] ?? null;

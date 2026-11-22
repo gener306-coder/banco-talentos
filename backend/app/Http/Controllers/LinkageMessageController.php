@@ -150,7 +150,7 @@ class LinkageMessageController extends Controller
             ->map(fn (LinkageRequest $linkage) => [
                 'id' => $linkage->id,
                 'counterpart_name' => $party === LinkageParty::COMPANY
-                    ? $linkage->institution->name
+                    ? $linkage->institution->label()
                     : $linkage->company->label(),
                 'opportunity_title' => $linkage->opportunity->title,
                 'unread_count' => (int) $linkage->unread_count,
@@ -204,7 +204,7 @@ class LinkageMessageController extends Controller
             'sender_party' => $message->sender_party->value,
             'sender_name' => $message->sender_party === LinkageParty::COMPANY
                 ? $linkage->company->label()
-                : $linkage->institution->name,
+                : $linkage->institution->label(),
             'is_own' => $own,
             'account_name' => $own ? $message->sender->name : null,
             'body' => $message->body,

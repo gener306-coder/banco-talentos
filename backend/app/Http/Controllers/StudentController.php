@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Http\Controllers\Concerns\FindsOwnedStudent;
+use App\Http\Controllers\Concerns\RequiresOperableInstitution;
 use App\Http\Requests\ListStudentsRequest;
 use App\Http\Requests\StoreStudentRequest;
 use App\Http\Requests\UpdateStudentIdentityRequest;
@@ -23,7 +24,7 @@ use Illuminate\Validation\ValidationException;
  */
 class StudentController extends Controller
 {
-    use FindsOwnedStudent;
+    use FindsOwnedStudent, RequiresOperableInstitution;
 
     private const PER_PAGE = 50;
 
@@ -111,12 +112,14 @@ class StudentController extends Controller
         $record = $this->owned($request, $student);
 
         DB::transaction(function () use ($record, $request): void {
+            $wasSearchable = $this->searchable($record);
             // Solo columnas del expediente: la identidad y la institución no cambian por esta vía.
             $record->fill($request->validated());
             // El municipio ya viene del catálogo: el texto libre anterior deja de estar pendiente (HU-S4-04 CA-06).
             $record->legacy_municipality = null;
             $record->save();
             $this->locate($record);
+            $this->ensureCanBecomeSearchable($record, $wasSearchable);
         });
 
         return $this->detail($record);
@@ -150,10 +153,32 @@ class StudentController extends Controller
     public function updateStatus(UpdateStudentStatusRequest $request, string $student): JsonResponse
     {
         $record = $this->owned($request, $student);
-        $record->is_active = $request->validated('is_active');
-        $record->save();
+        DB::transaction(function () use ($record, $request): void {
+            $wasSearchable = $this->searchable($record);
+            $record->is_active = $request->validated('is_active');
+            $record->save();
+            $this->ensureCanBecomeSearchable($record, $wasSearchable);
+        });
 
         return $this->detail($record);
+    }
+
+    /** Si el alumno aparece en el buscador de talento (activo y con el expediente público capturado, HU-S4-05). */
+    private function searchable(Student $student): bool
+    {
+        return Student::query()->whereKey($student->id)->searchable()->exists();
+    }
+
+    /**
+     * HU-S16-08 (D6): un alumno solo pasa a ser buscable en /talent si su institución tiene el perfil mínimo. Los
+     * borradores (expediente incompleto o alumno inactivo) y las ediciones de quien ya era buscable no se bloquean. La
+     * excepción revierte la transacción completa.
+     */
+    private function ensureCanBecomeSearchable(Student $student, bool $wasSearchable): void
+    {
+        if (! $wasSearchable && $this->searchable($student)) {
+            $this->ensureOperableInstitution($student->institution_id);
+        }
     }
 
     /**

@@ -22,10 +22,10 @@ interface Audience {
 const AUDIENCES: readonly Audience[] = [
   {
     name: 'visitante', storageState: NO_SESSION.storageState,
-    routes: ['/login', '/legal/privacidad', '/legal/terminos', '/legal/cookies', '/reset-password?email=qa%40example.test&token=x'],
+    routes: ['/login', '/forgot-password', '/legal/privacidad', '/legal/terminos', '/legal/cookies', '/reset-password?email=qa%40example.test&token=x'],
     expected: [/\/api\/me$/],
   },
-  { name: 'ADMIN', storageState: ADMIN_STATE, routes: ['/', '/institutions', '/institutions/new', '/secretary-accounts', '/reports', '/audit-events', '/promocion', '/account'] },
+  { name: 'ADMIN', storageState: ADMIN_STATE, routes: ['/', '/institutions', '/institutions/new', '/secretary-accounts', '/admin-accounts', '/reports', '/audit-events', '/promocion', '/account'] },
   { name: 'SECRETARY', storageState: SECRETARY_STATE, routes: ['/', '/companies', '/companies/new', '/secretary-accounts', '/reports', '/promocion', '/account'] },
   { name: 'INSTITUTION', storageState: INSTITUTION_STATE, routes: ['/', '/students', '/institution/linkage-requests', '/institution/videos', '/promocion', '/account'] },
   { name: 'COMPANY', storageState: COMPANY_STATE, routes: ['/', '/talent', '/opportunities', '/opportunities/new', '/linkage-requests', '/promocion', '/account', '/legal/privacidad'] },

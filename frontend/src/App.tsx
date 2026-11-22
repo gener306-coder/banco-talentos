@@ -10,6 +10,7 @@ import { LoginPage } from './pages/LoginPage'
 import { SessionPage } from './pages/SessionPage'
 import { ResetPasswordPage } from './pages/ResetPasswordPage'
 import { SetInitialPasswordPage } from './pages/SetInitialPasswordPage'
+import { ForgotPasswordPage } from './pages/ForgotPasswordPage'
 import { InstitutionsPage } from './institutions/InstitutionsPage'
 import { InstitutionCreatePage } from './institutions/InstitutionCreatePage'
 import { InstitutionDetailPage } from './institutions/InstitutionDetailPage'
@@ -20,6 +21,7 @@ import { CompanyDetailPage } from './companies/CompanyDetailPage'
 import { CompanyEditPage } from './companies/CompanyEditPage'
 import { SECRETARY_ACCOUNT_MANAGERS } from './secretary/api'
 import { SecretaryAccountsPage } from './secretary/SecretaryAccountsPage'
+import { AdminAccountsPage } from './admin-accounts/AdminAccountsPage'
 import { InstitutionLinkageRequestDetailPage } from './linkage/InstitutionLinkageRequestDetailPage'
 import { InstitutionLinkageRequestsPage } from './linkage/InstitutionLinkageRequestsPage'
 import { LinkageChatPage } from './linkage/LinkageChatPage'
@@ -86,8 +88,8 @@ function AuthRoutes() {
         {/* HU-S14-01: Mi cuenta, para todos los roles. */}
         <Route path="/account" element={<AccountPage />} />
       </Route>
-      {/* HU-S14-03: onboarding de la empresa invitada. */}
-      <Route element={<ProtectedRoute role="COMPANY" deniedMessage="Solo las empresas completan este perfil." />}>
+      {/* HU-S14-03 y HU-S16-07: onboarding de la empresa o la institución invitada. */}
+      <Route element={<ProtectedRoute role={['COMPANY', 'INSTITUTION']} deniedMessage="Solo las empresas y las instituciones completan este perfil." />}>
         <Route path="/welcome" element={<WelcomePage />} />
       </Route>
       <Route element={<ProtectedRoute role="ADMIN" />}>
@@ -95,6 +97,10 @@ function AuthRoutes() {
         <Route path="/institutions/new" element={<InstitutionCreatePage />} />
         <Route path="/institutions/:id" element={<InstitutionDetailPage />} />
         <Route path="/institutions/:id/edit" element={<InstitutionEditPage />} />
+      </Route>
+      {/* HU-S16-02: cuentas de Administración. */}
+      <Route element={<ProtectedRoute role="ADMIN" deniedMessage="No tienes permiso para gestionar las cuentas de Administración." />}>
+        <Route path="/admin-accounts" element={<AdminAccountsPage />} />
       </Route>
       <Route element={<ProtectedRoute role="ADMIN" deniedMessage="No tienes permiso para consultar la bitácora." />}>
         <Route path="/audit-events" element={<AuditEventsPage />} />
@@ -209,10 +215,10 @@ function useScrolled() {
  * Pantallas de acceso con una sola tarjeta: usan el ancho angosto. Todas las demás vistas, incluido el inicio,
  * son anchas por defecto (docs/design/identidad-visual.md, «Tamaños y retícula»).
  */
-const NARROW_PATHS = ['/login', '/set-initial-password', '/reset-password']
+const NARROW_PATHS = ['/login', '/set-initial-password', '/reset-password', '/forgot-password']
 
 /** Enlaces de contraseña: funcionan sin sesión y no montan el proveedor de sesión. */
-const PASSWORD_PATHS = ['/set-initial-password', '/reset-password']
+const PASSWORD_PATHS = ['/set-initial-password', '/reset-password', '/forgot-password']
 
 function App() {
   const { pathname } = useLocation()
@@ -254,6 +260,8 @@ function App() {
         <Routes>
           <Route path="/set-initial-password" element={<SetInitialPasswordPage />} />
           <Route path="/reset-password" element={<ResetPasswordPage />} />
+          {/* HU-S16-03: «¿Olvidaste tu contraseña?», sin sesión. */}
+          <Route path="/forgot-password" element={<ForgotPasswordPage />} />
           {/* HU-S15-03: documentos legales públicos. Fuera de AuthRoutes: no esperan la sesión ni redirigen a /login, pero
               siguen dentro del proveedor, así que con sesión se ven los menús de la barra. */}
           <Route path="/legal/:document" element={<LegalPage />} />
