@@ -112,16 +112,25 @@ it('aplica el límite general throttle:api a la API, salvo a los medios firmados
     expect($media->excludedMiddleware())->toContain('throttle:api');
 });
 
-it('el límite general es de 300 por minuto por cuenta y responde 429 al excederlo (auditoría QA #10)', function () {
+it('el límite general es de 300 escrituras por minuto por cuenta y responde 429 al excederlo (auditoría QA #10)', function () {
     $account = User::factory()->forInstitution(Institution::factory()->create())->create();
     $this->loginWithCookies($account)->assertOk();
-    RateLimiter::clear('api:user:'.$account->id);
     // Se consumen 299 intentos sin peticiones HTTP para que la prueba sea rápida.
     $key = md5('api'.'api:user:'.$account->id);
     for ($i = 0; $i < 299; $i++) {
         RateLimiter::hit($key, 60);
     }
 
-    $this->browserRequest('GET', '/api/me')->assertOk()->assertHeader('X-RateLimit-Limit', '300');
-    $this->browserRequest('GET', '/api/me')->assertStatus(429);
+    $this->browserRequest('PATCH', '/api/me', ['name' => 'Coordinación'])->assertOk()->assertHeader('X-RateLimit-Limit', '300');
+    $this->browserRequest('PATCH', '/api/me', ['name' => 'Coordinación dual'])->assertStatus(429);
+});
+
+it('las lecturas no pasan por el límite general ni escriben en la caché (auditoría QA #10)', function () {
+    $account = User::factory()->forInstitution(Institution::factory()->create())->create();
+    $this->loginWithCookies($account)->assertOk();
+    $key = md5('api'.'api:user:'.$account->id);
+
+    $response = $this->browserRequest('GET', '/api/me')->assertOk();
+    expect($response->headers->has('X-RateLimit-Limit'))->toBeFalse()
+        ->and(RateLimiter::attempts($key))->toBe(0);
 });

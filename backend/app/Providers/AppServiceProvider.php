@@ -64,13 +64,17 @@ class AppServiceProvider extends ServiceProvider
         RateLimiter::for('organization-profile', fn (Request $request) => Limit::perMinute(10)->by('organization-profile:'.$request->user()->id)
         );
 
-        // Auditoría QA (#10): límite general de la API, además de los específicos (acceso, contraseñas, búsqueda, subidas,
-        // exportaciones…), que siguen aplicando. 300 por minuto por cuenta cubre con holgura la navegación y el sondeo
-        // de mensajes (6 por minuto por pestaña); sin sesión, 120 por minuto por IP.
-        RateLimiter::for('api', fn (Request $request) => $request->user()
-            ? Limit::perMinute(300)->by('api:user:'.$request->user()->id)
-            : Limit::perMinute(120)->by('api:ip:'.$request->ip())
-        );
+        // Auditoría QA (#10): límite general de las escrituras de la API (POST, PUT, PATCH), además de los específicos
+        // (acceso, contraseñas, búsqueda, subidas, exportaciones…), que siguen aplicando: 300 por minuto por cuenta y 120
+        // por IP sin sesión. Las lecturas no pasan por él: con la caché en base de datos, cada conteo es una transacción
+        // con FOR UPDATE sobre la fila de la cuenta, y las peticiones en paralelo de la SPA (incluido el sondeo de
+        // mensajes) se formaban en fila (la suite E2E pasó de 8.7 a 13 minutos). La lectura masiva ya está acotada donde
+        // importa: búsqueda de talento (60/min) y exportaciones (10/min). Limit::none() no toca la caché.
+        RateLimiter::for('api', fn (Request $request) => match (true) {
+            $request->isMethodSafe() => Limit::none(),
+            $request->user() !== null => Limit::perMinute(300)->by('api:user:'.$request->user()->id),
+            default => Limit::perMinute(120)->by('api:ip:'.$request->ip()),
+        });
 
         // Auditoría QA: las subidas (videos y comprobantes) ocupan disco y procesamiento; las exportaciones CSV recorren
         // tablas completas. Un límite por cuenta frena el abuso sin afectar el uso normal.
