@@ -228,6 +228,9 @@ test('HU-S4-05, HU-S5-04, HU-S5-05, HU-S6-01, HU-S6-02, HU-S6-03, HU-S13-02, HU-
     await company.getByLabel('Estado').selectOption('ACEPTADA')
     await filtered
     const acceptedRow = company.getByRole('table', { name: 'Solicitudes de vinculación enviadas' }).getByRole('row', { name: new RegExp(opportunityTitle) })
+    // La respuesta llega antes de que React pinte la tabla nueva (T-S13-18 deja la anterior atenuada mientras tanto):
+    // se espera a que solo quede la fila aceptada.
+    await expect(acceptedRow).toHaveCount(1)
     // HU-S13-06: el mensaje de la institución ya no está en la celda; se lee en la conversación.
     await expect(acceptedRow).not.toContainText('Coordinemos la entrevista')
     await expect(acceptedRow).toContainText('Respondida el')
