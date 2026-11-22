@@ -21,7 +21,20 @@ import '../institutions/institutions.css'
 const dateFormat = new Intl.DateTimeFormat('es-MX', { dateStyle: 'long' })
 
 /** Lo que significa el estado para la empresa y lo que sigue. Solo los estados con un paso pendiente llevan aviso. */
-function StatusCallout({ data }: { data: LinkageInboxItem }) {
+function StatusCallout({ data, toRequest }: { data: LinkageInboxItem; toRequest: ReturnType<typeof backState> }) {
+  // T-S15-03: con la oportunidad inactiva, la institución no puede aceptar la solicitud (auditoría QA #6). La empresa lo
+  // sabe aquí y puede reactivarla desde su detalle o cancelar la solicitud.
+  if (data.status === 'PENDIENTE_INSTITUCION' && !data.opportunity.is_active) {
+    return (
+      <Callout tone="pending" label="Estado de la solicitud"
+        action={<Link className="pill-link" to={`/opportunities/${data.opportunity.id}`} state={toRequest}>Ver oportunidad<ChevronRightIcon /></Link>}>
+        <p>
+          Tu oportunidad <strong>{data.opportunity.title}</strong> está inactiva: mientras siga así, la institución no puede aceptar esta
+          solicitud. Reactívala para que pueda responderla, o cancela la solicitud.
+        </p>
+      </Callout>
+    )
+  }
   if (data.status === 'PENDIENTE_INSTITUCION') {
     return (
       <Callout tone="pending" label="Estado de la solicitud">
@@ -68,7 +81,7 @@ function Detail({ data, onCancelled }: { data: LinkageInboxItem; onCancelled: (u
     <>
       {notice && <p className="institution-success" role="status">{notice}</p>}
       {cancelError && <p className="notice" role="alert">{cancelError}</p>}
-      <StatusCallout data={data} />
+      <StatusCallout data={data} toRequest={toRequest} />
       {/* HU-S13-06: la conversación vive en su propia vista; en una pendiente muestra solo el mensaje de la solicitud. */}
       {!fromChat && (
         <p>

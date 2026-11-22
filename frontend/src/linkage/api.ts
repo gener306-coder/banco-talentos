@@ -100,7 +100,8 @@ export interface LinkageInboxItem {
   status: LinkageStatus
   created_at: string
   message: string | null
-  opportunity: { id: number; title: string }
+  /** T-S15-03: `is_active` en false, la institución no puede aceptar la solicitud (auditoría QA #6). */
+  opportunity: { id: number; title: string; is_active: boolean }
   profile: { public_id: string; headline: string | null; program: string | null; period_type: PeriodType | null; period_number: number | null }
   /** El teléfono es opcional (T-S8-11). */
   institution: { name: string; contact_name: string | null; contact_position: string | null; contact_email: string; contact_phone: string | null }
@@ -142,7 +143,8 @@ function inboxItem(data: unknown): LinkageInboxItem {
   // Solo se conservan los campos del contrato.
   return {
     id: data.id, status: data.status as LinkageStatus, created_at: data.created_at, message: data.message,
-    opportunity: { id: data.opportunity.id, title: data.opportunity.title },
+    // Sin el campo (respuestas anteriores), la oportunidad se considera activa.
+    opportunity: { id: data.opportunity.id, title: data.opportunity.title, is_active: data.opportunity.is_active !== false },
     profile: {
       public_id: data.profile.public_id, headline: data.profile.headline, program: data.profile.program,
       period_type: data.profile.period_type as PeriodType | null, period_number: data.profile.period_number as number | null,

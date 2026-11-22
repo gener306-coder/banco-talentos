@@ -222,6 +222,20 @@ Auditoría del 20 de noviembre de 2026 sobre `main` (a0b9622):
 
 ---
 
+### T-S15-03 — La empresa sabe que su oportunidad inactiva impide la aceptación
+
+**Estado:** Implementada (22 de noviembre de 2026). Solicitada por el responsable tras el cierre del punto #6 de la auditoría QA (`docs/qa-pre-release-audit.md`), que impide aceptar solicitudes de oportunidades inactivas.
+
+- **Contrato:** la bandeja y el detalle de la empresa (`GET /api/linkage-requests` y `/{id}`) agregan `opportunity.is_active`, el mismo campo en los dos (HU-S13-02 CA-01).
+- **Interfaz:**
+  - con la solicitud pendiente y la oportunidad inactiva, el aviso de estado del detalle dice: «Tu oportunidad **título** está inactiva: mientras siga así, la institución no puede aceptar esta solicitud. Reactívala para que pueda responderla, o cancela la solicitud.»;
+  - lleva la acción «Ver oportunidad», con regreso a la solicitud;
+  - con la oportunidad activa, o con la solicitud ya respondida, el aviso no cambia.
+- **Pruebas:**
+  - Pest (`LinkageInboxTest`): `is_active` en false en el detalle y en la bandeja, y el contrato exacto actualizado;
+  - Vitest (`LinkageRequestDetailPage.test.tsx`): el aviso y su enlace, el aviso de siempre con la oportunidad activa, y sin aviso nuevo en una solicitud respondida.
+- **Revisión visual:** 1440 y 390 px en claro y oscuro, sin desborde ni errores de consola.
+
 ## Notas previas a producción
 
 No se implementan en este Sprint. Se revisan antes del despliegue:
