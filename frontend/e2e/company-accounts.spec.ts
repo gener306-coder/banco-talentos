@@ -56,6 +56,9 @@ test('HU-S4-03: la Secretaría crea la cuenta de una empresa → la titular entr
 })
 
 test('HU-S6-04: la Secretaría inactiva una cuenta de empresa (su sesión se cierra), la reactiva y restablece su contraseña por correo', async ({ page, browser, baseURL, request }) => {
+  // Flujo completo (alta, cuenta, sesión, inactivación, reactivación y restablecimiento por correo): el límite por
+  // defecto de 30 s no alcanza con la máquina cargada; mismo margen que los demás flujos largos.
+  test.setTimeout(90_000)
   const { context: secretaryContext, page: secretary } = await newSecretarySession(page, browser, baseURL, 'acceso-empresa-se')
   const suffix = randomBytes(6).toString('hex')
   const email = `acceso-${suffix}@example.test`
