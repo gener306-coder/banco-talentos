@@ -9,6 +9,7 @@ import { useInstitutionMutation } from './useInstitutionRequest'
 import { PendingLabel } from '../ui/forms'
 import { ChevronRightIcon } from '../ui/icons'
 import { emailErrorOnBlur, INVALID_EMAIL } from '../ui/validation'
+import '../companies/companies.css'
 
 type Field = 'email' | 'name' | 'person_name'
 
@@ -79,9 +80,10 @@ export function InstitutionCreatePage() {
     <InstitutionLayout title="Invitar institución" back={{ to: '/institutions', label: 'Volver a instituciones' }}>
       <p>Solo necesitas el correo de quien gestionará la cuenta. La institución queda ACTIVA y completa su perfil al entrar: nombre, CCT y persona de contacto.</p>
       {failure && failure.status !== 422 && <InstitutionRequestError failure={failure} />}
-      <form className="institution-form" onSubmit={send} aria-busy={pending} noValidate>
+      {/* Mismo formulario agrupado que la invitación de empresas (HU-S14-02). */}
+      <form className="company-form company-invite" onSubmit={send} aria-busy={pending} noValidate>
         <fieldset disabled={pending}>
-          <legend className="visually-hidden">Cuenta de la institución</legend>
+          <legend>Cuenta de la institución</legend>
           <label htmlFor="institution-email">Correo de la cuenta</label>
           <p className="field-help" id="institution-email-help">
             {method === 'email' ? 'Le enviaremos el enlace para crear su contraseña.' : 'Será el correo con el que inicie sesión. Recibirás un enlace para compartírselo.'}
