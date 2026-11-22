@@ -18,7 +18,7 @@ import { SkillPicker } from '../students/SkillPicker'
 import { emptyFilters, MAX_SKILL_FILTERS, talentViewParams } from '../talent/api'
 import { UnreadBadge } from '../linkage/UnreadBadge'
 import { DualStoriesSpotlight } from '../videos/DualStoriesSpotlight'
-import { BriefcaseIcon, BuildingIcon, ChartIcon, ChevronRightIcon, ClipboardIcon, IdCardIcon, PlusIcon, SearchIcon, UsersIcon, VideoIcon } from '../ui/icons'
+import { BriefcaseIcon, BuildingIcon, ChartIcon, ChevronRightIcon, ClipboardIcon, IdCardIcon, KeyIcon, PlusIcon, SearchIcon, UsersIcon, VideoIcon } from '../ui/icons'
 
 interface Section {
   to: string
@@ -63,6 +63,8 @@ function homeFor(user: User): Home | null {
         sections: [
           { to: '/institutions', title: 'Instituciones', icon: <BuildingIcon />, description: 'Registra instituciones educativas y administra sus cuentas.' },
           secretaryAccounts,
+          // HU-S16-02: solo ADMIN.
+          { to: '/admin-accounts', title: 'Cuentas de Administración', icon: <KeyIcon />, description: 'Invita a otros Administradores, inactiva sus cuentas y restablece su acceso.' },
           reports,
           // HU-S7-03 CA-01: solo ADMIN.
           { to: '/audit-events', title: 'Bitácora', icon: <ClipboardIcon />, description: 'Revisa quién creó cuentas, empresas, oportunidades y solicitudes de vinculación, y cuándo.' },

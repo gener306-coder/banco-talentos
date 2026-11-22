@@ -78,6 +78,9 @@ class AppServiceProvider extends ServiceProvider
         RateLimiter::for('company-setup-resend', fn (Request $request) => Limit::perMinute(10)->by('company-setup-resend:'.$request->user()->id)
         );
 
+        RateLimiter::for('admin-setup-resend', fn (Request $request) => Limit::perMinute(10)->by('admin-setup-resend:'.$request->user()->id)
+        );
+
         RateLimiter::for('secretary-setup-resend', fn (Request $request) => Limit::perMinute(10)->by('secretary-setup-resend:'.$request->user()->id)
         );
 

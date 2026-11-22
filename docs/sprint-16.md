@@ -132,7 +132,8 @@ Sprint vigente desde el 22 de noviembre de 2026. Sprint anterior: [sprint-15.md]
 
 ## HU-S16-02 — Gestión de varias cuentas ADMIN
 
-**Estado:** Pendiente.  
+**Estado:** Completada (22 de noviembre de 2026) en `feat/s16-admin-and-institutions`.  
+**Diseño técnico y verificación:** [HU-S16-02.md](HU-S16-02.md)  
 **Story Points:** 5  
 **Rol:** `ADMIN`
 

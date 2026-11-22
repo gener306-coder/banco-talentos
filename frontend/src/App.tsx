@@ -20,6 +20,7 @@ import { CompanyDetailPage } from './companies/CompanyDetailPage'
 import { CompanyEditPage } from './companies/CompanyEditPage'
 import { SECRETARY_ACCOUNT_MANAGERS } from './secretary/api'
 import { SecretaryAccountsPage } from './secretary/SecretaryAccountsPage'
+import { AdminAccountsPage } from './admin-accounts/AdminAccountsPage'
 import { InstitutionLinkageRequestDetailPage } from './linkage/InstitutionLinkageRequestDetailPage'
 import { InstitutionLinkageRequestsPage } from './linkage/InstitutionLinkageRequestsPage'
 import { LinkageChatPage } from './linkage/LinkageChatPage'
@@ -95,6 +96,10 @@ function AuthRoutes() {
         <Route path="/institutions/new" element={<InstitutionCreatePage />} />
         <Route path="/institutions/:id" element={<InstitutionDetailPage />} />
         <Route path="/institutions/:id/edit" element={<InstitutionEditPage />} />
+      </Route>
+      {/* HU-S16-02: cuentas de Administración. */}
+      <Route element={<ProtectedRoute role="ADMIN" deniedMessage="No tienes permiso para gestionar las cuentas de Administración." />}>
+        <Route path="/admin-accounts" element={<AdminAccountsPage />} />
       </Route>
       <Route element={<ProtectedRoute role="ADMIN" deniedMessage="No tienes permiso para consultar la bitácora." />}>
         <Route path="/audit-events" element={<AuditEventsPage />} />
