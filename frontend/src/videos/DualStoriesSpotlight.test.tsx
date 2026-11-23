@@ -248,13 +248,15 @@ describe('módulo del inicio HU-S9-05', () => {
   })
 
   it('mientras carga, un esqueleto con la forma del carrusel reserva su lugar y anuncia la carga (T-S14-07)', async () => {
-    let respond: (response: Response) => void = () => {}
+    let respond: ((response: Response) => void) | undefined
     galleryMock.mockImplementation(() => new Promise<Response>((resolve) => { respond = resolve }))
     start()
     const skeleton = await screen.findByTestId('spotlight-skeleton')
     expect(skeleton).toHaveAttribute('aria-busy', 'true')
     expect(screen.getByText('Cargando historias del Dual…')).toHaveAttribute('role', 'status')
-    respond(pageOf([story(1, 'Historia 1'), story(2, 'Historia 2')]))
+    // T-S17-09: el estado de carga puede pintarse antes de que salga la petición; se responde solo cuando ya salió.
+    await waitFor(() => expect(respond).toBeDefined())
+    await act(async () => { respond!(pageOf([story(1, 'Historia 1'), story(2, 'Historia 2')])) })
     // Con la máquina cargada (suite completa) el carrusel puede tardar más que el segundo predeterminado.
     expect(await screen.findByRole('region', { name: HEADING }, { timeout: 3000 })).toBeInTheDocument()
     expect(screen.queryByTestId('spotlight-skeleton')).not.toBeInTheDocument()

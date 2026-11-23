@@ -193,13 +193,15 @@ describe('recarga sin saltos (T-S13-18)', () => {
     apiMock.mockResolvedValueOnce(page(events))
     renderApp()
     const region = await screen.findByRole('region', { name: 'Listado de eventos' })
-    let respond: (value: Response) => void = () => undefined
+    let respond: ((value: Response) => void) | undefined
     apiMock.mockImplementationOnce(() => new Promise<Response>((resolve) => { respond = resolve }))
     fireEvent.change(screen.getByLabelText('Tipo de evento'), { target: { value: events[0].type } })
     await waitFor(() => expect(region).toHaveAttribute('aria-busy', 'true'))
     expect(region.closest('.table-card')).toHaveClass('is-refreshing')
     expect(screen.getByRole('table')).toBeInTheDocument()
-    await act(async () => { respond(page([events[0]])) })
+    // T-S17-09: el estado de carga puede pintarse antes de que salga la petición; se responde solo cuando ya salió.
+    await waitFor(() => expect(respond).toBeDefined())
+    await act(async () => { respond!(page([events[0]])) })
     await waitFor(() => expect(region).toHaveAttribute('aria-busy', 'false'))
     expect(region.querySelector('tbody')).toHaveClass('rows-enter')
   })

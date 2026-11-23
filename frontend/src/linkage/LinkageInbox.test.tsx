@@ -136,7 +136,7 @@ describe('recarga sin saltos (T-S13-13)', () => {
     const table = await screen.findByRole('table', { name: 'Solicitudes de vinculación enviadas' })
     const firstBody = table.querySelector('tbody')!
     expect(firstBody).toHaveClass('rows-enter')
-    let respond: (value: Response) => void = () => undefined
+    let respond: ((value: Response) => void) | undefined
     apiMock.mockImplementation(() => new Promise<Response>((resolve) => { respond = resolve }))
 
     fireEvent.change(screen.getByLabelText('Estado'), { target: { value: 'ACEPTADA' } })
@@ -147,7 +147,9 @@ describe('recarga sin saltos (T-S13-13)', () => {
     expect(screen.getByText('Actualizando resultados…')).toBeInTheDocument()
     expect(screen.queryByText('Cargando solicitudes…')).not.toBeInTheDocument()
 
-    await act(async () => { respond(page([{ ...sent, id: 77 }])) })
+    // T-S17-09: el estado de carga puede pintarse antes de que salga la petición; se responde solo cuando ya salió.
+    await waitFor(() => expect(respond).toBeDefined())
+    await act(async () => { respond!(page([{ ...sent, id: 77 }])) })
     await waitFor(() => expect(region).toHaveAttribute('aria-busy', 'false'))
     // El resultado nuevo monta sus filas otra vez para que entren con su animación escalonada.
     expect(table.querySelector('tbody')).not.toBe(firstBody)
