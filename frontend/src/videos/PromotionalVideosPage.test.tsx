@@ -126,7 +126,12 @@ describe('Historias del Dual HU-S9-04', () => {
       ? pageOf([second], { current_page: 2, last_page: 2, total: 2 }) : pageOf([promo], { last_page: 2, total: 2 }))
     start('COMPANY')
     await screen.findByRole('button', { name: 'Ver más historias' })
-    const sentinel = observers.find(({ element }) => element.classList.contains('story-more-wrapper'))!
+    // T-S17-09: el botón aparece antes de que el feed registre su IntersectionObserver (carrera vista en el runner).
+    const sentinel = await vi.waitFor(() => {
+      const found = observers.find(({ element }) => element.classList.contains('story-more-wrapper'))
+      expect(found).toBeDefined()
+      return found!
+    })
 
     act(() => sentinel.callback([{ isIntersecting: true, target: sentinel.element } as IntersectionObserverEntry], {} as IntersectionObserver))
     expect(await screen.findByRole('article', { name: 'Mi año en logística' })).toBeInTheDocument()
@@ -195,7 +200,8 @@ describe('orden de las historias T-S9-03', () => {
     start('COMPANY')
     const order = await screen.findByRole('group', { name: 'Ordenar las historias' })
     expect(within(order).getByRole('radio', { name: 'Más recientes' })).toBeChecked()
-    expect(urls()[0]).toBe('/api/promotional-videos?page=1')
+    // T-S17-09: el control de orden se pinta antes de que salga la primera petición (carrera vista en el runner).
+    await vi.waitFor(() => expect(urls()[0]).toBe('/api/promotional-videos?page=1'))
     expect(screen.queryByRole('button', { name: 'Otra mezcla' })).not.toBeInTheDocument()
 
     fireEvent.click(within(order).getByRole('radio', { name: 'Al azar' }))
@@ -265,7 +271,11 @@ describe('skeleton del feed T-S12-10', () => {
     // desaparecer entre dos aserciones (carrera vista en el runner de GitHub).
     const pending: Array<() => void> = []
     galleryMock.mockImplementation(() => new Promise<Response>((resolve) => { pending.push(() => resolve(pageOf([promo]))) }))
-    const respond = () => act(() => { pending.splice(0).forEach((release) => release()) })
+    // El esqueleto puede aparecer antes de que salga la petición: se espera a que exista antes de responderla.
+    const respond = async () => {
+      await vi.waitFor(() => expect(pending.length).toBeGreaterThan(0))
+      await act(async () => { pending.splice(0).forEach((release) => release()) })
+    }
 
     start('COMPANY')
     expect(await screen.findAllByTestId('story-skeleton')).toHaveLength(2)
