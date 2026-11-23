@@ -10,6 +10,7 @@ use App\Models\Student;
 use App\Models\StudentSocialSecurity;
 use App\Support\SocialSecurityNumber;
 use Illuminate\Database\UniqueConstraintViolationException;
+use Illuminate\Filesystem\FilesystemAdapter;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -26,9 +27,6 @@ use Throwable;
 class StudentSocialSecurityController extends Controller
 {
     use FindsOwnedStudent;
-
-    /** Disco privado (storage/app/private): no se sirve por HTTP; solo se descarga por este controlador. */
-    private const DISK = 'local';
 
     private const DOWNLOAD_NAME = 'comprobante-seguro.pdf';
 
@@ -78,26 +76,29 @@ class StudentSocialSecurityController extends Controller
         $file = $request->file('document');
         $security = $this->recordFor($record);
         $previous = $security->document_path;
+        $disk = $this->disk();
+        // T-S17-02: la huella sale del archivo subido, no del disco, porque S3 no tiene rutas locales.
+        $sha256 = hash_file('sha256', $file->getRealPath());
 
         // Nombre aleatorio: la ruta no deriva de nada que envíe el cliente.
-        $path = $file->storeAs('imss/'.$record->institution_id, Str::uuid()->toString().'.pdf', self::DISK);
+        $path = $file->storeAs('imss/'.$record->institution_id, Str::uuid()->toString().'.pdf', $this->diskName());
         abort_if($path === false, 500, 'No se pudo guardar el comprobante.');
 
         try {
             $security->document_path = $path;
             $security->document_name = $this->displayName($file->getClientOriginalName());
             $security->document_size = $file->getSize();
-            $security->document_sha256 = hash_file('sha256', Storage::disk(self::DISK)->path($path));
+            $security->document_sha256 = $sha256;
             $security->document_uploaded_at = now();
             DB::transaction(fn () => $security->save());
         } catch (Throwable $exception) {
-            Storage::disk(self::DISK)->delete($path);
+            $disk->delete($path);
             throw $exception;
         }
 
         // El comprobante anterior solo se borra cuando el nuevo ya quedó registrado.
         if ($previous !== null && $previous !== $path) {
-            Storage::disk(self::DISK)->delete($previous);
+            $disk->delete($previous);
         }
 
         return $this->present($security);
@@ -108,13 +109,28 @@ class StudentSocialSecurityController extends Controller
         $security = $this->owned($request, $student, ['socialSecurity'])->socialSecurity;
         $path = $security?->document_path;
 
-        abort_if($path === null || ! Storage::disk(self::DISK)->exists($path), 404, 'El alumno no tiene comprobante del seguro.');
+        $disk = $this->disk();
+        abort_if($path === null || ! $disk->exists($path), 404, 'El alumno no tiene comprobante del seguro.');
 
-        return Storage::disk(self::DISK)->download($path, self::DOWNLOAD_NAME, [
+        return $disk->download($path, self::DOWNLOAD_NAME, [
             'Content-Type' => 'application/pdf',
             'X-Content-Type-Options' => 'nosniff',
             'Cache-Control' => 'no-store, private',
         ]);
+    }
+
+    /**
+     * Disco privado de los comprobantes (T-S17-02): `local` (storage/app/private) en desarrollo y pruebas, `s3` en el
+     * piloto. Nunca se sirve por HTTP: solo se descarga por este controlador.
+     */
+    private function diskName(): string
+    {
+        return (string) config('filesystems.private_documents_disk');
+    }
+
+    private function disk(): FilesystemAdapter
+    {
+        return Storage::disk($this->diskName());
     }
 
     private function recordFor(Student $student): StudentSocialSecurity

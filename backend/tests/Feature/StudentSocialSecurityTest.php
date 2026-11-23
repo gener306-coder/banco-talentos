@@ -7,6 +7,7 @@ use App\Models\StudentSocialSecurity;
 use App\Models\User;
 use App\Support\SocialSecurityNumber;
 use Illuminate\Database\QueryException;
+use Illuminate\Filesystem\FilesystemAdapter;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Crypt;
@@ -365,6 +366,40 @@ describe('comprobante', function () {
             ->assertHeader('Cache-Control', 'no-store, private')
             ->assertDownload('comprobante-seguro.pdf');
         expect($response->streamedContent())->toBe("%PDF-1.7\n1 0 obj\n<<>>\nendobj\n%%EOF\n");
+    });
+
+    it('stores, replaces and downloads the document on S3 without local paths (T-S17-02)', function () {
+        config(['filesystems.private_documents_disk' => 's3']);
+        // El doble de S3 rechaza path(), como el disco real, que no tiene rutas locales.
+        $fake = Storage::fake('s3');
+        Storage::set('s3', new class($fake->getDriver(), $fake->getAdapter(), $fake->getConfig()) extends FilesystemAdapter
+        {
+            public function path($path)
+            {
+                throw new LogicException('S3 no tiene rutas locales.');
+            }
+        });
+        signInSecurityInstitution($this);
+
+        uploadDocument($this, $this->student, pdfUpload('anterior.pdf'))->assertOk();
+        $previous = StudentSocialSecurity::sole()->document_path;
+        uploadDocument($this, $this->student, pdfUpload('nuevo.pdf', "%PDF-1.4\nnuevo\n%%EOF\n"))->assertOk();
+        $record = StudentSocialSecurity::sole();
+
+        expect($record->document_sha256)->toBe(hash('sha256', "%PDF-1.4\nnuevo\n%%EOF\n"));
+        Storage::disk('s3')->assertMissing($previous);
+        expect(Storage::disk('s3')->allFiles('imss'))->toBe([$record->document_path]);
+        expect(Storage::disk('local')->allFiles())->toBe([]);
+
+        $response = $this->browserRequest('GET', securityUrl($this->student, '/document'))->assertOk()
+            ->assertHeader('X-Content-Type-Options', 'nosniff')
+            ->assertHeader('Cache-Control', 'no-store, private')
+            ->assertDownload('comprobante-seguro.pdf');
+        expect($response->streamedContent())->toBe("%PDF-1.4\nnuevo\n%%EOF\n");
+    });
+
+    it('keeps the documents on the local private disk by default (T-S17-02)', function () {
+        expect(config('filesystems.private_documents_disk'))->toBe('local');
     });
 
     it('answers 404 when there is no document to download', function () {
