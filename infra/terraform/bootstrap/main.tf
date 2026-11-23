@@ -5,8 +5,10 @@ locals {
   account_id = data.aws_caller_identity.current.account_id
   region     = data.aws_region.current.region
   name       = "banco-talentos-${var.environment}"
-  # Solo los jobs del entorno protegido de GitHub obtienen credenciales (sin llaves estáticas).
-  oidc_subject = "repo:${var.github_repository}:environment:${var.github_environment}"
+  # Solo los jobs de entornos de GitHub obtienen credenciales (sin llaves estáticas): `pilot` exige aprobación manual;
+  # `pilot-plan` solo ejecuta terraform plan en deploy-pilot.yml. Ambos se limitan a la rama main en GitHub.
+  oidc_subject      = "repo:${var.github_repository}:environment:${var.github_environment}"
+  oidc_plan_subject = "repo:${var.github_repository}:environment:${var.github_environment}-plan"
 }
 
 # --- Estado remoto --------------------------------------------------------------------------------------------------
@@ -87,6 +89,26 @@ data "aws_iam_policy_document" "github_assume" {
       test     = "StringEquals"
       variable = "token.actions.githubusercontent.com:sub"
       values   = [local.oidc_subject]
+    }
+  }
+}
+
+data "aws_iam_policy_document" "github_assume_deploy" {
+  statement {
+    actions = ["sts:AssumeRoleWithWebIdentity"]
+    principals {
+      type        = "Federated"
+      identifiers = [aws_iam_openid_connect_provider.github.arn]
+    }
+    condition {
+      test     = "StringEquals"
+      variable = "token.actions.githubusercontent.com:aud"
+      values   = ["sts.amazonaws.com"]
+    }
+    condition {
+      test     = "StringEquals"
+      variable = "token.actions.githubusercontent.com:sub"
+      values   = [local.oidc_subject, local.oidc_plan_subject]
     }
   }
 }
@@ -181,7 +203,7 @@ resource "aws_iam_role_policy" "build_ami" {
 # --- Rol de deploy-pilot.yml ----------------------------------------------------------------------------------------
 resource "aws_iam_role" "deploy" {
   name               = "banco-talentos-gha-deploy-${var.environment}"
-  assume_role_policy = data.aws_iam_policy_document.github_assume.json
+  assume_role_policy = data.aws_iam_policy_document.github_assume_deploy.json
 }
 
 data "aws_iam_policy_document" "deploy" {

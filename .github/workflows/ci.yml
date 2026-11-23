@@ -6,6 +6,8 @@ on:
   pull_request:
   push:
     branches: [main]
+  # build-ami.yml exige el CI en verde para el mismo commit.
+  workflow_call:
   workflow_dispatch:
     inputs:
       e2e:
@@ -17,7 +19,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: ci-${{ github.ref }}
+  group: ci-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
