@@ -128,6 +128,13 @@ resource "aws_instance" "app" {
     cpu_credits = var.cpu_credits
   }
 
+  # Recuperación automática simplificada de EC2: mueve la instancia a otro host si falla el del proveedor. Reemplaza la
+  # alarma de CloudWatch con acción ec2:recover, que exige el rol vinculado AWSServiceRoleForCloudWatchEvents
+  # (AccessDenied en el primer despliegue, T-S17-09).
+  maintenance_options {
+    auto_recovery = "default"
+  }
+
   metadata_options {
     http_endpoint               = "enabled"
     http_tokens                 = "required"
@@ -149,7 +156,9 @@ resource "aws_instance" "app" {
   })
   user_data_replace_on_change = true
 
-  tags = { Name = "${var.name}-app" }
+  # ConfigParameters crea la dependencia con los parámetros de SSM (bt-boot los lee al arrancar); cambiarla solo
+  # actualiza la etiqueta, nunca reemplaza la instancia.
+  tags = { Name = "${var.name}-app", ConfigParameters = tostring(var.config_parameter_count) }
 
   lifecycle {
     create_before_destroy = true
@@ -164,18 +173,4 @@ resource "aws_eip" "app" {
 resource "aws_eip_association" "app" {
   allocation_id = aws_eip.app.id
   instance_id   = aws_instance.app.id
-}
-
-# Recupera la instancia en otro host si falla el del proveedor (alarmas básicas: sin costo dentro de la capa gratuita).
-resource "aws_cloudwatch_metric_alarm" "recover" {
-  alarm_name          = "${var.name}-app-recover"
-  namespace           = "AWS/EC2"
-  metric_name         = "StatusCheckFailed_System"
-  statistic           = "Maximum"
-  period              = 60
-  evaluation_periods  = 2
-  threshold           = 1
-  comparison_operator = "GreaterThanOrEqualToThreshold"
-  dimensions          = { InstanceId = aws_instance.app.id }
-  alarm_actions       = ["arn:aws:automate:${data.aws_region.current.region}:ec2:recover"]
 }

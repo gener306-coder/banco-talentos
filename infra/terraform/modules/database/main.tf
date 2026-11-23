@@ -32,9 +32,11 @@ resource "aws_db_parameter_group" "this" {
   name   = "${var.name}-pg17"
   family = "postgres17"
 
+  # AWS guarda rds.force_ssl como pending-reboot; declararlo igual evita un cambio perpetuo en cada plan (T-S17-09).
   parameter {
-    name  = "rds.force_ssl"
-    value = "1"
+    name         = "rds.force_ssl"
+    value        = "1"
+    apply_method = "pending-reboot"
   }
 }
 

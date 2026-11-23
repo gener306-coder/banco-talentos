@@ -36,8 +36,9 @@ module "compute" {
   bucket_arn    = module.storage.bucket_arn
   acme_email    = var.acme_email
 
-  # La instancia lee su configuración al arrancar: los parámetros deben existir antes.
-  depends_on = [module.params]
+  # La instancia lee su configuración al arrancar: los parámetros deben existir antes. Sin depends_on de módulo, que
+  # aplazaría sus data sources y forzaría a reemplazar la instancia en cada plan.
+  config_parameter_count = module.params.parameter_count
 }
 
 module "database" {
