@@ -115,7 +115,21 @@ No hay secretos de AWS en GitHub: los roles se asumen por OIDC.
    |---|---|---|---|
    | A | `piloto` | `<Elastic IP>` | 300 |
 
-   Espera la propagación (`dig +short piloto.example.com` devuelve la EIP) y vuelve a ejecutar **Deploy pilot** con el mismo `ami_id`. Esta vez no hay reemplazo: solo migra (sin cambios), confirma y pasa el smoke. Caddy emite el certificado en cuanto el dominio resuelve.
+   Espera la propagación (`dig +short piloto.example.com` devuelve la EIP).
+4. **Reinicia Caddy una vez** para que pida el certificado con el DNS ya válido:
+   ```bash
+   $ aws ssm send-command --region us-east-2 --instance-ids <instance_id> --document-name AWS-RunShellScript \
+       --parameters 'commands=["systemctl restart caddy"]'
+   $ aws ssm start-session --target <instance_id>     # opcional: journalctl -u caddy | grep "certificate obtained"
+   ```
+   Hace falta porque Caddy arrancó con la instancia, antes de que existiera el registro A. Su primer intento con Let's Encrypt falla (`no valid A records found`), pasa a ZeroSSL y puede quedarse esperando ese desafío sin volver a intentar (visto en el primer despliegue real). Al reiniciarlo, Let's Encrypt emite el certificado en segundos.
+5. Comprueba con `infra/scripts/smoke.sh https://piloto.example.com` y respalda el certificado de inmediato, sin esperar al temporizador diario:
+   ```bash
+   $ aws ssm send-command --region us-east-2 --instance-ids <instance_id> --document-name AWS-RunShellScript \
+       --parameters 'commands=["systemctl start bt-caddy-certs.service"]'
+   $ aws s3 ls s3://<bucket>/caddy/certificates/ --recursive
+   ```
+   No hace falta volver a ejecutar **Deploy pilot**: las migraciones y `artisan up` ya se aplicaron. En los despliegues siguientes el DNS ya existe y `bt-boot` restaura el certificado desde S3, así que este paso no se repite.
 
 ## 6. Catálogo de habilidades y primer Administrador
 
