@@ -18,7 +18,7 @@ El producto está cerrado en `main` (`e57cfce`, Sprint 16) y la auditoría QA (`
 | Node | `engines: 24.x`; React 19.2, Vite 8, TS ~5.9, Tailwind 4.3 | Node 24 **solo en CI**; la AMI no lleva Node |
 | PostgreSQL / PostGIS | `postgis/postgis:17-3.5`; la migración `2026_09_26_000000_enable_postgis_extension` hace `CREATE EXTENSION postgis` | RDS PostgreSQL 17.x (PostGIS 3.5 disponible); el usuario maestro (`rds_superuser`) puede crear la extensión |
 | ffmpeg | 5.1 (bookworm), con `libx264`, `libvpx-vp9`, `libopus`, `nice` y `ffprobe` (`VideoProcessor`) | ffmpeg 7.1 de Debian 13, con los mismos códecs. **Riesgo:** es un salto de versión mayor, así que la prueba real de video del runbook es obligatoria |
-| Servidor web | Ninguno en el repo (solo `artisan serve` y Vite) | **Caddy 2.10.x** del repositorio oficial de Caddy (HTTPS automático) + PHP-FPM |
+| Servidor web | Ninguno en el repo (solo `artisan serve` y Vite) | **Caddy 2.x** del repositorio oficial de Caddy (2.11 al 22 de noviembre de 2026) (HTTPS automático) + PHP-FPM |
 | Cola | `database`; colas `videos,default`, `--timeout=900 --tries=2` | systemd `queue:work` |
 | Planificador | `routes/console.php` **vacío**: hoy no hay tareas programadas | systemd timer de `schedule:run` instalado; hoy no hace nada y queda listo para el futuro |
 
@@ -32,7 +32,7 @@ El producto está cerrado en `main` (`e57cfce`, Sprint 16) y la auditoría QA (`
   4. prueba Pest: con `PRIVATE_DOCUMENTS_DISK=s3` (`Storage::fake('s3')`), subir, verificar `document_sha256` y descargar. El resto de la suite sigue en `local`.
 - **Un solo bucket privado** con prefijos que ya existen en las rutas: videos (`MEDIA_DISK=s3`), `imss/<institution_id>/…` (`PRIVATE_DOCUMENTS_DISK=s3`) y `caddy/` (certificados, ver §2).
 - **Lo que vive en la EC2 y puede perderse sin daño:** caché de archivos del límite general (`ThrottleApiRequests`), vistas compiladas, archivo de mantenimiento y originales de video en proceso. Las sesiones y la caché (`database`), y la cola (`database`), viven en RDS. Logs: `LOG_CHANNEL=stderr` (ya es el valor de `.env.example`), recogidos por journald.
-- **`LARAVEL_STORAGE_PATH=/var/lib/banco-talentos/storage`** (ya probado en `docker/simulation/backend-entrypoint.sh`): el código en `/opt` queda de solo lectura.
+- **Estado fuera del código:** `storage/` y `bootstrap/cache/` son enlaces simbólicos a `/var/lib/banco-talentos/` (`www-data`), y `.env` es un enlace a `/run/banco-talentos/.env`. El código en `/opt` queda de solo lectura (`root`). *Implementación:* se eligieron enlaces y no `LARAVEL_STORAGE_PATH` porque `public/index.php` busca `storage/framework/maintenance.php` con una ruta fija, y porque PHP-FPM no siempre expone las variables de entorno en `$_ENV`.
 - **`APP_KEY` es crítica:** el NSS y la póliza usan el cast `encrypted`. Si se pierde, no hay forma de descifrarlos. Va en SSM `SecureString`, nunca rota sin un plan, y se respalda fuera de AWS (gestor de contraseñas del responsable).
 
 ### 1.3 CSP estricta y `index.html`
@@ -45,11 +45,11 @@ El producto está cerrado en `main` (`e57cfce`, Sprint 16) y la auditoría QA (`
 
 CSP final, que Caddy envía solo en la SPA:
 ```
-default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data: blob: https://<bucket>.s3.<region>.amazonaws.com;
-media-src 'self' blob: https://<bucket>.s3.<region>.amazonaws.com; connect-src 'self'; worker-src 'self';
+default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data: blob: <S3_ORIGIN>;
+media-src 'self' blob: <S3_ORIGIN>; connect-src 'self'; worker-src 'self';
 font-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'
 ```
-No se usa `crossorigin` en `<video>`/`<img>` (verificado con grep), así que **el bucket no necesita CORS**.
+`<S3_ORIGIN>` incluye `https://<bucket>.s3.amazonaws.com` y `https://<bucket>.s3.us-east-1.amazonaws.com`, porque el SDK puede firmar con el punto global o con el regional. No se usa `crossorigin` en `<video>`/`<img>` (verificado con grep), así que **el bucket no necesita CORS**.
 
 ### 1.4 Endpoint de salud
 **Usar `/up`, que ya existe** (`bootstrap/app.php`, `health: '/up'`) y ya usan los healthchecks de Compose. Está fuera de `/api`, así que `ApiSecurityMatrixTest` no lo ve. No se crea `/api/health`. El smoke check valida `/up` (200) y, aparte, la conexión a la base mediante `php artisan migrate:status` por SSM.
@@ -75,7 +75,7 @@ No se usa `crossorigin` en `<video>`/`<img>` (verificado con grep), así que **e
 - **Arranque (`/usr/local/sbin/bt-boot.sh`, `user_data` mínimo que solo fija `BT_ENV=pilot`):**
   0. **A3:** errores controlados: si falla un paso no crítico (restaurar certificados, revisar migraciones), registra el motivo y continúa;
   1. `aws ssm get-parameters-by-path --path /banco-talentos/pilot/ --with-decryption` escribe `/run/banco-talentos/.env` (tmpfs, `0640 root:www-data`); el enlace `current/backend/.env` apunta ahí. **Nunca toca disco persistente ni la AMI**;
-  2. crea `LARAVEL_STORAGE_PATH` y sus subcarpetas;
+  2. crea las carpetas de `/var/lib/banco-talentos` (estado local);
   3. `aws s3 sync s3://…/caddy/ /var/lib/caddy/` (restaura los certificados: evita reemitir a Let's Encrypt en cada AMI y sus límites de 5 certificados duplicados por semana). Después, `chown -R caddy:caddy /var/lib/caddy` (A3). `caddy` pertenece al grupo `www-data` y el pool de FPM publica su socket con `listen.group = www-data` y `listen.mode = 0660`;
   4. `php artisan config:cache route:cache view:cache event:cache` como `www-data`;
   5. si `migrate:status` muestra migraciones pendientes, **o falla** porque la base está vacía en el primer despliegue (aún no existe la tabla `migrations`, A3), ejecuta `php artisan down --retry=30` sin abortar `bt-boot.service`. El despliegue migra y luego ejecuta `up` (ver §4);
@@ -174,11 +174,11 @@ infra/terraform/
   5. etiqueta la AMI (`Release=<sha>`, `App=banco-talentos`) y publica su `ami_id` en el resumen del job;
   6. limpieza: conserva las 3 AMI más recientes y sus snapshots.
 - **`deploy-pilot.yml`** (`workflow_dispatch`, entrada `ami_id` o «última AMI etiquetada»; entorno `pilot`):
-  1. `terraform plan -var ami_id=…`, visible en el resumen, y espera la aprobación del entorno;
+  1. `terraform plan` en el entorno `pilot-plan`, visible en el resumen. El job de aplicación (entorno `pilot`, con aprobación) vuelve a planear con las mismas entradas: el plan no se sube como artefacto porque contiene la contraseña de la base;
   2. antes del reemplazo, `aws ssm send-command` a la instancia actual: `systemctl stop bt-queue@*` (drena el video en curso con `TimeoutStopSec`) y `aws s3 sync` de los certificados;
   3. `terraform apply`. `aws_instance` usa `create_before_destroy`, la EIP se reasocia a la nueva y la vieja se destruye;
   4. espera a que la instancia nueva esté `Online` en SSM;
-  5. Run Command: `sudo -u www-data php artisan migrate --force --isolated && sudo -u www-data php artisan up`;
+  5. Run Command: `bt-artisan migrate --force && bt-artisan up` y reinicio de los workers. Va **sin `--isolated`**, porque su candado vive en la caché de base de datos, cuya tabla no existe en el primer despliegue (un solo servidor, sin carreras);
   6. smoke:
      - `curl -fsS https://<dominio>/up`;
      - `curl -sI https://<dominio>/` comprueba `strict-transport-security`, `content-security-policy`, `x-content-type-options: nosniff` y `referrer-policy: no-referrer`;
