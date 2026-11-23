@@ -69,10 +69,11 @@ bucket="$(param AWS_BUCKET)"
 s3_region="$(param AWS_DEFAULT_REGION)"
 # El SDK firma con el punto global (us-east-1) o el regional: la CSP admite ambos orígenes del bucket.
 s3_origin="https://${bucket}.s3.amazonaws.com https://${bucket}.s3.${s3_region}.amazonaws.com"
+# Comillas en S3_ORIGIN (lleva espacios): las entienden tanto systemd (EnvironmentFile) como bash (source).
 install -m 0640 -o root -g caddy /dev/stdin "$run_dir/caddy.env" <<CADDY
 DOMAIN=$domain
 ACME_EMAIL=$ACME_EMAIL
-S3_ORIGIN=$s3_origin
+S3_ORIGIN="$s3_origin"
 BT_BUCKET=$bucket
 CADDY
 
@@ -93,7 +94,11 @@ fi
 chown -R caddy:caddy /var/lib/caddy
 
 # 3. Cachés de Laravel (código inmutable) -----------------------------------------------------------------------
-artisan optimize:clear >/dev/null
+# Sin optimize:clear: también vaciaría la caché de base de datos, cuya tabla no existe antes de migrar (A3).
+artisan config:clear >/dev/null
+artisan route:clear >/dev/null
+artisan view:clear >/dev/null
+artisan event:clear >/dev/null
 artisan package:discover >/dev/null
 artisan config:cache
 artisan route:cache
