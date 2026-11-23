@@ -53,3 +53,8 @@ variable "bucket_arn" {
 variable "acme_email" {
   type = string
 }
+
+variable "config_parameter_count" {
+  type        = number
+  description = "Salida parameter_count de params: la instancia no se crea antes que su configuración en SSM."
+}

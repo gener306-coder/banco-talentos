@@ -211,6 +211,14 @@ Sin cambios de contrato.
   - el control de orden aparecía antes de la primera petición.
 
   Ahora las pruebas esperan esas condiciones. Al repetir el archivo apareció un tercer caso: el esqueleto podía mostrarse antes de que saliera la petición a la galería, y ahora la prueba espera a tenerla pendiente. Resultado: el archivo pasa 30 de 30 veces y Vitest completo 4 de 4. En el CI de ese PR, Pest superó el límite de 30 minutos del job (antes tardaba entre 23 y 28): el límite pasa a 45 minutos, y el de E2E a 60.
+- **Build AMI (run 45128532648, sobre `74cb451`):** en verde. AMI `ami-0ec52f53f493d3927` (arm64, `Release=74cb45146e48`) en 16 minutos de Packer, con `99-verify.sh` superado en AWS real.
+- **Primer Deploy pilot (run 45135132231):** el plan creaba 78 recursos y el `apply` creó 77: red, bucket, RDS 17.9, la EC2 y la EIP. El SSM Agent de la EC2 queda `Online`.
+  - **Falló** la alarma de CloudWatch con acción `ec2:recover`: `AccessDenied`, porque exige el rol vinculado `AWSServiceRoleForCloudWatchEvents`, que no existe y que el rol de despliegue no puede crear.
+  - **Sobraba:** la instancia ya tiene la recuperación automática simplificada de EC2 (`maintenance_options.auto_recovery = "default"`), que ahora se declara en lugar de la alarma.
+  - **Al planear contra el estado real** se vio que el siguiente despliegue habría reemplazado la EC2:
+    - el `depends_on = [module.params]` del módulo `compute` aplazaba todos sus `data` hasta el `apply`, y la región del `user_data` quedaba desconocida;
+    - además, `rds.force_ssl` tenía un cambio perpetuo (AWS lo guarda con `apply_method = "pending-reboot"`).
+  - **Corrección:** la instancia depende de los parámetros mediante la etiqueta `ConfigParameters` (salida `parameter_count` de `params`), y el grupo de parámetros declara `pending-reboot`. El plan contra el estado real queda en `0 to add, 1 to change, 0 to destroy`: solo la etiqueta.
 - **Siguiente:** paso 5 del runbook (**Build AMI** y **Deploy pilot**), y después el registro A `piloto` en Hostinger con la EIP.
 
 ---
