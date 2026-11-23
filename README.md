@@ -4,7 +4,7 @@ Plataforma web que vincula instituciones educativas, empresas y la Secretaría d
 
 La visión completa del proyecto, su arquitectura, el modelo de datos y las diferencias con la propuesta original están en el [Documento General](docs/Banco_de_Talentos_Documento_General.md).
 
-Sprint vigente: [Sprint 8](docs/sprint-8.md), completo. Sprint anterior: [Sprint 7](docs/sprint-7.md), completo. Historias construidas (cada una con su diseño técnico en `docs/HU-SN-0X.md`):
+Sprint vigente: [Sprint 17](docs/sprint-17.md), completo: el piloto corre en AWS en https://piloto.ellukas.online (ver [Despliegue piloto en AWS](#despliegue-piloto-en-aws)). Historias construidas (cada una con su diseño técnico en `docs/HU-SN-0X.md`; las tareas técnicas `T-*`, dentro de cada Sprint):
 
 | Sprint | Historias |
 |---|---|
@@ -16,8 +16,17 @@ Sprint vigente: [Sprint 8](docs/sprint-8.md), completo. Sprint anterior: [Sprint
 | [6](docs/sprint-6.md) | Bandeja institucional; respuesta `ACEPTADA`/`RECHAZADA`; indicadores de vinculación; inactivación y restablecimiento de cuentas de Secretaría y empresa |
 | [7](docs/sprint-7.md) | Reporte ejecutivo; exportación CSV; bitácora de trazabilidad; actualización del Documento General |
 | [8](docs/sprint-8.md) | Búsqueda y filtrado del padrón de alumnos; completar el expediente justo después de registrar; modo oscuro con el logotipo para fondo oscuro |
+| [9](docs/sprint-9.md) | Multimedia institucional y promoción dual |
+| [10](docs/sprint-10.md) | Inteligencia de búsqueda y taxonomía de habilidades |
+| [11](docs/sprint-11.md) | Inteligencia de búsqueda en el Buscador de Talento |
+| [12](docs/sprint-12.md) | Estabilización UI/UX y sistema de diseño |
+| [13](docs/sprint-13.md) | Mensajería de vinculación |
+| [14](docs/sprint-14.md) | Mi cuenta y empresas autogestionadas |
+| [15](docs/sprint-15.md) | Apartado legal y de transparencia |
+| [16](docs/sprint-16.md) | Gobierno de cuentas ADMIN e instituciones autogestionadas |
+| [17](docs/sprint-17.md) | Infraestructura y piloto en AWS (Packer, Terraform y GitHub Actions) |
 
-No hay registro público ni recuperación de contraseña iniciada por la propia cuenta.
+No hay registro público. Desde el Sprint 16, cada cuenta puede recuperar su contraseña por sí misma («Olvidé mi contraseña»).
 
 ## Stack y estructura
 
@@ -33,6 +42,9 @@ frontend/                SPA React por módulos (auth, institutions, companies, 
                          opportunities, linkage, reports, audit, ui), pruebas Vitest y E2E en frontend/e2e
 docker/                  Imágenes y configuración de desarrollo/pruebas
 docs/                    Documento General, Sprints, diseño técnico de cada historia e identidad visual (docs/design/)
+docs/infra/              Plan técnico y runbook del piloto en AWS
+infra/                   Packer (AMI inmutable), Terraform (bootstrap y entorno pilot) y scripts de despliegue
+.github/workflows/       CI, construcción de la AMI y despliegue del piloto
 compose.yaml             Entorno de desarrollo (incluye Mailpit y el worker de la cola)
 compose.testing.yaml     Entorno aislado de pruebas
 scripts/test-backend.sh   Ejecuta Pest con PostgreSQL temporal
@@ -40,6 +52,20 @@ scripts/test-e2e.sh       Ejecuta Chromium con API y base de pruebas reales
 ```
 
 `backend/composer.lock` y `frontend/package-lock.json` fijan las dependencias.
+
+## Despliegue piloto en AWS
+
+El piloto (Sprint 17) corre en `us-east-2` con infraestructura inmutable:
+- una AMI por versión, construida con Packer: Debian 13 arm64, PHP 8.4 FPM, ffmpeg y Caddy con HTTPS automático;
+- una EC2 con IP elástica, RDS PostgreSQL privado y un bucket S3 privado para videos, comprobantes y certificados;
+- la configuración en SSM Parameter Store, nunca en Git ni en la AMI.
+
+Se despliega con GitHub Actions por OIDC, sin llaves estáticas:
+- **CI** en cada PR;
+- **Build AMI** y **Deploy pilot** a mano, con aprobación del entorno `pilot`.
+
+- [Plan técnico](docs/infra/pilot-aws-plan.md): decisiones, arquitectura, costos y seguridad.
+- [Runbook](docs/infra/runbook-pilot.md): primer despliegue, operación diaria, respaldos, recreación y cómo pausar o destruir el piloto.
 
 ## Desarrollo local
 

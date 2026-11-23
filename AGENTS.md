@@ -69,7 +69,7 @@ Cada historia debe:
 
 ## Desarrollo por Sprint
 
-Sprint vigente: docs/sprint-14.md
+Sprint vigente: docs/sprint-17.md
 
 Ese archivo es la única fuente de verdad mientras dure el Sprint.
 Los archivos de Sprints anteriores (docs/sprint-N.md) son históricos:
