@@ -51,7 +51,7 @@ export const browserTechnologies: readonly BrowserTechnology[] = [
     kind: 'localStorage',
     purpose: 'Recuerda el tema que elegiste: claro, oscuro o el del sistema.',
     duration: 'Hasta que cambies el tema o borres los datos del sitio.',
-    files: ['src/ui/theme.ts', 'index.html'],
+    files: ['src/ui/theme.ts', 'public/theme-init.js'],
   },
   {
     name: DISMISSED_KEY,

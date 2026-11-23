@@ -8,7 +8,7 @@ test.describe('modo oscuro', () => {
 
   test('con el tema oscuro elegido, se aplica desde el primer pintado con el logotipo blanco y «Educación Dual» en blanco (HU-S8-03)', async ({ page }) => {
     await page.addInitScript(() => localStorage.setItem('bt-theme', 'dark'))
-    // data-theme se fija antes de que cargue la aplicación (script de index.html).
+    // data-theme se fija antes de que cargue la aplicación (public/theme-init.js, cargado desde index.html).
     await page.goto('/', { waitUntil: 'commit' })
     await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark')
     await expect(page.getByRole('heading', { level: 2, name: /^Hola, / })).toBeVisible()
