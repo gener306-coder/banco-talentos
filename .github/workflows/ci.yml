@@ -76,6 +76,10 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
+      # Laravel busca backend/.env en cada prueba; sin él, phpdotenv deja un aviso que PHPUnit cuenta en todas.
+      # Vacío basta: las variables vienen de compose.testing.yaml y phpunit.xml.
+      - name: backend/.env vacío
+        run: touch backend/.env
       - name: Pest
         run: LOCAL_UID="$(id -u)" LOCAL_GID="$(id -g)" sh scripts/test-backend.sh
 
@@ -90,5 +94,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
+      - name: backend/.env vacío
+        run: touch backend/.env
       - name: Playwright
         run: LOCAL_UID="$(id -u)" LOCAL_GID="$(id -g)" sh scripts/test-e2e.sh

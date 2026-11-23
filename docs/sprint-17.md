@@ -119,6 +119,8 @@ Sin cambios de contrato.
     - Con rol `COMPANY` o `INSTITUTION`, el menú de mensajes del encabezado consulta `/unread-summary` al montarse, y 4 archivos de `src/institutions` contaban esa consulta como petición administrativa prohibida. Ahora la responden aparte, como ya hacían `SessionPage.test.tsx` y `TalentSearchPage.test.tsx`.
     - La prueba del esqueleto del feed (`PromotionalVideosPage.test.tsx`) recibía la galería al instante, y el esqueleto desaparecía entre dos aserciones. Ahora la prueba decide cuándo llega la respuesta.
 
+**Segunda ejecución:** los tres jobs quedaron en verde, pero Pest reportó «1734 warnings» en lugar de «passed». Sin `backend/.env` (no se versiona), phpdotenv intenta leerlo con `@file_get_contents` en cada prueba, y PHPUnit registra ese aviso aunque esté silenciado. El CI crea un `backend/.env` vacío antes de Pest y de E2E; las variables siguen viniendo de `compose.testing.yaml` y `phpunit.xml`.
+
 ### T-S17-06 — AMI inmutable con Packer
 
 **Estado:** Plantilla completada (22 de noviembre de 2026). La primera construcción real queda pendiente de la cuenta de AWS.
