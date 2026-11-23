@@ -1,0 +1,9 @@
+# T-S17-06: respalda los certificados de Caddy en el bucket privado (evita reemitirlos en cada AMI nueva).
+[Unit]
+Description=Banco de Talentos: respaldo de los certificados de Caddy en S3
+Requires=bt-boot.service
+After=bt-boot.service caddy.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/bt-caddy-certs.sh backup

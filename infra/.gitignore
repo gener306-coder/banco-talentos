@@ -1,0 +1,10 @@
+# T-S17-06/07: artefactos locales de Packer y Terraform; nunca se versionan estados, planes ni variables reales.
+packer/packer-manifest.json
+packer/*.tar.gz
+**/.terraform/
+*.tfstate
+*.tfstate.*
+*.tfplan
+crash.log
+*.tfvars
+!*.tfvars.example
