@@ -210,7 +210,7 @@ Sin cambios de contrato.
   - el botón «Ver más historias» aparecía antes de registrarse el `IntersectionObserver`;
   - el control de orden aparecía antes de la primera petición.
 
-  Ahora las pruebas esperan esas condiciones. Al repetir el archivo apareció un tercer caso: el esqueleto podía mostrarse antes de que saliera la petición a la galería, y ahora la prueba espera a tenerla pendiente. Resultado: el archivo pasa 30 de 30 veces y Vitest completo 4 de 4.
+  Ahora las pruebas esperan esas condiciones. Al repetir el archivo apareció un tercer caso: el esqueleto podía mostrarse antes de que saliera la petición a la galería, y ahora la prueba espera a tenerla pendiente. Resultado: el archivo pasa 30 de 30 veces y Vitest completo 4 de 4. En el CI de ese PR, Pest superó el límite de 30 minutos del job (antes tardaba entre 23 y 28): el límite pasa a 45 minutos, y el de E2E a 60.
 - **Siguiente:** paso 5 del runbook (**Build AMI** y **Deploy pilot**), y después el registro A `piloto` en Hostinger con la EIP.
 
 ---
