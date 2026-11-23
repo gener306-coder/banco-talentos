@@ -71,7 +71,8 @@ jobs:
   backend-tests:
     name: Backend (Pest con PostGIS)
     runs-on: ubuntu-24.04
-    timeout-minutes: 30
+    # Pest tarda entre 23 y 30 minutos en el runner (imagen, 1734 pruebas con PostGIS); 30 min ya lo cortó una vez.
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -89,7 +90,7 @@ jobs:
     if: github.event_name == 'workflow_dispatch' && inputs.e2e
     needs: backend-tests
     runs-on: ubuntu-24.04
-    timeout-minutes: 40
+    timeout-minutes: 60
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
