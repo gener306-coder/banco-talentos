@@ -176,7 +176,28 @@ Sin cambios de contrato.
 
 ### T-S17-09 — Primer despliegue real y prueba de recreación
 
-**Estado:** Pendiente (requiere la cuenta de AWS, el subdominio en Hostinger y el dominio verificado en Resend). Sigue `docs/infra/runbook-pilot.md` de principio a fin.
+**Estado:** En curso. Sigue `docs/infra/runbook-pilot.md` de principio a fin.
+
+**Avance (22 de noviembre de 2026):**
+- **Cuenta y acceso:** cuenta del Plan Gratuito, en `us-east-2`; acceso local con `aws login`.
+- **Comprobaciones previas:**
+  - `t4g.small` entra en el Plan Gratuito;
+  - RDS ofrece PostgreSQL 17.11 en `db.t4g.micro` (`engine_version = "17"` toma la menor más reciente);
+  - existe la AMI de Debian 13 arm64 en `us-east-2`.
+- **Paso 1 (bootstrap):** `terraform apply` creó 15 recursos, sin cambios ni destrucciones.
+  - Bucket del estado `banco-talentos-tfstate-<cuenta>`, con versionado, cifrado y acceso público bloqueado.
+  - Proveedor OIDC de GitHub.
+  - Roles `banco-talentos-gha-build-ami` (entorno `pilot`) y `banco-talentos-gha-deploy-pilot` (entornos `pilot` y `pilot-plan`).
+  - Perfil de instancia y grupo de seguridad sin entradas para Packer.
+  - El estado local se respaldó en `s3://<bucket del estado>/bootstrap/terraform.tfstate`.
+- **Paso 3 (Resend y DNS):** subdominio `piloto.ellukas.online`, verificado por el responsable en Resend y en Hostinger.
+- **Paso 4 (entornos de GitHub, con `gh api`):**
+  - `pilot-plan`: solo la rama `main`.
+  - `pilot`: aprobación del responsable (sin *Prevent self-review*), la rama `main` y los tags `v*`.
+  - Variables `AWS_DEPLOY_ROLE_ARN`, `TF_STATE_BUCKET`, `PILOT_DOMAIN` y `PILOT_ACME_EMAIL` en ambos; además, en `pilot`, `AWS_BUILD_AMI_ROLE_ARN` y `PACKER_SECURITY_GROUP_ID`. Ningún secreto de AWS en GitHub.
+- **Paso 2 (secretos):** `APP_KEY` y `MAIL_PASSWORD` los carga el responsable en SSM desde su terminal. No pasan por el chat ni por Terraform.
+- **Fusión:** el PR #1 se fusionó a `main` (merge commit) para habilitar `workflow_dispatch` en `build-ami.yml` y `deploy-pilot.yml`.
+- **Siguiente:** paso 5 del runbook (**Build AMI** y **Deploy pilot**), y después el registro A `piloto` en Hostinger con la EIP.
 
 ---
 
