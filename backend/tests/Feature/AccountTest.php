@@ -6,6 +6,7 @@ use App\Models\Company;
 use App\Models\Institution;
 use App\Models\User;
 use App\Notifications\PasswordChanged;
+use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Database\QueryException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
@@ -186,7 +187,7 @@ describe('contraseña (CA-03, CA-04)', function () {
             $mail = $notice->toMail($this->account);
             $text = implode(' ', [$mail->subject, ...$mail->introLines, ...$mail->outroLines]);
 
-            return $channels === ['mail'] && ! str_contains($text, NEW_PASSWORD) && $notice instanceof Illuminate\Contracts\Queue\ShouldQueue;
+            return $channels === ['mail'] && ! str_contains($text, NEW_PASSWORD) && $notice instanceof ShouldQueue;
         });
         $event = AccountAuditEvent::query()->sole();
         expect([$event->event, $event->subject_type, $event->changed_fields])->toBe(['password_changed', 'user', []]);

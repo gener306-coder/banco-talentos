@@ -1,13 +1,13 @@
 <?php
 
+use App\Http\Middleware\ThrottleApiRequests;
 use App\Models\Institution;
 use App\Models\User;
-use App\Http\Middleware\ThrottleApiRequests;
 use Illuminate\Cache\RateLimiter;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Routing\Route as LaravelRoute;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Routing\Route as LaravelRoute;
 use Illuminate\Support\Facades\Route;
 use Tests\Support\InteractsWithCookieSessions;
 

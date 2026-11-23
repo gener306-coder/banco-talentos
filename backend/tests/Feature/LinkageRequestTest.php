@@ -319,4 +319,3 @@ describe('cupo de la oportunidad (T-S14-11)', function () {
             ->assertJsonPath('data.0.vacancies', 3)->assertJsonPath('data.0.accepted_count', 0);
     });
 });
-

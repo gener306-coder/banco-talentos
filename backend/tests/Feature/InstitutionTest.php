@@ -4,6 +4,7 @@ use App\Enums\UserRole;
 use App\Models\Institution;
 use App\Models\User;
 use App\Notifications\SetInitialPassword;
+use App\Rules\WorkCenterKey;
 use Illuminate\Database\QueryException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
@@ -294,7 +295,7 @@ it('normalizes the cct, requires the SEP format and applies uniqueness to the no
     $this->browserRequest('PUT', $uri, institutionPayload(['cct' => '09dit-0005 b']))
         ->assertUnprocessable()->assertJsonValidationErrors(['cct' => 'La Clave de Centro de Trabajo ya está registrada.']);
     $this->browserRequest('PUT', $uri, institutionPayload(['cct' => 'EXACT-CCT']))
-        ->assertUnprocessable()->assertJsonValidationErrors(['cct' => \App\Rules\WorkCenterKey::MESSAGE]);
+        ->assertUnprocessable()->assertJsonValidationErrors(['cct' => WorkCenterKey::MESSAGE]);
     $this->browserRequest('PUT', $uri, institutionPayload(['cct' => '09dit 0006 c']))
         ->assertOk()->assertJsonPath('data.cct', '09DIT0006C');
 
@@ -308,7 +309,7 @@ it('lets the admin keep an older cct without the SEP format while editing other 
     $this->browserRequest('PUT', '/api/institutions/'.$institution->id, institutionPayload(['cct' => 'CLAVE-ANTERIOR', 'name' => 'Nombre corregido']))
         ->assertOk()->assertJsonPath('data.cct', 'CLAVE-ANTERIOR');
     $this->browserRequest('PUT', '/api/institutions/'.$institution->id, institutionPayload(['cct' => 'OTRA-CLAVE']))
-        ->assertUnprocessable()->assertJsonValidationErrors(['cct' => \App\Rules\WorkCenterKey::MESSAGE]);
+        ->assertUnprocessable()->assertJsonValidationErrors(['cct' => WorkCenterKey::MESSAGE]);
 });
 
 it('only permits status changes through the dedicated action', function (string $method, mixed $state) {

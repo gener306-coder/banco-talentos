@@ -261,7 +261,9 @@ describe('cupo de la oportunidad (T-S14-11)', function () {
     it('locks the opportunity (FOR UPDATE) before the request and before counting, so simultaneous acceptances are serialized', function () {
         $this->loginWithCookies($this->account)->assertOk();
         $queries = [];
-        DB::listen(function ($query) use (&$queries): void { $queries[] = strtolower($query->sql); });
+        DB::listen(function ($query) use (&$queries): void {
+            $queries[] = strtolower($query->sql);
+        });
 
         decide($this, $this->linkage, ['status' => 'ACEPTADA'])->assertOk();
 
@@ -276,13 +278,14 @@ describe('cupo de la oportunidad (T-S14-11)', function () {
     it('rejecting never locks the opportunity', function () {
         $this->loginWithCookies($this->account)->assertOk();
         $queries = [];
-        DB::listen(function ($query) use (&$queries): void { $queries[] = strtolower($query->sql); });
+        DB::listen(function ($query) use (&$queries): void {
+            $queries[] = strtolower($query->sql);
+        });
 
         decide($this, $this->linkage, ['status' => 'RECHAZADA'])->assertOk();
         expect(collect($queries)->contains(fn (string $sql): bool => str_contains($sql, 'from "opportunities"') && str_contains($sql, 'for update')))->toBeFalse();
     });
 });
-
 
 describe('oportunidad inactiva (auditoría QA #6)', function () {
     it('answers 422 without changes when accepting a request whose opportunity the company deactivated', function () {
@@ -311,7 +314,9 @@ describe('oportunidad inactiva (auditoría QA #6)', function () {
         $this->opportunity->forceFill(['is_active' => false])->save();
         $this->loginWithCookies($this->account)->assertOk();
         $queries = [];
-        DB::listen(function ($query) use (&$queries): void { $queries[] = strtolower($query->sql); });
+        DB::listen(function ($query) use (&$queries): void {
+            $queries[] = strtolower($query->sql);
+        });
 
         decide($this, $this->linkage, ['status' => 'ACEPTADA'])->assertUnprocessable();
 

@@ -8,6 +8,7 @@ use App\Models\LinkageRequest;
 use App\Models\Opportunity;
 use App\Models\Student;
 use App\Models\User;
+use App\Rules\WorkCenterKey;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Notification;
@@ -347,7 +348,7 @@ describe('control de la institución sobre sus datos (T-S14-15)', function () {
         // Un CCT anterior a la regla sigue siendo válido mientras no cambie.
         $this->browserRequest('PUT', '/api/organization/profile', institutionProfile(['cct' => 'CLAVE-ANTERIOR', 'name' => 'Universidad Tecnológica del Golfo']))->assertOk();
         $this->browserRequest('PUT', '/api/organization/profile', institutionProfile(['cct' => '28EUT01']))
-            ->assertUnprocessable()->assertJsonPath('errors.cct.0', \App\Rules\WorkCenterKey::MESSAGE);
+            ->assertUnprocessable()->assertJsonPath('errors.cct.0', WorkCenterKey::MESSAGE);
         $this->browserRequest('PUT', '/api/organization/profile', institutionProfile(['cct' => '28eut0009z']))
             ->assertUnprocessable()->assertJsonPath('errors.cct.0', 'Esa Clave de Centro de Trabajo ya está registrada en otra institución.');
         expect($this->institution->refresh()->cct)->toBe('CLAVE-ANTERIOR');

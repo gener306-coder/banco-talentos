@@ -7,6 +7,7 @@ use App\Models\LinkageRequest;
 use App\Models\Opportunity;
 use App\Models\Student;
 use App\Models\User;
+use Illuminate\Database\QueryException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Tests\Support\InteractsWithCookieSessions;
@@ -133,7 +134,7 @@ describe('baja de una vinculación aceptada (T-S14-13)', function () {
 
     it('enforces the termination data with the database', function () {
         expect(fn () => DB::table('linkage_requests')->where('id', $this->linkage->id)->update(['status' => 'BAJA']))
-            ->toThrow(\Illuminate\Database\QueryException::class);
+            ->toThrow(QueryException::class);
     });
 });
 
