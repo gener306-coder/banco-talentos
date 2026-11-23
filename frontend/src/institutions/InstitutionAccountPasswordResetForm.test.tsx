@@ -29,6 +29,9 @@ beforeEach(() => {
   resetRequest.mockReset()
   fetchMock.mockReset()
   fetchMock.mockImplementation(async (path, options) => {
+    // T-S17-05: el menú de mensajes del encabezado (COMPANY, INSTITUTION) consulta el resumen de no leídos al montarse;
+    // se responde aparte para que no cuente como petición administrativa (carrera vista en el runner de GitHub).
+    if (String(path).endsWith('/unread-summary')) return Response.json({ data: { conversations: 0, items: [] } })
     if (path === '/api/me') return Response.json({ user: { id: 1, name: 'Admin', email: 'admin@example.test', role } })
     if (path === '/api/institutions/7') return Response.json({ data: { ...institution, is_active: isActive } })
     if (path === '/sanctum/csrf-cookie') {

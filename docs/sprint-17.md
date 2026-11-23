@@ -111,6 +111,14 @@ Sin cambios de contrato.
 - `backend-tests`: `sh scripts/test-backend.sh`;
 - `e2e`: solo con `workflow_dispatch` y la entrada `e2e`, siempre después de `backend-tests`.
 
+**Primera ejecución en GitHub (PR #1, en borrador):**
+- Pest pasó en el runner.
+- Fallaron dos jobs, por deuda previa que el CI destapó; no por cambios de este Sprint.
+  - **`backend-lint`:** Pint nunca había corrido en CI, y 13 archivos de Sprints anteriores tenían estilo pendiente (orden de imports, espacios, llaves). Se corrigieron con `vendor/bin/pint`, solo estilo, y Pest de esos archivos queda en 385 de 385.
+  - **`frontend`:** dos carreras de pruebas que en local no se manifestaban.
+    - Con rol `COMPANY` o `INSTITUTION`, el menú de mensajes del encabezado consulta `/unread-summary` al montarse, y 4 archivos de `src/institutions` contaban esa consulta como petición administrativa prohibida. Ahora la responden aparte, como ya hacían `SessionPage.test.tsx` y `TalentSearchPage.test.tsx`.
+    - La prueba del esqueleto del feed (`PromotionalVideosPage.test.tsx`) recibía la galería al instante, y el esqueleto desaparecía entre dos aserciones. Ahora la prueba decide cuándo llega la respuesta.
+
 ### T-S17-06 — AMI inmutable con Packer
 
 **Estado:** Plantilla completada (22 de noviembre de 2026). La primera construcción real queda pendiente de la cuenta de AWS.
