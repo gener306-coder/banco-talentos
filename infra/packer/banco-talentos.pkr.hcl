@@ -141,9 +141,20 @@ build {
     destination = "/tmp/release.tar.gz"
   }
 
+  # Los archivos de configuración viajan como un solo tar.gz: subir un directorio por el túnel de Session Manager falla
+  # con «scp: /tmp/bt-files: Is a directory» (primera construcción real, T-S17-09). build-ami.yml lo arma antes de
+  # packer validate (Packer exige que el archivo exista al preparar el provisioner): tar -C files -czf bt-files.tar.gz .
   provisioner "file" {
-    source      = "${path.root}/files/"
-    destination = "/tmp/bt-files"
+    source      = "${path.root}/bt-files.tar.gz"
+    destination = "/tmp/bt-files.tar.gz"
+  }
+
+  provisioner "shell" {
+    inline = [
+      "mkdir -p /tmp/bt-files",
+      "tar -xzf /tmp/bt-files.tar.gz -C /tmp/bt-files",
+      "rm -f /tmp/bt-files.tar.gz",
+    ]
   }
 
   provisioner "shell" {

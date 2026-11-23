@@ -7,8 +7,11 @@ locals {
   name       = "banco-talentos-${var.environment}"
   # Solo los jobs de entornos de GitHub obtienen credenciales (sin llaves estáticas): `pilot` exige aprobación manual;
   # `pilot-plan` solo ejecuta terraform plan en deploy-pilot.yml. Ambos se limitan a la rama main en GitHub.
-  oidc_subject      = "repo:${var.github_repository}:environment:${var.github_environment}"
-  oidc_plan_subject = "repo:${var.github_repository}:environment:${var.github_environment}-plan"
+  # Con sujetos inmutables, GitHub incluye los identificadores del dueño y del repositorio: un repositorio recreado con
+  # el mismo nombre no obtiene credenciales.
+  oidc_sub_prefix   = var.github_oidc_sub_prefix != "" ? var.github_oidc_sub_prefix : "repo:${var.github_repository}"
+  oidc_subject      = "${local.oidc_sub_prefix}:environment:${var.github_environment}"
+  oidc_plan_subject = "${local.oidc_sub_prefix}:environment:${var.github_environment}-plan"
 }
 
 # --- Estado remoto --------------------------------------------------------------------------------------------------

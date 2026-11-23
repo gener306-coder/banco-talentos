@@ -121,6 +121,8 @@ jobs:
           PKR_VAR_build_security_group_id: ${{ vars.PACKER_SECURITY_GROUP_ID }}
           PKR_VAR_region: ${{ env.AWS_REGION }}
         run: |
+          # La configuración viaja como un solo archivo: un directorio no sube por el túnel de Session Manager.
+          tar -C files -czf bt-files.tar.gz .
           packer init .
           packer fmt -check .
           packer validate .
