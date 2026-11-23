@@ -1,0 +1,12 @@
+# Copia como pilot.tfvars (ignorado por Git). D1–D5 de docs/sprint-17.md.
+region        = "us-east-1"
+domain        = "piloto.example.com"
+acme_email    = "operaciones@example.com"
+ami_id        = "ami-0123456789abcdef0" # deploy-pilot.yml lo sobrescribe con -var ami_id=...
+instance_type = "t4g.small"
+cpu_credits   = "standard"
+
+# Destruir y recrear el piloto sin conservar datos requiere relajar estas tres protecciones de forma explícita.
+db_deletion_protection = true
+db_skip_final_snapshot = false
+bucket_force_destroy   = false
