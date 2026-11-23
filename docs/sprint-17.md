@@ -103,7 +103,7 @@ Sin cambios de contrato.
 
 ### T-S17-05 — CI en GitHub Actions
 
-**Estado:** Completada (22 de noviembre de 2026). Pendiente de su primera ejecución en GitHub, al hacer push.
+**Estado:** Completada (22 de noviembre de 2026). En verde en GitHub desde el PR #1; endurecida en T-S17-09: `backend/.env` vacío, límite de 45 minutos para Pest y carreras de Vitest corregidas.
 
 `.github/workflows/ci.yml` (PR y push a `main`; acciones fijadas por SHA; permisos de solo lectura):
 - `frontend`: lint, `tsc -b`, Vitest, build y `npm audit --audit-level=high`;
@@ -123,7 +123,7 @@ Sin cambios de contrato.
 
 ### T-S17-06 — AMI inmutable con Packer
 
-**Estado:** Plantilla completada (22 de noviembre de 2026). La primera construcción real queda pendiente de la cuenta de AWS.
+**Estado:** Completada (23 de noviembre de 2026). Construida en AWS real: `ami-0ec52f53f493d3927` y `ami-0f0620218b7736e3a`, con `99-verify.sh` superado. Correcciones en T-S17-09: OIDC inmutable y configuración como `tar.gz`.
 
 `infra/packer/`:
 - `banco-talentos.pkr.hcl`: Debian 13 arm64;
@@ -144,7 +144,7 @@ Sin cambios de contrato.
 
 ### T-S17-07 — Terraform del piloto
 
-**Estado:** Plantilla completada (22 de noviembre de 2026). El primer `apply` real queda pendiente de la cuenta de AWS.
+**Estado:** Completada (23 de noviembre de 2026). `bootstrap` y `envs/pilot` aplicados en `us-east-2`. Correcciones en T-S17-09: recuperación automática de EC2 sin alarma, plan estable y `rds.force_ssl` con `pending-reboot`.
 
 `infra/terraform/`:
 - `bootstrap`: estado, OIDC y roles de GitHub;
@@ -159,7 +159,7 @@ Sin cambios de contrato.
 
 ### T-S17-08 — Flujos de construcción y despliegue
 
-**Estado:** Plantilla completada (22 de noviembre de 2026). La primera ejecución queda pendiente de la cuenta de AWS.
+**Estado:** Completada (23 de noviembre de 2026). **Build AMI** y **Deploy pilot** ejecutados en real: primer despliegue y prueba de recreación.
 
 - `build-ami.yml`:
   - llama al CI (`workflow_call`) para el mismo commit;
@@ -176,7 +176,7 @@ Sin cambios de contrato.
 
 ### T-S17-09 — Primer despliegue real y prueba de recreación
 
-**Estado:** En curso. Sigue `docs/infra/runbook-pilot.md` de principio a fin.
+**Estado:** Completada (23 de noviembre de 2026). Se siguió `docs/infra/runbook-pilot.md` de principio a fin: el piloto quedó en línea en https://piloto.ellukas.online y superó la prueba de recreación.
 
 **Avance (22 de noviembre de 2026):**
 - **Cuenta y acceso:** cuenta del Plan Gratuito, en `us-east-2`; acceso local con `aws login`.
@@ -228,7 +228,34 @@ Sin cambios de contrato.
   - `infra/scripts/smoke.sh https://piloto.ellukas.online` pasó sus 4 verificaciones: `/up` 200 con certificado válido; HSTS, CSP, `nosniff` y `no-referrer` en la SPA; `/api/me` 401 con `no-store`; redirección de HTTP a HTTPS.
   - `bt-caddy-certs.service` respaldó el certificado, su llave y la cuenta ACME en `s3://<bucket>/caddy/` (SSE `AES256`), con el temporizador diario programado.
   - Documentado en el runbook (paso 5): en un despliegue inicial, reiniciar Caddy después de crear el registro A. `deploy-pilot.yml` no cambia, porque en los despliegues siguientes el DNS ya existe y el certificado se restaura desde S3.
-- **Siguiente:** paso 6 del runbook (`skills:seed` y `admin:bootstrap`), prueba funcional (paso 7) y prueba de recreación (paso 8). (**Build AMI** y **Deploy pilot**), y después el registro A `piloto` en Hostinger con la EIP.
+- **Paso 6 (catálogo y primer Administrador)**, por SSM:
+  - `bt-artisan skills:seed` agregó 820 habilidades;
+  - `bt-artisan admin:bootstrap gener306@gmail.com` creó el Administrador y envió el enlace de contraseña inicial.
+  - Las colas, el planificador, PHP-FPM y Caddy quedaron activos, sin trabajos fallidos.
+  - El planificador falló de 08:14 a 08:51 (`relation "cache" does not exist`): era el hueco anterior a la primera migración y no se repitió.
+  - Los workers se reciclan cada hora por diseño (`--max-time=3600`).
+- **Paso 7 (prueba funcional, validada por el responsable):** correo real por Resend, comprobante PDF en S3 privado, video real de 1:30 procesado y reproducido, y consola sin violaciones de CSP.
+  - `ProcessInstitutionVideo` tardó 5 min 18 s, con 2 vCPU casi al máximo (créditos `standard`).
+  - Pico de memoria del worker: 408 MiB, ffmpeg incluido.
+  - El swap nunca se usó (`pswpout 0`), sin OOM, con `failed_jobs` vacío.
+- **Paso 8 (prueba de recreación):**
+  - **Antes de construir la AMI**, el CI de Build AMI destapó otra carrera de prueba (`DualStoriesSpotlight`): el esqueleto se pinta antes de que salga la petición. Las pruebas que esperan un estado de carga y después responden comprueban ahora que la petición ya salió: también `LinkageInbox`, `AuditEventsPage` y `SessionPage` (PR #6; los 4 archivos pasan 25 de 25 veces).
+  - **AMI nueva** `ami-0f0620218b7736e3a` (sobre `cc825df`). El plan local y el del flujo coincidieron: `2 to add, 0 to change, 2 to destroy`, solo `aws_instance.app` y `aws_eip_association.app`.
+  - **Deploy pilot (run 45252247099), en verde en todos sus pasos:** drenado de colas y respaldo del certificado; EC2 nueva `i-0ef3dbc94bde1ae80` con la misma EIP; `migrate` sin pendientes; `artisan up`; smoke.
+  - **Verificado contra la referencia previa:**
+
+    | Elemento | Antes | Después |
+    |---|---|---|
+    | Instancia | `i-0789c241ac1449f42` (`ami-0ec52f53f493d3927`) | `i-0ef3dbc94bde1ae80` (`ami-0f0620218b7736e3a`), misma EIP `18.189.147.143` |
+    | Certificado | serial `06F327DF…C141`, vence el 21 de febrero de 2027 | **mismo serial**; 0 emisiones en la instancia nueva (restaurado desde S3 por `bt-boot`) |
+    | Video y comprobante en S3 | `videos/1/fd33464d-…` (mp4, webm, jpg) e `imss/1/325d6b89-….pdf` | los mismos objetos y tamaños; el video sigue `READY` y la huella SHA-256 del PDF no cambió |
+    | Sesiones en RDS | 2 | 2, con actividad posterior a la recreación: la sesión abierta sobrevivió |
+    | Smoke | 4 de 4 | 4 de 4 |
+    | Errores en `journalctl` | — | 0 desde el arranque; colas, planificador, PHP-FPM y Caddy activos |
+
+  - Confirmado por el responsable en el navegador: la sesión siguió activa tras el reemplazo, el video se reproduce y el comprobante PDF se descarga.
+  - La AMI anterior sigue disponible para volver atrás (Deploy pilot con su `ami_id`).
+- **Resultado:** el piloto corre en AWS con infraestructura inmutable. Reemplazar la EC2 no pierde archivos, sesiones ni certificado.
 
 ---
 
@@ -275,7 +302,7 @@ Ni Packer, ni Terraform, ni Caddy, ni actionlint, ni shellcheck están instalado
 - Revalidado con Docker: `packer fmt -check` y `validate`, `terraform fmt -check` y `validate` (`bootstrap`, `envs/pilot`), `tflint`, `actionlint` y `shellcheck`, todos sin avisos.
 - `build-ami.yml` instala `session-manager-plugin` antes de `packer build`. Las URLs del plugin y del SSM Agent arm64 de `us-east-2` responden 200.
 
-### Pendiente para T-S17-09 (requiere AWS)
+### Lo que quedaba pendiente para T-S17-09 (resuelto el 23 de noviembre de 2026)
 - Primera `packer build` real:
   - SSM Agent por `user_data` (A1);
   - Session Manager desde el runner;
@@ -283,3 +310,10 @@ Ni Packer, ni Terraform, ni Caddy, ni actionlint, ni shellcheck están instalado
 - Primer `terraform apply`, certificado real de Let's Encrypt y correo real de Resend.
 - Video real con ffmpeg 7.1 en arm64. Las pruebas automatizadas no transcodifican.
 - Primera ejecución de `ci.yml` en GitHub, al hacer push.
+
+Todo se resolvió en T-S17-09:
+- la AMI se construyó por Session Manager, con SSM Agent instalado por `user_data` y `99-verify.sh` superado;
+- `terraform apply` real;
+- certificado de Let's Encrypt y correo por Resend reales;
+- video real procesado en arm64;
+- `ci.yml` en verde en GitHub.
