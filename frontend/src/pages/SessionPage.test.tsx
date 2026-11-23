@@ -413,7 +413,7 @@ describe('inicio dinámico T-S12-11', () => {
       observe(element: Element) { observed.set(element, this.callback) }
       disconnect() {}
     })
-    let respond: (response: Response) => void = () => {}
+    let respond: ((response: Response) => void) | undefined
     try {
       user = { ...base, role: 'INSTITUTION', institution: { id: 7, name: 'Instituto Dual' } }
       dashboard = () => new Promise<Response>((resolve) => { respond = resolve })
@@ -428,7 +428,9 @@ describe('inicio dinámico T-S12-11', () => {
       act(() => observed.get(list)!([{ isIntersecting: true } as IntersectionObserverEntry], {} as IntersectionObserver))
       expect(list).toHaveAttribute('data-reveal', 'shown')
 
-      respond(Response.json({ data: { role: 'INSTITUTION', metrics: zeroMetrics.INSTITUTION } }))
+      // T-S17-09: el esqueleto puede pintarse antes de que salga la petición; se responde solo cuando ya salió.
+      await waitFor(() => expect(respond).toBeDefined())
+      respond!(Response.json({ data: { role: 'INSTITUTION', metrics: zeroMetrics.INSTITUTION } }))
       await loadedIndicators()
       expect(screen.queryByTestId('home-stats-skeleton')).not.toBeInTheDocument()
     } finally {
