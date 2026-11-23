@@ -103,7 +103,7 @@ Sin cambios de contrato.
 
 ### T-S17-05 — CI en GitHub Actions
 
-**Estado:** Completada (22 de noviembre de 2026). Pendiente de su primera ejecución en GitHub, al hacer push.
+**Estado:** Completada (22 de noviembre de 2026). En verde en GitHub desde el PR #1; endurecida en T-S17-09: `backend/.env` vacío, límite de 45 minutos para Pest y carreras de Vitest corregidas.
 
 `.github/workflows/ci.yml` (PR y push a `main`; acciones fijadas por SHA; permisos de solo lectura):
 - `frontend`: lint, `tsc -b`, Vitest, build y `npm audit --audit-level=high`;
@@ -123,7 +123,7 @@ Sin cambios de contrato.
 
 ### T-S17-06 — AMI inmutable con Packer
 
-**Estado:** Plantilla completada (22 de noviembre de 2026). La primera construcción real queda pendiente de la cuenta de AWS.
+**Estado:** Completada (23 de noviembre de 2026). Construida en AWS real: `ami-0ec52f53f493d3927` y `ami-0f0620218b7736e3a`, con `99-verify.sh` superado. Correcciones en T-S17-09: OIDC inmutable y configuración como `tar.gz`.
 
 `infra/packer/`:
 - `banco-talentos.pkr.hcl`: Debian 13 arm64;
@@ -144,7 +144,7 @@ Sin cambios de contrato.
 
 ### T-S17-07 — Terraform del piloto
 
-**Estado:** Plantilla completada (22 de noviembre de 2026). El primer `apply` real queda pendiente de la cuenta de AWS.
+**Estado:** Completada (23 de noviembre de 2026). `bootstrap` y `envs/pilot` aplicados en `us-east-2`. Correcciones en T-S17-09: recuperación automática de EC2 sin alarma, plan estable y `rds.force_ssl` con `pending-reboot`.
 
 `infra/terraform/`:
 - `bootstrap`: estado, OIDC y roles de GitHub;
@@ -159,7 +159,7 @@ Sin cambios de contrato.
 
 ### T-S17-08 — Flujos de construcción y despliegue
 
-**Estado:** Plantilla completada (22 de noviembre de 2026). La primera ejecución queda pendiente de la cuenta de AWS.
+**Estado:** Completada (23 de noviembre de 2026). **Build AMI** y **Deploy pilot** ejecutados en real: primer despliegue y prueba de recreación.
 
 - `build-ami.yml`:
   - llama al CI (`workflow_call`) para el mismo commit;
@@ -253,6 +253,7 @@ Sin cambios de contrato.
     | Smoke | 4 de 4 | 4 de 4 |
     | Errores en `journalctl` | — | 0 desde el arranque; colas, planificador, PHP-FPM y Caddy activos |
 
+  - Confirmado por el responsable en el navegador: la sesión siguió activa tras el reemplazo, el video se reproduce y el comprobante PDF se descarga.
   - La AMI anterior sigue disponible para volver atrás (Deploy pilot con su `ami_id`).
 - **Resultado:** el piloto corre en AWS con infraestructura inmutable. Reemplazar la EC2 no pierde archivos, sesiones ni certificado.
 
