@@ -200,6 +200,12 @@ Sin cambios de contrato.
 - **Primera ejecución de Build AMI (run 45111486818):** CI y artefacto en verde; el job `packer` falló al asumir el rol: `Not authorized to perform sts:AssumeRoleWithWebIdentity`.
   - **Causa:** el repositorio emite sujetos OIDC inmutables (`repo:gener306-coder@232904730/banco-talentos@1386071232:environment:pilot`) y la confianza esperaba el formato clásico.
   - **Corrección:** `bootstrap` acepta `github_oidc_sub_prefix` y solo confía en el formato inmutable, que impide que un repositorio recreado con el mismo nombre obtenga credenciales. El plan actualiza la confianza de los dos roles, sin crear ni destruir nada.
+- **Segundo intento de Build AMI** (mismo run, solo el job `packer`):
+  - **Funcionó:** OIDC con el sujeto inmutable; el SSM Agent instalado por `user_data` (A1); Packer por Session Manager sin puerto 22; la subida del artefacto.
+  - **Falló:** la subida de la carpeta `files/` (`scp: /tmp/bt-files: Is a directory`). Un directorio no sube por el túnel de Session Manager.
+  - **Corrección:** `build-ami.yml` arma `bt-files.tar.gz` antes de `packer validate` (Packer exige que exista al preparar el provisioner), y Packer sube y extrae un solo archivo.
+  - Se comprobó en Debian 13 que `systemd-analyze verify` acepta la plantilla `bt-queue@.service`.
+  - La instancia temporal quedó terminada, su llave borrada y la sesión de SSM cerrada a mano.
 - **Siguiente:** paso 5 del runbook (**Build AMI** y **Deploy pilot**), y después el registro A `piloto` en Hostinger con la EIP.
 
 ---
