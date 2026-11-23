@@ -219,7 +219,16 @@ Sin cambios de contrato.
     - el `depends_on = [module.params]` del módulo `compute` aplazaba todos sus `data` hasta el `apply`, y la región del `user_data` quedaba desconocida;
     - además, `rds.force_ssl` tenía un cambio perpetuo (AWS lo guarda con `apply_method = "pending-reboot"`).
   - **Corrección:** la instancia depende de los parámetros mediante la etiqueta `ConfigParameters` (salida `parameter_count` de `params`), y el grupo de parámetros declara `pending-reboot`. El plan contra el estado real queda en `0 to add, 1 to change, 0 to destroy`: solo la etiqueta.
-- **Siguiente:** paso 5 del runbook (**Build AMI** y **Deploy pilot**), y después el registro A `piloto` en Hostinger con la EIP.
+- **Segundo Deploy pilot (run 45141635282, sobre `b44ea7e`):**
+  - el plan fue `0 to add, 1 to change, 0 to destroy` (solo la etiqueta) y el `apply` no reemplazó nada;
+  - las migraciones corrieron desde cero (incluido el catálogo INEGI) y `artisan up` pasó;
+  - el smoke falló al buscar HTTPS: Caddy había arrancado antes del registro A, su intento con Let's Encrypt falló (`no valid A records found`) y se quedó esperando el desafío de ZeroSSL sin reintentar.
+- **Corrección operativa:** `systemctl restart caddy` por SSM.
+  - Let's Encrypt emitió el certificado `CN=piloto.ellukas.online` (emisor YE1, vence el 21 de febrero de 2027).
+  - `infra/scripts/smoke.sh https://piloto.ellukas.online` pasó sus 4 verificaciones: `/up` 200 con certificado válido; HSTS, CSP, `nosniff` y `no-referrer` en la SPA; `/api/me` 401 con `no-store`; redirección de HTTP a HTTPS.
+  - `bt-caddy-certs.service` respaldó el certificado, su llave y la cuenta ACME en `s3://<bucket>/caddy/` (SSE `AES256`), con el temporizador diario programado.
+  - Documentado en el runbook (paso 5): en un despliegue inicial, reiniciar Caddy después de crear el registro A. `deploy-pilot.yml` no cambia, porque en los despliegues siguientes el DNS ya existe y el certificado se restaura desde S3.
+- **Siguiente:** paso 6 del runbook (`skills:seed` y `admin:bootstrap`), prueba funcional (paso 7) y prueba de recreación (paso 8). (**Build AMI** y **Deploy pilot**), y después el registro A `piloto` en Hostinger con la EIP.
 
 ---
 
