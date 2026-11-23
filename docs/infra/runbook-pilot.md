@@ -44,8 +44,11 @@ Si no quieres instalarlas, Terraform y Packer corren en Docker (`hashicorp/terra
    ```bash
    $ cd infra/terraform/bootstrap
    $ terraform init
-   $ terraform apply -var 'github_repository=<owner>/banco-talentos'
+   $ gh api repos/<owner>/banco-talentos/actions/oidc/customization/sub   # ¿use_immutable_subject?
+   $ terraform apply -var 'github_repository=<owner>/banco-talentos' \
+       -var 'github_oidc_sub_prefix=<sub_claim_prefix>'                   # solo con sujetos inmutables
    ```
+   Si GitHub responde `use_immutable_subject: true`, el `sub` del token incluye los identificadores (`repo:<owner>@<id>/<repo>@<id>:environment:pilot`). Pasa su `sub_claim_prefix` como `github_oidc_sub_prefix`; si no, GitHub Actions falla con `Not authorized to perform sts:AssumeRoleWithWebIdentity`.
 5. Guarda sus salidas: `state_bucket`, `build_ami_role_arn`, `deploy_role_arn` y `packer_build_security_group_id`.
 6. Respalda su `terraform.tfstate` (local, ignorado por Git) en el gestor de contraseñas o en el propio bucket del estado: `aws s3 cp terraform.tfstate s3://<state_bucket>/bootstrap/terraform.tfstate`.
 
