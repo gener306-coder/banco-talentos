@@ -35,7 +35,7 @@ command -v nice >/dev/null || fail "falta nice"
 php "$app/artisan" --version >/dev/null || fail "artisan no arranca"
 
 # Caddy, systemd, swap y SSM.
-DOMAIN=piloto.example.com ACME_EMAIL=ops@example.com S3_ORIGIN=https://bucket.s3.us-east-1.amazonaws.com \
+DOMAIN=piloto.example.com ACME_EMAIL=ops@example.com S3_ORIGIN=https://bucket.s3.us-east-2.amazonaws.com \
   caddy validate --config /etc/caddy/Caddyfile --adapter caddyfile
 systemd-analyze verify /etc/systemd/system/bt-*.service /etc/systemd/system/bt-*.timer
 grep -q '^/swapfile none swap' /etc/fstab || fail "swap sin entrada en /etc/fstab"

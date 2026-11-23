@@ -67,7 +67,7 @@ domain="${app_url#https://}"
 domain="${domain%%/*}"
 bucket="$(param AWS_BUCKET)"
 s3_region="$(param AWS_DEFAULT_REGION)"
-# El SDK firma con el punto global (us-east-1) o el regional: la CSP admite ambos orígenes del bucket.
+# La CSP admite el origen regional del bucket (el que firma el SDK fuera de us-east-1) y el global (por si se usa).
 s3_origin="https://${bucket}.s3.amazonaws.com https://${bucket}.s3.${s3_region}.amazonaws.com"
 # Comillas en S3_ORIGIN (lleva espacios): las entienden tanto systemd (EnvironmentFile) como bash (source).
 install -m 0640 -o root -g caddy /dev/stdin "$run_dir/caddy.env" <<CADDY

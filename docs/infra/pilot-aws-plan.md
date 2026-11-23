@@ -49,7 +49,7 @@ default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data: bl
 media-src 'self' blob: <S3_ORIGIN>; connect-src 'self'; worker-src 'self';
 font-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'
 ```
-`<S3_ORIGIN>` incluye `https://<bucket>.s3.amazonaws.com` y `https://<bucket>.s3.us-east-1.amazonaws.com`, porque el SDK puede firmar con el punto global o con el regional. No se usa `crossorigin` en `<video>`/`<img>` (verificado con grep), así que **el bucket no necesita CORS**.
+`<S3_ORIGIN>` incluye `https://<bucket>.s3.amazonaws.com` y `https://<bucket>.s3.us-east-2.amazonaws.com`: en `us-east-2` el SDK firma con el origen regional, y el global se conserva por si se usa. No se usa `crossorigin` en `<video>`/`<img>` (verificado con grep), así que **el bucket no necesita CORS**.
 
 ### 1.4 Endpoint de salud
 **Usar `/up`, que ya existe** (`bootstrap/app.php`, `health: '/up'`) y ya usan los healthchecks de Compose. Está fuera de `/api`, así que `ApiSecurityMatrixTest` no lo ve. No se crea `/api/health`. El smoke check valida `/up` (200) y, aparte, la conexión a la base mediante `php artisan migrate:status` por SSM.
@@ -135,7 +135,7 @@ infra/terraform/
   - #4: no aplica en la Opción A;
   - #5: unidades systemd;
   - #6: RDS cifrado con snapshots de 7 días, y bucket cifrado y versionado.
-- **Costo mensual aproximado (us-east-1, bajo demanda):**
+- **Costo mensual aproximado (us-east-2, bajo demanda; mismos precios que us-east-1 para EC2, RDS y S3):**
 
   | Recurso | US$/mes |
   |---|---|
@@ -148,7 +148,6 @@ infra/terraform/
   | SSM Standard, KMS gestionada, endpoint S3 | 0 |
     | **Total con `t4g.small` (D3)** | **≈ 33** |
 
-  En `mx-central-1`, el total sube ~15–25 %.
 - **Apagar o destruir:**
   - pausa barata: `aws ec2 stop-instances` y `aws rds stop-db-instance`. RDS se reinicia solo a los 7 días; se paga solo EBS, EIP y almacenamiento (≈ US$9);
   - destruir: snapshot manual de RDS y `aws s3 sync` del bucket si se quieren conservar los datos; después, `terraform destroy -var-file=pilot.tfvars` con `deletion_protection=false` y `force_destroy=true`, que son explícitos en `pilot.tfvars`;
@@ -209,7 +208,7 @@ Proveedor elegido: **Resend** (D5). Brevo queda como referencia.
 Cambiar a SES después solo cambia los `MAIL_*` y el DNS: no hay cambios de código.
 
 ### 5.2 Runbook del primer despliegue
-1. Cuenta AWS: MFA en root y usuario administrador con SSO. `terraform -chdir=infra/terraform/bootstrap apply` crea el estado, el OIDC y los roles.
+1. Cuenta AWS en `us-east-2`: MFA en root y acceso local con `aws login` (usuario IAM administrador con `SignInLocalDevelopmentAccess`). `terraform -chdir=infra/terraform/bootstrap apply` crea el estado, el OIDC y los roles.
 2. Generar `APP_KEY` en local (`php artisan key:generate --show`), guardarla en el gestor de contraseñas y cargarla con `aws ssm put-parameter --type SecureString`. Cargar también `MAIL_PASSWORD`.
 3. Verificar el dominio en Resend o Brevo y crear sus registros DNS (SPF, DKIM y DMARC).
 4. `terraform apply` de `envs/pilot` con `ami_id` de la primera AMI (`build-ami.yml`). Crear en **Hostinger** el registro **A `<subdominio>` → EIP** (salida `domain_a_record`) y esperar la propagación: Caddy emite el certificado al resolver.
@@ -229,7 +228,7 @@ Cambiar a SES después solo cambia los `MAIL_*` y el DNS: no hay cambios de cód
 ## 6. Decisiones abiertas y fases
 
 ### Decisiones confirmadas (22 de noviembre de 2026)
-1. **D1. Región:** `us-east-1`.
+1. **D1. Región:** `us-east-2` (Ohio). Cambiada desde `us-east-1` porque la cuenta del Plan Gratuito quedó asignada a Ohio.
 2. **D2. DNS:** externo, en **Hostinger**. Terraform no crea zonas de Route 53. El dominio es una variable (`piloto.example.com` en `pilot.tfvars.example`).
 3. **D3. Instancia:** `t4g.small` (arm64, Graviton), con 2 GB de swap.
 4. **D4. HTTPS:** Opción A (EC2 pública + EIP + Caddy).

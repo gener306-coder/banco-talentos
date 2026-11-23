@@ -1,6 +1,6 @@
 # Copia como backend.hcl (ignorado por Git) con el bucket que imprime bootstrap/.
 bucket       = "banco-talentos-tfstate-123456789012"
 key          = "pilot/terraform.tfstate"
-region       = "us-east-1"
+region       = "us-east-2"
 encrypt      = true
 use_lockfile = true

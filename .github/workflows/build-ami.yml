@@ -20,7 +20,7 @@ concurrency:
   cancel-in-progress: false
 
 env:
-  AWS_REGION: us-east-1
+  AWS_REGION: us-east-2
   PACKER_VERSION: 1.16.2
 
 jobs:

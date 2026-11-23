@@ -3,13 +3,13 @@
 Sprint 17 ([sprint-17.md](../sprint-17.md)), T-S17-09. Plan técnico: [pilot-aws-plan.md](pilot-aws-plan.md).
 
 **Supuestos:**
-- región `us-east-1`;
+- región `us-east-2` (Ohio): la cuenta del Plan Gratuito quedó asignada ahí y bloquea las demás regiones;
 - subdominio del piloto en **Hostinger** (`piloto.example.com` en los ejemplos);
 - correo con **Resend**;
 - instancia `t4g.small` con Opción A (EC2 + EIP + Caddy).
 
 **Convenciones:**
-- `$` es tu terminal, con credenciales de administrador de la cuenta (AWS IAM Identity Center/SSO; nunca llaves del usuario root).
+- `$` es tu terminal, con credenciales de corta duración de `aws login` (paso 1). Nunca llaves de acceso de larga duración.
 - `bt-artisan` es `php artisan` como `www-data` dentro de la instancia.
 - Nada de este runbook se guarda en Git: ni `.tfvars` reales, ni estados, ni secretos.
 
@@ -19,7 +19,7 @@ Sprint 17 ([sprint-17.md](../sprint-17.md)), T-S17-09. Plan técnico: [pilot-aws
 
 | Herramienta | Versión | Uso |
 |---|---|---|
-| AWS CLI | v2 | Parámetros, sesiones y snapshots |
+| AWS CLI | v2 ≥ 2.32.0 (requisito de `aws login`) | Acceso local, parámetros, sesiones y snapshots |
 | Session Manager plugin | reciente | `aws ssm start-session` |
 | Terraform | ≥ 1.10 (CI usa 1.17.2) | `bootstrap/` y operación manual |
 | Packer | ≥ 1.11 (CI usa 1.16.2) | Solo si se construye fuera de GitHub |
@@ -28,8 +28,17 @@ Si no quieres instalarlas, Terraform y Packer corren en Docker (`hashicorp/terra
 
 ## 1. Cuenta de AWS y bootstrap (una sola vez)
 
-1. Activa MFA en el usuario root y deja de usarlo.
-2. Crea un usuario administrador en IAM Identity Center y entra con `aws sso login`.
+1. Activa MFA en el usuario root.
+2. Acceso local con `aws login` (AWS CLI ≥ 2.32.0, sin IAM Identity Center):
+   ```bash
+   $ aws configure set region us-east-2
+   $ aws login                      # abre el navegador; con --remote si la máquina no tiene navegador
+   $ aws sts get-caller-identity    # confirma la cuenta y la identidad
+   ```
+   - Credenciales de corta duración que rotan cada 15 minutos y valen hasta 12 horas. Al vencer, se repite `aws login`.
+   - `aws login` usa el inicio de sesión de la **cuenta de AWS**: el root o un usuario IAM. AWS Builder ID es otra identidad (servicios para desarrolladores) y no da acceso a los recursos de la cuenta.
+   - Recomendado: con el root, crea un usuario IAM administrador con MFA y la política administrada `SignInLocalDevelopmentAccess` (además de `AdministratorAccess`), y usa ese usuario para `aws login`. El root queda solo para tareas de cuenta.
+   - La cuenta del Plan Gratuito bloquea las regiones distintas de `us-east-2`: un `AccessDenied` por SCP suele ser una región mal configurada (`aws configure get region`).
 3. Crea una alerta de presupuesto: AWS Budgets → US$50 al mes con aviso al 80 %.
 4. Aplica el bootstrap:
    ```bash
@@ -46,9 +55,9 @@ Si no quieres instalarlas, Terraform y Packer corren en Docker (`hashicorp/terra
 
 ```bash
 $ docker compose exec backend php artisan key:generate --show      # base64:...
-$ aws ssm put-parameter --region us-east-1 --name /banco-talentos/pilot/APP_KEY \
+$ aws ssm put-parameter --region us-east-2 --name /banco-talentos/pilot/APP_KEY \
     --type SecureString --value 'base64:...'
-$ aws ssm put-parameter --region us-east-1 --name /banco-talentos/pilot/MAIL_PASSWORD \
+$ aws ssm put-parameter --region us-east-2 --name /banco-talentos/pilot/MAIL_PASSWORD \
     --type SecureString --value 're_...'                            # API key de Resend (paso 3)
 ```
 
@@ -57,7 +66,7 @@ Los valores no pueden contener comillas simples ni saltos de línea: `bt-boot.sh
 ## 3. Resend y DNS en Hostinger
 
 1. En Resend:
-   - **Domains → Add domain**, con `piloto.example.com` (o el dominio raíz si se enviará desde él), región `us-east-1`;
+   - **Domains → Add domain**, con `piloto.example.com` (o el dominio raíz si se enviará desde él). La región de Resend es independiente de la de AWS: Resend no ofrece `us-east-2`, así que usa `us-east-1` (Norte de Virginia); por eso el registro MX de abajo apunta a `us-east-1`;
    - **API Keys → Create**, con permiso *Sending access* limitado a ese dominio. Esa llave es `MAIL_PASSWORD` (paso 2).
 2. En Hostinger (**DNS / Nameservers → Administrar registros DNS**), crea exactamente los registros que muestra Resend:
 

@@ -13,7 +13,7 @@ Sprint vigente desde el 22 de noviembre de 2026. Sprint anterior: [sprint-16.md]
 
 ## Decisiones del responsable (22 de noviembre de 2026)
 
-- **D1. Región:** `us-east-1`.
+- **D1. Región:** `us-east-2` (Ohio). Cambiada el 22 de noviembre de 2026 desde `us-east-1`: la cuenta nueva (Plan Gratuito) quedó asignada a Ohio y bloquea las demás regiones.
 - **D2. Dominio y DNS:**
   - el DNS es externo, en Hostinger: Terraform no crea zonas de Route 53;
   - el dominio es una variable (`piloto.example.com` en `pilot.tfvars.example`) hasta que se configure el subdominio real.
@@ -130,7 +130,7 @@ Sin cambios de contrato.
 - **Sin puerto 22, tampoco al construir.** Packer usa un grupo de seguridad sin entradas creado por `bootstrap` (`build_security_group_id`), y borra las llaves temporales (`ssh_clear_authorized_keys`).
 - **`.env` literal.** `bt-boot` escribe cada valor entre comillas simples (phpdotenv no interpola `$` ni `${}`) y rechaza comillas simples y saltos de línea. Se verificó con phpdotenv que `$HOME`, `${X}`, `\`, `=` y `#` llegan intactos.
 - **Sin `optimize:clear` en el arranque.** Incluye `cache:clear`, que falla con la base vacía; se limpian solo las cachés de archivos (corregido en `94f961a`).
-- **CSP con dos orígenes del bucket.** El SDK puede firmar con el punto global o con el regional de `us-east-1`.
+- **CSP con dos orígenes del bucket.** En `us-east-2` el SDK firma con el origen regional (`<bucket>.s3.us-east-2.amazonaws.com`); el global se conserva por si se usa.
 
 ### T-S17-07 — Terraform del piloto
 
@@ -206,6 +206,12 @@ Ni Packer, ni Terraform, ni Caddy, ni actionlint, ni shellcheck están instalado
   - avisa sin fallar que no pudo restaurar los certificados;
   - entra en mantenimiento y termina con código 0.
 - `migrate --force` (incluida la carga de 2 478 municipios) y `up`. Un segundo arranque informa «esquema al día» y deja la aplicación en línea.
+
+### Ajuste de región (22 de noviembre de 2026)
+- Región por defecto `us-east-2` en Packer, Terraform (`bootstrap`, `envs/pilot` y ejemplos), los flujos, `.env.example` y la documentación.
+- El runbook usa `aws login` (AWS CLI ≥ 2.32.0) para el acceso local, en lugar de IAM Identity Center.
+- Revalidado con Docker: `packer fmt -check` y `validate`, `terraform fmt -check` y `validate` (`bootstrap`, `envs/pilot`), `tflint`, `actionlint` y `shellcheck`, todos sin avisos.
+- `build-ami.yml` instala `session-manager-plugin` antes de `packer build`. Las URLs del plugin y del SSM Agent arm64 de `us-east-2` responden 200.
 
 ### Pendiente para T-S17-09 (requiere AWS)
 - Primera `packer build` real:

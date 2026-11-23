@@ -1,5 +1,5 @@
 # Copia como pilot.tfvars (ignorado por Git). D1–D5 de docs/sprint-17.md.
-region        = "us-east-1"
+region        = "us-east-2"
 domain        = "piloto.example.com"
 acme_email    = "operaciones@example.com"
 ami_id        = "ami-0123456789abcdef0" # deploy-pilot.yml lo sobrescribe con -var ami_id=...
