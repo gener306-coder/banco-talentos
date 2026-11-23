@@ -210,10 +210,11 @@ resource "aws_iam_role" "deploy" {
 }
 
 data "aws_iam_policy_document" "deploy" {
-  # Terraform administra la red, la EC2, la EIP, RDS y la alarma del piloto.
+  # Terraform administra la red, la EC2, la EIP y RDS. Sin permisos de CloudWatch: la recuperación de la EC2 usa
+  # maintenance_options.auto_recovery en lugar de una alarma (T-S17-09).
   statement {
     sid       = "ManagePilotInfrastructure"
-    actions   = ["ec2:*", "rds:*", "cloudwatch:*Alarm*", "cloudwatch:ListTagsForResource", "cloudwatch:TagResource"]
+    actions   = ["ec2:*", "rds:*"]
     resources = ["*"]
     condition {
       test     = "StringEquals"

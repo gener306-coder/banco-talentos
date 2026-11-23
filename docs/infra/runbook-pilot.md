@@ -189,12 +189,34 @@ Vuelve a construir la AMI (o reutiliza otra) y despliégala con **Deploy pilot**
 
 ## Pausar o destruir
 
-**Pausar** (≈ US$9 al mes por EBS, EIP y almacenamiento):
+**Pausar** (≈ US$9 al mes: EBS, la EIP sin instancia en marcha y el almacenamiento de RDS y S3). Primero la EC2, para que los workers y el planificador no intenten usar una base ya detenida; después RDS:
 
 ```bash
-$ aws ec2 stop-instances --instance-ids <instance_id>
-$ aws rds stop-db-instance --db-instance-identifier banco-talentos-pilot   # AWS lo reinicia solo a los 7 días
+$ aws ec2 stop-instances --region us-east-2 --instance-ids <instance_id>
+$ aws ec2 wait instance-stopped --region us-east-2 --instance-ids <instance_id>
+$ aws rds stop-db-instance --region us-east-2 --db-instance-identifier banco-talentos-pilot
 ```
+
+> **RDS se reinicia solo a los 7 días.** AWS no permite tener detenida una instancia de RDS más de 7 días seguidos: al cumplirse, la arranca y vuelve a cobrar. Durante una pausa larga hay que volver a detenerla cada semana (`aws rds describe-db-instances --db-instance-identifier banco-talentos-pilot --query 'DBInstances[0].DBInstanceStatus'` dice `available`). Para pausas de varias semanas suele convenir más «Destruir conservando datos», con el snapshot.
+
+**Reanudar.** En orden inverso: primero RDS, para que `bt-boot` y los workers encuentren la base al arrancar.
+
+```bash
+$ aws rds start-db-instance --region us-east-2 --db-instance-identifier banco-talentos-pilot
+$ aws rds wait db-instance-available --region us-east-2 --db-instance-identifier banco-talentos-pilot   # unos minutos
+$ aws ec2 start-instances --region us-east-2 --instance-ids <instance_id>
+$ aws ec2 wait instance-running --region us-east-2 --instance-ids <instance_id>
+$ infra/scripts/smoke.sh https://piloto.example.com
+```
+
+Al detenerse, la instancia conserva su disco y su EIP:
+- `bt-boot` vuelve a leer SSM y regenera las cachés;
+- Caddy usa el certificado guardado en el disco (y su respaldo en S3);
+- el registro A no cambia.
+
+Si `bt-boot` arrancó con la base todavía detenida, la aplicación queda en mantenimiento. Para salir:
+- `sudo bt-artisan up` por Session Manager;
+- o, si hubo cambios de esquema, **Deploy pilot** con la misma AMI.
 
 **Destruir conservando datos:**
 1. Haz un snapshot manual de RDS y `aws s3 sync` del bucket.
