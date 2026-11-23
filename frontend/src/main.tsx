@@ -7,7 +7,7 @@ import './index.css'
 import './ui/ui.css'
 import { watchTheme } from './ui/theme'
 
-// Modo oscuro: index.html ya fijó el tema antes de pintar; aquí se mantiene al día (sistema u otra pestaña).
+// Modo oscuro: public/theme-init.js ya fijó el tema antes de pintar; aquí se mantiene al día (sistema u otra pestaña).
 watchTheme()
 
 createRoot(document.getElementById('root')!).render(

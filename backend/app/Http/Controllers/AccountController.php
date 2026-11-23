@@ -2,15 +2,14 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\UserRole;
 use App\Http\Requests\UpdateAccountRequest;
 use App\Http\Requests\UpdatePasswordRequest;
-use App\Enums\UserRole;
 use App\Models\AccountAuditEvent;
 use App\Models\Company;
 use App\Models\Institution;
 use App\Notifications\PasswordChanged;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;

@@ -1,0 +1,173 @@
+# T-S17-08: despliega una AMI en el piloto (docs/infra/pilot-aws-plan.md, §4; runbook en docs/infra/runbook-pilot.md).
+#   plan (entorno pilot-plan) → aprobación manual (entorno pilot) → drenar colas y respaldar certificados →
+#   terraform apply (reemplazo create_before_destroy y reasociación de la EIP) → migraciones y `artisan up` por SSM →
+#   smoke HTTPS y de cabeceras.
+# El job de aplicación vuelve a planear con las mismas entradas: el plan no se sube como artefacto porque contiene la
+# contraseña de la base en claro.
+#
+# Configuración de los entornos «pilot-plan» y «pilot» de GitHub (ambos solo para la rama main; pilot con aprobación):
+#   vars.AWS_DEPLOY_ROLE_ARN   salida deploy_role_arn de infra/terraform/bootstrap
+#   vars.TF_STATE_BUCKET       salida state_bucket
+#   vars.PILOT_DOMAIN          subdominio del piloto (D2; registro A en Hostinger)
+#   vars.PILOT_ACME_EMAIL      contacto de Let's Encrypt
+name: Deploy pilot
+
+on:
+  workflow_dispatch:
+    inputs:
+      ami_id:
+        description: AMI a desplegar (vacío = la más reciente con App=banco-talentos)
+        type: string
+        required: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy-pilot
+  cancel-in-progress: false
+
+env:
+  AWS_REGION: us-east-2
+  TF_VERSION: 1.17.2
+  TF_IN_AUTOMATION: '1'
+  TF_INPUT: '0'
+  TF_DIR: infra/terraform/envs/pilot
+  TF_STATE_BUCKET: ${{ vars.TF_STATE_BUCKET }}
+
+jobs:
+  plan:
+    name: Terraform plan
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    environment: pilot-plan
+    permissions:
+      contents: read
+      id-token: write
+    outputs:
+      ami_id: ${{ steps.ami.outputs.ami_id }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: aws-actions/configure-aws-credentials@e1253824e5c10ff9df46874f81ed3ec929e19cfd # v6.3.0
+        with:
+          role-to-assume: ${{ vars.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+          role-session-name: deploy-plan-${{ github.run_id }}
+      - uses: hashicorp/setup-terraform@dfe3c3f87815947d99a8997f908cb6525fc44e9e # v4.0.1
+        with:
+          terraform_version: ${{ env.TF_VERSION }}
+          terraform_wrapper: false
+      - name: AMI a desplegar
+        id: ami
+        env:
+          INPUT_AMI: ${{ inputs.ami_id }}
+        run: |
+          ami_id="$INPUT_AMI"
+          if [ -z "$ami_id" ]; then
+            ami_id="$(aws ec2 describe-images --owners self --filters Name=tag:App,Values=banco-talentos \
+              --query 'sort_by(Images, &CreationDate)[-1].ImageId' --output text)"
+          fi
+          [[ "$ami_id" =~ ^ami-[0-9a-f]{8,17}$ ]] || { echo "AMI inválida: $ami_id" >&2; exit 1; }
+          release="$(aws ec2 describe-images --image-ids "$ami_id" --query "Images[0].Tags[?Key=='Release'].Value | [0]" --output text)"
+          echo "ami_id=$ami_id" >> "$GITHUB_OUTPUT"
+          echo "### Despliegue de \`$ami_id\` (versión \`$release\`)" >> "$GITHUB_STEP_SUMMARY"
+      - name: terraform plan
+        working-directory: ${{ env.TF_DIR }}
+        env:
+          TF_VAR_ami_id: ${{ steps.ami.outputs.ami_id }}
+          TF_VAR_domain: ${{ vars.PILOT_DOMAIN }}
+          TF_VAR_acme_email: ${{ vars.PILOT_ACME_EMAIL }}
+        run: |
+          terraform init -backend-config="bucket=$TF_STATE_BUCKET" -backend-config="key=pilot/terraform.tfstate" \
+            -backend-config="region=$AWS_REGION" -backend-config="encrypt=true" -backend-config="use_lockfile=true"
+          terraform fmt -check -recursive ../..
+          terraform validate
+          terraform plan -no-color -out=tfplan
+          { echo '```'; terraform show -no-color tfplan | tail -n 200; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
+
+  apply:
+    name: Apply, migraciones y smoke
+    needs: plan
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    environment: pilot
+    permissions:
+      contents: read
+      id-token: write
+    env:
+      TF_VAR_ami_id: ${{ needs.plan.outputs.ami_id }}
+      TF_VAR_domain: ${{ vars.PILOT_DOMAIN }}
+      TF_VAR_acme_email: ${{ vars.PILOT_ACME_EMAIL }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: aws-actions/configure-aws-credentials@e1253824e5c10ff9df46874f81ed3ec929e19cfd # v6.3.0
+        with:
+          role-to-assume: ${{ vars.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+          role-session-name: deploy-apply-${{ github.run_id }}
+      - uses: hashicorp/setup-terraform@dfe3c3f87815947d99a8997f908cb6525fc44e9e # v4.0.1
+        with:
+          terraform_version: ${{ env.TF_VERSION }}
+          terraform_wrapper: false
+      - name: terraform init
+        working-directory: ${{ env.TF_DIR }}
+        run: |
+          terraform init -backend-config="bucket=$TF_STATE_BUCKET" -backend-config="key=pilot/terraform.tfstate" \
+            -backend-config="region=$AWS_REGION" -backend-config="encrypt=true" -backend-config="use_lockfile=true"
+      # Antes del reemplazo: deja terminar el video en curso (TimeoutStopSec) y respalda los certificados de Caddy.
+      - name: Drenar la instancia actual
+        working-directory: ${{ env.TF_DIR }}
+        run: |
+          current="$(terraform output -raw instance_id 2>/dev/null || true)"
+          if [[ ! "$current" =~ ^i-[0-9a-f]+$ ]]; then echo "Primer despliegue: no hay instancia que drenar."; exit 0; fi
+          current_ami="$(aws ec2 describe-instances --instance-ids "$current" --query 'Reservations[0].Instances[0].ImageId' --output text)"
+          if [ "$current_ami" = "$TF_VAR_ami_id" ]; then echo "La instancia ya usa $TF_VAR_ami_id: no se reemplaza."; exit 0; fi
+          "$GITHUB_WORKSPACE/infra/scripts/ssm-run.sh" "$current" 1000 \
+            'systemctl stop bt-queue@videos.service bt-queue@default.service' \
+            'systemctl start bt-caddy-certs.service'
+      - name: terraform apply
+        working-directory: ${{ env.TF_DIR }}
+        run: terraform apply -no-color -auto-approve
+      - name: Esperar la instancia nueva
+        id: instance
+        working-directory: ${{ env.TF_DIR }}
+        run: |
+          instance_id="$(terraform output -raw instance_id)"
+          {
+            echo "instance_id=$instance_id"
+            echo "app_url=$(terraform output -raw app_url)"
+            echo "public_ip=$(terraform output -raw public_ip)"
+          } >> "$GITHUB_OUTPUT"
+          "$GITHUB_WORKSPACE/infra/scripts/wait-ssm-online.sh" "$instance_id" 900
+      # Sin --isolated: su candado vive en la caché de base de datos, cuya tabla aún no existe en el primer despliegue.
+      - name: Migraciones y fin del mantenimiento
+        env:
+          INSTANCE_ID: ${{ steps.instance.outputs.instance_id }}
+        run: |
+          infra/scripts/ssm-run.sh "$INSTANCE_ID" 900 \
+            'set -e' \
+            'bt-artisan migrate --force' \
+            'bt-artisan up' \
+            'systemctl restart bt-queue@videos.service bt-queue@default.service'
+      - name: Smoke HTTPS y cabeceras
+        env:
+          APP_URL: ${{ steps.instance.outputs.app_url }}
+        run: infra/scripts/smoke.sh "$APP_URL"
+      - name: Resumen
+        if: always()
+        env:
+          APP_URL: ${{ steps.instance.outputs.app_url }}
+          INSTANCE_ID: ${{ steps.instance.outputs.instance_id }}
+          PUBLIC_IP: ${{ steps.instance.outputs.public_ip }}
+        run: |
+          {
+            echo "### Piloto"
+            echo "- URL: $APP_URL"
+            echo "- Instancia: \`$INSTANCE_ID\` · AMI: \`$TF_VAR_ami_id\`"
+            echo "- Registro DNS en Hostinger: \`A $TF_VAR_domain $PUBLIC_IP\`"
+            echo "- Si el smoke falla: vuelve a ejecutar este flujo con el ami_id anterior (las migraciones son compatibles hacia atrás)."
+          } >> "$GITHUB_STEP_SUMMARY"

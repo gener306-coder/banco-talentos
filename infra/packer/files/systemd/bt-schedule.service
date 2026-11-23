@@ -1,0 +1,17 @@
+# T-S17-06: planificador de Laravel (hoy routes/console.php no programa tareas; queda listo para las futuras).
+[Unit]
+Description=Banco de Talentos: schedule:run
+Requires=bt-boot.service
+After=bt-boot.service
+
+[Service]
+Type=oneshot
+User=www-data
+Group=www-data
+WorkingDirectory=/opt/banco-talentos/current/backend
+ExecStart=/usr/bin/php artisan schedule:run --no-interaction
+NoNewPrivileges=yes
+PrivateTmp=yes
+ProtectSystem=strict
+ProtectHome=yes
+ReadWritePaths=/var/lib/banco-talentos

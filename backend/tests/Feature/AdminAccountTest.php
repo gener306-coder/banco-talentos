@@ -138,7 +138,9 @@ describe('estado (CA-02 a CA-04)', function () {
         $other = User::factory()->role(UserRole::ADMIN)->create();
         adminAccountsSignIn($this);
         $queries = [];
-        DB::listen(function ($query) use (&$queries): void { $queries[] = strtolower($query->sql); });
+        DB::listen(function ($query) use (&$queries): void {
+            $queries[] = strtolower($query->sql);
+        });
 
         $this->browserRequest('PATCH', "/api/admin-accounts/{$other->id}/status", ['is_active' => false])->assertOk();
 

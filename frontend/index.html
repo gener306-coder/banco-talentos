@@ -6,16 +6,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Banco de Talentos – Educación Dual</title>
     <meta name="theme-color" content="" />
-    <!-- Tema: fija data-theme antes del primer pintado para evitar un destello (ver src/ui/theme.ts). -->
-    <script>
-      (function () {
-        var preference = null
-        try { preference = localStorage.getItem('bt-theme') } catch (error) { /* almacenamiento bloqueado */ }
-        // T-S14-06: el tema claro es el predeterminado; solo «Oscuro» o «Sistema» con el sistema en oscuro lo cambian.
-        var dark = preference === 'dark' || (preference === 'system' && window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches)
-        document.documentElement.dataset.theme = dark ? 'dark' : 'light'
-      })()
-    </script>
+    <!-- Tema: fija data-theme antes del primer pintado (script clásico y síncrono; T-S17-03, CSP script-src 'self'). -->
+    <script src="/theme-init.js"></script>
   </head>
   <body>
     <div id="root"></div>

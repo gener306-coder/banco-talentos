@@ -1,0 +1,24 @@
+# T-S17-06: worker de una cola (videos o default; auditoría QA sección 3 #5). Dos procesos para que un video largo
+# no frene los correos. TimeoutStopSec deja terminar el trabajo en curso (--timeout=900) antes de matar el proceso.
+[Unit]
+Description=Banco de Talentos: cola %i
+Requires=bt-boot.service
+After=bt-boot.service
+
+[Service]
+User=www-data
+Group=www-data
+WorkingDirectory=/opt/banco-talentos/current/backend
+ExecStart=/usr/bin/php artisan queue:work database --queue=%i --timeout=900 --tries=2 --max-time=3600 --sleep=3
+Restart=always
+RestartSec=5
+KillSignal=SIGTERM
+TimeoutStopSec=930
+NoNewPrivileges=yes
+PrivateTmp=yes
+ProtectSystem=strict
+ProtectHome=yes
+ReadWritePaths=/var/lib/banco-talentos
+
+[Install]
+WantedBy=multi-user.target

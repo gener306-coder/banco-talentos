@@ -1,0 +1,45 @@
+# T-S17-06: servidor web del piloto (Opción A, D4). Termina HTTPS directamente (sin balanceador ni proxies de
+# confianza), sirve la SPA y la API en el mismo sitio y aplica las cabeceras de la auditoría QA (sección 3 #2).
+# Variables (bt-boot las escribe en /run/banco-talentos/caddy.env): DOMAIN, ACME_EMAIL y S3_ORIGIN.
+{
+	email {$ACME_EMAIL}
+}
+
+{$DOMAIN} {
+	encode zstd gzip
+
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		X-Content-Type-Options "nosniff"
+		Referrer-Policy "no-referrer"
+		X-Frame-Options "DENY"
+		Permissions-Policy "camera=(), microphone=(), geolocation=()"
+		-Server
+	}
+
+	# API, CSRF de Sanctum y salud: un solo front controller (public/index.php). ApiSecurityHeaders ya agrega
+	# Cache-Control no-store, nosniff, X-Frame-Options y Referrer-Policy en cada respuesta de Laravel.
+	@backend path /api/* /sanctum/* /up
+	handle @backend {
+		request_body {
+			max_size 260MB
+		}
+		root * /opt/banco-talentos/current/backend/public
+		php_fastcgi unix//run/php/php8.4-fpm.sock
+	}
+
+	# SPA compilada por Vite.
+	handle {
+		root * /opt/banco-talentos/current/frontend
+		# CSP estricta: sin scripts ni estilos en línea (T-S17-03). Los medios y pósteres llegan del bucket con URLs
+		# prefirmadas (MEDIA_DISK=s3); el bucket no necesita CORS porque <video> e <img> no usan crossorigin.
+		header Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data: blob: {$S3_ORIGIN}; media-src 'self' blob: {$S3_ORIGIN}; connect-src 'self'; worker-src 'self'; font-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'"
+		# Los archivos con hash en el nombre son inmutables; el resto (index.html, theme-init.js y
+		# notifications-sw.js, A4) se revalida en cada carga.
+		@hashed path /assets/*
+		header @hashed Cache-Control "public, max-age=31536000, immutable"
+		header ?Cache-Control "no-cache"
+		try_files {path} /index.html
+		file_server
+	}
+}

@@ -24,6 +24,14 @@ return [
     'media_disk' => env('MEDIA_DISK', 'media'),
 
     /*
+    | T-S17-02: disco privado de los comprobantes del seguro (HU-S3-02). "local" (storage/app/private) en desarrollo
+    | y pruebas; "s3" en el piloto, para que reemplazar el servidor nunca pierda archivos. Nunca se sirven por HTTP:
+    | solo se descargan con la sesión de la institución.
+    */
+
+    'private_documents_disk' => env('PRIVATE_DOCUMENTS_DISK', 'local'),
+
+    /*
     |--------------------------------------------------------------------------
     | Filesystem Disks
     |--------------------------------------------------------------------------

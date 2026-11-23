@@ -1,0 +1,15 @@
+# T-S17-06: prepara cada instancia nueva antes de que arranquen PHP-FPM, Caddy y los workers.
+[Unit]
+Description=Banco de Talentos: configuración desde SSM, certificados y cachés de Laravel
+Wants=network-online.target
+After=network-online.target cloud-config.service amazon-ssm-agent.service
+Before=php8.4-fpm.service caddy.service bt-queue@videos.service bt-queue@default.service bt-schedule.timer
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/usr/local/sbin/bt-boot.sh
+TimeoutStartSec=600
+
+[Install]
+WantedBy=multi-user.target

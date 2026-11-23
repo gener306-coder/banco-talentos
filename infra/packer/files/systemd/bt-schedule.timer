@@ -1,0 +1,10 @@
+[Unit]
+Description=Banco de Talentos: schedule:run cada minuto
+
+[Timer]
+OnCalendar=*-*-* *:*:00
+AccuracySec=1s
+Persistent=false
+
+[Install]
+WantedBy=timers.target

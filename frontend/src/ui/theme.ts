@@ -3,7 +3,7 @@ import { useCallback, useSyncExternalStore } from 'react'
 /**
  * Tema claro u oscuro (docs/design/identidad-visual.md, «Modo oscuro»). Por defecto es el claro (T-S14-06); «Sistema»
  * sigue la preferencia del sistema operativo. La elección se guarda solo en este navegador. El tema se aplica como data-theme en <html>, que activa el
- * bloque de tokens oscuros de index.css. index.html aplica el mismo cálculo antes del primer pintado.
+ * bloque de tokens oscuros de index.css. public/theme-init.js aplica el mismo cálculo antes del primer pintado.
  */
 export type ThemePreference = 'system' | 'light' | 'dark'
 

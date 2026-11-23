@@ -84,6 +84,9 @@ beforeEach(() => {
     if (path === '/api/me') {
       return sessionUser ? Response.json({ user: sessionUser }) : new Response(null, { status: 401 })
     }
+    // T-S17-05: el menú de mensajes del encabezado (COMPANY, INSTITUTION) consulta el resumen de no leídos al montarse;
+    // se responde aparte para que no cuente como petición administrativa (carrera vista en el runner de GitHub).
+    if (String(path).endsWith('/unread-summary')) return Response.json({ data: { conversations: 0, items: [] } })
     // Indicadores del inicio (HU-S5-01): ajenos a estas pruebas, quedan pendientes sin consumir respuestas.
     if (path === '/api/dashboard') return new Promise<Response>(() => undefined)
     if (path === '/sanctum/csrf-cookie') {

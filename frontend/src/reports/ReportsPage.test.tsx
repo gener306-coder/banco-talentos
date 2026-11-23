@@ -30,6 +30,9 @@ beforeEach(() => {
   apiMock.mockReset()
   fetchMock.mockReset()
   fetchMock.mockImplementation(async (path, init) => {
+    // T-S17-05: el menú de mensajes del encabezado (COMPANY, INSTITUTION) consulta el resumen de no leídos al montarse;
+    // se responde aparte para que no cuente como petición de la vista (carrera vista en el runner de GitHub).
+    if (String(path).endsWith('/unread-summary')) return Response.json({ data: { conversations: 0, items: [] } })
     if (path === '/api/me') return Response.json({ user })
     if (path === '/api/dashboard') return new Promise<Response>(() => undefined)
     return apiMock(path, init)

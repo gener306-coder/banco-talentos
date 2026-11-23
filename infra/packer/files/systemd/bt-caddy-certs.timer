@@ -1,0 +1,10 @@
+[Unit]
+Description=Banco de Talentos: respaldo diario de los certificados de Caddy
+
+[Timer]
+OnBootSec=30min
+OnUnitActiveSec=1d
+RandomizedDelaySec=15min
+
+[Install]
+WantedBy=timers.target

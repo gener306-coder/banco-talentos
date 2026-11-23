@@ -1,0 +1,100 @@
+# T-S17-05: integración continua. Reproduce las verificaciones locales (CLAUDE.md, «Ejecución de Pruebas»).
+# Las acciones van fijadas por SHA (el comentario indica su versión) y el token solo puede leer.
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  # build-ami.yml exige el CI en verde para el mismo commit.
+  workflow_call:
+  workflow_dispatch:
+    inputs:
+      e2e:
+        description: Ejecutar también Playwright (≈ 10 min), después de Pest
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  frontend:
+    name: Frontend (lint, tipos, Vitest, build, audit)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - run: npm ci --no-audit --no-fund
+      - run: npm run lint
+      - run: npx tsc -b
+      - run: npx vitest run
+      - run: npm run build
+      - run: npm audit --audit-level=high
+
+  backend-lint:
+    name: Backend (Pint, composer audit)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: shivammathur/setup-php@eb7c497e18156a6bbabfef1d3a82760b9eda3962 # 2.40.0
+        with:
+          php-version: '8.4'
+          extensions: pdo_pgsql, intl, zip, pcntl
+          coverage: none
+          tools: composer:v2
+      - run: composer install --no-interaction --prefer-dist --no-progress
+      - run: composer lint
+      - run: composer audit
+
+  # Pest con PostGIS: el mismo camino que en local (compose.testing.yaml, PostgreSQL 17 + PostGIS 3.5 en tmpfs).
+  backend-tests:
+    name: Backend (Pest con PostGIS)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      # Laravel busca backend/.env en cada prueba; sin él, phpdotenv deja un aviso que PHPUnit cuenta en todas.
+      # Vacío basta: las variables vienen de compose.testing.yaml y phpunit.xml.
+      - name: backend/.env vacío
+        run: touch backend/.env
+      - name: Pest
+        run: LOCAL_UID="$(id -u)" LOCAL_GID="$(id -g)" sh scripts/test-backend.sh
+
+  # Opcional y siempre después de Pest: E2E y Pest comparten el proyecto Compose banco-talentos-tests.
+  e2e:
+    name: E2E (Playwright)
+    if: github.event_name == 'workflow_dispatch' && inputs.e2e
+    needs: backend-tests
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: backend/.env vacío
+        run: touch backend/.env
+      - name: Playwright
+        run: LOCAL_UID="$(id -u)" LOCAL_GID="$(id -g)" sh scripts/test-e2e.sh

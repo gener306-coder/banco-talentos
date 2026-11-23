@@ -11,6 +11,7 @@ use App\Models\User;
 use App\Support\ContactInformation;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 use Tests\Support\InteractsWithCookieSessions;
 
 // HU-S5-02: oportunidades de Educación Dual de la empresa.
@@ -178,7 +179,7 @@ describe('alta y autoría (CA-02, CA-03, CA-05)', function () {
         $response = $this->browserRequest('POST', '/api/opportunities', opportunityPayload(['period_type' => 'four_month', 'period_number' => 6]))
             ->assertCreated()->assertJsonPath('data.period_number', 6);
         expect($response->json('data'))->not->toHaveKey('period_type')
-            ->and(\Illuminate\Support\Facades\Schema::hasColumn('opportunities', 'period_type'))->toBeFalse();
+            ->and(Schema::hasColumn('opportunities', 'period_type'))->toBeFalse();
     });
 
     it('accepts an opportunity without skills nor language', function () {

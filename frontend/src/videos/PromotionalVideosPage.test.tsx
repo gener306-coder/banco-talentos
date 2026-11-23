@@ -261,15 +261,23 @@ describe('barra de orden flotante T-S12-09', () => {
 
 describe('skeleton del feed T-S12-10', () => {
   it('muestra esqueletos con la carga anunciada hasta que llegan las historias, y vuelve a mostrarlos al cambiar el orden', async () => {
+    // T-S17-05: la galería responde cuando la prueba lo decide; con la respuesta inmediata, el esqueleto podía
+    // desaparecer entre dos aserciones (carrera vista en el runner de GitHub).
+    const pending: Array<() => void> = []
+    galleryMock.mockImplementation(() => new Promise<Response>((resolve) => { pending.push(() => resolve(pageOf([promo]))) }))
+    const respond = () => act(() => { pending.splice(0).forEach((release) => release()) })
+
     start('COMPANY')
     expect(await screen.findAllByTestId('story-skeleton')).toHaveLength(2)
     expect(screen.getAllByTestId('story-skeleton')[0]).toHaveAttribute('aria-hidden', 'true')
     expect(screen.getByRole('status')).toHaveTextContent('Cargando historias…')
+    await respond()
     await screen.findByRole('article', { name: promo.title })
     expect(screen.queryByTestId('story-skeleton')).not.toBeInTheDocument()
 
     fireEvent.click(screen.getByRole('radio', { name: 'Al azar' }))
     expect(await screen.findAllByTestId('story-skeleton')).toHaveLength(2)
+    await respond()
     await screen.findByRole('article', { name: promo.title })
     expect(screen.queryByTestId('story-skeleton')).not.toBeInTheDocument()
   })

@@ -1,0 +1,11 @@
+#cloud-config
+# T-S17-07: datos no secretos de la instancia; bt-boot.sh obtiene el resto de SSM Parameter Store.
+write_files:
+  - path: /etc/banco-talentos/instance.env
+    owner: root:root
+    permissions: "0644"
+    content: |
+      BT_ENV=${environment}
+      BT_SSM_PATH=${ssm_path}
+      AWS_REGION=${region}
+      ACME_EMAIL=${acme_email}
