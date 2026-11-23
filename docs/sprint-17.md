@@ -77,7 +77,7 @@ Sin cambios de contrato.
 **Pruebas:** `StudentSocialSecurityTest`.
 - Nueva: con `PRIVATE_DOCUMENTS_DISK=s3` y un doble de S3 que rechaza `path()`, sube, reemplaza (el anterior desaparece), verifica la huella y descarga con `nosniff` y `no-store`, sin tocar el disco local.
 - Nueva: el valor por defecto sigue siendo `local`.
-- Las 62 pruebas previas siguen en verde.
+- Las 62 pruebas previas siguen en verde (64 de 64 en el archivo).
 
 ### T-S17-03 — Script de tema externo para una CSP sin `'unsafe-inline'`
 
@@ -116,14 +116,21 @@ Sin cambios de contrato.
 **Estado:** Plantilla completada (22 de noviembre de 2026). La primera construcción real queda pendiente de la cuenta de AWS.
 
 `infra/packer/`:
-- Debian 13 arm64;
+- `banco-talentos.pkr.hcl`: Debian 13 arm64;
 - PHP 8.4 FPM, ffmpeg y Caddy;
 - SSM Agent instalado por `user_data` (A1);
 - swap (A2);
 - unidades systemd: arranque, colas `videos` y `default`, planificador y respaldo de certificados;
 - `bt-boot.sh` (A3);
 - `Caddyfile` con HSTS, CSP y caché (A4);
-- verificación de cero secretos.
+- verificación de cero secretos (`99-verify.sh`).
+
+**Decisiones de implementación:**
+- **Estado fuera del código.** `storage/` y `bootstrap/cache/` son enlaces a `/var/lib/banco-talentos` y `.env` es un enlace a `/run/banco-talentos/.env`. No se usa `LARAVEL_STORAGE_PATH`: `public/index.php` busca el archivo de mantenimiento con una ruta fija.
+- **Sin puerto 22, tampoco al construir.** Packer usa un grupo de seguridad sin entradas creado por `bootstrap` (`build_security_group_id`), y borra las llaves temporales (`ssh_clear_authorized_keys`).
+- **`.env` literal.** `bt-boot` escribe cada valor entre comillas simples (phpdotenv no interpola `$` ni `${}`) y rechaza comillas simples y saltos de línea. Se verificó con phpdotenv que `$HOME`, `${X}`, `\`, `=` y `#` llegan intactos.
+- **Sin `optimize:clear` en el arranque.** Incluye `cache:clear`, que falla con la base vacía; se limpian solo las cachés de archivos (corregido en `94f961a`).
+- **CSP con dos orígenes del bucket.** El SDK puede firmar con el punto global o con el regional de `us-east-1`.
 
 ### T-S17-07 — Terraform del piloto
 
@@ -132,18 +139,79 @@ Sin cambios de contrato.
 `infra/terraform/`:
 - `bootstrap`: estado, OIDC y roles de GitHub;
 - módulos `network`, `storage`, `database`, `compute` y `params`;
-- `envs/pilot` con `pilot.tfvars.example`.
+- `envs/pilot` con `pilot.tfvars.example` y `backend.hcl.example`.
+
+**Decisiones de implementación:**
+- `APP_KEY` y `MAIL_PASSWORD` no pasan por Terraform (nunca quedan en su estado): se cargan a mano (runbook, paso 2). `DB_PASSWORD` sale de `random_password`, en un juego de caracteres válido para RDS y para `bt-boot`.
+- `SESSION_DOMAIN` no se crea: SSM no admite valores vacíos y su ausencia deja la cookie *host-only*.
+- `cpu_credits = "standard"` por defecto (costo predecible); `unlimited` si los videos se procesan lento.
+- El rol de despliegue acepta los entornos `pilot` y `pilot-plan` de GitHub; el de AMI, solo `pilot`.
 
 ### T-S17-08 — Flujos de construcción y despliegue
 
 **Estado:** Plantilla completada (22 de noviembre de 2026). La primera ejecución queda pendiente de la cuenta de AWS.
 
-- `build-ami.yml`: artefacto, `packer build` y limpieza de AMIs.
+- `build-ami.yml`:
+  - llama al CI (`workflow_call`) para el mismo commit;
+  - arma el artefacto e instala el plugin de Session Manager en el runner;
+  - ejecuta `packer build`;
+  - limpieza: conserva las 3 AMIs más recientes y las que estén en uso.
 - `deploy-pilot.yml`:
   - `plan` → aprobación del entorno `pilot` → `apply`;
   - migraciones y `up` por SSM Run Command;
-  - smoke HTTPS y de cabeceras.
+  - smoke HTTPS y de cabeceras (`infra/scripts/smoke.sh`).
+- Precisiones:
+  - el plan no se sube como artefacto (contiene la contraseña de la base): el job de aplicación vuelve a planear;
+  - `migrate` va sin `--isolated`, porque su candado usa la caché de base de datos, que no existe en el primer despliegue.
 
 ### T-S17-09 — Primer despliegue real y prueba de recreación
 
 **Estado:** Pendiente (requiere la cuenta de AWS, el subdominio en Hostinger y el dominio verificado en Resend). Sigue `docs/infra/runbook-pilot.md` de principio a fin.
+
+---
+
+## Verificación de la etapa (22 de noviembre de 2026)
+
+### Aplicación (en secuencia, nunca en paralelo)
+
+| Suite | Resultado |
+|---|---|
+| `npm run lint` | sin errores |
+| `npx tsc -b` | sin errores |
+| `npx vitest run` | 1585 de 1585 (76 archivos), incluida `themeInit.test.ts` |
+| `npm run build` | correcto; `dist/theme-init.js` y `dist/notifications-sw.js` presentes; `index.html` sin scripts en línea |
+| `sh scripts/test-backend.sh` (Pest) | 1734 de 1734 (17 298 aserciones) |
+| `sh scripts/test-e2e.sh` (Playwright) | 79 de 79 en 9.4 min |
+
+### Infraestructura (sin AWS)
+
+Ni Packer, ni Terraform, ni Caddy, ni actionlint, ni shellcheck están instalados en la máquina: todo se validó con sus imágenes oficiales de Docker.
+
+| Verificación | Resultado |
+|---|---|
+| `packer fmt -check`, `packer validate -syntax-only` y `packer validate` completo con el plugin amazon v1.8.4 (Packer 1.16.2) | válido |
+| `terraform fmt -recursive -check` y `terraform validate` de `bootstrap` y `envs/pilot` (Terraform 1.17.2, AWS provider 6.73) | válido |
+| `tflint --recursive` | sin avisos |
+| `caddy validate` y `caddy fmt` (Caddy 2.11.9) | válido |
+| Caddy en funcionamiento con `DOMAIN=localhost` | HSTS, CSP, `nosniff` y `no-referrer` sin cabecera `Server`; `no-cache` en `/`, rutas de la SPA, `theme-init.js` y `notifications-sw.js` (A4); `immutable` en `/assets/*` |
+| `actionlint` (incluye shellcheck de los `run:`) en `ci.yml`, `build-ami.yml` y `deploy-pilot.yml` | sin avisos |
+| `shellcheck` de los scripts de Packer y de `infra/scripts` | sin avisos |
+
+**Simulación del arranque en Debian 13** (contenedor `debian:trixie` con PostGIS 17-3.5 vacío y un `aws` simulado):
+- Los paquetes de `01-base.sh` existen y traen PHP 8.4.28 y ffmpeg 7.1.5 con `libx264`, `libvpx-vp9` y `libopus`. Las extensiones requeridas y opcache están presentes, y `php-fpm8.4 -t` acepta el pool.
+- `02-app.sh` instala el artefacto de `composer --no-dev` con los enlaces de estado y `.env`.
+- `bt-boot.sh` con la base **vacía** (A3):
+  - escribe `.env` (`0640 root:www-data`) y `caddy.env`;
+  - genera las cachés y aplica `chown caddy:caddy /var/lib/caddy`;
+  - avisa sin fallar que no pudo restaurar los certificados;
+  - entra en mantenimiento y termina con código 0.
+- `migrate --force` (incluida la carga de 2 478 municipios) y `up`. Un segundo arranque informa «esquema al día» y deja la aplicación en línea.
+
+### Pendiente para T-S17-09 (requiere AWS)
+- Primera `packer build` real:
+  - SSM Agent por `user_data` (A1);
+  - Session Manager desde el runner;
+  - `systemd-analyze verify` y `caddy validate` dentro de `99-verify.sh`.
+- Primer `terraform apply`, certificado real de Let's Encrypt y correo real de Resend.
+- Video real con ffmpeg 7.1 en arm64. Las pruebas automatizadas no transcodifican.
+- Primera ejecución de `ci.yml` en GitHub, al hacer push.
