@@ -123,7 +123,7 @@ Diagnóstico de solo lectura del 24 de noviembre de 2026.
 
 ### T-S18-05 — Correos con la marca de la plataforma
 
-**Estado:** Pendiente (PR 2).
+**Estado:** Completada (24 de noviembre de 2026).
 
 **Hallazgo:**
 - Las 5 notificaciones (`SetInitialPassword`, `ResetInstitutionPassword`, `PasswordChanged`, `AccessEmailChanged` y `LinkageMessageReceived`) usan la plantilla Markdown de Laravel sin personalizar.
@@ -136,3 +136,19 @@ Diagnóstico de solo lectura del 24 de noviembre de 2026.
 - logo por URL pública (D4), verificando que Caddy sirva `/brand/logo-correo.png` en el piloto;
 - vista previa en Mailpit y con un comando `mail:preview`;
 - pruebas Pest sin textos en inglés y con la marca.
+
+**Resultado:**
+- **Plantilla:** `resources/views/vendor/mail` solo sobrescribe tres piezas; el resto de componentes sale de Laravel (`config/mail.php`, `markdown`):
+  - el encabezado: logotipo, «Educación Dual» y el nombre de la plataforma;
+  - el mensaje, en HTML y texto, con un pie en español: «Banco de Talentos – Educación Dual · <dominio>» y «Este correo se envió automáticamente…»;
+  - el tema `banco-talentos.css`: vino `#991B30` en títulos, enlaces y botón; grafito `#57565B` en el texto; filete dorado `#B99058` sobre la tarjeta.
+- **Textos:** `lang/es.json` traduce el saludo, «Saludos,» y el texto de respaldo del botón. El idioma por defecto pasa a `es` (`config/app.php`), porque en CI no hay `.env` que lo fije.
+- **Logo (D4):** `frontend/public/brand/logo-correo.png` (108×128 px, transparente, generado por `scripts/brand/build-mail-logo.py`), por la URL `config('mail.logo_url')`.
+  - La URL es `<FRONTEND_URL>/brand/logo-correo.png`, configurable con `MAIL_LOGO_URL`. En el piloto, `FRONTEND_URL` es igual a `APP_URL`. En desarrollo apunta a Vite (`:5173`), así que el logo también se ve en Mailpit.
+  - **Verificado con el `Caddyfile` del piloto y la compilación real:** `/brand/logo-correo.png` responde `200 image/png` con los bytes del archivo. Una ruta inexistente responde `200 text/html` (la SPA), así que una ruta equivocada rompería la imagen sin un 404; las pruebas fijan el nombre en ambos lados.
+- **Vista previa:** `php artisan mail:preview` guarda los 7 correos y variantes en `storage/app/mail-previews`. Con `--send=<correo>`, además los envía por el mailer configurado (Mailpit en desarrollo, http://localhost:8025). Nunca corre en producción.
+- **Mailpit «HTML Check»:** 45 % de soporte total, 35 % parcial. Lo no soportado (`position`, `box-sizing`, `word-break`) viene del tema base de Laravel y no afecta la lectura. Se revisaron en Chromium a 800 y 390 px.
+
+**Pruebas:**
+- Pest, `BrandedMailTest` (21 pruebas): los 7 correos en HTML y texto, sin restos en inglés; logotipo, colores y pie; la URL del logo; el idioma por defecto; y `mail:preview` (archivos, envío, correo inválido y producción).
+- Vitest, `ui/favicon.test.ts`: el archivo del logo.

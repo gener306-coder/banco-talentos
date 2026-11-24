@@ -115,4 +115,22 @@ return [
         'name' => env('MAIL_FROM_NAME', env('APP_NAME', 'Laravel')),
     ],
 
+    /*
+    | T-S18-05: plantilla Markdown con la marca del Banco de Talentos (resources/views/vendor/mail). Solo se sobrescriben
+    | el encabezado, el pie y el tema; el resto de componentes sale de Laravel.
+    */
+
+    'markdown' => [
+        'theme' => 'banco-talentos',
+        'paths' => [resource_path('views/vendor/mail')],
+    ],
+
+    /*
+    | T-S18-05: logotipo del encabezado por URL pública (Gmail no muestra SVG y las imágenes incrustadas por CID pueden
+    | aparecer como adjuntos). La SPA lo sirve en /brand/logo-correo.png (frontend/public/brand), en el mismo origen que
+    | FRONTEND_URL: en el piloto, Caddy en https://<dominio>; en desarrollo, Vite en http://localhost:5173.
+    */
+
+    'logo_url' => env('MAIL_LOGO_URL') ?: rtrim((string) env('FRONTEND_URL', 'http://localhost:5173'), '/').'/brand/logo-correo.png',
+
 ];
