@@ -48,7 +48,8 @@ class InstitutionLinkageRequestController extends Controller
         $page = $this->filtered($request)
             ->withUnreadCount(LinkageParty::INSTITUTION)
             ->with([
-                'company:id,legal_name,trade_name,municipality_code',
+                // T-S18-02: el correo de contacto, para el ícono de correo de la bandeja (el detalle ya lo mostraba).
+                'company:id,legal_name,trade_name,municipality_code,contact_email',
                 'company.municipality:code,name',
                 // T-S14-11: los lugares cubiertos en la misma consulta, sin una por fila.
                 'opportunity' => fn ($opportunity) => $opportunity->select(['id', 'title', 'program', 'vacancies'])->withAcceptedCount(),
@@ -326,7 +327,7 @@ class InstitutionLinkageRequestController extends Controller
 
     private function companySummary(Company $company): array
     {
-        return ['name' => $company->label(), 'municipality' => $company->municipality?->name];
+        return ['name' => $company->label(), 'municipality' => $company->municipality?->name, 'contact_email' => $company->contact_email];
     }
 
     private function studentSummary(Student $student): array

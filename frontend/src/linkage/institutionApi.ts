@@ -34,7 +34,8 @@ export interface ReceivedLinkage {
   id: number
   status: LinkageStatus
   created_at: string
-  company: { name: string; municipality: string | null }
+  /** T-S18-02: contact_email alimenta el ícono de correo de la bandeja (el detalle ya lo mostraba). */
+  company: { name: string; municipality: string | null; contact_email: string | null }
   /** T-S14-11: `accepted_count`, lugares ya cubiertos por solicitudes aceptadas de cualquier institución. */
   opportunity: { id: number; title: string; program: string; vacancies: number; accepted_count: number }
   student: ReceivedStudent
@@ -120,13 +121,14 @@ function student(data: unknown): ReceivedStudent {
 function item(data: unknown): ReceivedLinkage {
   if (!isObject(data) || !isPositiveInt(data.id) || !STATUSES.includes(data.status as LinkageStatus) || !isText(data.created_at) ||
       !isObject(data.company) || !isText(data.company.name) || !isOptionalText(data.company.municipality) ||
+      !isOptionalText(data.company.contact_email ?? null) ||
       !isObject(data.opportunity) || !isPositiveInt(data.opportunity.id) || !isText(data.opportunity.title) ||
       !isText(data.opportunity.program) || !isPositiveInt(data.opportunity.vacancies) ||
       typeof data.opportunity.accepted_count !== 'number' || !Number.isSafeInteger(data.opportunity.accepted_count) || data.opportunity.accepted_count < 0) return invalid()
   // Solo se conservan los campos del contrato.
   return {
     id: data.id, status: data.status as LinkageStatus, created_at: data.created_at,
-    company: { name: data.company.name, municipality: data.company.municipality },
+    company: { name: data.company.name, municipality: data.company.municipality, contact_email: (data.company.contact_email ?? null) as string | null },
     opportunity: {
       id: data.opportunity.id, title: data.opportunity.title, program: data.opportunity.program, vacancies: data.opportunity.vacancies,
       accepted_count: data.opportunity.accepted_count,
