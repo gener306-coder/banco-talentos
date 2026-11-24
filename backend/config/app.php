@@ -83,7 +83,8 @@ return [
     |
     */
 
-    'locale' => env('APP_LOCALE', 'en'),
+    // T-S18-05: español por defecto (correos y textos del framework); en CI no hay .env que lo fije.
+    'locale' => env('APP_LOCALE', 'es'),
 
     'fallback_locale' => env('APP_FALLBACK_LOCALE', 'en'),
 

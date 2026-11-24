@@ -31,3 +31,14 @@ describe('favicon', () => {
     expect(sizes).toEqual([16, 32, 48])
   })
 })
+
+// T-S18-05: los correos cargan el logo desde <FRONTEND_URL>/brand/logo-correo.png (config('mail.logo_url') en el backend).
+// Caddy responde con el index.html de la SPA a una ruta inexistente, así que un archivo movido rompería la imagen sin 404.
+describe('logo de los correos', () => {
+  it('existe en public/brand con el nombre que usa la plantilla, a 2× de los 64 px con que se muestra', () => {
+    const [width, height] = pngSize('brand/logo-correo.png')
+    expect(height).toBe(128)
+    expect(width).toBeGreaterThan(90)
+    expect(width).toBeLessThan(130)
+  })
+})
