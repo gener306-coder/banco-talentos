@@ -1,6 +1,6 @@
 # Sprint 18 — Afinaciones de interfaz y correos con marca
 
-Sprint vigente desde el 24 de noviembre de 2026. Sprint anterior: [sprint-17.md](sprint-17.md) (histórico).
+Sprint del 24 de noviembre de 2026, cerrado el mismo día (PRs #9 y #10). Sprint anterior: [sprint-17.md](sprint-17.md); siguiente: [sprint-19.md](sprint-19.md).
 
 **Objetivo del Sprint:** pulir lo que el piloto en AWS dejó a la vista:
 - un campo de contraseña único con mostrar u ocultar;
