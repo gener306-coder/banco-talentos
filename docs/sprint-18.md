@@ -38,7 +38,7 @@ Diagnóstico de solo lectura del 24 de noviembre de 2026.
 
 ### T-S18-01 — Campo de contraseña compartido con mostrar u ocultar
 
-**Estado:** Pendiente.
+**Estado:** Completada (24 de noviembre de 2026).
 
 **Hallazgo:**
 - El inicio de sesión (`LoginPage`) tiene el botón de mostrar u ocultar escrito en línea, y Mi cuenta (`AccountPage`) lo tiene en un `PasswordField` local.
@@ -49,9 +49,16 @@ Diagnóstico de solo lectura del 24 de noviembre de 2026.
 - la etiqueta «Mostrar …»;
 - los errores enlazados con `aria-describedby`.
 
+**Resultado:**
+- `LoginPage`, `AccountPage` (cambio de contraseña) y `NewPasswordForm` (contraseña inicial y restablecimiento) usan `ui/PasswordField`.
+- Acepta una descripción externa (`password-requirements`) y errores en lista.
+- Se vuelve a ocultar cuando el campo se vacía, que es lo que hacía el inicio de sesión tras un intento.
+
+**Pruebas:** `ui/PasswordField.test.tsx` (4 pruebas) y una nueva en `SetInitialPasswordPage.test.tsx`; las del inicio de sesión y Mi cuenta siguen en verde.
+
 ### T-S18-02 — Correo de la empresa en Instituciones → Vinculación
 
-**Estado:** Pendiente.
+**Estado:** Completada (24 de noviembre de 2026).
 
 **Hallazgo:**
 - La bandeja de la empresa muestra el `EmailMenu` del contacto de la institución.
@@ -62,9 +69,17 @@ Diagnóstico de solo lectura del 24 de noviembre de 2026.
 - `contact_email` de la empresa en el listado de la institución; no amplía permisos, porque la institución ya lo ve en el detalle.
 - `EmailMenu` junto al ícono de mensajes, como en la bandeja de la empresa.
 
+**Resultado:**
+- El listado agrega `company.contact_email` (`null` si la empresa no lo tiene); el teléfono y el nombre del contacto siguen solo en el detalle.
+- En el detalle, el campo aparece ahora junto al nombre de la empresa: mismos campos y valores, en otro orden.
+
+**Pruebas:**
+- Pest, `InstitutionLinkageInboxTest`: correo presente o `null`, y solo 3 campos de la empresa en el listado.
+- Vitest, `InstitutionLinkageRequests.test.tsx`: menú de correo junto a la conversación y ausente sin correo.
+
 ### T-S18-03 — Favicon con el isotipo de Nodologístico
 
-**Estado:** Pendiente.
+**Estado:** Completada (24 de noviembre de 2026).
 
 **Hallazgo:** `index.html` no declara ningún ícono.
 
@@ -73,11 +88,38 @@ Diagnóstico de solo lectura del 24 de noviembre de 2026.
 - `favicon.ico` (16, 32 y 48 px), `favicon.png` y `apple-touch-icon.png` (180 px);
 - enlaces en `frontend/index.html`.
 
+**Resultado:**
+- `scripts/brand/build-favicons.py` recorta el isotipo (394×401 px) por la franja vacía que lo separa de la palabra y genera los tres archivos en `frontend/public/`.
+- El ícono de iOS va sobre fondo blanco, porque iOS rellena la transparencia de negro.
+- A 16 px se distinguen el monograma «nl» y los círculos; la órbita gris se pierde en la pestaña oscura, como se aceptó (D2).
+
+**Pruebas:** `ui/favicon.test.ts`, que verifica los enlaces en `index.html` y los tamaños de los archivos.
+
 ### T-S18-04 — Logotipos y encabezado legibles al 100 % de zoom
 
-**Estado:** Pendiente.
+**Estado:** Completada (24 de noviembre de 2026).
 
 **Alcance (D3):** auditar los encabezados con logotipos (la barra autenticada y las vistas públicas) y aumentar los logos alrededor de un 25 %, con la altura y el espaciado necesarios, verificando escritorio y móvil.
+
+**Auditoría:**
+- La barra (`App.tsx`) muestra el logotipo de Nodologístico y el coemblema de la Secretaría en las vistas con sesión, y solo el coemblema en las públicas.
+- El inicio de sesión muestra el logotipo grande en su tarjeta (144 px), fuera de la barra; no se cambió.
+
+**Resultado** (capturas de Chromium al 100 % de zoom, escala 1, de 360 a 1440 px, con y sin sesión):
+
+| Medida | Antes | Después |
+|---|---|---|
+| Logotipo en escritorio | 47×56 px | 61×72 px (`h-18`) |
+| Logotipo en móvil | 37×44 px | 47×56 px (`h-14`) |
+| Coemblema en escritorio | 204×44 px | 260×56 px (`h-14`) |
+| Coemblema en su franja móvil | 167×36 px | 204×44 px (`h-11`) |
+| Barra en escritorio | 79 px | 91 px (relleno de 0.7 a 0.55rem) |
+| Barra en móvil | 67 px | 75 px |
+
+- La franja propia del coemblema empieza en 640 px (antes 480). Entre 481 y 640 px el coemblema ya se aplastaba a 82 px de ancho, y con el tamaño nuevo no cabía en la barra.
+- Sin desborde horizontal en ningún ancho.
+
+**Pruebas:** `App.test.tsx` (la franja móvil, con el nuevo corte) sigue en verde.
 
 ### T-S18-05 — Correos con la marca de la plataforma
 
