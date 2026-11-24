@@ -421,7 +421,7 @@ describe('identidad visual', () => {
 
   it('en móvil lleva el logotipo de la Secretaría a una franja sobre la barra (T-S12-08)', async () => {
     const original = window.matchMedia
-    window.matchMedia = ((query: string) => ({ matches: query === '(max-width: 480px)', media: query, addEventListener: () => {}, removeEventListener: () => {} })) as unknown as typeof window.matchMedia
+    window.matchMedia = ((query: string) => ({ matches: query === '(max-width: 640px)', media: query, addEventListener: () => {}, removeEventListener: () => {} })) as unknown as typeof window.matchMedia
     try {
       fetchMock.mockResolvedValueOnce(Response.json({ user }))
       renderApp('/')

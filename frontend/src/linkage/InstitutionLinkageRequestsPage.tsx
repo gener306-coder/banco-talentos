@@ -7,6 +7,7 @@ import { InstitutionRequestError } from '../institutions/InstitutionLayout'
 import { useApiRequest } from '../lib/useApiRequest'
 import { surnames } from '../students/api'
 import { CsvDownloadButton } from '../ui/CsvDownloadButton'
+import { EmailMenu } from '../ui/EmailMenu'
 import { ChevronLeftIcon, ChevronRightIcon, SearchIcon } from '../ui/icons'
 import { StateMessage } from '../ui/StateMessage'
 import { backState } from '../ui/backLink'
@@ -136,6 +137,8 @@ export function InstitutionLinkageRequestsPage() {
                               {item.company.name}
                               <span className="cell-actions">
                                 <ConversationLink to={`${href}/chat`} state={back} counterpart={`${item.company.name} sobre ${name}`} count={item.unread_count} />
+                                {/* T-S18-02: el correo de contacto de la empresa, como en la bandeja de la empresa (T-S12-06). */}
+                                {item.company.contact_email && <EmailMenu email={item.company.contact_email} />}
                               </span>
                             </span>
                             {item.company.municipality && <span className="linkage-meta">{item.company.municipality}</span>}

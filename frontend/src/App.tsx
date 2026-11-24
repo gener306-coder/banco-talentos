@@ -228,11 +228,12 @@ function App() {
   const scrolled = useScrolled()
   const [bar, setBar] = useState<HTMLElement | null>(null)
   useAppBarHeight(bar)
-  // T-S12-08: en móvil el coemblema sale de la barra a una franja propia, donde se lee completo.
-  const narrow = useMediaQuery('(max-width: 480px)')
+  // T-S12-08: en móvil el coemblema sale de la barra a una franja propia, donde se lee completo. T-S18-04: desde 640 px,
+  // porque con los logotipos al tamaño legible al 100 % de zoom ya no cabe en la barra entre 481 y 640 px.
+  const narrow = useMediaQuery('(max-width: 640px)')
   useRouteTransition(main, pathname)
   // Coemblema institucional. Se usa tal cual en ambos temas, por decisión del responsable (HU-S8-03).
-  const partner = <img src="/brand/sec-economia.png" alt="Secretaría de Economía" width={1920} height={414} className={`w-auto ${narrow ? 'h-9' : 'h-11'}`} />
+  const partner = <img src="/brand/sec-economia.png" alt="Secretaría de Economía" width={1920} height={414} className={`w-auto ${narrow ? 'h-11' : 'h-14'}`} />
 
   const shell = (
     <>
@@ -240,8 +241,9 @@ function App() {
       <header ref={setBar} className="app-bar" data-scrolled={scrolled}>
         <div className={`app-bar-inner${wide ? ' wide' : ''}`}>
           {/* En /login el logotipo se muestra en el formulario; se evita duplicarlo. */}
+          {/* T-S18-04: ~25 % más grande que antes (56 y 72 px), para distinguirse al 100 % de zoom. */}
           {pathname !== '/login' && (
-            <BrandLogo className="h-11 w-auto shrink-0 min-[481px]:h-14" />
+            <BrandLogo className="h-14 w-auto shrink-0 min-[641px]:h-18" />
           )}
           <div className="app-bar-title">
             <p className="eyebrow">Educación Dual</p>

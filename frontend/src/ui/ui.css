@@ -26,7 +26,7 @@ h4 { font-weight: 600; }
 .app-bar { position: sticky; top: 0; z-index: 10; margin: 0 0 1.5rem; background: var(--glass);
   -webkit-backdrop-filter: blur(20px) saturate(180%); backdrop-filter: blur(20px) saturate(180%);
   border-top: 1px solid color-mix(in srgb, var(--surface) 60%, transparent); }
-.app-bar-inner { width: min(100% - var(--page-gutter), var(--page-narrow)); margin: 0 auto; display: flex; align-items: center; gap: 0.9rem; padding: 0.7rem 0; }
+.app-bar-inner { width: min(100% - var(--page-gutter), var(--page-narrow)); margin: 0 auto; display: flex; align-items: center; gap: 0.9rem; padding: 0.55rem 0; }
 /* Mismo ancho que <main> (index.css): encabezado y contenido siempre alineados. */
 .app-bar-inner.wide { width: min(100% - var(--page-gutter), var(--page-wide)); }
 .app-bar h1 { margin: 0.1rem 0 0; font-size: var(--type-xl); color: var(--accent); white-space: nowrap; }
@@ -37,11 +37,11 @@ h4 { font-weight: 600; }
 .app-bar-partner { display: flex; margin-left: auto; padding-left: 0.9rem; border-left: 1px solid var(--border); flex-shrink: 1; min-width: 0; }
 .app-bar-partner img { min-width: 0; max-width: 100%; object-fit: contain; }
 /* En pantallas angostas el título se reduce (el logotipo, con h-* en App.tsx) para caber en una línea. */
-@media (max-width: 480px) {
+@media (max-width: 640px) {
   .app-bar-inner { gap: 0.6rem; }
   .app-bar h1 { font-size: var(--type-lg); }
 }
-/* T-S12-08: hasta 480px el coemblema va en una franja sobre la barra; se desplaza con la página y la barra fija no crece. */
+/* T-S12-08: hasta 640px (T-S18-04) el coemblema va en una franja sobre la barra; se desplaza con la página y la barra fija no crece. */
 .partner-band { display: flex; justify-content: center; padding: 0.6rem 1rem; background: var(--surface); border-bottom: 1px solid var(--border); }
 /* Borde de scroll suave: aparece solo cuando hay contenido bajo el encabezado. */
 .app-bar::after { content: ''; position: absolute; left: 0; right: 0; top: 100%; height: 14px; pointer-events: none;

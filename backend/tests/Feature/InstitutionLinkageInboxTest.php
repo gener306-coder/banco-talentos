@@ -146,7 +146,7 @@ describe('bandeja (CA-02, CA-03, CA-04)', function () {
             'id' => $linkage->id,
             'status' => 'PENDIENTE_INSTITUCION',
             'created_at' => $linkage->created_at->toISOString(),
-            'company' => ['name' => 'ManuGolfo', 'municipality' => Municipality::query()->find('28041')->name],
+            'company' => ['name' => 'ManuGolfo', 'municipality' => Municipality::query()->find('28041')->name, 'contact_email' => 'dual@manugolfo.mx'],
             'opportunity' => ['id' => $this->opportunity->id, 'title' => 'Tableros de producción', 'program' => 'Ingeniería en Datos', 'vacancies' => 2, 'accepted_count' => 0],
             'student' => [
                 'id' => $this->student->id, 'enrollment_number' => 'MAT-0001', 'given_names' => 'Ana Sofía', 'first_surname' => 'García',
@@ -156,6 +156,18 @@ describe('bandeja (CA-02, CA-03, CA-04)', function () {
             'last_message_at' => null,
         ]]);
         expect($response->getContent())->not->toContain('12345678903')->not->toContain('secreto.pdf')->not->toContain('location');
+    });
+
+    it('includes the company contact email for the mail icon, and null when the company has none (T-S18-02)', function () {
+        receivedLinkage($this->company, $this->opportunity, $this->student);
+        $other = Company::factory()->create(['legal_name' => 'Sin Contacto, S.A.', 'trade_name' => null, 'contact_email' => null]);
+        receivedLinkage($other, receivedOpportunity($other, 'B'), $this->student);
+        $this->loginWithCookies($this->account)->assertOk();
+
+        $companies = array_column($this->browserRequest('GET', '/api/institution/linkage-requests')->assertOk()->json('data'), 'company');
+        expect(array_column($companies, 'contact_email', 'name'))->toBe(['Sin Contacto, S.A.' => null, 'ManuGolfo' => 'dual@manugolfo.mx']);
+        // Solo el correo: el teléfono y el nombre del contacto siguen únicamente en el detalle.
+        expect($companies[0])->toHaveKeys(['name', 'municipality', 'contact_email'])->toHaveCount(3);
     });
 
     it('uses the legal name when the company has no trade name', function () {
@@ -256,9 +268,9 @@ describe('detalle (CA-02, CA-05)', function () {
             'status' => 'PENDIENTE_INSTITUCION',
             'created_at' => $linkage->created_at->toISOString(),
             'company' => [
-                'name' => 'ManuGolfo', 'municipality' => Municipality::query()->find('28041')->name,
+                'name' => 'ManuGolfo', 'municipality' => Municipality::query()->find('28041')->name, 'contact_email' => 'dual@manugolfo.mx',
                 'legal_name' => 'Manufacturas del Golfo, S.A. de C.V.', 'trade_name' => 'ManuGolfo', 'sector_code' => '54', 'state_code' => '28',
-                'contact_name' => 'Laura Méndez', 'contact_position' => 'Recursos Humanos', 'contact_email' => 'dual@manugolfo.mx', 'contact_phone' => '8331234567',
+                'contact_name' => 'Laura Méndez', 'contact_position' => 'Recursos Humanos', 'contact_phone' => '8331234567',
             ],
             'opportunity' => [
                 'id' => $this->opportunity->id, 'title' => 'Tableros de producción', 'program' => 'Ingeniería en Datos', 'vacancies' => 2, 'accepted_count' => 0,

@@ -14,12 +14,12 @@ const student = {
 }
 const pending = {
   id: 41, status: 'PENDIENTE_INSTITUCION', created_at: '2026-10-28T10:00:00Z',
-  company: { name: 'ManuGolfo', municipality: 'Victoria' },
+  company: { name: 'ManuGolfo', municipality: 'Victoria', contact_email: 'dual@manugolfo.mx' },
   opportunity: { id: 12, title: 'Tableros de producción', program: 'Ingeniería en Datos', vacancies: 2, accepted_count: 0 },
   student,
   unread_count: 0,
 }
-const accepted = { ...pending, id: 40, status: 'ACEPTADA', company: { name: 'Aceros del Norte', municipality: null } }
+const accepted = { ...pending, id: 40, status: 'ACEPTADA', company: { name: 'Aceros del Norte', municipality: null, contact_email: null } }
 const detail = {
   ...pending,
   message: 'Nos interesa su perfil.',
@@ -294,6 +294,18 @@ describe('respuesta institucional HU-S6-02', () => {
     // HU-S13-06: la conversación vive en su vista; el detalle la ofrece en cualquier estado y no la carga.
     expect(screen.getByRole('link', { name: 'Abrir conversación' })).toHaveAttribute('href', '/institution/linkage-requests/41/chat')
     expect(fetchMock.mock.calls.map(([path]) => path)).not.toContain('/api/institution/linkage-requests/41/messages')
+  })
+
+  it('ofrece el correo de la empresa junto a la conversación, y no lo muestra si la empresa no tiene correo (T-S18-02)', async () => {
+    apiMock.mockResolvedValueOnce(page([pending, accepted]))
+    renderApp()
+    const table = await screen.findByRole('table', { name: 'Solicitudes de vinculación recibidas' })
+    const trigger = within(within(table).getByRole('row', { name: /ManuGolfo/ })).getByRole('button', { name: 'Escribir a dual@manugolfo.mx' })
+    expect(trigger).toHaveAttribute('aria-haspopup', 'menu')
+    expect(trigger.closest('.cell-actions')).toContainElement(within(table).getByRole('link', { name: /^Abrir la conversación con ManuGolfo sobre / }))
+    fireEvent.click(trigger)
+    expect(await screen.findByRole('menuitem', { name: 'Copiar correo' })).toBeInTheDocument()
+    expect(within(within(table).getByRole('row', { name: /Aceros del Norte/ })).queryByRole('button', { name: /^Escribir a / })).not.toBeInTheDocument()
   })
 
   it('el ícono de la bandeja abre la conversación con regreso a la bandeja (HU-S13-06 CA-04)', async () => {

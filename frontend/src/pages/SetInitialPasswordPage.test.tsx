@@ -52,6 +52,19 @@ describe('configuración pública de contraseña inicial', () => {
     expect(screen.getByRole('region', { name: 'Establecer contraseña' }).textContent).not.toContain('token-de-un-solo-uso')
   })
 
+  it('permite mostrar la contraseña y su confirmación, como el inicio de sesión (T-S18-01)', () => {
+    renderApp()
+    fillForm()
+    for (const [label, toggle] of [['Contraseña', 'Mostrar contraseña'], ['Confirmar contraseña', 'Mostrar confirmar contraseña']]) {
+      const input = screen.getByLabelText(label)
+      expect(input).toHaveAttribute('type', 'password')
+      fireEvent.click(screen.getByRole('button', { name: toggle }))
+      expect(input).toHaveAttribute('type', 'text')
+      expect(input).toHaveValue(password)
+    }
+    expect(screen.getByLabelText('Contraseña')).toHaveAttribute('aria-describedby', 'password-requirements')
+  })
+
   it('retira el token al cargar bajo StrictMode y conserva las credenciales solo en memoria', async () => {
     setupRequest.mockResolvedValueOnce(new Response(null, { status: 204 }))
     render(<StrictMode><MemoryRouter initialEntries={[path]}><App /><Location /></MemoryRouter></StrictMode>)
