@@ -6,7 +6,8 @@ import { useAuth } from '../auth/useAuth'
 import { useApiMutation } from '../lib/useApiRequest'
 import type { FailureMessages } from '../lib/useApiRequest'
 import { PendingLabel } from '../ui/forms'
-import { EyeIcon, EyeOffIcon, LockIcon, PencilIcon } from '../ui/icons'
+import { PencilIcon } from '../ui/icons'
+import { PasswordField } from '../ui/PasswordField'
 import { NavBackLink } from '../ui/NavBackLink'
 import { Sheet } from '../ui/Sheet'
 import { useSnackbar } from '../ui/useSnackbar'
@@ -104,30 +105,6 @@ function IdentityCard({ user, notify }: { user: User; notify: (message: string) 
         <p className="account-email">{user.email}</p>
       </div>
     </section>
-  )
-}
-
-/** Campo de contraseña con mostrar u ocultar (el mismo de T-S8-04). */
-function PasswordField({ id, label, value, onChange, autoComplete, error, disabled, help }: {
-  id: string; label: string; value: string; onChange: (value: string) => void; autoComplete: string; error?: string; disabled: boolean; help?: string
-}) {
-  const [shown, setShown] = useState(false)
-  const describedBy = [help ? `${id}-help` : null, error ? `${id}-error` : null].filter(Boolean).join(' ') || undefined
-  return (
-    <>
-      <label htmlFor={id}>{label}</label>
-      {help && <p className="field-help" id={`${id}-help`}>{help}</p>}
-      <div className="input-with-icon has-action">
-        <LockIcon />
-        <input id={id} type={shown ? 'text' : 'password'} autoComplete={autoComplete} required value={value} disabled={disabled}
-          aria-invalid={Boolean(error)} aria-describedby={describedBy} onChange={(event) => onChange(event.target.value)} />
-        <button type="button" className="plain input-action" aria-label={`Mostrar ${label.toLowerCase()}`} aria-pressed={shown}
-          aria-controls={id} disabled={disabled} onClick={() => setShown((value) => !value)}>
-          {shown ? <EyeOffIcon /> : <EyeIcon />}
-        </button>
-      </div>
-      {error && <p className="field-error" id={`${id}-error`}>{error}</p>}
-    </>
   )
 }
 

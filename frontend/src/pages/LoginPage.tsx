@@ -4,14 +4,14 @@ import { Link, Navigate } from 'react-router'
 import { useAuth } from '../auth/useAuth'
 import { PendingLabel } from '../ui/forms'
 import { BrandLogo } from '../ui/BrandLogo'
-import { EyeIcon, EyeOffIcon, LockIcon, MailIcon } from '../ui/icons'
+import { MailIcon } from '../ui/icons'
+import { PasswordField } from '../ui/PasswordField'
 import { SimplifiedNotice } from '../legal/SimplifiedNotice'
 
 export function LoginPage() {
   const { user, signIn, pending, message } = useAuth()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
-  const [showPassword, setShowPassword] = useState(false)
 
   if (user) return <Navigate to="/" replace />
 
@@ -21,8 +21,8 @@ export function LoginPage() {
     try {
       await signIn(email.trim(), password)
     } finally {
+      // Vaciar el campo también lo vuelve a ocultar (PasswordField).
       setPassword('')
-      setShowPassword(false)
     }
   }
 
@@ -40,19 +40,8 @@ export function LoginPage() {
             required maxLength={254} value={email} disabled={pending}
             onChange={(event) => setEmail(event.target.value)} />
         </div>
-        <label htmlFor="password">Contraseña</label>
-        <div className="input-with-icon has-action">
-          <LockIcon />
-          <input id="password" name="password" type={showPassword ? 'text' : 'password'}
-            autoComplete="current-password" placeholder="Ingresa tu contraseña"
-            required value={password} disabled={pending}
-            onChange={(event) => setPassword(event.target.value)} />
-          <button type="button" className="plain input-action" aria-label="Mostrar contraseña"
-            aria-pressed={showPassword} aria-controls="password" disabled={pending}
-            onClick={() => setShowPassword((shown) => !shown)}>
-            {showPassword ? <EyeOffIcon /> : <EyeIcon />}
-          </button>
-        </div>
+        <PasswordField id="password" name="password" label="Contraseña" autoComplete="current-password"
+          placeholder="Ingresa tu contraseña" value={password} onChange={setPassword} disabled={pending} />
         <button type="submit" disabled={pending}>
           <PendingLabel pending={pending} label="Iniciar sesión" pendingLabel="Iniciando sesión…" />
         </button>

@@ -4,6 +4,7 @@ import { Link, useNavigate, useSearchParams } from 'react-router'
 import { accessErrorMessages, ApiError } from '../lib/http'
 import type { ValidationErrors } from '../lib/http'
 import { PendingLabel } from '../ui/forms'
+import { PasswordField } from '../ui/PasswordField'
 import { SimplifiedNotice } from '../legal/SimplifiedNotice'
 
 export interface NewPasswordInput {
@@ -123,18 +124,13 @@ export function NewPasswordForm({
         {message && <p className="notice" role="alert">{message}</p>}
         {message === invalidLinkMessage && <p>{invalidLinkHelp}</p>}
         <form onSubmit={(event) => { void submit(event) }} aria-busy={pending}>
-          <label htmlFor="initial-password">Contraseña</label>
-          <input id="initial-password" name="password" type="password" autoComplete="new-password" required
-            disabled={pending} value={password} aria-invalid={Boolean(errors.password?.length)}
-            aria-describedby={`password-requirements${errors.password?.length ? ' initial-password-error' : ''}`}
-            onChange={(event) => setPassword(event.target.value)} />
-          {errors.password?.length > 0 && <p className="field-error" id="initial-password-error">{errors.password.join(' ')}</p>}
-          <label htmlFor="password-confirmation">Confirmar contraseña</label>
-          <input id="password-confirmation" name="password_confirmation" type="password" autoComplete="new-password" required
-            disabled={pending} value={confirmation} aria-invalid={Boolean(errors.password_confirmation?.length)}
-            aria-describedby={errors.password_confirmation?.length ? 'password-confirmation-error' : undefined}
-            onChange={(event) => setConfirmation(event.target.value)} />
-          {errors.password_confirmation?.length > 0 && <p className="field-error" id="password-confirmation-error">{errors.password_confirmation.join(' ')}</p>}
+          {/* T-S18-01: el mismo campo con mostrar u ocultar del inicio de sesión y de Mi cuenta. */}
+          <PasswordField id="initial-password" name="password" label="Contraseña" autoComplete="new-password"
+            describedBy="password-requirements" value={password} onChange={setPassword} disabled={pending}
+            error={errors.password?.length ? errors.password : undefined} />
+          <PasswordField id="password-confirmation" name="password_confirmation" label="Confirmar contraseña"
+            autoComplete="new-password" value={confirmation} onChange={setConfirmation} disabled={pending}
+            error={errors.password_confirmation?.length ? errors.password_confirmation : undefined} />
           <button type="submit" disabled={pending}><PendingLabel pending={pending} label={submitLabel} pendingLabel={pendingLabel} /></button>
         </form>
       </>}
