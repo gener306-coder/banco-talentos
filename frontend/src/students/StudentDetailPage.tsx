@@ -109,7 +109,7 @@ function StudentDetailView({ id }: { id: string }) {
 
             <section className="student-section" aria-labelledby="student-profile-title">
               <h3 id="student-profile-title">Expediente público</h3>
-              <p>Es la información con la que las empresas podrán encontrar a este alumno en el Banco de Talentos, sin conocer su identidad.</p>
+              <p>Es la información con la que las empresas podrán encontrar a este alumno en el Banco de Talentos, sin conocer su identidad. Tras aceptar una vinculación, tu institución decide si comparte con esa empresa una ficha ampliada.</p>
               <StudentProfileForm student={data} onSaved={(student) => { setNotice(null); setStatusNotice(null); setData(student) }} />
             </section>
 

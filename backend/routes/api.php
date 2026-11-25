@@ -27,6 +27,7 @@ use App\Http\Controllers\SecretaryAccountController;
 use App\Http\Controllers\SkillController;
 use App\Http\Controllers\StudentController;
 use App\Http\Controllers\StudentCvController;
+use App\Http\Controllers\StudentDisclosureController;
 use App\Http\Controllers\StudentSocialSecurityController;
 use App\Http\Controllers\TalentController;
 use App\Http\Middleware\ThrottleApiRequests;
@@ -237,6 +238,8 @@ Route::middleware(['auth:sanctum', 'active', 'role:'.UserRole::COMPANY->value, '
         Route::patch('{linkageRequest}/cancel', [LinkageRequestController::class, 'cancel']);
         // T-S14-13: baja de una vinculación aceptada; libera el lugar de la oportunidad.
         Route::patch('{linkageRequest}/termination', [LinkageRequestController::class, 'terminate']);
+        // T-S19-05: ficha que la institución compartió; 404 si no está vigente o la vinculación no está aceptada.
+        Route::get('{linkageRequest}/disclosure', [StudentDisclosureController::class, 'show']);
         // Conversación de la solicitud aceptada con la institución (HU-S13-01).
         Route::get('{linkageRequest}/messages', [LinkageMessageController::class, 'index']);
         Route::post('{linkageRequest}/messages', [LinkageMessageController::class, 'store'])->middleware('throttle:linkage-messages');
@@ -261,6 +264,9 @@ Route::middleware(['auth:sanctum', 'active', 'role:'.UserRole::INSTITUTION->valu
         Route::patch('{linkageRequest}/decision', [InstitutionLinkageRequestController::class, 'decide']);
         // T-S14-13: baja de una vinculación aceptada de su alumno.
         Route::patch('{linkageRequest}/termination', [InstitutionLinkageRequestController::class, 'terminate']);
+        // T-S19-05: compartir la ficha con la empresa tras aceptar y dejar de compartirla (sin DELETE).
+        Route::post('{linkageRequest}/disclosure', [StudentDisclosureController::class, 'store'])->middleware('throttle:linkage-disclosure');
+        Route::patch('{linkageRequest}/disclosure/revoke', [StudentDisclosureController::class, 'revoke'])->middleware('throttle:linkage-disclosure');
         // Conversación de la solicitud aceptada con la empresa (HU-S13-01).
         Route::get('{linkageRequest}/messages', [LinkageMessageController::class, 'index']);
         Route::post('{linkageRequest}/messages', [LinkageMessageController::class, 'store'])->middleware('throttle:linkage-messages');

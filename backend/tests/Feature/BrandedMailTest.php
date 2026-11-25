@@ -8,6 +8,7 @@ use App\Notifications\LinkageMessageReceived;
 use App\Notifications\PasswordChanged;
 use App\Notifications\ResetInstitutionPassword;
 use App\Notifications\SetInitialPassword;
+use App\Notifications\StudentProfileShared;
 use Illuminate\Mail\Markdown;
 use Illuminate\Notifications\Notification;
 use Illuminate\Support\Facades\File;
@@ -28,6 +29,7 @@ function brandedMailSamples(): array
         'confirmar correo nuevo' => fn () => new ConfirmAccessEmail('https://piloto.example.test/confirm-email?token=x', 'Ana López', change: true),
         'verificar correo' => fn () => new ConfirmAccessEmail('https://piloto.example.test/confirm-email?token=x', 'Ana López', change: false),
         'aviso de cambio de correo' => fn () => new AccessEmailChangeRequested('ana.nueva@example.test'),
+        'ficha compartida' => fn () => new StudentProfileShared('UT del Golfo', 'Tableros de producción', 'https://piloto.example.test/linkage-requests/1'),
         'mensaje de vinculación' => fn () => new LinkageMessageReceived('ManuGolfo', 'Tableros de producción', 'https://piloto.example.test/linkage-requests/1/chat'),
     ];
 }
@@ -97,7 +99,7 @@ describe('mail:preview', function () {
         $files = collect(File::files(storage_path('app/mail-previews')))->map->getFilename()->sort()->values()->all();
         expect($files)->toBe([
             'aviso-cambio-de-correo.html', 'confirmar-correo-nuevo.html', 'contrasena-cambiada.html', 'contrasena-inicial.html',
-            'correo-de-acceso-anterior.html', 'correo-de-acceso-nuevo.html', 'mensaje-de-vinculacion.html',
+            'correo-de-acceso-anterior.html', 'correo-de-acceso-nuevo.html', 'ficha-compartida.html', 'mensaje-de-vinculacion.html',
             'restablecimiento-administracion.html', 'restablecimiento-olvide.html', 'verificar-correo.html',
         ]);
         expect(File::get(storage_path('app/mail-previews/contrasena-inicial.html')))->toContain('Establecer contraseña');
@@ -115,6 +117,7 @@ describe('mail:preview', function () {
         Notifications::assertSentTimes(LinkageMessageReceived::class, 1);
         Notifications::assertSentTimes(ConfirmAccessEmail::class, 2);
         Notifications::assertSentTimes(AccessEmailChangeRequested::class, 1);
+        Notifications::assertSentTimes(StudentProfileShared::class, 1);
     });
 
     it('rejects an invalid address without sending anything', function () {

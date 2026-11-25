@@ -30,6 +30,9 @@ enum AuditEventType: string
     case EMAIL_CHANGED = 'email_changed';
     case ACCOUNT_STATUS_CHANGED = 'account_status_changed';
     case INSTITUTION_INVITED = 'institution_invited';
+    // student_disclosures.disclosed_by y revoked_by (T-S19-05)
+    case STUDENT_DISCLOSED = 'student_disclosed';
+    case STUDENT_DISCLOSURE_REVOKED = 'student_disclosure_revoked';
 
     public static function values(): array
     {

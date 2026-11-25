@@ -486,7 +486,7 @@ describe('respuesta institucional HU-S6-02', () => {
         termination: status === 'BAJA' ? { at: '2026-11-02T10:00:00Z', party: 'COMPANY', reason: 'El alumno no se presentó.', by: null } : null } }))
       const linked = renderApp('/institution/linkage-requests/41')
       const student = await screen.findByRole('region', { name: 'Alumno solicitado' })
-      expect(student).toHaveTextContent('comparte por la conversación solo los datos necesarios y con el consentimiento del alumno')
+      expect(student).toHaveTextContent('Con su consentimiento, puedes compartirle una ficha ampliada desde esta página o los datos necesarios por la conversación.')
       expect(student).not.toHaveTextContent('la empresa no la conoce')
       linked.unmount()
     }

@@ -1,3 +1,5 @@
+import { parseDisclosureView } from './disclosureApi'
+import type { DisclosureView } from './disclosureApi'
 import { ApiError, request, requestBlob } from '../lib/http'
 import type { FailureMessages } from '../lib/useApiRequest'
 import { isPeriodType, isStateCode } from '../students/catalogs'
@@ -96,6 +98,8 @@ export interface ReceivedLinkageDetail extends ReceivedLinkage {
   termination: LinkageTermination | null
   /** T-S14-12: otras vinculaciones aceptadas del mismo alumno. */
   student_accepted_elsewhere: { id: number; company: string; opportunity: string; responded_at: string | null }[]
+  /** T-S19-05: ficha compartida vigente con la empresa, o null. */
+  disclosure: DisclosureView | null
 }
 
 const STATUSES: readonly LinkageStatus[] = LINKAGE_STATUSES.map((item) => item.value)
@@ -152,7 +156,8 @@ function detail(data: unknown): ReceivedLinkageDetail {
     ? (data.student_accepted_elsewhere as { id: number; company: string; opportunity: string; responded_at: string | null }[])
       .map((other) => ({ id: other.id, company: other.company, opportunity: other.opportunity, responded_at: other.responded_at }))
     : null
-  if (termination === undefined || elsewhere === null ||
+  const disclosure = isObject(data) ? parseDisclosureView(data.disclosure) : undefined
+  if (termination === undefined || elsewhere === null || disclosure === undefined ||
       !isObject(data) || !isOptionalText(data.message) || !isOptionalText(data.responded_at) || !isOptionalText(data.response_message) ||
       (data.responded_by !== null && (!isObject(data.responded_by) || !isText(data.responded_by.name)))) return invalid()
   const { company, opportunity, student: person } = data
@@ -194,6 +199,7 @@ function detail(data: unknown): ReceivedLinkageDetail {
     responded_by: isObject(data.responded_by) ? { name: data.responded_by.name as string } : null,
     termination,
     student_accepted_elsewhere: elsewhere,
+    disclosure,
   }
 }
 

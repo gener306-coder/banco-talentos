@@ -55,11 +55,11 @@ export function termsDocument(config: LegalConfig = legalConfig): LegalDocument 
             <ul>
               <li>Antes de registrar a un alumno, obtienen su consentimiento o, si es menor de edad, el de su madre, padre o tutor, y lo informan de este tratamiento.</li>
               <li>Mantienen exacto el expediente del alumno.</li>
-              <li>Al aceptar una vinculación, comparten con la empresa solo los datos estrictamente necesarios para coordinarla.</li>
+              <li>Al aceptar una vinculación, comparten con la empresa solo los datos estrictamente necesarios para coordinarla. Si comparten la ficha ampliada del alumno, cuentan antes con su consentimiento o el de su tutor, y la dejan de compartir cuando ya no haga falta.</li>
             </ul>
             <h4>Empresas</h4>
             <ul>
-              <li>Tratan como confidencial todo lo que conocen de los alumnos y lo usan solo para la vinculación de que se trate.</li>
+              <li>Tratan como confidencial todo lo que conocen de los alumnos, incluida la ficha que una institución les comparta, y lo usan solo para evaluar y coordinar la vinculación de que se trate.</li>
               <li>No intentan identificar a un alumno a partir de su perfil disociado ni cruzar sus datos con otras fuentes.</li>
               <li>No extraen datos de forma masiva o automatizada (scraping) ni los copian a otros sistemas.</li>
               <li>Publican solo oportunidades reales del modelo dual.</li>

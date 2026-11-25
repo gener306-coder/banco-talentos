@@ -1,3 +1,4 @@
+import { disclosureFieldLabels } from '../linkage/disclosureApi'
 import { TableHead, TableSkeleton } from '../ui/TableSkeleton'
 import type { TableColumn } from '../ui/TableSkeleton'
 import { useCallback } from 'react'
@@ -41,6 +42,10 @@ function describe(event: AuditEvent): ReactNode {
       return `Solicitud #${event.resource.id} de ${event.resource.company} a ${event.resource.institution}`
     case 'linkage_responded':
       return `Solicitud #${event.resource.id} de ${event.resource.company} a ${event.resource.institution}: ${event.resource.status === 'ACEPTADA' ? 'aceptada' : 'rechazada'}`
+    case 'student_disclosed':
+      return `Solicitud #${event.resource.id} de ${event.resource.company} a ${event.resource.institution}: ${event.resource.fields.map((field) => disclosureFieldLabels[field]).join(', ')}`
+    case 'student_disclosure_revoked':
+      return `Solicitud #${event.resource.id} de ${event.resource.company} a ${event.resource.institution}${event.resource.reason === 'termination' ? ' (por la baja de la vinculación)' : ''}`
     case 'company_invited':
     case 'institution_invited':
     case 'password_changed':

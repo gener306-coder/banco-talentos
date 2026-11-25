@@ -10,6 +10,7 @@ use App\Notifications\LinkageMessageReceived;
 use App\Notifications\PasswordChanged;
 use App\Notifications\ResetInstitutionPassword;
 use App\Notifications\SetInitialPassword;
+use App\Notifications\StudentProfileShared;
 use Illuminate\Console\Command;
 use Illuminate\Notifications\Notification;
 use Illuminate\Support\Facades\File;
@@ -82,6 +83,7 @@ class PreviewMail extends Command
             'confirmar-correo-nuevo' => new ConfirmAccessEmail($app.'/confirm-email?token=ejemplo-de-un-solo-uso', 'Ana López', change: true),
             'verificar-correo' => new ConfirmAccessEmail($app.'/confirm-email?token=ejemplo-de-un-solo-uso', 'Ana López', change: false),
             'aviso-cambio-de-correo' => new AccessEmailChangeRequested('ana.nueva@example.test'),
+            'ficha-compartida' => new StudentProfileShared('UT del Golfo', 'Tableros de producción', $app.'/linkage-requests/41'),
             'mensaje-de-vinculacion' => new LinkageMessageReceived('ManuGolfo', 'Tableros de producción', $app.'/linkage-requests/41/chat'),
         ];
     }

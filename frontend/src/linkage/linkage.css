@@ -259,3 +259,16 @@ tr.has-unread > :first-child .linkage-meta { font-weight: 400; }
 /* T-S14-13: baja de la vinculación. */
 .linkage-termination-form textarea { width: 100%; resize: vertical; }
 }
+
+/* T-S19-06: ficha compartida con la empresa. Etiqueta neutra (privada) o verde (compartida) y la ficha que ve la empresa. */
+@layer components {
+.disclosure-badge { display: inline-block; margin-right: 0.4rem; padding: 0.15rem 0.6rem; border-radius: 999px; font-size: var(--type-xs); font-weight: 700; white-space: nowrap; }
+.disclosure-badge.private { color: var(--status-off-text); background: var(--status-off-surface); }
+.disclosure-badge.shared { color: var(--success-text); background: var(--success-surface); }
+.disclosure-consent { display: flex; align-items: flex-start; gap: 0.55rem; margin: 0.4rem 0 0.6rem; }
+.disclosure-consent input { margin-top: 0.2rem; }
+.disclosure-consent label { font-weight: 400; }
+.shared-profile { border: 1px solid var(--border); border-radius: 0.75rem; padding: 0.9rem 1rem; }
+.shared-profile ul { margin: 0; padding-left: 1.1rem; }
+.shared-profile .shared-profile-footer { margin: 0.6rem 0 0; color: var(--text-muted); font-size: var(--type-xs); }
+}

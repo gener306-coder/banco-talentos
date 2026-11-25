@@ -59,7 +59,7 @@ export function CvLinksSection({ studentId, cv, onSaved }: { studentId: number; 
   return (
     <section className="student-section cv-section protected-section" aria-labelledby="cv-links-title">
       <h3 id="cv-links-title">Enlaces externos <ProtectedBadge /></h3>
-      <ProtectedNote>GitHub, LinkedIn o un portafolio revelan el nombre y la foto del alumno. Esta información no es visible en la búsqueda general de empresas; solo se compartirá cuando exista un contacto autorizado.</ProtectedNote>
+      <ProtectedNote>GitHub, LinkedIn o un portafolio revelan el nombre y la foto del alumno. No es visible en la búsqueda de empresas; solo la verá la empresa de una vinculación aceptada si tu institución decide compartirle la ficha, con el consentimiento del alumno.</ProtectedNote>
       <form onSubmit={(event) => { void submit(event) }} aria-busy={mutation.pending} noValidate>
         {mutation.failure && mutation.failure.status !== 422 && <InstitutionRequestError failure={mutation.failure} />}
         {rows.length === 0 && <p className="notice-muted">Aún no hay enlaces.</p>}

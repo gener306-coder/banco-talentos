@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Concerns;
 use App\Enums\LinkageParty;
 use App\Enums\LinkageRequestStatus;
 use App\Models\LinkageRequest;
+use App\Models\StudentDisclosure;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
@@ -31,6 +32,8 @@ trait TerminatesLinkage
             $linkage->terminated_party = $party;
             $linkage->termination_reason = $reason;
             $linkage->save();
+            // D4: la baja deja de compartir la ficha en la misma transacción.
+            $linkage->disclosures()->active()->lockForUpdate()->first()?->revoke($user, StudentDisclosure::REVOKED_BY_TERMINATION);
 
             return $linkage;
         });

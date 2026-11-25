@@ -289,6 +289,8 @@ describe('detalle (CA-02, CA-05)', function () {
             'response_message' => null,
             'responded_by' => null,
             'termination' => null,
+            // T-S19-05: sin ficha compartida.
+            'disclosure' => null,
             'student_accepted_elsewhere' => [],
         ]);
     });

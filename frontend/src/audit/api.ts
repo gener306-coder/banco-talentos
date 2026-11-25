@@ -1,3 +1,5 @@
+import { DISCLOSURE_FIELDS } from '../linkage/disclosureApi'
+import type { DisclosureField } from '../linkage/disclosureApi'
 import { roleLabels } from '../auth/api'
 import type { Role } from '../auth/api'
 import { LINKAGE_STATUSES } from '../linkage/api'
@@ -27,6 +29,9 @@ export const AUDIT_EVENT_TYPES = [
   { value: 'admin_bootstrapped', label: 'Primer Administrador creado' },
   { value: 'password_reset_issued', label: 'Restablecimiento de contraseña emitido' },
   { value: 'email_changed', label: 'Correo de acceso cambiado' },
+  // T-S19-05: ficha del alumno compartida con la empresa y cuándo dejó de compartirse.
+  { value: 'student_disclosed', label: 'Ficha compartida con la empresa' },
+  { value: 'student_disclosure_revoked', label: 'Ficha dejó de compartirse' },
 ] as const
 
 /** Etiqueta legible de un campo que cambió; uno desconocido no expone su nombre técnico. */
@@ -49,6 +54,8 @@ export const auditEventLabel = (type: AuditEventType) => AUDIT_EVENT_TYPES.find(
 /** D3 (Sprint 16): null cuando el evento viene de la consola del servidor. */
 type Actor = { id: number; name: string; role: Role } | null
 interface LinkageResource { id: number; status: LinkageStatus; institution: string; company: string }
+/** T-S19-05: la solicitud, los grupos compartidos y, al dejar de compartir, si fue la institución o la baja. Nunca el alumno. */
+export interface DisclosureResource extends LinkageResource { fields: DisclosureField[]; reason: 'institution' | 'termination' | null }
 export type ChangeSubject = 'user' | 'company' | 'institution'
 /** Eventos de account_audit_events: el sujeto afectado y los campos que cambiaron. */
 export type ChangeEventType = 'company_invited' | 'institution_invited' | 'organization_profile_updated' | 'account_updated' | 'password_changed'
@@ -62,6 +69,7 @@ export type AuditEvent = { occurred_at: string; actor: Actor } & (
   | { type: 'company_registered'; resource: { id: number; name: string } }
   | { type: 'opportunity_created'; resource: { id: number; title: string } }
   | { type: 'linkage_requested' | 'linkage_responded'; resource: LinkageResource }
+  | { type: 'student_disclosed' | 'student_disclosure_revoked'; resource: DisclosureResource }
   | { type: ChangeEventType; resource: ChangeResource }
 )
 
@@ -106,6 +114,17 @@ function event(value: unknown): AuditEvent {
     case 'linkage_responded':
       if (!isStatus(resource.status) || !isString(resource.institution) || !isString(resource.company)) break
       return { ...base, type: value.type, resource: { id, status: resource.status, institution: resource.institution, company: resource.company } }
+    case 'student_disclosed':
+    case 'student_disclosure_revoked': {
+      const reason = resource.reason ?? null
+      if (!isStatus(resource.status) || !isString(resource.institution) || !isString(resource.company) || !Array.isArray(resource.fields) ||
+          !resource.fields.every((field) => (DISCLOSURE_FIELDS as readonly unknown[]).includes(field)) ||
+          (reason !== null && reason !== 'institution' && reason !== 'termination')) break
+      return {
+        ...base, type: value.type,
+        resource: { id, status: resource.status, institution: resource.institution, company: resource.company, fields: resource.fields as DisclosureField[], reason },
+      }
+    }
     case 'company_invited':
     case 'institution_invited':
     case 'organization_profile_updated':

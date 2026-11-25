@@ -55,7 +55,7 @@ function TalentProfile({ publicId }: { publicId: string }) {
         : data && (
           <div className="content-enter">
             <h2 id="talent-profile-title">{data.headline ?? 'Perfil sin titular'}</h2>
-            <p className="privacy-note">Perfil anónimo: la identidad del alumno y sus datos de contacto los resguarda su institución.</p>
+            <p className="privacy-note">Perfil anónimo: la identidad del alumno la resguarda su institución, que puede compartirte una ficha ampliada si acepta tu solicitud.</p>
             {sent.data && sent.data.items.length > 0 && (
               <Callout tone="info" label="Solicitudes enviadas para este perfil"
                 action={<Link className="pill-link" to="/linkage-requests">Ver tus solicitudes<ChevronRightIcon /></Link>}>

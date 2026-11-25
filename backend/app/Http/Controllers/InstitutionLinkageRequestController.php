@@ -242,6 +242,9 @@ class InstitutionLinkageRequestController extends Controller
             'responded_by' => $linkage->responder === null ? null : ['name' => $linkage->responder->name],
             // T-S14-13: la baja, con la cuenta solo si la registró la institución.
             'termination' => $linkage->terminationFor(LinkageParty::INSTITUTION),
+            // T-S19-05: ficha compartida vigente con la empresa (grupos, fecha y quién), o null.
+            'disclosure' => ($disclosure = $linkage->disclosures()->active()->with('discloser:id,name')->first()) === null
+                ? null : StudentDisclosureController::institutionView($disclosure),
             // T-S14-12: otras vinculaciones aceptadas del mismo alumno, para decidir con ese contexto. Su institución
             // ya las ve en su bandeja; solo la empresa, la oportunidad y la fecha de la respuesta.
             'student_accepted_elsewhere' => LinkageRequest::query()
