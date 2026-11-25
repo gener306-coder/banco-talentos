@@ -76,7 +76,24 @@ Auditoría de solo lectura de `main`:
 
 ### T-S20-03 — B2: visión general, stack, ADRs, roles y metodología
 
-**Estado:** pendiente.
+**Estado:** en revisión.
+
+**Alcance:**
+- **Cap. 01:** visión y alcance (D02); stack con versiones declaradas y resueltas de los lockfiles; arquitectura y módulos (D03); 6 ADRs con contexto, decisión, alternativas y consecuencias, registrados de forma retrospectiva con su fecha original.
+- **Cap. 02:**
+  - roles, quién crea cada cuenta y casos de uso (D01);
+  - ciclo de vida de la vinculación (D08);
+  - matriz de permisos derivada ruta por ruta de `routes/api.php` y `routes/web.php`;
+  - metodología (D15).
+
+**Verificación:**
+- Cada afirmación se contrastó con el archivo citado en «Fuentes en el repositorio».
+- Correcciones hechas durante la redacción:
+  - el `CHECK users_role_organization` no exige `institution_id`: lo exige el middleware;
+  - la regla `NoContactInformation` también cubre habilidades y certificaciones.
+- Los 18 bloques Mermaid son idénticos a los aprobados en T-S20-02.
+- `sh scripts/docs-pdf.sh diagramas` sigue en 18 de 18.
+- Los enlaces relativos de `docs/tecnica/` resuelven todos.
 
 ### T-S20-04 — B3: modelo de datos, almacenamiento S3 y ficha compartida
 
