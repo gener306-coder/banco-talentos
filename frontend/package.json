@@ -1,6 +1,7 @@
 {
   "name": "banco-talentos-frontend",
   "private": true,
+  "license": "UNLICENSED",
   "version": "0.0.0",
   "type": "module",
   "engines": {
