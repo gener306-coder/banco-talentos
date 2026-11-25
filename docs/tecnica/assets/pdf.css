@@ -1,0 +1,274 @@
+/*
+ * T-S20-07: maquetación del PDF formal de la documentación técnica (Paged.js en Chromium, tamaño Carta).
+ * Paleta oficial (docs/design/identidad-visual.md): vino #991B30 en títulos y acentos, grafito #57565B en el texto y
+ * dorado #B99058 solo decorativo (filetes y bordes), nunca en texto.
+ */
+
+:root {
+  --vino: #991B30;
+  --grafito: #57565B;
+  --dorado: #B99058;
+  --tinta: #2E2D31;
+  --tenue: #F6F4F1;
+  --linea: #D9D6D2;
+  --texto: "Noto Sans", "DejaVu Sans", sans-serif;
+  --mono: "Noto Sans Mono", "DejaVu Sans Mono", "Liberation Mono", monospace;
+}
+
+/* ---------- Páginas ---------- */
+
+@page {
+  size: letter;
+  margin: 0.95in 0.85in 0.85in 0.85in;
+
+  /* El texto variable va a la izquierda y el fijo a la derecha: Paged.js reparte el ancho según el contenido conocido
+     al componer, y una caja variable a la derecha quedaría en 0. */
+  @top-left {
+    content: string(capitulo);
+    font: 600 7.5pt var(--texto);
+    color: var(--vino);
+    vertical-align: bottom;
+    padding-bottom: 6pt;
+  }
+  @top-right {
+    content: "Banco de Talentos · Documentación técnica";
+    font: 7.5pt var(--texto);
+    color: var(--grafito);
+    vertical-align: bottom;
+    padding-bottom: 6pt;
+  }
+  @bottom-left {
+    content: string(parte);
+    font: 7.5pt var(--texto);
+    color: var(--grafito);
+    vertical-align: top;
+    padding-top: 6pt;
+  }
+  @bottom-right {
+    content: "Página " counter(page) " de " counter(pages);
+    font: 7.5pt var(--texto);
+    color: var(--grafito);
+    vertical-align: top;
+    padding-top: 6pt;
+  }
+}
+
+/* Filete dorado continuo bajo el encabezado, salvo en la portada. */
+.pagedjs_page:not(.pagedjs_portada_page) .pagedjs_margin-top { border-bottom: 0.6pt solid var(--dorado); }
+
+/* Diagramas de secuencia anchos (D06, D07, D09 y D10): página horizontal propia. */
+@page horizontal {
+  size: letter landscape;
+  margin: 0.8in 0.75in 0.7in 0.75in;
+}
+
+@page portada {
+  margin: 0;
+  @top-left { content: none; }
+  @top-right { content: none; }
+  @bottom-left { content: none; }
+  @bottom-right { content: none; }
+}
+
+@page apertura {
+  @top-left { content: none; }
+}
+
+@page preliminar {
+  @top-left { content: none; }
+  @bottom-left { content: none; }
+}
+
+/* ---------- Base ---------- */
+
+html { font-family: var(--texto); font-size: 9.6pt; line-height: 1.45; color: var(--tinta); }
+body { margin: 0; }
+p, li { orphans: 3; widows: 3; hyphens: auto; }
+p { margin: 0 0 6pt; }
+ul, ol { margin: 0 0 6pt; padding-left: 16pt; }
+li { margin: 1.5pt 0; }
+li > ul, li > ol { margin-top: 2pt; margin-bottom: 2pt; }
+strong { color: #1F1E21; }
+a { color: var(--vino); text-decoration: none; }
+a.externo::after { content: " ↗"; font-size: 7pt; }
+code {
+  font-family: var(--mono);
+  font-size: 8.2pt;
+  background: var(--tenue);
+  border-radius: 2pt;
+  padding: 0 2pt;
+  overflow-wrap: anywhere;
+}
+pre {
+  font-family: var(--mono);
+  font-size: 7.8pt;
+  line-height: 1.4;
+  background: var(--tenue);
+  border-left: 2pt solid var(--dorado);
+  padding: 6pt 8pt;
+  margin: 4pt 0 8pt;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  break-inside: avoid;
+}
+pre code { background: none; padding: 0; font-size: inherit; }
+blockquote { margin: 6pt 0; padding: 4pt 10pt; border-left: 2pt solid var(--dorado); color: var(--grafito); }
+.ruta { font-size: 7.5pt; color: var(--grafito); }
+
+/* ---------- Títulos ---------- */
+
+/* Una sola declaración por nombre: Paged.js conserva solo la última string-set de cada cadena. */
+h2.capitulo, h3.adr { string-set: capitulo content(text); }
+
+h1, h2, h3, h4, h5 { color: var(--vino); line-height: 1.25; break-after: avoid; font-weight: 700; }
+
+h1.parte {
+  page: apertura;
+  break-before: page;
+  string-set: parte content(text);
+  font-size: 24pt;
+  margin: 1.6in 0 10pt;
+  padding-bottom: 8pt;
+  border-bottom: 1.5pt solid var(--dorado);
+}
+h1.parte::before { content: "PARTE " attr(data-numero); display: block; font-size: 11pt; color: var(--grafito); font-weight: 600; letter-spacing: 0.08em; margin-bottom: 4pt; }
+
+h2.capitulo {
+  break-before: page;
+  font-size: 16pt;
+  margin: 0 0 10pt;
+  padding-bottom: 5pt;
+  border-bottom: 0.8pt solid var(--dorado);
+}
+h2.capitulo::before, h3.adr::before { content: attr(data-numero); color: var(--grafito); font-weight: 600; margin-right: 7pt; }
+h3.adr { break-before: page; font-size: 13.5pt; margin: 0 0 8pt; padding-bottom: 4pt; border-bottom: 0.8pt solid var(--dorado); }
+
+h3 { font-size: 12pt; margin: 14pt 0 5pt; }
+h4 { font-size: 10.5pt; margin: 11pt 0 4pt; }
+h5, h6 { font-size: 9.8pt; margin: 9pt 0 3pt; color: var(--grafito); }
+
+/* ---------- Tablas ---------- */
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 4pt 0 10pt;
+  font-size: 7.9pt;
+  line-height: 1.35;
+}
+thead { display: table-header-group; }
+th {
+  text-align: left;
+  color: #fff;
+  background: var(--vino);
+  font-weight: 600;
+  padding: 3.5pt 5pt;
+  border: 0.5pt solid var(--vino);
+}
+td {
+  padding: 3pt 5pt;
+  border: 0.5pt solid var(--linea);
+  vertical-align: top;
+  overflow-wrap: break-word;
+}
+td code { overflow-wrap: break-word; }
+tr { break-inside: avoid; }
+tbody tr:nth-child(even) td { background: #FBFAF8; }
+td code, th code { font-size: 7.2pt; }
+th code { background: rgba(255, 255, 255, 0.18); color: #fff; }
+td ul, td ol { margin: 0; padding-left: 11pt; }
+
+/* ---------- Figuras ---------- */
+
+figure.diagrama {
+  margin: 8pt 0 12pt;
+  break-inside: avoid;
+  text-align: center;
+}
+figure.diagrama img {
+  display: block;
+  margin: 0 auto;
+  max-width: 100%;
+  max-height: 7.6in;
+  width: auto;
+  height: auto;
+}
+figcaption {
+  margin-top: 5pt;
+  font-size: 8pt;
+  color: var(--grafito);
+}
+figcaption strong { color: var(--vino); }
+
+section.horizontal { page: horizontal; break-before: page; break-after: page; }
+section.horizontal figure.diagrama { margin-top: 0; }
+section.horizontal figure.diagrama img { max-height: 6.25in; }
+
+/* ---------- Portada ---------- */
+
+section.portada {
+  page: portada;
+  height: 11in;
+  box-sizing: border-box;
+  padding: 0.9in 0.95in 0.8in;
+  display: flex;
+  flex-direction: column;
+  border-top: 14pt solid var(--vino);
+  position: relative;
+}
+section.portada::after {
+  content: "";
+  position: absolute;
+  left: 0.95in;
+  right: 0.95in;
+  bottom: 0.55in;
+  border-bottom: 1pt solid var(--dorado);
+}
+.portada .logos { display: flex; align-items: center; justify-content: space-between; gap: 0.5in; }
+.portada .logo-plataforma { height: 1.55in; }
+.portada .logo-secretaria { height: 0.62in; }
+.portada .bloque-titulo { margin-top: 1.5in; border-left: 3pt solid var(--dorado); padding-left: 16pt; }
+.portada .antetitulo { font-size: 11pt; letter-spacing: 0.14em; text-transform: uppercase; color: var(--grafito); margin: 0 0 6pt; }
+.portada h1 { font-size: 34pt; margin: 0; color: var(--vino); line-height: 1.1; }
+.portada .subtitulo { font-size: 17pt; margin: 8pt 0 0; color: var(--grafito); font-weight: 600; }
+.portada .descripcion { margin-top: 18pt; max-width: 5.6in; font-size: 10.5pt; color: var(--tinta); }
+.portada .ficha { margin-top: auto; font-size: 8.8pt; color: var(--grafito); border-collapse: collapse; width: auto; }
+.portada .ficha td { border: none; padding: 1.5pt 14pt 1.5pt 0; background: none !important; }
+.portada .ficha td:first-child { color: var(--vino); font-weight: 600; }
+
+/* ---------- Índices ---------- */
+
+section.indice { page: preliminar; break-before: page; }
+section.indice h2 {
+  font-size: 18pt;
+  margin: 0 0 12pt;
+  padding-bottom: 5pt;
+  border-bottom: 1pt solid var(--dorado);
+}
+.indice ol { list-style: none; padding: 0; margin: 0; }
+.indice li { margin: 0; }
+.indice a { color: var(--tinta); display: flex; align-items: baseline; }
+.indice a .texto { flex: 0 1 auto; }
+.indice a::after {
+  content: target-counter(attr(href), page);
+  flex: 0 0 auto;
+  margin-left: auto;
+  padding-left: 6pt;
+  color: var(--vino);
+  font-variant-numeric: tabular-nums;
+}
+.indice a .relleno { flex: 1 1 auto; border-bottom: 0.6pt dotted #B9B5B0; margin: 0 4pt 3pt; min-width: 12pt; }
+.indice .nivel-parte > a { font-weight: 700; color: var(--vino); font-size: 10.5pt; margin-top: 9pt; }
+.indice .nivel-capitulo > a { padding-left: 14pt; font-size: 9.3pt; margin-top: 2.5pt; }
+.indice .nivel-adr > a { padding-left: 30pt; font-size: 8.6pt; color: var(--grafito); margin-top: 1.5pt; }
+.indice .numero { color: var(--grafito); margin-right: 6pt; font-weight: 600; min-width: 22pt; display: inline-block; }
+.indice.figuras li a { font-size: 8.8pt; margin-top: 3pt; }
+.indice.figuras .numero { min-width: 34pt; color: var(--vino); }
+
+section.acerca { page: preliminar; break-before: page; }
+section.acerca h2 { font-size: 16pt; margin: 0 0 10pt; padding-bottom: 5pt; border-bottom: 1pt solid var(--dorado); }
+
+/* Saltos que deben ganar a las reglas generales: Paged.js aplica break-before en el orden de las reglas, no por
+   especificidad, así que van al final. */
+h3.adr.continuo { break-before: avoid; margin-top: 14pt; }
+section.acerca { break-after: page; }
