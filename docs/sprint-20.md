@@ -76,7 +76,7 @@ Auditoría de solo lectura de `main`:
 
 ### T-S20-03 — B2: visión general, stack, ADRs, roles y metodología
 
-**Estado:** en revisión.
+**Estado:** completada (aprobada el 25 de noviembre de 2026, commit `1660a69`).
 
 **Alcance:**
 - **Cap. 01:** visión y alcance (D02); stack con versiones declaradas y resueltas de los lockfiles; arquitectura y módulos (D03); 6 ADRs con contexto, decisión, alternativas y consecuencias, registrados de forma retrospectiva con su fecha original.
@@ -97,11 +97,44 @@ Auditoría de solo lectura de `main`:
 
 ### T-S20-04 — B3: modelo de datos, almacenamiento S3 y ficha compartida
 
-**Estado:** pendiente.
+**Estado:** en revisión.
+
+**Alcance:**
+- **Modelo de datos:**
+  - las 28 tablas por dominio, leídas migración por migración (las 9 de SQL crudo y los `ALTER TABLE` posteriores);
+  - convenciones: FK compuestas de pertenencia, `CHECK` relacionados, 3 índices únicos parciales, 3 triggers, PostGIS y búsqueda por trigramas;
+  - catálogos INEGI (2,478 municipios) y de habilidades (820);
+  - la bitácora como unión de columnas de autoría y eventos;
+  - la nota de `users_role_organization` (la base no exige `institution_id`; lo exige `institution.member`).
+- **Almacenamiento:** discos y prefijos, controles del bucket, URLs prefirmadas con caducidad por hora, comprobantes solo con sesión, certificados de Caddy y límites de subida.
+- **Ficha compartida:** lista blanca, reglas y dónde se cumplen, datos en vivo, flujo con D09, trazabilidad y pruebas.
+
+**Correcciones a lo aprobado en T-S20-02 y T-S20-03:**
+- D05a: `actor_kind` vale `user` o `cli`, no `console`.
+- D09 y ADR-006: el trigger de `student_disclosures` no es de solo inserción; solo admite revocar una vez, y rechaza el `DELETE` y cualquier otro cambio.
 
 ### T-S20-05 — B4: backend, API, colas y correos; frontend y CSP
 
-**Estado:** pendiente.
+**Estado:** Cap. 04 (backend) en revisión; Cap. 05 (frontend) pendiente. Según el plan aprobado, el Cap. 04 se adelantó a B3.
+
+**Alcance del Cap. 04:**
+- **Arquitectura Laravel** (D04): componentes y su cantidad, ciclo de una petición, límites con nombre y convenciones.
+- **Catálogo resumido de la API:** las 111 rutas (105 en `api.php` y 6 en `web.php`, ninguna `DELETE`) por recurso, con las convenciones del contrato y los tamaños de página.
+- **Colas y video** (D10):
+  - cola en PostgreSQL con `after_commit` y `retry_after`;
+  - los dos workers;
+  - parámetros exactos de FFmpeg, la cuota de 5 videos y el reproductor con respaldo WebM;
+  - el aviso de mensajes con su ventana de 5 minutos y de 6 horas.
+- **Correos** (D06, D07): las 8 notificaciones, su entrega inmediata o en cola, los enlaces de un solo uso y su vigencia, la verificación y el cambio del correo de acceso, y la plantilla con marca.
+
+**Verificación de B3:**
+- Cada afirmación se contrastó con el archivo citado. Correcciones hechas durante la redacción:
+  - el respaldo de WebM es `fallbackSrc` del reproductor;
+  - el reemplazo de un comprobante borra el archivo anterior;
+  - los 9 eventos de la bitácora incluyen `institution_invited`, que una migración agrega aparte.
+- No se citan conteos de pruebas: se obtienen al ejecutar las suites en T-S20-06.
+- Los bloques Mermaid coinciden con los aprobados, salvo las dos correcciones de arriba. `sh scripts/docs-pdf.sh diagramas` sigue en 18 de 18.
+- Los enlaces y las anclas internas de `docs/tecnica/` resuelven todos.
 
 ### T-S20-06 — B5: infraestructura, operación, seguridad, pruebas y entorno local
 

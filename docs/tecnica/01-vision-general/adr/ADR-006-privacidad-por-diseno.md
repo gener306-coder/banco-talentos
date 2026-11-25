@@ -43,7 +43,7 @@ Tras aceptar una vinculación, la institución puede compartir con esa empresa u
 - **Solo los grupos de la lista blanca** `StudentDisclosure::SHAREABLE` (`full_name`, `links` y `credentials`). Un `CHECK` de la base lo repite.
 - **Nunca** la matrícula, el seguro, `students.id`, `location` ni `verified_by`.
 - **Revocable.** La institución deja de compartirla cuando quiera, y la baja de la vinculación la revoca automáticamente.
-- **Registro de solo inserción.** Un trigger impide borrar o reescribir el historial de `student_disclosures`.
+- **Historial protegido.** Un trigger impide borrar filas de `student_disclosures` o cambiar lo que se compartió; la única actualización permitida es la revocación, una sola vez.
 
 El detalle y el diagrama D09 están en [Ficha compartida](../../03-datos/03-ficha-compartida.md).
 
