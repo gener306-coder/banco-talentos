@@ -5,3 +5,7 @@
 .DS_Store
 .idea/
 .vscode/
+
+# Documentación técnica: salidas generadas (PDF, SVG, PNG) y dependencias del script
+docs/tecnica/build/
+docs/tecnica/tools/node_modules/

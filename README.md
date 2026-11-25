@@ -4,7 +4,7 @@ Plataforma web que vincula instituciones educativas, empresas y la Secretaría d
 
 La visión completa del proyecto, su arquitectura, el modelo de datos y las diferencias con la propuesta original están en el [Documento General](docs/Banco_de_Talentos_Documento_General.md).
 
-Sprint vigente: [Sprint 19](docs/sprint-19.md), completo y desplegado junto con el Sprint 18. El piloto corre en AWS en https://piloto.ellukas.online (ver [Despliegue piloto en AWS](#despliegue-piloto-en-aws)). Historias construidas (cada una con su diseño técnico en `docs/HU-SN-0X.md`; las tareas técnicas `T-*`, dentro de cada Sprint):
+Sprint vigente: [Sprint 20](docs/sprint-20.md), documentación técnica en [`docs/tecnica/`](docs/tecnica/README.md); el Sprint 19 quedó completo y desplegado junto con el Sprint 18. El piloto corre en AWS en https://piloto.ellukas.online (ver [Despliegue piloto en AWS](#despliegue-piloto-en-aws)). Historias construidas (cada una con su diseño técnico en `docs/HU-SN-0X.md`; las tareas técnicas `T-*`, dentro de cada Sprint):
 
 | Sprint | Historias |
 |---|---|
@@ -27,6 +27,7 @@ Sprint vigente: [Sprint 19](docs/sprint-19.md), completo y desplegado junto con 
 | [17](docs/sprint-17.md) | Infraestructura y piloto en AWS (Packer, Terraform y GitHub Actions) |
 | [18](docs/sprint-18.md) | Afinaciones de interfaz y correos con marca |
 | [19](docs/sprint-19.md) | Correo de acceso verificado y ficha compartida con la empresa |
+| [20](docs/sprint-20.md) | Documentación técnica (`docs/tecnica/` y PDF formal), en curso |
 
 No hay registro público. Desde el Sprint 16, cada cuenta puede recuperar su contraseña por sí misma («Olvidé mi contraseña»).
 
