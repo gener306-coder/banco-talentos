@@ -25,6 +25,8 @@ const PUBLIC_API_ROUTES = [
     'api/institution-accounts/password-reset',
     // HU-S16-03: «Olvidé mi contraseña», con su límite por correo y por IP.
     'api/password/forgot',
+    // T-S19-03 y T-S19-04: confirmación del correo de acceso con enlace de un solo uso, con o sin sesión.
+    'api/account-email/confirm',
     'api/media/{path}',
 ];
 
@@ -59,6 +61,7 @@ it('las rutas públicas tienen su propia protección: límite de intentos o firm
         ->and($byUri['api/institution-accounts/password-setup']->gatherMiddleware())->toContain('throttle:password-setup')
         ->and($byUri['api/institution-accounts/password-reset']->gatherMiddleware())->toContain('throttle:password-reset')
         ->and($byUri['api/password/forgot']->gatherMiddleware())->toContain('throttle:password-forgot')
+        ->and($byUri['api/account-email/confirm']->gatherMiddleware())->toContain('throttle:email-confirm')
         ->and($byUri['api/media/{path}']->gatherMiddleware())->toContain('signed:relative');
 });
 
@@ -107,7 +110,7 @@ it('aplica el límite general a la API, salvo a los medios firmados (auditoría 
 
     // Las rutas de acceso viven en web.php con su propio límite estricto; todas las demás están en el grupo api.
     $outside = collect(apiRoutes())
-        ->reject(fn (LaravelRoute $route) => in_array($route->uri(), ['api/login', 'api/logout', 'api/institution-accounts/password-setup', 'api/institution-accounts/password-reset', 'api/password/forgot'], true))
+        ->reject(fn (LaravelRoute $route) => in_array($route->uri(), ['api/login', 'api/logout', 'api/institution-accounts/password-setup', 'api/institution-accounts/password-reset', 'api/password/forgot', 'api/account-email/confirm'], true))
         ->reject(fn (LaravelRoute $route) => in_array('api', $route->gatherMiddleware(), true))
         ->map(fn (LaravelRoute $route) => $route->uri())->values()->all();
     expect($outside)->toBe([]);

@@ -60,6 +60,10 @@ class AdminUpdateEmail extends Command
                 // Los enlaces pendientes están ligados al correo anterior: se invalidan antes del cambio.
                 $this->revokeAccess($admin);
                 $admin->email = $new;
+                // D9 (T-S19-04): sigue siendo inmediato para recuperar el acceso, pero el correo nuevo queda sin verificar
+                // y se descarta cualquier cambio pendiente desde Mi cuenta.
+                $admin->email_verified_at = null;
+                $admin->forgetEmailToken();
                 $admin->save();
                 AccountAuditEvent::recordFromConsole(AccountAuditEvent::EMAIL_CHANGED, $admin, ['email']);
 

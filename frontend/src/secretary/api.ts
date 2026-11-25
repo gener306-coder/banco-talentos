@@ -45,4 +45,6 @@ export function resendSecretaryAccountSetup(input: { email: string; delivery_met
 
 /** Estado y restablecimiento de contraseña de una cuenta SECRETARY (HU-S6-04 CA-01, CA-02). */
 export const secretaryAccountStatusPath = (id: number) => `/api/secretary-accounts/${id}/status`
+/** T-S19-02: corrección del correo de una cuenta pendiente de activar. */
+export const secretaryAccountEmailPath = (id: number) => `/api/secretary-accounts/${id}/email`
 export const SECRETARY_PASSWORD_RESET_PATH = '/api/secretary-accounts/password-reset/start'

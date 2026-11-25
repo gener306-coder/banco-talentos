@@ -120,3 +120,13 @@
   .profile-actions button { width: 100%; min-height: 2.75rem; }
 }
 }
+
+/* T-S19-03 y T-S19-04: correo de acceso con su etiqueta, cambio pendiente y aviso para verificarlo. */
+@layer components {
+.account-email-value { display: flex; flex-wrap: wrap; align-items: center; gap: 0.3rem 0.6rem; }
+.account-email-pending { margin: 0.2rem 0 0.9rem; padding: 0.9rem 1rem; border-radius: 0.75rem; background: var(--tint); }
+.account-email-pending.is-quiet { background: var(--surface-muted); }
+.account-email-pending h4 { margin: 0 0 0.3rem; color: var(--text-strong); font-size: var(--type-sm); }
+.account-email-pending p { margin: 0 0 0.6rem; font-size: var(--type-sm); }
+.account-email-pending .actions { margin: 0; }
+}

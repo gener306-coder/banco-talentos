@@ -8,9 +8,9 @@ use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
 
 /**
- * HU-S16-04: aviso de cambio del correo de acceso de un Administrador, hecho desde la consola del servidor. Se envía a la
- * dirección anterior (por si no fue la persona) y a la nueva (para confirmar que ya entra con ella). Nunca incluye
- * contraseñas ni enlaces.
+ * Aviso de cambio del correo de acceso: de un Administrador desde la consola (HU-S16-04) o de cualquier cuenta al confirmar
+ * el cambio desde Mi cuenta (T-S19-03). Se envía a la dirección anterior (por si no fue la persona) y a la nueva (para
+ * confirmar que ya entra con ella). Nunca incluye contraseñas ni enlaces.
  */
 class AccessEmailChanged extends Notification implements ShouldQueue
 {
@@ -32,7 +32,7 @@ class AccessEmailChanged extends Notification implements ShouldQueue
 
         return $this->toPreviousAddress
             ? $message
-                ->line('El correo de acceso de tu cuenta de Administración del Banco de Talentos se cambió a otra dirección. Las sesiones abiertas se cerraron.')
+                ->line('El correo de acceso de tu cuenta del Banco de Talentos se cambió a otra dirección. Las sesiones abiertas se cerraron.')
                 ->line('Si no lo pediste, comunícate de inmediato con el equipo de operación de la plataforma.')
             : $message
                 ->line('Desde ahora inicias sesión en el Banco de Talentos con esta dirección. Las sesiones abiertas se cerraron.')

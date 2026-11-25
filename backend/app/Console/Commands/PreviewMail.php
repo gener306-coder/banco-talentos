@@ -4,6 +4,8 @@ namespace App\Console\Commands;
 
 use App\Models\User;
 use App\Notifications\AccessEmailChanged;
+use App\Notifications\AccessEmailChangeRequested;
+use App\Notifications\ConfirmAccessEmail;
 use App\Notifications\LinkageMessageReceived;
 use App\Notifications\PasswordChanged;
 use App\Notifications\ResetInstitutionPassword;
@@ -77,6 +79,9 @@ class PreviewMail extends Command
             'contrasena-cambiada' => new PasswordChanged,
             'correo-de-acceso-nuevo' => new AccessEmailChanged(false),
             'correo-de-acceso-anterior' => new AccessEmailChanged(true),
+            'confirmar-correo-nuevo' => new ConfirmAccessEmail($app.'/confirm-email?token=ejemplo-de-un-solo-uso', 'Ana López', change: true),
+            'verificar-correo' => new ConfirmAccessEmail($app.'/confirm-email?token=ejemplo-de-un-solo-uso', 'Ana López', change: false),
+            'aviso-cambio-de-correo' => new AccessEmailChangeRequested('ana.nueva@example.test'),
             'mensaje-de-vinculacion' => new LinkageMessageReceived('ManuGolfo', 'Tableros de producción', $app.'/linkage-requests/41/chat'),
         ];
     }

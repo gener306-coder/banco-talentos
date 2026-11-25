@@ -6,6 +6,7 @@ use App\Models\User;
 use App\Notifications\SetInitialPassword;
 use App\Services\InitialPasswordLink;
 use Illuminate\Foundation\Testing\DatabaseMigrations;
+use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Notification;
@@ -49,18 +50,18 @@ it('keeps a committed account recoverable after mail failures during creation an
             ->assertCreated()->assertJsonPath('setup_delivery', 'pending')
             ->assertJsonMissingPath('setup_url')->assertJsonMissingPath('data.password');
         $user = User::findOrFail($created->json('data.id'));
-        $original = $user->getAttributes();
+        $original = Arr::except($user->getAttributes(), ['setup_delivery']);
         expect($user->password_setup_required)->toBeTrue();
         $this->assertDatabaseCount('institution_password_setup_tokens', 1);
 
         $this->travel(61)->seconds();
         $this->browserRequest('POST', '/api/institution-accounts/resend-setup', $payload)
             ->assertOk()->assertJsonPath('setup_delivery', 'pending')->assertJsonMissingPath('setup_url');
-        expect($user->fresh()->getAttributes())->toBe($original);
+        expect(Arr::except($user->fresh()->getAttributes(), ['setup_delivery']))->toBe($original);
         $this->travel(61)->seconds();
         $this->browserRequest('POST', '/api/institution-accounts/resend-setup', $payload)
             ->assertOk()->assertJsonPath('setup_delivery', 'sent')->assertJsonMissingPath('setup_url');
-        expect($user->fresh()->getAttributes())->toBe($original);
+        expect(Arr::except($user->fresh()->getAttributes(), ['setup_delivery']))->toBe($original);
         $this->assertDatabaseCount('users', 2);
         $this->assertDatabaseCount('institution_password_setup_tokens', 1);
 

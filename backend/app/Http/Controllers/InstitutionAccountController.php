@@ -3,8 +3,12 @@
 namespace App\Http\Controllers;
 
 use App\Enums\SetupDeliveryMethod;
+use App\Enums\UserRole;
+use App\Http\Controllers\Concerns\ManagesAccountAccess;
+use App\Http\Requests\CorrectPendingEmailRequest;
 use App\Http\Requests\StoreInstitutionAccountRequest;
 use App\Models\Institution;
+use App\Models\User;
 use App\Services\InitialPasswordLink;
 use App\Services\InstitutionAccounts;
 use Illuminate\Database\UniqueConstraintViolationException;
@@ -14,6 +18,34 @@ use Illuminate\Validation\ValidationException;
 
 class InstitutionAccountController extends Controller
 {
+    use ManagesAccountAccess;
+
+    /** T-S19-02: cuentas de la institución con su estado, para ver las pendientes y corregir su correo. */
+    public function index(Institution $institution): JsonResponse
+    {
+        $accounts = User::query()
+            ->where('role', UserRole::INSTITUTION)
+            ->where('institution_id', $institution->id)
+            ->orderBy('name')
+            ->orderBy('id')
+            ->get(['id', 'name', 'email', 'is_active', 'password_setup_required', 'email_verified_at', 'created_at']);
+
+        return response()->json(['data' => $accounts->map(fn (User $user): array => $user->setupAccountSummary())->values()])
+            ->header('Cache-Control', 'no-store, private');
+    }
+
+    /** T-S19-02: corrige el correo de una cuenta institucional pendiente y le reenvía el enlace; la institución debe estar activa. */
+    public function correctEmail(CorrectPendingEmailRequest $request, Institution $institution, string $account, InitialPasswordLink $links): JsonResponse
+    {
+        $accounts = User::query()->where('role', UserRole::INSTITUTION)->where('institution_id', $institution->id);
+
+        return $this->correctPendingEmail($request, $accounts, $account, $request->validated('email'), $links, function () use ($institution): void {
+            if (! Institution::query()->lockForUpdate()->find($institution->id)?->is_active) {
+                throw ValidationException::withMessages(['institution_id' => ['La institución no existe o no está activa.']]);
+            }
+        });
+    }
+
     public function store(StoreInstitutionAccountRequest $request, InitialPasswordLink $links, InstitutionAccounts $accounts): JsonResponse
     {
         $data = $request->validated();

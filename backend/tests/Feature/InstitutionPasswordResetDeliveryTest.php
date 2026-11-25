@@ -6,6 +6,7 @@ use App\Models\User;
 use App\Notifications\ResetInstitutionPassword;
 use App\Services\InstitutionPasswordResetLink;
 use Illuminate\Foundation\Testing\DatabaseMigrations;
+use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Notification;
@@ -42,14 +43,14 @@ it('sends the link only after the token is committed and keeps the reset recover
         return true;
     });
 
-    $original = $this->account->fresh()->getAttributes();
+    $original = Arr::except($this->account->fresh()->getAttributes(), ['setup_delivery']);
     $first = $this->browserRequest('POST', '/api/institution-accounts/password-reset/start', $this->payload)
         ->assertOk()->assertExactJson(['reset_delivery' => 'pending']);
     $this->travel(61)->seconds();
     $second = $this->browserRequest('POST', '/api/institution-accounts/password-reset/start', $this->payload)
         ->assertOk()->assertExactJson(['reset_delivery' => 'sent']);
 
-    expect($this->account->fresh()->getAttributes())->toBe($original);
+    expect(Arr::except($this->account->fresh()->getAttributes(), ['setup_delivery']))->toBe($original);
     $this->assertDatabaseCount('institution_password_reset_tokens', 1);
     foreach ($notifications as $index => $notification) {
         parse_str(parse_url($notification->resetUrl, PHP_URL_QUERY), $query);

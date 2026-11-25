@@ -72,6 +72,11 @@ class AppServiceProvider extends ServiceProvider
         );
         RateLimiter::for('account-password', fn (Request $request) => Limit::perMinute(5)->by('account-password:'.$request->user()->id)
         );
+        // T-S19-03 y T-S19-04: solicitudes y reenvíos del enlace de correo, por cuenta; cada envío además espera 60 s.
+        RateLimiter::for('account-email', fn (Request $request) => Limit::perMinute(10)->by('account-email:'.$request->user()->id)
+        );
+        RateLimiter::for('email-confirm', fn (Request $request) => Limit::perMinute(10)->by('email-confirm:'.$request->ip())
+        );
         // HU-S14-02: el perfil de la organización, por cuenta.
         RateLimiter::for('organization-profile', fn (Request $request) => Limit::perMinute(10)->by('organization-profile:'.$request->user()->id)
         );

@@ -34,6 +34,8 @@ beforeEach(() => {
     if (String(path).endsWith('/unread-summary')) return Response.json({ data: { conversations: 0, items: [] } })
     if (path === '/api/me') return Response.json({ user: { id: 1, name: 'Admin', email: 'admin@example.test', role } })
     if (path === '/api/institutions/7') return Response.json({ data: { ...institution, is_active: isActive } })
+    // T-S19-02: listado de cuentas del detalle; se responde aparte para no contar como petición del formulario.
+    if (path === '/api/institutions/7/accounts') return Response.json({ data: [] })
     if (path === '/sanctum/csrf-cookie') {
       document.cookie = 'XSRF-TOKEN=csrf; Path=/'
       return new Response(null, { status: 204 })

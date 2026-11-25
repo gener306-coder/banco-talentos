@@ -59,7 +59,7 @@ describe('invitación y listado (CA-01)', function () {
 
         $response = $this->browserRequest('GET', '/api/admin-accounts')->assertOk()->assertJsonPath('meta.total', 2);
         expect(collect($response->json('data'))->pluck('status')->sort()->values()->all())->toBe(['active', 'inactive'])
-            ->and(array_keys($response->json('data.0')))->toEqualCanonicalizing(['id', 'name', 'email', 'status', 'created_at'])
+            ->and(array_keys($response->json('data.0')))->toEqualCanonicalizing(['id', 'name', 'email', 'status', 'email_verified', 'created_at'])
             ->and($response->getContent())->not->toContain('secretaria@example.test');
     });
 

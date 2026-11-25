@@ -44,6 +44,10 @@ it('logs in each allowed role and restores its identity from the session cookie'
         'name' => $user->name,
         'email' => $user->email,
         'role' => $role,
+        // T-S19-01: estado del correo de acceso, sin el hash del enlace.
+        'email_verified' => false,
+        'pending_email' => null,
+        'email_link_sent_at' => null,
         'institution' => null,
         // HU-S4-03 CA-05: una cuenta COMPANY incluye su empresa vinculada.
         'company' => $user->company ? ['id' => $user->company->id, 'name' => $user->company->legal_name, 'missing' => [], 'onboarding' => 'done', 'can_operate' => true] : null,

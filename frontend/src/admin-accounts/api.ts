@@ -36,4 +36,6 @@ export function resendAdminAccountSetup(input: { email: string; delivery_method:
 
 /** Estado y restablecimiento de contraseña de una cuenta ADMIN. */
 export const adminAccountStatusPath = (id: number) => `/api/admin-accounts/${id}/status`
+/** T-S19-02: corrección del correo de una cuenta pendiente de activar. */
+export const adminAccountEmailPath = (id: number) => `/api/admin-accounts/${id}/email`
 export const ADMIN_PASSWORD_RESET_PATH = '/api/admin-accounts/password-reset/start'

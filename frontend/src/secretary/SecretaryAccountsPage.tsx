@@ -1,6 +1,6 @@
 import { RoleAccountsPage } from '../accounts/RoleAccountsPage'
 import type { RoleAccountsConfig } from '../accounts/RoleAccountsPage'
-import { listSecretaryAccounts, SECRETARY_PASSWORD_RESET_PATH, secretaryAccountStatusPath, secretaryMessages } from './api'
+import { listSecretaryAccounts, SECRETARY_PASSWORD_RESET_PATH, secretaryAccountStatusPath, secretaryAccountEmailPath, secretaryMessages } from './api'
 import { SecretaryAccountForm, SecretarySetupLinkForm } from './SecretaryAccountForms'
 
 /**
@@ -16,6 +16,7 @@ const config: RoleAccountsConfig = {
   messages: secretaryMessages,
   list: listSecretaryAccounts,
   statusPath: secretaryAccountStatusPath,
+  emailPath: secretaryAccountEmailPath,
   resetPath: SECRETARY_PASSWORD_RESET_PATH,
   createForm: (onCreated) => <SecretaryAccountForm onCreated={onCreated} />,
   resendForm: (initialEmail) => <SecretarySetupLinkForm initialEmail={initialEmail} />,

@@ -2,11 +2,14 @@
 
 namespace App\Http\Controllers\Concerns;
 
+use App\Enums\SetupDeliveryMethod;
 use App\Models\AccountAuditEvent;
 use App\Models\User;
+use App\Services\InitialPasswordLink;
 use App\Services\InstitutionPasswordResetLink;
 use Closure;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -81,5 +84,58 @@ trait ManagesAccountAccess
         return response()->json([
             'reset_delivery' => $links->deliverAfterCommit($account, $resetUrl, $initiator),
         ])->header('Cache-Control', 'no-store, private');
+    }
+
+    /**
+     * T-S19-02: corrige el correo de una cuenta pendiente de activar (un error de dedo al invitar) y le envía un enlace
+     * nuevo por correo. El enlace anterior estaba ligado al correo equivocado y se borra antes del cambio. A esa dirección
+     * no se le envía nada.
+     */
+    private function correctPendingEmail(Request $request, Builder $accounts, string $id, string $email, InitialPasswordLink $links, ?Closure $guard = null): JsonResponse
+    {
+        try {
+            [$account, $setupUrl] = $this->correctPendingEmailInTransaction($request, $accounts, $id, $email, $links, $guard);
+        } catch (UniqueConstraintViolationException) {
+            throw ValidationException::withMessages(['email' => ['El correo electrónico ya está registrado.']]);
+        }
+
+        return response()->json([
+            'data' => $account->setupAccountSummary(),
+            ...$links->deliver($account, $setupUrl, SetupDeliveryMethod::EMAIL, $request->user()->id),
+        ])->header('Cache-Control', 'no-store, private');
+    }
+
+    /** @return array{0: User, 1: string} */
+    private function correctPendingEmailInTransaction(Request $request, Builder $accounts, string $id, string $email, InitialPasswordLink $links, ?Closure $guard): array
+    {
+        return DB::transaction(function () use ($request, $accounts, $id, $email, $links, $guard): array {
+            $account = $accounts->lockForUpdate()->find((int) $id);
+            abort_if($account === null, 404, 'La cuenta no existe.');
+            $guard?->__invoke();
+
+            if (! $account->password_setup_required || ! $account->is_active) {
+                throw ValidationException::withMessages(['email' => ['Solo se corrige el correo de una cuenta activa pendiente de activar. Una cuenta activada cambia su correo desde Mi cuenta.']]);
+            }
+            if ($account->email === $email) {
+                throw ValidationException::withMessages(['email' => ['El correo nuevo es igual al actual.']]);
+            }
+            if (User::query()->where('email', $email)->exists()) {
+                throw ValidationException::withMessages(['email' => ['El correo electrónico ya está registrado.']]);
+            }
+
+            Password::broker('institution_setup')->getRepository()->delete($account);
+            // M3: una invitada sin nombre lleva su correo como nombre provisional; se corrige con él.
+            $fields = $account->name === $account->email ? ['email', 'name'] : ['email'];
+            if ($account->name === $account->email) {
+                $account->name = $email;
+            }
+            $account->email = $email;
+            $account->email_verified_at = null;
+            $account->forgetEmailToken();
+            $account->save();
+            AccountAuditEvent::record($request->user(), AccountAuditEvent::EMAIL_CHANGED, $account, $fields);
+
+            return [$account, $links->issue($account)];
+        });
     }
 }

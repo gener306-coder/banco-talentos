@@ -5,6 +5,7 @@ use App\Models\Company;
 use App\Models\Institution;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
@@ -27,13 +28,13 @@ beforeEach(function () {
 });
 
 it('renews only the pending link and lets its holder finish setup without changing account identity', function () {
-    $original = $this->pendingUser->fresh()->getAttributes();
+    $original = Arr::except($this->pendingUser->fresh()->getAttributes(), ['setup_delivery']);
     $response = $this->browserRequest('POST', '/api/institution-accounts/resend-setup', $this->resendPayload)
         ->assertOk()->assertJsonPath('setup_delivery', 'sent')->assertJsonMissingPath('password')->assertJsonMissingPath('setup_url');
     $query = sentSetupLinkQuery($this->pendingUser);
     expect($query['token'])->not->toBe($this->oldToken);
     expect($query['email'])->toBe($this->pendingUser->email);
-    expect($this->pendingUser->fresh()->getAttributes())->toBe($original);
+    expect(Arr::except($this->pendingUser->fresh()->getAttributes(), ['setup_delivery']))->toBe($original);
     expect(Password::broker('institution_setup')->tokenExists($this->pendingUser, $this->oldToken))->toBeFalse();
     expect(Password::broker('institution_setup')->tokenExists($this->pendingUser, $query['token']))->toBeTrue();
     $this->assertDatabaseCount('users', 2);
@@ -71,7 +72,7 @@ it('recovers pending accounts whose original token is expired or absent', functi
 })->with(['missing' => [true], 'expired' => [false]]);
 
 it('normalizes the lookup email and ignores forged recipient and password fields', function () {
-    $original = $this->pendingUser->fresh()->getAttributes();
+    $original = Arr::except($this->pendingUser->fresh()->getAttributes(), ['setup_delivery']);
     $response = $this->browserRequest('POST', '/api/institution-accounts/resend-setup', [
         ...$this->resendPayload,
         'email' => '  '.strtoupper($this->pendingUser->email).'  ',
@@ -83,15 +84,15 @@ it('normalizes the lookup email and ignores forged recipient and password fields
     $query = sentSetupLinkQuery($this->pendingUser);
     expect($query['email'])->toBe($this->pendingUser->email);
     expect($response->getContent())->not->toContain('attacker@example.test', 'AdministratorSecret!');
-    expect($this->pendingUser->fresh()->getAttributes())->toBe($original);
+    expect(Arr::except($this->pendingUser->fresh()->getAttributes(), ['setup_delivery']))->toBe($original);
 });
 
 it('rejects accounts outside pending active institutional setup', function (array|Closure $attributes, string $method) {
     $this->pendingUser->forceFill(value($attributes))->save();
-    $original = $this->pendingUser->fresh()->getAttributes();
+    $original = Arr::except($this->pendingUser->fresh()->getAttributes(), ['setup_delivery']);
     $this->browserRequest('POST', '/api/institution-accounts/resend-setup', [...$this->resendPayload, 'delivery_method' => $method])
         ->assertUnprocessable()->assertJsonValidationErrors('email')->assertJsonMissingPath('setup_url');
-    expect($this->pendingUser->fresh()->getAttributes())->toBe($original);
+    expect(Arr::except($this->pendingUser->fresh()->getAttributes(), ['setup_delivery']))->toBe($original);
     expect(Password::broker('institution_setup')->tokenExists($this->pendingUser, $this->oldToken))->toBeTrue();
 })->with([
     'already configured' => [['password_setup_required' => false]],
@@ -190,7 +191,7 @@ it('limits aggregate resend attempts by administrator', function () {
 it('renews the link for manual delivery without sending mail and invalidates the previous one (HU-S2-01 CA-03)', function (string $environment) {
     Notification::fake();
     Log::spy();
-    $original = $this->pendingUser->fresh()->getAttributes();
+    $original = Arr::except($this->pendingUser->fresh()->getAttributes(), ['setup_delivery']);
     $this->app->detectEnvironment(fn () => $environment);
 
     try {
@@ -206,7 +207,7 @@ it('renews the link for manual delivery without sending mail and invalidates the
         expect(Password::broker('institution_setup')->tokenExists($this->pendingUser, $this->oldToken))->toBeFalse();
         expect(Password::broker('institution_setup')->tokenExists($this->pendingUser, $query['token']))->toBeTrue();
         expect(Hash::check($query['token'], DB::table('institution_password_setup_tokens')->value('token')))->toBeTrue();
-        expect($this->pendingUser->fresh()->getAttributes())->toBe($original);
+        expect(Arr::except($this->pendingUser->fresh()->getAttributes(), ['setup_delivery']))->toBe($original);
 
         Notification::assertNothingSent();
         Log::shouldHaveReceived('notice')->once()->withArgs(fn (string $message, array $context): bool => $message === 'Enlace de configuración inicial generado para entrega manual.'

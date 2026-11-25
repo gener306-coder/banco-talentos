@@ -14,6 +14,8 @@ export interface SetupAccount {
   email: string
   /** Activa, pendiente de su primera contraseña o inactiva. */
   status: SetupAccountStatus
+  /** T-S19-01: correo probado; null si la respuesta no lo trae (no se muestra etiqueta). */
+  email_verified: boolean | null
   created_at: string
 }
 
@@ -39,8 +41,21 @@ export function setupAccount(data: unknown): SetupAccount {
       !('email' in data) || typeof data.email !== 'string' ||
       !('status' in data) || !isStatus(data.status) ||
       !('created_at' in data) || typeof data.created_at !== 'string') throw new ApiError(502)
+  const verified = 'email_verified' in data && typeof data.email_verified === 'boolean' ? data.email_verified : null
   // Solo se conservan los campos del contrato.
-  return { id: data.id, name: data.name, email: data.email, status: data.status, created_at: data.created_at }
+  return { id: data.id, name: data.name, email: data.email, status: data.status, email_verified: verified, created_at: data.created_at }
+}
+
+/**
+ * T-S19-02: corrige el correo de una cuenta pendiente de activar. El servidor invalida el enlace anterior y envía uno nuevo
+ * por correo; devuelve la cuenta actualizada y el resultado del envío.
+ */
+export async function correctPendingEmail(path: string, email: string): Promise<{ account: SetupAccount; delivery: 'sent' | 'pending' }> {
+  await request('/sanctum/csrf-cookie')
+  const response = await request(path, { method: 'PATCH', body: JSON.stringify({ email }) })
+  if (typeof response !== 'object' || response === null || !('data' in response) || !('setup_delivery' in response) ||
+      (response.setup_delivery !== 'sent' && response.setup_delivery !== 'pending')) throw new ApiError(502)
+  return { account: setupAccount(response.data), delivery: response.setup_delivery }
 }
 
 export async function createSetupAccount(path: string, input: SetupAccountInput): Promise<CreatedSetupAccount> {

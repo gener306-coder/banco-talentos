@@ -2,6 +2,7 @@
 
 use App\Enums\UserRole;
 use App\Http\Controllers\AccountController;
+use App\Http\Controllers\AccountEmailController;
 use App\Http\Controllers\AdminAccountController;
 use App\Http\Controllers\AuditEventController;
 use App\Http\Controllers\AuthController;
@@ -39,6 +40,13 @@ Route::get('/me', [AuthController::class, 'me'])
 Route::middleware(['auth:sanctum', 'active', 'role:'.implode(',', UserRole::values())])->group(function (): void {
     Route::patch('/me', [AccountController::class, 'update'])->middleware('throttle:account-update');
     Route::put('/me/password', [AccountController::class, 'password'])->middleware('throttle:account-password');
+    // T-S19-03 y T-S19-04: cambio y verificación del correo de acceso, con enlace de un solo uso (sin DELETE).
+    Route::middleware('throttle:account-email')->group(function (): void {
+        Route::post('/me/email', [AccountEmailController::class, 'request']);
+        Route::post('/me/email/resend', [AccountEmailController::class, 'resend']);
+        Route::post('/me/email/cancel', [AccountEmailController::class, 'cancel']);
+        Route::post('/me/email/verification', [AccountEmailController::class, 'verification']);
+    });
 });
 
 // Perfil de la organización (HU-S14-02): solo empresas e instituciones, siempre la de la sesión (sin ids).
@@ -83,6 +91,10 @@ Route::middleware(['auth:sanctum', 'active', 'role:'.UserRole::ADMIN->value])
         Route::get('/{institution}', [InstitutionController::class, 'show'])->name('show');
         Route::put('/{institution}', [InstitutionController::class, 'update'])->name('update');
         Route::patch('/{institution}/status', [InstitutionController::class, 'updateStatus'])->name('status');
+        // T-S19-02: cuentas de la institución con su estado y corrección del correo de las pendientes.
+        Route::get('/{institution}/accounts', [InstitutionAccountController::class, 'index'])->name('accounts');
+        Route::patch('/{institution}/accounts/{account}/email', [InstitutionAccountController::class, 'correctEmail'])
+            ->where('account', '[1-9][0-9]{0,17}')->middleware('throttle:institution-setup-resend')->name('accounts.email');
     });
 
 Route::post('/institution-accounts', [InstitutionAccountController::class, 'store'])
@@ -104,6 +116,8 @@ Route::middleware(['auth:sanctum', 'active', 'role:'.UserRole::ADMIN->value.','.
         Route::post('/resend-setup', [SecretaryAccountController::class, 'resendSetup'])->middleware('throttle:secretary-setup-resend');
         // Estado y restablecimiento de contraseña (HU-S6-04).
         Route::patch('{account}/status', [SecretaryAccountController::class, 'updateStatus'])->where('account', '[1-9][0-9]{0,17}');
+        // T-S19-02: corregir el correo de una cuenta pendiente de activar.
+        Route::patch('{account}/email', [SecretaryAccountController::class, 'correctEmail'])->where('account', '[1-9][0-9]{0,17}')->middleware('throttle:secretary-setup-resend');
         Route::post('/password-reset/start', [SecretaryAccountController::class, 'startPasswordReset'])->middleware('throttle:account-password-reset');
     });
 
@@ -116,6 +130,7 @@ Route::middleware(['auth:sanctum', 'active', 'role:'.UserRole::ADMIN->value])
         Route::post('/', [AdminAccountController::class, 'store']);
         Route::post('/resend-setup', [AdminAccountController::class, 'resendSetup'])->middleware('throttle:admin-setup-resend');
         Route::patch('{account}/status', [AdminAccountController::class, 'updateStatus'])->where('account', '[1-9][0-9]{0,17}');
+        Route::patch('{account}/email', [AdminAccountController::class, 'correctEmail'])->where('account', '[1-9][0-9]{0,17}')->middleware('throttle:admin-setup-resend');
         Route::post('/password-reset/start', [AdminAccountController::class, 'startPasswordReset'])->middleware('throttle:account-password-reset');
     });
 
@@ -136,6 +151,7 @@ Route::middleware(['auth:sanctum', 'active', 'role:'.UserRole::SECRETARY->value]
         Route::post('{company}/accounts/resend-setup', [CompanyAccountController::class, 'resendSetup'])->middleware('throttle:company-setup-resend');
         // Estado y restablecimiento de contraseña de las cuentas de la empresa (HU-S6-04).
         Route::patch('{company}/accounts/{account}/status', [CompanyAccountController::class, 'updateStatus'])->where('account', '[1-9][0-9]{0,17}');
+        Route::patch('{company}/accounts/{account}/email', [CompanyAccountController::class, 'correctEmail'])->where('account', '[1-9][0-9]{0,17}')->middleware('throttle:company-setup-resend');
         Route::post('{company}/accounts/password-reset/start', [CompanyAccountController::class, 'startPasswordReset'])->middleware('throttle:account-password-reset');
     });
 

@@ -6,7 +6,8 @@ import { useAccountAccess } from '../accounts/useAccountAccess'
 import { useAuth } from '../auth/useAuth'
 import { InstitutionRequestError } from '../institutions/InstitutionLayout'
 import { useApiRequest } from '../lib/useApiRequest'
-import { ChevronLeftIcon, ChevronRightIcon, MailIcon, PlusIcon } from '../ui/icons'
+import { ChevronLeftIcon, ChevronRightIcon, MailIcon, PencilIcon, PlusIcon } from '../ui/icons'
+import { CorrectEmailForm } from './CorrectEmailForm'
 import { Sheet } from '../ui/Sheet'
 import { useTableMemory } from '../ui/useTableMemory'
 import { rowIndex } from '../ui/tableMotion'
@@ -15,6 +16,7 @@ import { useListParams } from '../ui/useListParams'
 import type { ReactNode } from 'react'
 import type { FailureMessages } from '../lib/useApiRequest'
 import type { SetupAccount, SetupAccountStatus } from './api'
+import { AccountEmailCell } from './AccountEmailCell'
 import '../institutions/institutions.css'
 
 /** Página de cuentas de un rol sin organización invitado con enlace: la Secretaría (HU-S4-01) y Administración (HU-S16-02). */
@@ -29,6 +31,8 @@ export interface RoleAccountsConfig {
   messages: FailureMessages
   list: (page: number, signal: AbortSignal) => Promise<{ accounts: SetupAccount[]; page: number; lastPage: number; total: number }>
   statusPath: (id: number) => string
+  /** T-S19-02: ruta para corregir el correo de una cuenta pendiente. */
+  emailPath: (id: number) => string
   resetPath: string
   createForm: (onCreated: () => void) => ReactNode
   resendForm: (initialEmail: string) => ReactNode
@@ -74,7 +78,7 @@ export function RoleAccountsPage({ config }: { config: RoleAccountsConfig }) {
     selfId: user?.id,
     onUpdated: (updated) => setData((current) => current && { ...current, accounts: current.accounts.map((account) => account.id === updated.id ? updated : account) }),
   })
-  const [sheet, setSheet] = useState<{ kind: 'create' } | { kind: 'resend'; email: string } | null>(null)
+  const [sheet, setSheet] = useState<{ kind: 'create' } | { kind: 'resend'; email: string } | { kind: 'email'; account: SetupAccount } | null>(null)
   const closeSheet = useCallback(() => setSheet(null), [])
 
   return (
@@ -106,7 +110,7 @@ export function RoleAccountsPage({ config }: { config: RoleAccountsConfig }) {
                     {data.accounts.map((account, index) => (
                       <tr key={account.id} style={rowIndex(index)}>
                         <th scope="row" data-cell="title">{account.name}</th>
-                        <td data-cell="meta">{account.email}</td>
+                        <td data-cell="meta"><AccountEmailCell account={account} /></td>
                         <td data-cell="status"><span className={`institution-status ${account.status}`}>{statusLabels[account.status]}</span></td>
                         <td data-cell="meta"><span className="unit">Alta: </span>{dateFormat.format(new Date(account.created_at))}</td>
                         <td data-cell="actions">
@@ -114,6 +118,10 @@ export function RoleAccountsPage({ config }: { config: RoleAccountsConfig }) {
                             {account.status === 'pending' && (
                               <button type="button" className="account-action" aria-label={`Reenviar enlace a ${account.name}`}
                                 onClick={() => setSheet({ kind: 'resend', email: account.email })}><MailIcon />Reenviar enlace</button>
+                            )}
+                            {account.status === 'pending' && (
+                              <button type="button" className="account-action" aria-label={`Corregir el correo de ${account.name}`}
+                                onClick={() => setSheet({ kind: 'email', account })}><PencilIcon />Corregir correo</button>
                             )}
                             {access.rowActions(account)}
                           </div>
@@ -142,6 +150,13 @@ export function RoleAccountsPage({ config }: { config: RoleAccountsConfig }) {
       <Sheet open={sheet?.kind === 'resend'} onClose={closeSheet} labelledBy={config.resendTitleId}>
         {/* key: cada apertura parte del correo de la fila elegida. */}
         {sheet?.kind === 'resend' && <div key={sheet.email}>{config.resendForm(sheet.email)}</div>}
+      </Sheet>
+      <Sheet open={sheet?.kind === 'email'} onClose={closeSheet} labelledBy={`${config.id}-email-title`}>
+        {sheet?.kind === 'email' && (
+          <CorrectEmailForm key={sheet.account.id} idPrefix={`${config.id}-email`} account={sheet.account} path={config.emailPath(sheet.account.id)}
+            messages={config.messages}
+            onCorrected={(updated) => setData((current) => current && { ...current, accounts: current.accounts.map((account) => account.id === updated.id ? updated : account) })} />
+        )}
       </Sheet>
     </section>
   )

@@ -1,7 +1,7 @@
 import { RoleAccountsPage } from '../accounts/RoleAccountsPage'
 import type { RoleAccountsConfig } from '../accounts/RoleAccountsPage'
 import { SetupAccountForm, SetupLinkResendForm } from '../accounts/SetupAccountForms'
-import { ADMIN_PASSWORD_RESET_PATH, adminAccountMessages, adminAccountStatusPath, createAdminAccount, listAdminAccounts, resendAdminAccountSetup } from './api'
+import { ADMIN_PASSWORD_RESET_PATH, adminAccountMessages, adminAccountStatusPath, adminAccountEmailPath, createAdminAccount, listAdminAccounts, resendAdminAccountSetup } from './api'
 
 /**
  * Cuentas de Administración (HU-S16-02): un ADMIN invita a otros por correo o con un enlace manual, los inactiva o
@@ -17,6 +17,7 @@ const config: RoleAccountsConfig = {
   messages: adminAccountMessages,
   list: listAdminAccounts,
   statusPath: adminAccountStatusPath,
+  emailPath: adminAccountEmailPath,
   resetPath: ADMIN_PASSWORD_RESET_PATH,
   createForm: (onCreated) => (
     <SetupAccountForm idPrefix="admin-account" title="Nueva cuenta de Administración" submitLabel="Crear cuenta de Administración"

@@ -1,10 +1,12 @@
 import { useCallback, useState } from 'react'
 import { SetupAccountForm, SetupLinkResendForm } from '../accounts/SetupAccountForms'
-import type { SetupAccountStatus } from '../accounts/api'
+import type { SetupAccount, SetupAccountStatus } from '../accounts/api'
+import { CorrectEmailForm } from '../accounts/CorrectEmailForm'
+import { AccountEmailCell } from '../accounts/AccountEmailCell'
 import { useAccountAccess } from '../accounts/useAccountAccess'
 import { InstitutionRequestError } from '../institutions/InstitutionLayout'
 import { useApiRequest } from '../lib/useApiRequest'
-import { MailIcon, PlusIcon } from '../ui/icons'
+import { MailIcon, PencilIcon, PlusIcon } from '../ui/icons'
 import { Sheet } from '../ui/Sheet'
 import { useTableMemory } from '../ui/useTableMemory'
 import { rowIndex } from '../ui/tableMotion'
@@ -30,7 +32,7 @@ export function CompanyAccountsSection({ companyId, active }: { companyId: numbe
     messages: companyMessages,
     onUpdated: (updated) => setData((current) => current && current.map((account) => account.id === updated.id ? updated : account)),
   })
-  const [sheet, setSheet] = useState<{ kind: 'create' } | { kind: 'resend'; email: string } | null>(null)
+  const [sheet, setSheet] = useState<{ kind: 'create' } | { kind: 'resend'; email: string } | { kind: 'email'; account: SetupAccount } | null>(null)
   const closeSheet = useCallback(() => setSheet(null), [])
   const create = useCallback((input: Parameters<typeof createCompanyAccount>[1]) => createCompanyAccount(companyId, input), [companyId])
   const resend = useCallback((input: Parameters<typeof resendCompanyAccountSetup>[1]) => resendCompanyAccountSetup(companyId, input), [companyId])
@@ -64,13 +66,17 @@ export function CompanyAccountsSection({ companyId, active }: { companyId: numbe
                     {data.map((account, index) => (
                       <tr key={account.id} style={rowIndex(index)}>
                         <th scope="row">{account.name}</th>
-                        <td>{account.email}</td>
+                        <td><AccountEmailCell account={account} /></td>
                         <td><span className={`institution-status ${account.status}`}>{statusLabels[account.status]}</span></td>
                         <td>
                           <div className="actions">
                             {active && account.status === 'pending' && (
                               <button type="button" className="account-action" aria-label={`Reenviar enlace a ${account.name}`}
                                 onClick={() => setSheet({ kind: 'resend', email: account.email })}><MailIcon />Reenviar enlace</button>
+                            )}
+                            {active && account.status === 'pending' && (
+                              <button type="button" className="account-action" aria-label={`Corregir el correo de ${account.name}`}
+                                onClick={() => setSheet({ kind: 'email', account })}><PencilIcon />Corregir correo</button>
                             )}
                             {access.rowActions(account, active)}
                           </div>
@@ -93,6 +99,13 @@ export function CompanyAccountsSection({ companyId, active }: { companyId: numbe
           <SetupLinkResendForm key={sheet.email} idPrefix="company-setup-link" initialEmail={sheet.email} messages={companyMessages}
             intro="Mientras la cuenta siga pendiente de su primera contraseña puedes reenviar el enlace. El nuevo enlace sustituye al anterior."
             resend={resend} />
+        )}
+      </Sheet>
+      <Sheet open={sheet?.kind === 'email'} onClose={closeSheet} labelledBy="company-account-email-title">
+        {sheet?.kind === 'email' && (
+          <CorrectEmailForm key={sheet.account.id} idPrefix="company-account-email" account={sheet.account}
+            path={`/api/companies/${companyId}/accounts/${sheet.account.id}/email`} messages={companyMessages}
+            onCorrected={(updated) => setData((current) => current && current.map((account) => account.id === updated.id ? updated : account))} />
         )}
       </Sheet>
     </section>

@@ -63,6 +63,12 @@ export interface User {
    * invitada no capture ninguno (HU-S14-02).
    */
   company: SessionCompany | null
+  /** T-S19-01: correo de acceso probado. Si la respuesta no lo trae, se trata como verificado (sin avisos). */
+  emailVerified: boolean
+  /** T-S19-03: correo nuevo por confirmar; el actual sigue activo mientras tanto. */
+  pendingEmail: string | null
+  /** T-S19-03 y T-S19-04: envío del enlace vigente (vence a los 60 minutos y se reenvía tras 60 segundos). */
+  emailLinkSentAt: string | null
 }
 
 function sessionUser(data: unknown): User {
@@ -113,9 +119,13 @@ function sessionUser(data: unknown): User {
     return sessionCompany(linked.id, linked.name as string | null, linked.missing as CompanyGap[], onboarding)
   }
 
+  const emailVerified = 'email_verified' in user && typeof user.email_verified === 'boolean' ? user.email_verified : true
+  const pendingEmail = 'pending_email' in user && typeof user.pending_email === 'string' ? user.pending_email : null
+  const emailLinkSentAt = 'email_link_sent_at' in user && typeof user.email_link_sent_at === 'string' ? user.email_link_sent_at : null
+
   return {
     id: user.id, name: user.name, email: user.email, role: user.role as Role,
-    institution: institution(), company: company(),
+    institution: institution(), company: company(), emailVerified, pendingEmail, emailLinkSentAt,
   }
 }
 
@@ -203,3 +213,45 @@ export async function changePassword(input: PasswordChangeInput): Promise<void> 
   })
 }
 
+/** T-S19-03 y T-S19-04: resultado de enviar un enlace de correo; 'pending' si el transporte no lo aceptó. */
+export type EmailLinkDelivery = 'sent' | 'pending'
+
+async function emailLinkRequest(path: string, body?: object): Promise<{ user: User; delivery: EmailLinkDelivery }> {
+  if (!csrfToken()) await request('/sanctum/csrf-cookie')
+  const response = await request(path, { method: 'POST', ...(body ? { body: JSON.stringify(body) } : {}) })
+  const delivery = typeof response === 'object' && response !== null && 'email_link_delivery' in response ? response.email_link_delivery : undefined
+  if (delivery !== 'sent' && delivery !== 'pending') throw new ApiError(502)
+  return { user: sessionUser(response), delivery }
+}
+
+/** T-S19-03: pide cambiar el correo de acceso; el enlace va a la dirección nueva y la actual sigue activa hasta confirmarlo. */
+export function requestEmailChange(input: { email: string; current_password: string }) {
+  return emailLinkRequest('/api/me/email', { email: input.email, current_password: input.current_password })
+}
+
+/** Reenvía el enlace vigente (cambio o verificación) con uno nuevo; el anterior deja de servir. */
+export function resendEmailLink() {
+  return emailLinkRequest('/api/me/email/resend')
+}
+
+/** T-S19-04: enlace para verificar el correo actual. */
+export function requestEmailVerification() {
+  return emailLinkRequest('/api/me/email/verification')
+}
+
+/** T-S19-03: cancela el cambio pendiente; el enlace enviado deja de servir. */
+export async function cancelEmailChange(): Promise<User> {
+  if (!csrfToken()) await request('/sanctum/csrf-cookie')
+  return sessionUser(await request('/api/me/email/cancel', { method: 'POST' }))
+}
+
+export type EmailConfirmation = { result: 'changed' | 'verified'; email: string }
+
+/** T-S19-03 y T-S19-04: confirmación pública con el token del enlace, con o sin sesión. */
+export async function confirmAccessEmail(token: string): Promise<EmailConfirmation> {
+  if (!csrfToken()) await request('/sanctum/csrf-cookie')
+  const response = await request('/api/account-email/confirm', { method: 'POST', referrerPolicy: 'no-referrer', body: JSON.stringify({ token }) })
+  if (typeof response !== 'object' || response === null || !('result' in response) || !('email' in response) ||
+      (response.result !== 'changed' && response.result !== 'verified') || typeof response.email !== 'string') throw new ApiError(502)
+  return { result: response.result, email: response.email }
+}
