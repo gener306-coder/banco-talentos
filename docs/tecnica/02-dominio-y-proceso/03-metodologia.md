@@ -80,7 +80,7 @@ El detalle de cada workflow está en [GitHub Actions y CI/CD](../06-infraestruct
 
 | Workflow | Disparador | Qué hace |
 |---|---|---|
-| `ci.yml` | Cada PR, cada push a `main` y manual | Frontend (`npm ci`, ESLint, `tsc -b`, Vitest, build y `npm audit --audit-level=high`), Pint y Pest. Playwright solo en ejecución manual con `e2e=true`. |
+| `ci.yml` | Cada PR, cada push a `main` y manual | Frontend (`npm ci`, ESLint, `tsc -b`, Vitest, build y `npm audit --audit-level=high`), Pint con `composer audit`, y Pest. Playwright solo en ejecución manual con `e2e=true`. |
 | `build-ami.yml` | Tags `v*` y manual | Reutiliza `ci.yml`, arma el artefacto de la versión y construye la AMI con Packer. |
 | `deploy-pilot.yml` | Manual | `plan` → aprobación del entorno `pilot` → `apply`, migraciones y prueba de humo. |
 

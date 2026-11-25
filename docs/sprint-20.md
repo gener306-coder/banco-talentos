@@ -97,7 +97,7 @@ Auditoría de solo lectura de `main`:
 
 ### T-S20-04 — B3: modelo de datos, almacenamiento S3 y ficha compartida
 
-**Estado:** en revisión.
+**Estado:** completada (aprobada el 25 de noviembre de 2026, commit `809f6ff`).
 
 **Alcance:**
 - **Modelo de datos:**
@@ -113,32 +113,51 @@ Auditoría de solo lectura de `main`:
 - D05a: `actor_kind` vale `user` o `cli`, no `console`.
 - D09 y ADR-006: el trigger de `student_disclosures` no es de solo inserción; solo admite revocar una vez, y rechaza el `DELETE` y cualquier otro cambio.
 
-### T-S20-05 — B4: backend, API, colas y correos; frontend y CSP
+### T-S20-05 — Cap. 04 (backend) y Cap. 05 (frontend)
 
-**Estado:** Cap. 04 (backend) en revisión; Cap. 05 (frontend) pendiente. Según el plan aprobado, el Cap. 04 se adelantó a B3.
+**Estado:** en revisión.
+- El Cap. 04 se redactó en B3 y quedó aprobado en el commit `809f6ff`.
+- El Cap. 05 se redactó en B4.
 
-**Alcance del Cap. 04:**
-- **Arquitectura Laravel** (D04): componentes y su cantidad, ciclo de una petición, límites con nombre y convenciones.
-- **Catálogo resumido de la API:** las 111 rutas (105 en `api.php` y 6 en `web.php`, ninguna `DELETE`) por recurso, con las convenciones del contrato y los tamaños de página.
-- **Colas y video** (D10):
-  - cola en PostgreSQL con `after_commit` y `retry_after`;
-  - los dos workers;
-  - parámetros exactos de FFmpeg, la cuota de 5 videos y el reproductor con respaldo WebM;
-  - el aviso de mensajes con su ventana de 5 minutos y de 6 horas.
-- **Correos** (D06, D07): las 8 notificaciones, su entrega inmediata o en cola, los enlaces de un solo uso y su vigencia, la verificación y el cambio del correo de acceso, y la plantilla con marca.
+**Alcance del Cap. 04:** arquitectura Laravel (D04), catálogo de las 111 rutas (ninguna `DELETE`), colas y FFmpeg (D10), y correos transaccionales (D06, D07). El detalle está en el commit `809f6ff`.
 
-**Verificación de B3:**
-- Cada afirmación se contrastó con el archivo citado. Correcciones hechas durante la redacción:
-  - el respaldo de WebM es `fallbackSrc` del reproductor;
-  - el reemplazo de un comprobante borra el archivo anterior;
-  - los 9 eventos de la bitácora incluyen `institution_invited`, que una migración agrega aparte.
-- No se citan conteos de pruebas: se obtienen al ejecutar las suites en T-S20-06.
-- Los bloques Mermaid coinciden con los aprobados, salvo las dos correcciones de arriba. `sh scripts/docs-pdf.sh diagramas` sigue en 18 de 18.
-- Los enlaces y las anclas internas de `docs/tecnica/` resuelven todos.
+**Alcance del Cap. 05:**
+- **Arquitectura de la SPA:** arranque, rutas y `ProtectedRoute`, sesión por cookie y validación del contrato de cada respuesta (125 comprobaciones), sondeo de no leídos y bloques de la ficha compartida.
+- **Componentes compartidos:**
+  - `Sheet`, `ConfirmDialog`, `LoadingState` y `StateMessage`;
+  - `PasswordField` (T-S18-01) y `EmailMenu` (T-S12-06);
+  - `emailState`, `EmailStatusBadge`, `AccessEmailSection` y `/confirm-email` (Sprint 19).
+- **Tokens y CSP:** tokens y lo que verifica `tokens.test.ts`; la CSP real del `Caddyfile`, contrastada directiva por directiva con lo que carga la SPA:
+  - el `dist/index.html` compilado no tiene scripts ni estilos en línea;
+  - los videos y pósteres vienen de S3 sin `crossorigin`;
+  - la vista previa local usa `blob:`.
+- **Limitación documentada:** la CSP no se aplica en local ni en E2E, solo en el piloto.
 
-### T-S20-06 — B5: infraestructura, operación, seguridad, pruebas y entorno local
+### T-S20-06 — Cap. 06 (infraestructura y operación) y Cap. 07 (seguridad, pruebas y entorno local)
 
-**Estado:** pendiente. Los conteos de pruebas se obtienen ejecutando las suites (`sh scripts/test-backend.sh`, Vitest y `sh scripts/test-e2e.sh`, en secuencia), no copiándolos de Sprints anteriores.
+**Estado:** Cap. 06 en revisión (B4); Cap. 07 pendiente (B5).
+
+**Alcance del Cap. 06:**
+- **Topología AWS** (D11): recursos por módulo, flujos de red y salidas.
+- **Packer** (D12): fuente, scripts, qué exige `99-verify.sh`, configuración horneada y ciclo de vida de las AMIs.
+- **Terraform:** `bootstrap/` con estado local fuera de Git, `envs/pilot` con bloqueo nativo, y parámetros y secretos.
+- **GitHub Actions** (D13, D14): jobs, entornos y protecciones.
+- **Operación:** mapa del runbook sin duplicarlo, más las notas verificadas:
+  - orden de pausa y reanudación;
+  - reinicio automático de RDS a los 7 días;
+  - verificación de migraciones por SSM;
+  - cambiar la base de un PR no relanza el CI.
+- **IDs del piloto** (AMI, instancia y ejecuciones) solo como referencia histórica.
+
+**Verificación de B4:**
+- **D13 y la metodología:** `backend-lint` también ejecuta `composer audit`. Es el único cambio en un diagrama.
+- **Correcciones durante la redacción:**
+  - `MunicipalityCombobox` no se usa en las vistas de instituciones;
+  - el `blob:` de la vista previa es `media-src`, no `img-src`.
+- **Afirmaciones sin fuente:** se quitó una fila sobre la pausa actual del piloto que no consta en el repositorio.
+- **Validaciones:** `sh scripts/docs-pdf.sh diagramas` en 18 de 18, y enlaces y anclas internas en 0 rotos.
+
+Los conteos de pruebas se obtienen ejecutando las suites (`sh scripts/test-backend.sh`, Vitest y `sh scripts/test-e2e.sh`, en secuencia), no copiándolos de Sprints anteriores.
 
 ### T-S20-07 — B6: PDF formal
 
