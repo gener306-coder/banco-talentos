@@ -309,3 +309,7 @@ docker compose down
 El `.env` raíz configura Compose; `backend/.env` conserva la clave y opciones Laravel. Las variables que Compose pasa al backend prevalecen sobre ese archivo. Ambos `.env` están excluidos de Git. Cambiar las credenciales PostgreSQL en `.env` no modifica las de un volumen ya inicializado.
 
 Sólo para borrar deliberadamente todos los datos y dependencias locales: `docker compose down -v`. Este comando **elimina PostgreSQL de desarrollo**; los scripts de pruebas no lo ejecutan.
+
+## Licencia
+
+Software propietario. Copyright (c) 2026 José Eduardo López Aguilar. Todos los derechos reservados. Ver [LICENSE](LICENSE).

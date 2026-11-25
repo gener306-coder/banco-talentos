@@ -1,0 +1,27 @@
+Copyright (c) 2026 José Eduardo López Aguilar. Todos los derechos reservados.
+
+Banco de Talentos – Educación Dual
+
+LICENCIA PROPIETARIA
+
+1. Este software, su código fuente, su documentación y los demás archivos de este
+   repositorio (el «Software») son propiedad exclusiva de José Eduardo López Aguilar
+   (el «Titular») y tienen carácter confidencial.
+
+2. Que el repositorio sea visible no concede ninguna licencia ni derecho sobre el
+   Software. Sin la autorización previa y por escrito del Titular, queda prohibido
+   usar, copiar, modificar, fusionar, publicar, distribuir, sublicenciar, vender o
+   explotar de cualquier otra forma el Software, en todo o en parte.
+
+3. Las bibliotecas y dependencias de terceros (instaladas con Composer y npm)
+   conservan sus propias licencias, que prevalecen sobre esta para esos componentes.
+
+4. Los logotipos, emblemas y marcas incluidos en el Software (entre ellos los de
+   Nodologístico y de la Secretaría de Economía) pertenecen a sus respectivos
+   titulares y no quedan comprendidos en esta licencia.
+
+5. EL SOFTWARE SE ENTREGA «TAL CUAL», SIN GARANTÍA DE NINGÚN TIPO, EXPRESA O
+   IMPLÍCITA. EN NINGÚN CASO EL TITULAR SERÁ RESPONSABLE DE DAÑOS O PERJUICIOS
+   DERIVADOS DEL USO O DE LA IMPOSIBILIDAD DE USO DEL SOFTWARE.
+
+Las solicitudes de permiso deben dirigirse al Titular.
