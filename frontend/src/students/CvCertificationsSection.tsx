@@ -85,7 +85,7 @@ function CertificationForm({ initial, reviewed, pending, serverErrors, onSubmit 
           <div>{input('expires_on', 'Vigente hasta (opcional)', { type: 'date', min: values.issued_on || undefined })}</div>
         </div>
         <div className="protected-fields">
-          <ProtectedNote>La credencial lleva a una página con el nombre del alumno: no es visible en la búsqueda general de empresas.</ProtectedNote>
+          <ProtectedNote>La credencial lleva a una página con el nombre del alumno: no es visible en la búsqueda de empresas; solo la verá la empresa de una vinculación aceptada si tu institución decide compartirle la ficha.</ProtectedNote>
           {input('credential_id', 'ID de la credencial (opcional)', { type: 'text', maxLength: 120 })}
           {input('credential_url', 'URL de verificación (opcional)', { type: 'url', inputMode: 'url', maxLength: 2048, spellCheck: false, placeholder: 'https://www.credly.com/badges/…' })}
         </div>

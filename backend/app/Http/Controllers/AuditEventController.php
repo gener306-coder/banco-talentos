@@ -9,6 +9,7 @@ use App\Models\Company;
 use App\Models\Institution;
 use App\Models\LinkageRequest;
 use App\Models\Opportunity;
+use App\Models\StudentDisclosure;
 use App\Models\User;
 use Illuminate\Database\Query\Builder;
 use Illuminate\Http\JsonResponse;
@@ -33,6 +34,9 @@ class AuditEventController extends Controller
         'opportunity_created' => ['opportunities', 'created_by', 'created_at'],
         'linkage_requested' => ['linkage_requests', 'requested_by', 'created_at'],
         'linkage_responded' => ['linkage_requests', 'responded_by', 'responded_at'],
+        // T-S19-05: ficha compartida con la empresa y cuándo dejó de compartirse (por la institución o por la baja).
+        'student_disclosed' => ['student_disclosures', 'disclosed_by', 'disclosed_at'],
+        'student_disclosure_revoked' => ['student_disclosures', 'revoked_by', 'revoked_at'],
     ];
 
     /** HU-S14-04: eventos de la tabla inmutable; su subject_id en la unión es el id del evento. */
@@ -103,7 +107,9 @@ class AuditEventController extends Controller
         $changedUsers = User::query()->whereIn('id', $subjects('user'))->get(['id', 'name', 'role'])->keyBy('id');
         $changedCompanies = Company::query()->whereIn('id', $subjects('company'))->get(['id', 'legal_name', 'trade_name'])->keyBy('id');
         $changedInstitutions = Institution::query()->whereIn('id', $subjects('institution'))->get(['id', 'name'])->keyBy('id');
-        $linkages = LinkageRequest::query()->whereIn('id', $ids('linkage_requested', 'linkage_responded'))
+        $disclosures = StudentDisclosure::query()->whereIn('id', $ids('student_disclosed', 'student_disclosure_revoked'))
+            ->get(['id', 'linkage_request_id', 'fields', 'revoked_reason'])->keyBy('id');
+        $linkages = LinkageRequest::query()->whereIn('id', $ids('linkage_requested', 'linkage_responded')->merge($disclosures->pluck('linkage_request_id'))->unique())
             ->with(['institution:id,name', 'company:id,legal_name,trade_name'])
             ->get(['id', 'status', 'institution_id', 'company_id'])
             ->keyBy('id');
@@ -119,7 +125,7 @@ class AuditEventController extends Controller
             return ['subject_type' => $change->subject_type, 'id' => $change->subject_id, ...$subject, 'fields' => array_values($change->changed_fields ?? [])];
         };
 
-        return $events->map(function (object $event) use ($actors, $accounts, $companies, $opportunities, $linkages, $changes, $change): array {
+        return $events->map(function (object $event) use ($actors, $accounts, $companies, $opportunities, $linkages, $changes, $change, $disclosures): array {
             // D3: los eventos de la consola del servidor no tienen cuenta como actor.
             $actor = $event->actor_id === null ? null : $actors[$event->actor_id];
 
@@ -133,6 +139,12 @@ class AuditEventController extends Controller
                     'opportunity_created' => ['id' => $event->subject_id, 'title' => $opportunities[$event->subject_id]->title],
                     'account_updated', 'password_changed', 'organization_profile_updated', 'company_invited',
                     'admin_bootstrapped', 'password_reset_issued', 'email_changed', 'account_status_changed', 'institution_invited' => $change($changes[$event->subject_id]),
+                    // Solo la solicitud y los grupos compartidos; nunca los datos del alumno.
+                    'student_disclosed', 'student_disclosure_revoked' => [
+                        ...$this->linkage($linkages[$disclosures[$event->subject_id]->linkage_request_id]),
+                        'fields' => array_values($disclosures[$event->subject_id]->fields),
+                        'reason' => $event->type === 'student_disclosure_revoked' ? $disclosures[$event->subject_id]->revoked_reason : null,
+                    ],
                     default => $this->linkage($linkages[$event->subject_id]),
                 },
             ];

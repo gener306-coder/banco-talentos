@@ -8,6 +8,7 @@ use App\Models\Opportunity;
 use App\Models\Student;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\DB;
 use Tests\Support\InteractsWithCookieSessions;
 
@@ -337,7 +338,9 @@ describe('detalle (HU-S13-02 CA-01)', function () {
         $detail = $this->browserRequest('GET', '/api/linkage-requests/'.$linkage->id)
             ->assertOk()->assertHeader('Cache-Control', 'no-store, private');
 
-        expect($detail->json('data'))->toBe($inbox)
+        // T-S19-05: el detalle agrega solo la fecha de la ficha compartida (null aquí); los datos se piden aparte.
+        expect(Arr::except($detail->json('data'), ['shared_profile_at']))->toBe($inbox)
+            ->and($detail->json('data.shared_profile_at'))->toBeNull()
             ->and($detail->json('data.profile.public_id'))->toBe($this->student->public_id)
             ->and($detail->json('data.institution.contact_email'))->toBe('dual@utgolfo.edu.mx');
         foreach (['student_id', 'Nombre Secreto', 'Apellido Secreto', 'enrollment_number', 'responded_by', 'last_read_message_id'] as $secret) {

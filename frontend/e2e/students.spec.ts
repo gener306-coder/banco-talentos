@@ -355,7 +355,7 @@ test('HU-S3-01: la institución construye el CV normalizado con datos protegidos
 
   // Enlaces protegidos (CA-02).
   const links = page.getByRole('region', { name: /Enlaces externos/ })
-  await expect(links.getByText(/no es visible en la búsqueda general de empresas/)).toBeVisible()
+  await expect(links.getByText(/no es visible en la búsqueda de empresas/i)).toBeVisible()
   await links.getByRole('button', { name: 'Agregar enlace' }).click()
   await links.getByLabel('Tipo del enlace 1', { exact: true }).selectOption({ label: 'GitHub' })
   await links.getByLabel('Dirección de GitHub').fill(githubUrl)

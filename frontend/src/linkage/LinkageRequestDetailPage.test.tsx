@@ -153,7 +153,7 @@ describe('detalle de la solicitud para la empresa HU-S13-02', () => {
     apiMock.mockResolvedValueOnce(Response.json({ data: accepted }))
     renderApp()
     const profile = await screen.findByRole('region', { name: 'Perfil solicitado' })
-    expect(profile).toHaveTextContent('La institución puede compartirte en la conversación los datos necesarios para la vinculación')
+    expect(profile).toHaveTextContent('La institución decide si comparte contigo una ficha ampliada del alumno o los datos necesarios por la conversación')
     expect(profile).not.toHaveTextContent('Conoces al alumno solo por su perfil anónimo')
   })
 

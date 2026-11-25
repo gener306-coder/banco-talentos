@@ -75,7 +75,7 @@ describe('página del CV HU-S3-01', () => {
   it('marca los enlaces como protegidos y fuera de la búsqueda de empresas (CA-02)', async () => {
     const links = await section('Enlaces externos Protegido')
     expect(within(links).getByText('Protegido.')).toBeInTheDocument()
-    expect(within(links).getByText(/no es visible en la búsqueda general de empresas/)).toBeInTheDocument()
+    expect(within(links).getByText(/no es visible en la búsqueda de empresas/i)).toBeInTheDocument()
   })
 
   it('trata un alumno ajeno como no encontrado', async () => {
@@ -293,7 +293,7 @@ describe('certificaciones', () => {
     const region = await section('Certificaciones')
     fireEvent.click(within(region).getByRole('button', { name: 'Agregar certificación' }))
     const sheet = screen.getByRole('dialog', { name: 'Agregar certificación' })
-    expect(within(sheet).getByText(/no es visible en la búsqueda general de empresas/)).toBeInTheDocument()
+    expect(within(sheet).getByText(/no es visible en la búsqueda de empresas/)).toBeInTheDocument()
     fireEvent.click(within(sheet).getByRole('button', { name: 'Agregar certificación' }))
     expect(within(sheet).getByLabelText('Nombre de la certificación')).toHaveAccessibleDescription('Escribe el nombre de la certificación.')
     expect(within(sheet).getByLabelText('Fecha de emisión')).toHaveAttribute('aria-invalid', 'true')

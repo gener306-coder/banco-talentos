@@ -115,6 +115,8 @@ export interface LinkageInboxItem {
   unread_count: number
   /** Último mensaje del hilo (T-S13-09), para explicar el orden por actividad. */
   last_message_at: string | null
+  /** T-S19-05: solo en el detalle; fecha de la ficha compartida vigente, o null. */
+  shared_profile_at?: string | null
 }
 
 export interface LinkageInboxPage {
@@ -185,7 +187,9 @@ export const linkageDetailMessages: FailureMessages = {
 export async function getLinkageRequest(id: string, signal?: AbortSignal): Promise<LinkageInboxItem> {
   const response = await request(`/api/linkage-requests/${encodeURIComponent(id)}`, { signal })
   if (!isObject(response)) throw new ApiError(502)
-  return inboxItem(response.data)
+  const item = inboxItem(response.data)
+  const shared = isObject(response.data) ? response.data.shared_profile_at : undefined
+  return { ...item, shared_profile_at: typeof shared === 'string' ? shared : null }
 }
 
 /** T-S14-13: la empresa da de baja una vinculación aceptada con su motivo; libera el lugar. */

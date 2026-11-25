@@ -15,6 +15,7 @@ import { cancelLinkageRequest, getLinkageRequest, linkageDetailMessages, termina
 import type { LinkageInboxItem } from './api'
 import { LinkageStatus } from './LinkageStatus'
 import { LinkageTerminationSection } from './LinkageTermination'
+import { SharedProfileSection } from './SharedProfileSection'
 import { UnreadTag } from './UnreadBadge'
 import '../institutions/institutions.css'
 
@@ -106,10 +107,10 @@ function Detail({ data, onCancelled }: { data: LinkageInboxItem; onCancelled: (u
 
       <section className="student-section" aria-labelledby="linkage-profile-title">
         <h3 id="linkage-profile-title">Perfil solicitado</h3>
-        {/* HU-S15-04: tras la aceptación, la institución puede compartir datos necesarios por la conversación. */}
+        {/* HU-S15-04 y T-S19-08: tras la aceptación, la institución puede compartir una ficha ampliada o datos por la conversación. */}
         <p className="privacy-note">
           {data.status === 'ACEPTADA' || data.status === 'BAJA'
-            ? 'La plataforma te muestra solo el perfil anónimo. La institución puede compartirte en la conversación los datos necesarios para la vinculación: trátalos con confidencialidad y solo para este fin.'
+            ? 'La institución decide si comparte contigo una ficha ampliada del alumno o los datos necesarios por la conversación: trátalos con confidencialidad y solo para esta vinculación.'
             : 'Conoces al alumno solo por su perfil anónimo; su identidad la resguarda su institución.'}
         </p>
         <dl className="student-identity">
@@ -119,6 +120,9 @@ function Detail({ data, onCancelled }: { data: LinkageInboxItem; onCancelled: (u
         </dl>
         <p><Link className="pill-link" to={`/talent/${profile.public_id}`} state={toRequest}>Ver perfil<ChevronRightIcon /></Link></p>
       </section>
+
+      {/* T-S19-06: ficha ampliada que la institución decidió compartir tras aceptar (D1). */}
+      <SharedProfileSection linkageId={data.id} status={data.status} sharedAt={data.shared_profile_at} />
 
       <section className="student-section" aria-labelledby="linkage-opportunity-title">
         <h3 id="linkage-opportunity-title">Oportunidad</h3>

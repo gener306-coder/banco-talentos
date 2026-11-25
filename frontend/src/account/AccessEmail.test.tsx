@@ -116,7 +116,8 @@ describe('Mi cuenta: verificar el correo (T-S19-04)', () => {
     fireEvent.click(within(notice).getByRole('button', { name: 'Enviar enlace de verificación' }))
     expect(await screen.findByText('Enviamos el enlace a admin@bt.test. Vence en 60 minutos.')).toBeInTheDocument()
     expect(writes()[0][0]).toBe('/api/me/email/verification')
-    expect(within(notice).getByRole('button', { name: /^Reenviar enlace \(\d+ s\)$/ })).toBeDisabled()
+    // La sesión se actualiza tras el envío; la espera aparece cuando llega la fecha del enlace.
+    await waitFor(() => expect(within(notice).getByRole('button', { name: /^Reenviar enlace \(\d+ s\)$/ })).toBeDisabled())
   })
 
   it('no muestra el aviso con el correo verificado', async () => {

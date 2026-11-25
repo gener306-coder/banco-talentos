@@ -157,6 +157,7 @@ describe('cambios de cuentas y organizaciones HU-S14-04', () => {
       'Todos los eventos', 'Cuenta creada', 'Empresa registrada', 'Oportunidad registrada', 'Vinculación solicitada', 'Vinculación respondida',
       'Empresa invitada', 'Institución invitada', 'Perfil de organización actualizado', 'Cuenta actualizada', 'Contraseña cambiada',
       'Estado de cuenta cambiado', 'Primer Administrador creado', 'Restablecimiento de contraseña emitido', 'Correo de acceso cambiado',
+      'Ficha compartida con la empresa', 'Ficha dejó de compartirse',
     ])
     fireEvent.change(filter, { target: { value: 'password_changed' } })
     await waitFor(() => expect(apiMock.mock.calls[1][0]).toBe('/api/audit-events?page=1&type=password_changed'))

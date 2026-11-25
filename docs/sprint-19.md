@@ -169,7 +169,7 @@ Mi cuenta y los listados de cuentas (Administración, Secretaría, empresa y el 
 
 ### T-S19-05 — Ficha compartida: modelo y API con lista blanca
 
-**Estado:** Pendiente.
+**Estado:** Completada (24 de noviembre de 2026).
 
 **Alcance:**
 - Registro por vinculación con los grupos compartidos, el consentimiento (D3), quién y cuándo compartió, y quién y cuándo dejó de compartir.
@@ -178,9 +178,35 @@ Mi cuenta y los listados de cuentas (Administración, Secretaría, empresa y el 
 - La empresa lee la ficha en vivo: 404 si no se compartió, se dejó de compartir, la vinculación no está `ACEPTADA` o la solicitud es de otra empresa.
 - Bitácora de compartir y dejar de compartir.
 
+**Resultado:**
+- **Tabla `student_disclosures`** (migración `2026_11_25_000001_create_student_disclosures_table`):
+  - `fields` en `jsonb`, con un `CHECK` que solo admite `full_name`, `links` y `credentials`, aunque se escriba sin la API;
+  - `consent_confirmed_at`, `disclosed_by` y `disclosed_at`, y `revoked_by`, `revoked_at` y `revoked_reason` (`institution` o `termination`);
+  - una sola ficha vigente por vinculación (índice único parcial);
+  - un disparador solo permite fijar la revocación una vez; volver a compartir crea otro registro, así que la tabla es también la historia.
+  - No copia datos del alumno.
+- **Modelo `StudentDisclosure`:** `SHAREABLE` es la lista blanca (D2). `sharedProfile()` lee en vivo, con columnas explícitas, solo los grupos compartidos:
+  - el nombre (`given_names` y apellidos), nunca `enrollment_number`;
+  - los enlaces, solo `http(s)`;
+  - las credenciales: nombre, emisor, id y URL, sin `verified_by` ni `verified_at`.
+  - Ninguna consulta toca el seguro ni la ubicación.
+- **Rutas:**
+  - institución: `POST /api/institution/linkage-requests/{id}/disclosure` (grupos y `consent` aceptado) y `PATCH …/disclosure/revoke`, con límite `linkage-disclosure`;
+  - empresa: `GET /api/linkage-requests/{id}/disclosure`, con 404 si no está vigente, si la vinculación no está `ACEPTADA` o si es de otra empresa.
+- **Detalles:** el de la institución agrega `disclosure` (grupos, fecha y quién) y el de la empresa, `shared_profile_at`.
+- **Baja (D4):** `TerminatesLinkage` revoca la ficha en la misma transacción, por cualquiera de los dos lados.
+- **Bitácora:** `student_disclosed` y `student_disclosure_revoked` con la solicitud, los grupos y el motivo; nunca el alumno.
+
+**Pruebas:** Pest, `StudentDisclosureTest` (25 pruebas):
+- claves exactas que recibe la empresa, sin matrícula, seguro, revisora, id ni ubicación;
+- lectura en vivo, consentimiento y lista blanca, en la API y en la base;
+- solo en `ACEPTADA` e IDOR de institución y de empresa;
+- dejar de compartir, volver a compartir y revocación por baja de los dos lados;
+- historia inmutable, aviso y bitácora.
+
 ### T-S19-06 — Ficha compartida: interfaz
 
-**Estado:** Pendiente.
+**Estado:** Completada (24 de noviembre de 2026).
 
 **Alcance:**
 - **Institución**, en el detalle de la vinculación:
@@ -191,14 +217,51 @@ Mi cuenta y los listados de cuentas (Administración, Secretaría, empresa y el 
 - Dejar de compartir (`ConfirmDialog`): la empresa pierde el acceso de inmediato; la vinculación y los mensajes siguen.
 - **Empresa:** «Ficha profesional no disponible…» mientras no se comparta; «Ficha profesional compartida» con fecha y el pie de confidencialidad cuando sí. Enlaces solo `http(s)` con `rel="noopener noreferrer"`.
 
+**Resultado:**
+- **`linkage/StudentDisclosureSection`** en el detalle de la institución, con los tres estados.
+  - La hoja de compartir lleva casillas por grupo y el consentimiento obligatorio; el botón sigue deshabilitado sin ambos.
+  - «Dejar de compartir» se confirma con `ConfirmDialog`.
+  - Los avisos breves confirman cada acción.
+- **`linkage/SharedProfileSection`** en el detalle de la empresa: solo con la vinculación aceptada.
+  - Pide la ficha únicamente si `shared_profile_at` existe.
+  - Un 404 vuelve al bloque neutro.
+  - Vuelve a filtrar los enlaces a `http(s)`.
+- **Bitácora:** el filtro y las descripciones incluyen «Ficha compartida con la empresa» y «Ficha dejó de compartirse».
+
+**Pruebas:**
+- Vitest, `StudentDisclosure.test.tsx`: estados de la institución, compartir, dejar de compartir, empresa sin ficha, con ficha (un enlace `javascript:` no se muestra) y retirada.
+- E2E, `student-disclosure.spec.ts`: solicitar, aceptar, compartir el nombre, verlo como empresa sin la matrícula, y dejar de compartir con 404 inmediato.
+
 ### T-S19-07 — Aviso a la empresa
 
-**Estado:** Pendiente.
+**Estado:** Completada (24 de noviembre de 2026).
 
 **Alcance:** correo con marca a las cuentas activas de la empresa al compartir la ficha; ninguno al dejar de compartir (D5). En `mail:preview` y `BrandedMailTest`.
 
+**Resultado:**
+- `StudentProfileShared` va a las cuentas activas y con contraseña de la empresa activa, después del commit.
+  - Nombra la institución y la oportunidad, sin ningún dato del alumno, y lleva al detalle de la solicitud.
+  - Si el envío falla, la ficha sigue compartida y queda una advertencia en el log.
+- `mail:preview` genera `ficha-compartida`, con 11 vistas previas en total.
+
+**Pruebas:**
+- Pest: destinatarios activos, sin las cuentas pendientes ni inactivas, ninguno al dejar de compartir y sin datos del alumno.
+- `BrandedMailTest`.
+
 ### T-S19-08 — Textos, aviso de privacidad y convención
 
-**Estado:** Pendiente.
+**Estado:** Completada (24 de noviembre de 2026).
 
 **Alcance:** `privacy.tsx`, `terms.tsx`, `CvLinksSection.tsx`, `CvCertificationsSection.tsx`, `LinkageRequestDetailPage.tsx`, `TalentProfilePage.tsx`, `StudentDetailPage.tsx`, los comentarios de las tablas, y la excepción en `CLAUDE.md` y `AGENTS.md` (D1).
+
+**Resultado:**
+- **Aviso de privacidad:**
+  - «Vinculación aceptada» describe la ficha opcional, con consentimiento, revocable y retirada por la baja;
+  - un punto nuevo, «Siempre privado», enumera lo que nunca se entrega;
+  - la versión de los documentos legales pasa a 1.1 (24 de noviembre de 2026).
+- **Términos:** la institución pide el consentimiento antes de compartir y deja de compartir cuando ya no haga falta; la empresa trata la ficha como confidencial y solo para evaluar la vinculación.
+- **Notas de ayuda:** enlaces y credenciales del CV, expediente público, perfil anónimo y las notas de privacidad de los dos detalles de la vinculación.
+- **Comentarios de tablas:** `student_identities`, `student_links` y `student_certification_credentials` mencionan la ficha compartida como única salida hacia la empresa.
+- **`CLAUDE.md` y `AGENTS.md`:** la regla «Privacidad por diseño» documenta la única excepción y sus límites.
+
+**Pruebas:** se actualizaron las de Vitest que fijaban los textos anteriores: Aviso de privacidad, notas de los dos detalles, CV y bitácora.

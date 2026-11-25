@@ -64,7 +64,10 @@ describe('documentos legales públicos HU-S15-03', () => {
       expect(within(summary).getByText(actor)).toBeInTheDocument()
     }
     const progressive = screen.getByRole('region', { name: 'Privacidad progresiva del alumno' })
-    expect(progressive).toHaveTextContent('La plataforma nunca entrega a la empresa la identidad del alumno')
+    // T-S19-08: la ficha ampliada es opcional, con consentimiento y revocable; lo interno nunca se entrega.
+    expect(progressive).toHaveTextContent('decide si comparte con esa empresa una ficha ampliada, con el consentimiento del alumno o de su tutor')
+    expect(progressive).toHaveTextContent('Puede dejar de compartirla en cualquier momento')
+    expect(progressive).toHaveTextContent('La matrícula, el número y el comprobante del seguro social, el domicilio y los demás datos internos del expediente nunca se entregan a la empresa.')
     // Auditoría QA: coincide con lo que /api/talent devuelve a la empresa (institución, estado y municipio, sin domicilio).
     expect(progressive).toHaveTextContent('su institución, el estado y el municipio, y la distancia aproximada en kilómetros. No ve nombre, matrícula, contacto, seguro social ni domicilio.')
     expect(screen.getByRole('region', { name: 'Medidas de seguridad' })).toHaveTextContent('nunca sus valores ni contraseñas')

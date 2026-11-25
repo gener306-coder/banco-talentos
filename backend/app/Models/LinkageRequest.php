@@ -141,6 +141,12 @@ class LinkageRequest extends Model
     }
 
     /** Conversación de la solicitud aceptada (HU-S13-01). */
+    /** T-S19-05: fichas compartidas con la empresa; como mucho una vigente. */
+    public function disclosures(): HasMany
+    {
+        return $this->hasMany(StudentDisclosure::class);
+    }
+
     public function messages(): HasMany
     {
         return $this->hasMany(LinkageMessage::class);

@@ -83,8 +83,9 @@ export const legalConfig: LegalConfig = {
   authority: { name: null, website: null },
   jurisdiction: { governingLaw: null, courts: null },
   processors: [],
-  version: '1.0',
-  lastUpdated: '2026-11-20',
+  // Sprint 19 (D1): ficha compartida con la empresa tras aceptar la vinculación.
+  version: '1.1',
+  lastUpdated: '2026-11-24',
 }
 
 /** Datos jurídicos que, al completarse con el área jurídica, amplían los documentos. */

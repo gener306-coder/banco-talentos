@@ -63,7 +63,8 @@ export function privacyDocument(config: LegalConfig = legalConfig): LegalDocumen
             <ol>
               <li><strong>Búsqueda.</strong> La empresa ve un perfil disociado: un titular, la carrera, el periodo, sus habilidades, idiomas, proyectos y certificaciones, su institución, el estado y el municipio, y la distancia aproximada en kilómetros. No ve nombre, matrícula, contacto, seguro social ni domicilio.</li>
               <li><strong>Solicitud pendiente.</strong> El perfil sigue disociado. El mensaje con el que la empresa acompaña su solicitud no admite datos de contacto.</li>
-              <li><strong>Vinculación aceptada.</strong> Solo entonces se abre la conversación entre la empresa y la institución. La plataforma nunca entrega a la empresa la identidad del alumno: la institución, que administra el expediente, decide qué datos estrictamente necesarios comparte por la conversación para coordinar la vinculación, con el consentimiento del alumno o de su tutor.</li>
+              <li><strong>Vinculación aceptada.</strong> Solo entonces se abre la conversación entre la empresa y la institución. La institución, que administra el expediente, decide si comparte con esa empresa una ficha ampliada, con el consentimiento del alumno o de su tutor. Puede elegir el nombre completo, los enlaces y el portafolio, y las credenciales de las certificaciones. Puede dejar de compartirla en cualquier momento, y deja de estar disponible si la vinculación se da de baja. También puede compartir por la conversación los datos estrictamente necesarios para coordinar la vinculación.</li>
+              <li><strong>Siempre privado.</strong> La matrícula, el número y el comprobante del seguro social, el domicilio y los demás datos internos del expediente nunca se entregan a la empresa.</li>
             </ol>
           </>
         ),

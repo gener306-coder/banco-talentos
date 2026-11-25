@@ -17,6 +17,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
@@ -92,7 +93,11 @@ class LinkageRequestController extends Controller
             ->find((int) $linkageRequest);
         abort_if($linkage === null, 404, 'La solicitud no existe.');
 
-        return response()->json(['data' => $this->item($linkage)])->header('Cache-Control', 'no-store, private');
+        // T-S19-05: fecha de la ficha compartida vigente, solo con la vinculación aceptada; los datos se piden aparte.
+        $shared = $linkage->status === LinkageRequestStatus::ACCEPTED ? $linkage->disclosures()->active()->value('disclosed_at') : null;
+
+        return response()->json(['data' => [...$this->item($linkage), 'shared_profile_at' => $shared === null ? null : Carbon::parse($shared)->toISOString()]])
+            ->header('Cache-Control', 'no-store, private');
     }
 
     /**

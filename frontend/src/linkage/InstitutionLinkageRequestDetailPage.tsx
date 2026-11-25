@@ -18,6 +18,8 @@ import { getReceivedLinkage, institutionLinkageMessages, terminateReceivedLinkag
 import type { ReceivedLinkageDetail } from './institutionApi'
 import { InstitutionLinkageLayout } from './InstitutionLinkageRequestsPage'
 import { LinkageDecisionSection } from './LinkageDecisionSection'
+import { StudentDisclosureSection } from './StudentDisclosureSection'
+import { useSnackbar } from '../ui/useSnackbar'
 import { LinkageTerminationSection } from './LinkageTermination'
 import { LinkageStatus } from './LinkageStatus'
 
@@ -42,9 +44,11 @@ function Detail({ data, onDecided, refresh }: {
   const chatPath = `/institution/linkage-requests/${data.id}/chat`
   // T-S13-07: si se llegó desde la conversación, «Volver a la conversación» ya lleva a ella; no se repite el botón.
   const fromChat = useContextualBack()?.to === chatPath
+  const [snackbar, notify] = useSnackbar()
 
   return (
     <>
+      {snackbar}
       <dl className="student-identity">
         <dt>Estado de la solicitud</dt><dd><LinkageStatus status={data.status} /></dd>
         <dt>Recibida</dt><dd>{dateFormat.format(new Date(data.created_at))}</dd>
@@ -61,11 +65,13 @@ function Detail({ data, onDecided, refresh }: {
 
       <section className="student-section" aria-labelledby="linkage-student-title">
         <h3 id="linkage-student-title">Alumno solicitado</h3>
-        {/* HU-S15-04: con la vinculación aceptada (o dada de baja después), la institución pudo compartir datos por la
-            conversación; la nota ya no afirma que la empresa no conoce al alumno (Aviso de Privacidad, privacidad progresiva). */}
+        {/* HU-S15-04 y T-S19-08: con la vinculación aceptada, la institución pudo compartir datos por la conversación o una
+            ficha ampliada; la nota ya no afirma que la empresa no conoce al alumno (Aviso de Privacidad, privacidad progresiva). */}
         <p className="privacy-note">
           {data.status === 'ACEPTADA' || data.status === 'BAJA'
-            ? 'La plataforma no muestra la identidad del alumno a la empresa. Si hace falta para coordinar la vinculación, comparte por la conversación solo los datos necesarios y con el consentimiento del alumno.'
+            ? data.disclosure
+              ? 'Compartiste con la empresa una ficha ampliada del alumno (abajo). La matrícula, el seguro y los campos internos siguen siendo de uso exclusivo de tu institución.'
+              : 'La empresa solo ve el perfil anónimo del alumno. Con su consentimiento, puedes compartirle una ficha ampliada desde esta página o los datos necesarios por la conversación.'
             : 'La identidad del alumno es de uso exclusivo de tu institución; la empresa no la conoce.'}
         </p>
         <dl className="student-identity">
@@ -131,6 +137,9 @@ function Detail({ data, onDecided, refresh }: {
       </section>
 
       <LinkageDecisionSection data={data} onDecided={onDecided} refresh={refresh} />
+      {/* T-S19-06: tras aceptar, la institución decide si comparte una ficha ampliada con la empresa (D1). */}
+      <StudentDisclosureSection linkageId={data.id} status={data.status} disclosure={data.disclosure} messages={institutionLinkageMessages}
+        onChanged={(disclosure, notice) => { onDecided({ ...data, disclosure }); notify(notice) }} />
       {/* T-S14-13: la institución da de baja una vinculación aceptada de su alumno (libera el lugar). */}
       <LinkageTerminationSection viewer="INSTITUTION" status={data.status} termination={data.termination} messages={institutionLinkageMessages}
         submit={(reason) => terminateReceivedLinkage(data.id, reason)} onTerminated={onDecided} />

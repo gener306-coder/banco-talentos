@@ -93,6 +93,11 @@ Antes de desarrollar vistas frontend, consulta `docs/design/identidad-visual.md`
 ### Backend y Base de Datos
 - **Aislamiento y Anti-IDOR:** Toda consulta o escritura de recursos de una institución o empresa debe filtrar por la organización de la sesión (ej. trait `FindsOwnedStudent`). Un recurso ajeno responde `404` idéntico a uno inexistente.
 - **Privacidad por diseño:** Nunca exponer `student_identities`, `student_social_security`, `student_links`, `student_certification_credentials`, `students.id` ni columnas `location` (PostGIS) en endpoints para `COMPANY` o `SECRETARY`. Usar listas explícitas de campos y `students.public_id` (UUID v4) para vistas externas.
+  - **Única excepción (Sprint 19, D1): la ficha compartida.**
+    - Solo en una vinculación `ACEPTADA` de la empresa de la sesión, mientras la institución la comparta. Es una acción explícita, con consentimiento registrado y revocable; la baja la revoca.
+    - `GET /api/linkage-requests/{id}/disclosure` puede entregar el nombre completo (de `student_identities`), los enlaces (`student_links`) y las credenciales (`student_certification_credentials`).
+    - Siempre por la lista blanca `StudentDisclosure::SHAREABLE` y con campos explícitos.
+    - Nunca la matrícula, el seguro, `students.id`, `location` ni `verified_by`.
 - **Geolocalización:** El cliente nunca envía coordenadas (`latitude`, `longitude`, `location` se ignoran). El servidor calcula `location` desde la cabecera municipal del catálogo INEGI (`municipalities`).
 - **Cabeceras y rutas:** Respuestas autenticadas llevan `Cache-Control: no-store, private`. No existen rutas `DELETE` para entidades principales (usar baja lógica `is_active` vía `PATCH .../status`).
 
