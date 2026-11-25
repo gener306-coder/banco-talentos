@@ -50,6 +50,8 @@ class InitialPasswordController extends Controller
                 // Tratar incluso una cadena con formato bcrypt como contraseña literal.
                 $account->password = Hash::make($password);
                 $account->password_setup_required = false;
+                // T-S19-01: el enlace enviado por correo prueba el buzón; el manual no (D7).
+                $account->verifyEmailIfLinkWasEmailed();
                 $account->save();
             });
             if ($status !== Password::PASSWORD_RESET) {

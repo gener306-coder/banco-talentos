@@ -60,7 +60,7 @@ class AuthController extends Controller
         return response()->noContent();
     }
 
-    private function userResponse(User $user): JsonResponse
+    public function userResponse(User $user): JsonResponse
     {
         $user->loadMissing(['institution', 'company']);
 
@@ -69,6 +69,10 @@ class AuthController extends Controller
             'name' => $user->name,
             'email' => $user->email,
             'role' => $user->role->value,
+            // T-S19-01, T-S19-03 y T-S19-04: estado del correo de acceso. El enlace vence a los 60 minutos de enviarse.
+            'email_verified' => $user->email_verified_at !== null,
+            'pending_email' => $user->pending_email,
+            'email_link_sent_at' => $user->email_token_sent_at?->toISOString(),
             'institution' => null,
             // Empresa vinculada (HU-S4-03 CA-05): solo su nombre visible, sin datos internos de validación.
             'company' => $user->company ? [

@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { ApiError, currentUser, login, logout, resetPassword, setInitialPassword } from './api'
 
-const user = { id: 1, name: 'Ana', email: 'ana@example.test', role: 'ADMIN', institution: null, company: null }
+const user = { id: 1, name: 'Ana', email: 'ana@example.test', role: 'ADMIN', institution: null, company: null, emailVerified: true, pendingEmail: null, emailLinkSentAt: null }
 const fetchMock = vi.fn<typeof fetch>()
 
 beforeEach(() => {

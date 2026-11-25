@@ -2,6 +2,7 @@ import { PendingLabel } from '../ui/forms'
 import { useCallback, useRef, useState } from 'react'
 import { Link, useLocation, useParams } from 'react-router'
 import { InstitutionAccountForm } from './InstitutionAccountForm'
+import { InstitutionAccountsList } from './InstitutionAccountsList'
 import { InstitutionAccountPasswordResetForm } from './InstitutionAccountPasswordResetForm'
 import { InstitutionAccountSetupLinkForm } from './InstitutionAccountSetupLinkForm'
 import { getInstitution, setInstitutionStatus, UNNAMED_INSTITUTION } from './api'
@@ -33,7 +34,9 @@ function InstitutionDetail({ id }: { id: string }) {
   const [confirming, setConfirming] = useState(false)
   // Los formularios de cuentas viven en hojas: la vista muestra solo los datos y las acciones.
   const [sheet, setSheet] = useState<'create' | 'resend' | 'reset' | null>(null)
-  const closeSheet = useCallback(() => setSheet(null), [])
+  // T-S19-02: al cerrar una hoja, el listado de cuentas se recarga (un alta o un reenvío pueden cambiarlo).
+  const [accountsVersion, setAccountsVersion] = useState(0)
+  const closeSheet = useCallback(() => { setSheet(null); setAccountsVersion((version) => version + 1) }, [])
 
   // Inactivar bloquea el acceso de las cuentas: se confirma. Activar no tiene consecuencias que confirmar.
   function requestStatusChange() {
@@ -85,6 +88,7 @@ function InstitutionDetail({ id }: { id: string }) {
                     <button type="button" className="secondary" disabled={mutation.pending} onClick={() => setSheet('resend')}>Reenviar enlace</button>
                     <button type="button" className="secondary" disabled={mutation.pending} onClick={() => setSheet('reset')}>Restablecer contraseña</button>
                   </div>
+                  <InstitutionAccountsList institutionId={data.id} version={accountsVersion} />
                 </section>
                 <Sheet open={sheet === 'create'} onClose={closeSheet} labelledBy="institution-account-title">
                   <InstitutionAccountForm institutionId={data.id} disabled={mutation.pending} />

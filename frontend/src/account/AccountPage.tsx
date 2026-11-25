@@ -1,7 +1,7 @@
 import { useId, useRef, useState } from 'react'
 import type { FormEvent } from 'react'
 import { changePassword, roleLabels, updateAccount } from '../auth/api'
-import type { Role, User } from '../auth/api'
+import type { User } from '../auth/api'
 import { useAuth } from '../auth/useAuth'
 import { useApiMutation } from '../lib/useApiRequest'
 import type { FailureMessages } from '../lib/useApiRequest'
@@ -12,19 +12,12 @@ import { NavBackLink } from '../ui/NavBackLink'
 import { Sheet } from '../ui/Sheet'
 import { useSnackbar } from '../ui/useSnackbar'
 import { UserAvatar } from '../ui/UserAvatar'
+import { AccessEmailSection } from './AccessEmailSection'
 import { OrganizationProfileSection } from './OrganizationProfileSection'
 import './account.css'
 
 const accountMessages: FailureMessages = {
   429: 'Hiciste demasiados intentos seguidos. Espera un minuto antes de volver a intentarlo.',
-}
-
-/** A quién pedir un cambio del correo de acceso, que no se edita desde la cuenta (Sprint 14, D5). */
-const emailOwner: Record<Role, string> = {
-  ADMIN: 'Para cambiarlo, contacta al equipo técnico del Banco de Talentos.',
-  SECRETARY: 'Para cambiarlo, pídelo a quien administra las cuentas de la Secretaría de Economía.',
-  INSTITUTION: 'Para cambiarlo, escribe a la Administración del Banco de Talentos.',
-  COMPANY: 'Para cambiarlo, escribe a la Secretaría de Economía.',
 }
 
 function fieldErrors(errors: Record<string, string[]> | undefined, name: string): string | undefined {
@@ -153,8 +146,8 @@ function PasswordSheet({ open, onClose, onChanged }: { open: boolean; onClose: (
 }
 
 /**
- * Acceso y seguridad (T-S14-03), al estilo de Ajustes: filas con divisores finos. El correo de acceso es de solo lectura
- * (D5) y la contraseña se cambia en la hoja de HU-S14-01.
+ * Acceso y seguridad (T-S14-03), al estilo de Ajustes: filas con divisores finos. El correo de acceso se cambia con
+ * confirmación por enlace (T-S19-03) y la contraseña en la hoja de HU-S14-01.
  */
 function SecurityCard({ user, notify }: { user: User; notify: (message: string) => void }) {
   const [sheetOpen, setSheetOpen] = useState(false)
@@ -162,13 +155,8 @@ function SecurityCard({ user, notify }: { user: User; notify: (message: string) 
     <section className="account-card" aria-labelledby="account-security-title">
       <div className="account-card-head"><h3 id="account-security-title">Acceso y seguridad</h3></div>
       <div className="account-rows">
-        <div className="account-row">
-          <div className="account-row-main">
-            <p className="account-row-label">Correo de acceso</p>
-            <p className="account-row-value">{user.email}</p>
-            <p className="account-row-note">{emailOwner[user.role]}</p>
-          </div>
-        </div>
+        {/* T-S19-03 y T-S19-04: el correo se cambia con confirmación por enlace y se puede verificar. */}
+        <AccessEmailSection user={user} notify={notify} />
         <div className="account-row">
           <div className="account-row-main">
             <p className="account-row-label">Contraseña</p>

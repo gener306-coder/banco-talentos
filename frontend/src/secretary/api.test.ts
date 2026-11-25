@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { createSecretaryAccount, listSecretaryAccounts, resendSecretaryAccountSetup } from './api'
 
 const fetchMock = vi.fn<typeof fetch>()
-const account = { id: 4, name: 'Ana', email: 'ana@economia.test', status: 'pending', created_at: '2026-10-22T10:00:00Z' }
+const account = { id: 4, name: 'Ana', email: 'ana@economia.test', status: 'pending', email_verified: null, created_at: '2026-10-22T10:00:00Z' }
 const setupUrl = 'http://localhost:5173/set-initial-password?email=ana%40economia.test&token=abc'
 
 function csrf() {

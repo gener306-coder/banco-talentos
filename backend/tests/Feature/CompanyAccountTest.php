@@ -231,7 +231,7 @@ it('lists only the accounts of the company with their status (CA-06)', function 
 
     expect(array_map(fn (array $row) => [$row['name'], $row['status']], $data))
         ->toBe([['Ana', 'active'], ['Beatriz', 'pending'], ['Carlos', 'inactive']]);
-    expect(array_keys($data[0]))->toBe(['id', 'name', 'email', 'status', 'created_at']);
+    expect(array_keys($data[0]))->toBe(['id', 'name', 'email', 'status', 'email_verified', 'created_at']);
 });
 
 it('resends the link of a pending account of the company and invalidates the previous one (CA-02)', function () {

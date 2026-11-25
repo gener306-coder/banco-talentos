@@ -15,6 +15,8 @@ class InitialPasswordLink
     public function issue(User $user): string
     {
         $token = Password::broker('institution_setup')->createToken($user);
+        // T-S19-01 (D7): manual hasta que el transporte acepte el correo.
+        $user->recordLinkDelivery(SetupDeliveryMethod::MANUAL);
 
         return rtrim(config('app.frontend_url'), '/').'/set-initial-password?'.http_build_query([
             'email' => $user->email,
@@ -52,6 +54,7 @@ class InitialPasswordLink
                 $user->notify(new SetInitialPassword($setupUrl));
                 // Aceptado por el transporte; no equivale a entrega en el buzón.
                 $status = 'sent';
+                $user->recordLinkDelivery(SetupDeliveryMethod::EMAIL);
             } catch (Throwable $exception) {
                 // La cuenta ya está confirmada. El ADMIN puede reenviar el enlace
                 // sin conocerlo; no registrar secretos ni el mensaje del transporte.

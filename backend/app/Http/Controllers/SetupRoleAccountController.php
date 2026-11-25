@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Enums\SetupDeliveryMethod;
 use App\Enums\UserRole;
 use App\Http\Controllers\Concerns\ManagesAccountAccess;
+use App\Http\Requests\CorrectPendingEmailRequest;
 use App\Http\Requests\ResendSetupLinkRequest;
 use App\Http\Requests\StartAccountPasswordResetRequest;
 use App\Http\Requests\StoreSetupAccountRequest;
@@ -45,7 +46,7 @@ abstract class SetupRoleAccountController extends Controller
         $page = $this->accounts()
             ->orderBy('name')
             ->orderBy('id')
-            ->paginate(self::PER_PAGE, ['id', 'name', 'email', 'is_active', 'password_setup_required', 'created_at']);
+            ->paginate(self::PER_PAGE, ['id', 'name', 'email', 'is_active', 'password_setup_required', 'email_verified_at', 'created_at']);
 
         return response()->json([
             'data' => $page->getCollection()->map(fn (User $user): array => $user->setupAccountSummary())->values(),
@@ -119,6 +120,12 @@ abstract class SetupRoleAccountController extends Controller
     }
 
     /** HU-S6-04 CA-01: una cuenta de otro rol responde 404, igual que una inexistente. */
+    /** T-S19-02: corrige el correo de una cuenta pendiente de activar y le reenvía el enlace. */
+    public function correctEmail(CorrectPendingEmailRequest $request, string $account, InitialPasswordLink $links): JsonResponse
+    {
+        return $this->correctPendingEmail($request, $this->accounts(), $account, $request->validated('email'), $links);
+    }
+
     public function updateStatus(UpdateAccountStatusRequest $request, string $account): JsonResponse
     {
         $user = $this->changeAccountStatus($request, $this->accounts(), $account, $request->validated('is_active'));

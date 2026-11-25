@@ -2,6 +2,8 @@
 
 use App\Models\User;
 use App\Notifications\AccessEmailChanged;
+use App\Notifications\AccessEmailChangeRequested;
+use App\Notifications\ConfirmAccessEmail;
 use App\Notifications\LinkageMessageReceived;
 use App\Notifications\PasswordChanged;
 use App\Notifications\ResetInstitutionPassword;
@@ -23,6 +25,9 @@ function brandedMailSamples(): array
         'contraseña cambiada' => fn () => new PasswordChanged,
         'correo de acceso nuevo' => fn () => new AccessEmailChanged(false),
         'correo de acceso anterior' => fn () => new AccessEmailChanged(true),
+        'confirmar correo nuevo' => fn () => new ConfirmAccessEmail('https://piloto.example.test/confirm-email?token=x', 'Ana López', change: true),
+        'verificar correo' => fn () => new ConfirmAccessEmail('https://piloto.example.test/confirm-email?token=x', 'Ana López', change: false),
+        'aviso de cambio de correo' => fn () => new AccessEmailChangeRequested('ana.nueva@example.test'),
         'mensaje de vinculación' => fn () => new LinkageMessageReceived('ManuGolfo', 'Tableros de producción', 'https://piloto.example.test/linkage-requests/1/chat'),
     ];
 }
@@ -43,6 +48,14 @@ it('renders every mail in Spanish with the brand header, colors and footer', fun
         expect($html)->not->toContain($leftover);
     }
 })->with(brandedMailSamples());
+
+it('words the access email links in Spanish with their 60-minute validity', function () {
+    $html = (string) (new ConfirmAccessEmail('https://piloto.example.test/confirm-email?token=x', 'Ana López', change: true))
+        ->toMail(new User)->render();
+
+    expect($html)->toContain('Hola, Ana López')->toContain('Confirmar correo')->toContain('Tu correo actual seguirá activo hasta que lo confirmes.')
+        ->toContain('El enlace vence en 60 minutos y solo puede utilizarse una vez.');
+});
 
 it('translates the salutation and the button fallback of the framework template', function () {
     $html = (string) (new SetInitialPassword('https://piloto.example.test/set-initial-password?token=x'))
@@ -83,8 +96,9 @@ describe('mail:preview', function () {
 
         $files = collect(File::files(storage_path('app/mail-previews')))->map->getFilename()->sort()->values()->all();
         expect($files)->toBe([
-            'contrasena-cambiada.html', 'contrasena-inicial.html', 'correo-de-acceso-anterior.html', 'correo-de-acceso-nuevo.html',
-            'mensaje-de-vinculacion.html', 'restablecimiento-administracion.html', 'restablecimiento-olvide.html',
+            'aviso-cambio-de-correo.html', 'confirmar-correo-nuevo.html', 'contrasena-cambiada.html', 'contrasena-inicial.html',
+            'correo-de-acceso-anterior.html', 'correo-de-acceso-nuevo.html', 'mensaje-de-vinculacion.html',
+            'restablecimiento-administracion.html', 'restablecimiento-olvide.html', 'verificar-correo.html',
         ]);
         expect(File::get(storage_path('app/mail-previews/contrasena-inicial.html')))->toContain('Establecer contraseña');
     });
@@ -99,6 +113,8 @@ describe('mail:preview', function () {
         Notifications::assertSentTimes(PasswordChanged::class, 1);
         Notifications::assertSentTimes(AccessEmailChanged::class, 2);
         Notifications::assertSentTimes(LinkageMessageReceived::class, 1);
+        Notifications::assertSentTimes(ConfirmAccessEmail::class, 2);
+        Notifications::assertSentTimes(AccessEmailChangeRequested::class, 1);
     });
 
     it('rejects an invalid address without sending anything', function () {

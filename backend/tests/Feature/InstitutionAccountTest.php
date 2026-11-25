@@ -253,6 +253,9 @@ it('returns institutional identity without exposing password hashes or setup cre
             'name' => $user->name,
             'email' => $user->email,
             'role' => 'INSTITUTION',
+            'email_verified' => false,
+            'pending_email' => null,
+            'email_link_sent_at' => null,
             // HU-S16-07: lo que falta, el onboarding y si puede operar, sin valores.
             'institution' => ['id' => $institution->id, 'name' => $institution->name, 'missing' => [], 'onboarding' => 'done', 'can_operate' => true],
             'company' => null,

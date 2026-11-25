@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Enums\SetupDeliveryMethod;
 use App\Enums\UserRole;
 use App\Http\Controllers\Concerns\ManagesAccountAccess;
+use App\Http\Requests\CorrectPendingEmailRequest;
 use App\Http\Requests\ResendSetupLinkRequest;
 use App\Http\Requests\StartAccountPasswordResetRequest;
 use App\Http\Requests\StoreSetupAccountRequest;
@@ -39,7 +40,7 @@ class CompanyAccountController extends Controller
             ->where('company_id', $record->id)
             ->orderBy('name')
             ->orderBy('id')
-            ->get(['id', 'name', 'email', 'is_active', 'password_setup_required', 'created_at']);
+            ->get(['id', 'name', 'email', 'is_active', 'password_setup_required', 'email_verified_at', 'created_at']);
 
         return response()->json(['data' => $accounts->map(fn (User $user): array => $user->setupAccountSummary())->values()])
             ->header('Cache-Control', 'no-store, private');
@@ -106,6 +107,15 @@ class CompanyAccountController extends Controller
     }
 
     /** HU-S6-04 CA-03: una cuenta de otra empresa responde 404, igual que una inexistente. */
+    /** T-S19-02: corrige el correo de una cuenta pendiente de la empresa y le reenvía el enlace; la empresa debe estar activa. */
+    public function correctEmail(CorrectPendingEmailRequest $request, string $company, string $account, InitialPasswordLink $links): JsonResponse
+    {
+        $companyId = $this->find($company)->id;
+
+        return $this->correctPendingEmail($request, $this->accounts($companyId), $account, $request->validated('email'), $links,
+            fn () => $this->ensureActive($companyId, 'La empresa está inactiva: actívala para reenviar el enlace.'));
+    }
+
     public function updateStatus(UpdateAccountStatusRequest $request, string $company, string $account): JsonResponse
     {
         $companyId = $this->find($company)->id;

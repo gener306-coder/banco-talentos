@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Enums\SetupDeliveryMethod;
 use App\Models\User;
 use App\Notifications\ResetInstitutionPassword;
 use Illuminate\Support\Facades\DB;
@@ -17,6 +18,8 @@ class InstitutionPasswordResetLink
     public function issue(User $user): string
     {
         $token = Password::broker('institution_reset')->createToken($user);
+        // T-S19-01 (D7): manual hasta que el transporte acepte el correo.
+        $user->recordLinkDelivery(SetupDeliveryMethod::MANUAL);
 
         return rtrim(config('app.frontend_url'), '/').'/'.ltrim(config('app.password_reset_path'), '/').'?'.http_build_query([
             'email' => $user->email,
@@ -36,6 +39,7 @@ class InstitutionPasswordResetLink
                 $user->notify(new ResetInstitutionPassword($resetUrl, $initiator));
                 // Aceptado por el transporte; no equivale a entrega en el buzón.
                 $status = 'sent';
+                $user->recordLinkDelivery(SetupDeliveryMethod::EMAIL);
             } catch (Throwable $exception) {
                 // No registrar el token, la URL ni el mensaje del transporte.
                 Log::warning('No se pudo enviar el enlace de restablecimiento de contraseña.', [

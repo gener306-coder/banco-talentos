@@ -102,6 +102,8 @@ class InstitutionPasswordResetController extends Controller
                 // Tratar incluso una cadena con formato bcrypt como contraseña literal.
                 // El nuevo hash invalida las sesiones por cookie existentes (AuthenticateSession).
                 $account->password = Hash::make($password);
+                // T-S19-01: igual que la contraseña inicial, solo si el enlace llegó por correo (D7).
+                $account->verifyEmailIfLinkWasEmailed();
                 $account->save();
             });
             if ($status !== Password::PASSWORD_RESET) {

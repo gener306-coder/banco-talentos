@@ -89,6 +89,8 @@ beforeEach(() => {
     if (String(path).endsWith('/unread-summary')) return Response.json({ data: { conversations: 0, items: [] } })
     // Indicadores del inicio (HU-S5-01): ajenos a estas pruebas, quedan pendientes sin consumir respuestas.
     if (path === '/api/dashboard') return new Promise<Response>(() => undefined)
+    // T-S19-02: listado de cuentas del detalle; se responde aparte para no consumir las respuestas de cada prueba.
+    if (/^\/api\/institutions\/\d+\/accounts$/.test(String(path))) return Response.json({ data: [] })
     if (path === '/sanctum/csrf-cookie') {
       document.cookie = 'XSRF-TOKEN=csrf%3D; Path=/'
       return new Response(null, { status: 204 })

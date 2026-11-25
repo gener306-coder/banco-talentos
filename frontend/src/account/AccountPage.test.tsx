@@ -69,7 +69,7 @@ describe('menú de cuenta', () => {
 })
 
 describe('Mi cuenta', () => {
-  it('presenta la identidad con el avatar de iniciales, el rol y la organización, y el acceso en solo lectura', async () => {
+  it('presenta la identidad con el avatar de iniciales, el rol y la organización, y el acceso con su estado', async () => {
     render(<MemoryRouter initialEntries={['/account']}><App /></MemoryRouter>)
     const identity = await screen.findByRole('region', { name: 'Tu perfil' })
     expect(within(identity).getByRole('heading', { level: 2, name: 'Reclutadora' })).toBeInTheDocument()
@@ -81,7 +81,9 @@ describe('Mi cuenta', () => {
 
     const security = screen.getByRole('region', { name: 'Acceso y seguridad' })
     expect(security).toHaveTextContent('Correo de acceso')
-    expect(security).toHaveTextContent('Para cambiarlo, escribe a la Secretaría de Economía.')
+    // T-S19-01 y T-S19-03: el correo con su etiqueta y el cambio con confirmación por enlace (antes, solo lectura).
+    expect(security).toHaveTextContent('Correo verificado')
+    expect(within(security).getByRole('button', { name: 'Cambiar correo' })).toBeInTheDocument()
     expect(security).toHaveTextContent('Al cambiarla se cierran tus sesiones en otros dispositivos.')
     expect(within(security).queryByRole('textbox')).not.toBeInTheDocument()
   })

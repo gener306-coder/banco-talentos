@@ -173,7 +173,7 @@ it('lists SECRETARY accounts with name, email, status and creation date only (CA
     expect($rows->map(fn (array $row) => [$row['name'], $row['status']])->sortBy(0)->values()->all())
         ->toBe($expected->sortBy(0)->values()->all());
     foreach ($rows as $row) {
-        expect(array_keys($row))->toBe(['id', 'name', 'email', 'status', 'created_at']);
+        expect(array_keys($row))->toBe(['id', 'name', 'email', 'status', 'email_verified', 'created_at']);
     }
 })->with('secretary account managers');
 

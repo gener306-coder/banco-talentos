@@ -78,7 +78,7 @@ describe('estado de cuentas SECRETARY (CA-01)', function () {
         secretaryStatus($this, $this->secretary, ['is_active' => false])->assertOk()->assertHeader('Cache-Control', 'no-store, private')
             ->assertExactJson(['data' => [
                 'id' => $this->secretary->id, 'name' => 'Analista de vinculación', 'email' => $this->secretary->email,
-                'status' => 'inactive', 'created_at' => $this->secretary->created_at->toISOString(),
+                'status' => 'inactive', 'email_verified' => false, 'created_at' => $this->secretary->created_at->toISOString(),
             ]]);
         expect($this->secretary->refresh()->is_active)->toBeFalse();
 

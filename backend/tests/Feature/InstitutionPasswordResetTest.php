@@ -5,6 +5,7 @@ use App\Models\Institution;
 use App\Models\User;
 use App\Notifications\ResetInstitutionPassword;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
@@ -57,7 +58,7 @@ beforeEach(function () {
 });
 
 it('lets ADMIN start a reset that mails a temporary link without exposing secrets (CA-02, CA-04, CA-11)', function () {
-    $original = $this->account->fresh()->getAttributes();
+    $original = Arr::except($this->account->fresh()->getAttributes(), ['setup_delivery']);
     $response = $this->browserRequest('POST', '/api/institution-accounts/password-reset/start', $this->startPayload)
         ->assertOk()
         ->assertExactJson(['reset_delivery' => 'sent'])
@@ -81,7 +82,7 @@ it('lets ADMIN start a reset that mails a temporary link without exposing secret
     expect($stored)->not->toBe($query['token']);
     expect(Hash::check($query['token'], $stored))->toBeTrue();
     expect($response->getContent())->not->toContain($query['token'], $stored, $this->account->password, 'reset_url');
-    expect($this->account->fresh()->getAttributes())->toBe($original);
+    expect(Arr::except($this->account->fresh()->getAttributes(), ['setup_delivery']))->toBe($original);
 });
 
 it('changes nothing until the holder resets, and the current password keeps working meanwhile', function () {

@@ -62,7 +62,7 @@ Mi cuenta y los listados de cuentas (Administración, Secretaría, empresa y el 
 
 ### T-S19-01 — Estado de verificación del correo
 
-**Estado:** Pendiente.
+**Estado:** Completada (24 de noviembre de 2026).
 
 **Alcance:**
 - `users.email_verified_at` y `users.setup_delivery` (`email` o `manual`), que registra cómo se entregó el último enlace emitido.
@@ -70,9 +70,17 @@ Mi cuenta y los listados de cuentas (Administración, Secretaría, empresa y el 
 - Las cuentas existentes quedan sin verificar; `/me` y los listados de cuentas exponen el estado.
 - No bloquea el inicio de sesión (D6).
 
+**Resultado:**
+- Migración `2026_11_24_000001_add_email_verification_to_users_table`: `email_verified_at`, `setup_delivery`, `pending_email`, `email_token_hash` y `email_token_sent_at`, con restricciones de pareja y un índice único parcial sobre el hash.
+- `InitialPasswordLink` e `InstitutionPasswordResetLink` fijan `setup_delivery = manual` al emitir el enlace y lo pasan a `email` solo cuando el transporte acepta el correo. Si el envío falla, nadie lo recibió en el buzón.
+- Completar la contraseña inicial o un restablecimiento verifica el correo solo si el enlace llegó por correo (`User::verifyEmailIfLinkWasEmailed`).
+- `/me` agrega `email_verified`, `pending_email` y `email_link_sent_at`. Los listados de cuentas agregan `email_verified`. El hash nunca sale (`$hidden`).
+
+**Pruebas:** Pest, `AccessEmailVerificationTest` (bloque T-S19-01): enlace por correo frente a manual, transporte caído y restablecimiento.
+
 ### T-S19-02 — Corregir el correo de una cuenta pendiente y reenviar
 
-**Estado:** Pendiente.
+**Estado:** Completada (24 de noviembre de 2026).
 
 **Alcance:**
 - Solo mientras la cuenta está pendiente de activar, con los permisos de hoy: ADMIN para cuentas institucionales, de Administración y de Secretaría; SECRETARY para las de empresa y de Secretaría.
@@ -80,9 +88,27 @@ Mi cuenta y los listados de cuentas (Administración, Secretaría, empresa y el 
 - Ventana «Corregir correo de acceso» con el correo actual (solo lectura), el nuevo y la aclaración de que el enlace anterior deja de servir.
 - Listado de cuentas institucionales en el detalle de la institución, con su estado.
 
+**Resultado:**
+- `PATCH /api/admin-accounts/{id}/email`, `/api/secretary-accounts/{id}/email`, `/api/companies/{company}/accounts/{id}/email` e `/api/institutions/{institution}/accounts/{id}/email`, con los mismos roles y límites que el reenvío del enlace.
+- La lógica común está en `ManagesAccountAccess::correctPendingEmail`:
+  - solo cuentas activas pendientes de activar;
+  - borra el enlace del correo equivocado antes del cambio;
+  - envía el nuevo siempre por correo;
+  - registra `email_changed` con quien corrigió;
+  - a la dirección equivocada no le envía nada;
+  - si la cuenta se invitó sin nombre, su nombre provisional era el correo mal escrito (M3) y se corrige junto con él.
+- `GET /api/institutions/{institution}/accounts` y `InstitutionAccountsList` en el detalle de la institución.
+- Ventana «Corregir correo de acceso» (`accounts/CorrectEmailForm`) en los listados de Administración, Secretaría, empresa e institución.
+- Etiquetas comunes (`ui/EmailStatusBadge`) en la celda del correo.
+
+**Pruebas:**
+- Pest: corrección, enlace anterior inválido, duplicados, cuenta activa, IDOR entre instituciones, empresa inactiva y roles.
+- Vitest, `AccessEmail.test.tsx`: Secretaría e institución.
+- E2E, `access-email.spec.ts`: cuenta institucional con el correo mal escrito.
+
 ### T-S19-03 — Cambio de correo de acceso en Mi cuenta
 
-**Estado:** Pendiente.
+**Estado:** Completada (24 de noviembre de 2026).
 
 **Alcance:**
 - Formulario con `Nuevo correo de acceso` y `Contraseña actual` (`ui/PasswordField`). El correo actual sigue activo hasta confirmar el enlace, vigente 60 minutos.
@@ -91,14 +117,55 @@ Mi cuenta y los listados de cuentas (Administración, Secretaría, empresa y el 
 - Pantalla pública de confirmación, con o sin sesión: éxito; enlace vencido, usado o cancelado; correo ya registrado en otra cuenta.
 - Al confirmar: correo verificado, enlaces y demás sesiones invalidados, aviso a ambas direcciones, bitácora y contacto de la organización (D8).
 
+**Resultado:**
+- `AccountEmailController`:
+  - `POST /api/me/email`, `/resend`, `/cancel` y `/verification`, con sesión y el límite `account-email`;
+  - `POST /api/account-email/confirm`, pública, con el límite `email-confirm` por IP.
+- **Enlace (`AccessEmailLink`):** token aleatorio de 64 caracteres; solo se guarda su SHA-256.
+  - Vence a los 60 minutos.
+  - Emitir otro enlace (reenvío o nueva solicitud) reemplaza el hash, así que el anterior deja de servir.
+  - Se usa en lugar de una URL firmada de Laravel porque así el enlace es de un solo uso y se puede cancelar. Además, la URL no lleva el id de la cuenta.
+- **Al confirmar:**
+  - se vuelve a comprobar que el correo esté libre (409 `EMAIL_TAKEN`, y se descarta el cambio);
+  - se borran los enlaces de contraseña del correo anterior;
+  - se rota el `remember_token` y se cierran las demás sesiones; si se confirma con la sesión de la misma cuenta, esa sigue abierta;
+  - se registra `email_changed` y, con D8, `organization_profile_updated` (`contact_email`);
+  - se avisa con `AccessEmailChanged` a ambas direcciones (su texto ya no menciona solo a Administración).
+- **Correos nuevos con la plantilla del Sprint 18:**
+  - `ConfirmAccessEmail`, al correo nuevo o al actual;
+  - `AccessEmailChangeRequested`, aviso sin enlace a la dirección actual.
+- **Mi cuenta (`account/AccessEmailSection`):**
+  - etiqueta del correo y **Cambiar correo**, en una hoja con `ui/PasswordField`;
+  - bloque «Confirmación de correo pendiente» con **Reenviar enlace**, que muestra la espera de 60 s, y **Cancelar cambio**.
+- **Pantalla pública `/confirm-email`:**
+  - confirma al abrir, una sola vez, y quita el token de la URL;
+  - tres mensajes: éxito, enlace inválido y correo ya registrado;
+  - con sesión, actualiza la identidad de la barra.
+
+**Pruebas:**
+- Pest (bloque T-S19-03): contraseña, correo igual u ocupado, aviso a la dirección actual, sesiones, D8, sin sesión, vencido, reemplazado, cancelado, doble uso, conflicto y espera del reenvío.
+- Vitest: Mi cuenta y la pantalla de confirmación.
+- E2E: cambio confirmado desde otro navegador e inicio de sesión con el correo nuevo.
+
 ### T-S19-04 — Verificar el correo actual
 
-**Estado:** Pendiente.
+**Estado:** Completada (24 de noviembre de 2026).
 
 **Alcance:**
 - Aviso discreto en Mi cuenta para cuentas sin verificar, con «Enviar enlace de verificación»: explica que garantiza poder restablecer la contraseña.
 - `admin:update-email` deja el correo sin verificar (D9).
 - Todos los correos nuevos usan la plantilla con marca del Sprint 18 y se cubren en `mail:preview` y `BrandedMailTest`.
+
+**Resultado:**
+- Aviso «Verifica tu correo de acceso» en Mi cuenta, con **Enviar enlace de verificación** y después **Reenviar enlace**. No aparece con un cambio pendiente: el servidor lo rechaza.
+- `admin:update-email` deja `email_verified_at` en nulo y descarta cualquier cambio pendiente (D9).
+- `mail:preview` genera 10 vistas previas: se agregan `confirmar-correo-nuevo`, `verificar-correo` y `aviso-cambio-de-correo`.
+- `BrandedMailTest` cubre los 3 correos en HTML y texto, sin restos en inglés.
+
+**Pruebas:**
+- Pest (bloque T-S19-04) y `BrandedMailTest`.
+- Vitest: aviso y envío.
+- E2E: una cuenta con enlace manual verifica su correo desde Mailpit.
 
 ### T-S19-05 — Ficha compartida: modelo y API con lista blanca
 
