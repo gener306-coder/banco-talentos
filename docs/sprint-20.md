@@ -1,6 +1,6 @@
 # Sprint 20 — Documentación técnica (`docs/tecnica/` y PDF formal)
 
-Sprint abierto el 25 de noviembre de 2026. Sprint anterior: [sprint-19.md](sprint-19.md) (histórico).
+Sprint del 25 de noviembre de 2026, completado ese mismo día; se integra a `main` con un solo PR (ver [Cierre](#cierre-25-de-noviembre-de-2026)). Sprint anterior: [sprint-19.md](sprint-19.md) (histórico).
 
 **Objetivo del Sprint:** documentar el sistema tal como está en `main` tras los Sprints 18 y 19 (`a01d283`), con dos salidas generadas desde una sola fuente:
 - documentación viva en GitHub, en Markdown modular con diagramas Mermaid, bajo [`docs/tecnica/`](tecnica/README.md);
@@ -133,7 +133,7 @@ Auditoría de solo lectura de `main`:
 
 ### T-S20-06 — Cap. 06 (infraestructura y operación) y Cap. 07 (seguridad, pruebas y entorno local)
 
-**Estado:** Cap. 06 completado (`51d4b63`); Cap. 07 en revisión (B5).
+**Estado:** completada (Cap. 06 en `51d4b63` y Cap. 07 en `fd0f2db`).
 
 **Alcance del Cap. 07:**
 - **Seguridad:** las capas de extremo a extremo con enlace a su detalle, la verificación automática (`ApiSecurityMatrixTest`, `tokens.test.ts`, `smoke.sh`, `99-verify.sh`, `npm audit` y `composer audit`) y las limitaciones conocidas.
@@ -173,4 +173,57 @@ Los conteos de pruebas se obtienen ejecutando las suites (`sh scripts/test-backe
 
 ### T-S20-07 — B6: PDF formal
 
-**Estado:** pendiente. `sh scripts/docs-pdf.sh pdf` genera el PDF en tamaño Carta con portada, tabla de contenido y numeración (Paged.js).
+**Estado:** completada (PDF aprobado el 25 de noviembre de 2026; D05b se queda en vertical por decisión del responsable).
+
+**Alcance:**
+- **Script.** `sh scripts/docs-pdf.sh`, que por omisión compila el PDF; `diagramas` sigue disponible. Usa la misma imagen fijada, ahora con Paged.js 0.4.3, markdown-it 15.0.3 y las fuentes Noto Sans y Noto Sans Mono.
+- **Código:**
+  - `tools/build.mjs`: lee el orden de capítulos de `docs/tecnica/README.md`, sustituye cada bloque Mermaid por su SVG ya validado y reescribe los enlaces internos a anclas del PDF. Los enlaces fuera de `docs/tecnica/` muestran su ruta en el repositorio;
+  - `tools/diagrams.mjs`: la exportación quedó en una función reutilizable;
+  - `assets/pdf.css` y `assets/portada.html`: la maquetación.
+- **Formato:**
+  - tamaño Carta;
+  - portada con `logo.png` y `sec-economia.png` (montados en solo lectura desde `frontend/public/brand/`), versión, commit y rama;
+  - contenido e índice de figuras con números de página;
+  - capítulo en el encabezado, y parte y «Página X de Y» en el pie;
+  - paleta oficial, con el dorado solo en filetes y bordes;
+  - páginas horizontales solo para D06, D07, D09 y D10.
+
+**Decisiones técnicas:**
+- **CSS en línea.** Paged.js vuelve a pedir las hojas `<link>` con `fetch()`, y Chromium lo bloquea sobre `file://`.
+- **Páginas horizontales.** Paged.js las compone a 11 × 8.5 in, pero deja la hoja exterior con las medidas verticales y no se lo indica a Chromium. Después de paginar se agregan una regla `@page` con nombre y la medida de la hoja.
+- **Encabezado.** La cadena variable va en la caja izquierda: Paged.js reparte el ancho según el contenido conocido al componer.
+- **Reglas de Paged.js.** Hay una sola `string-set` por cadena, y las excepciones de salto van al final de la hoja: Paged.js conserva la última `string-set` de cada cadena y aplica los saltos por orden de regla, no por especificidad.
+
+**Verificación:**
+- **Resultado.** 119 páginas: 115 en Carta vertical y 4 en horizontal (pp. 58, 71, 77 y 79). Además, 30 capítulos y 18 figuras.
+- **Barrido automático** en Chromium de todas las páginas: 0 elementos de contenido (párrafos, tablas, celdas, código, imágenes y títulos) fuera del área de la página.
+- **Revisión visual** de las páginas rasterizadas:
+  - portada, «Acerca», contenido e índice de figuras;
+  - una apertura de parte y el grupo de ADRs;
+  - las tablas anchas (matriz de permisos y contraste de la CSP);
+  - los diagramas más altos y más anchos (D01, D05b y D11);
+  - las páginas horizontales D09 y D10.
+
+---
+
+## Cierre (25 de noviembre de 2026)
+
+| Tarea | Bloque | Commit |
+|---|---|---|
+| T-S20-01 y T-S20-02 | B0 y B1: estructura y diagramas | `8848089` |
+| T-S20-03 | B2: visión, stack, arquitectura, ADRs, roles, permisos y metodología | `1660a69` |
+| T-S20-04 y Cap. 04 de T-S20-05 | B3: datos y backend | `809f6ff` |
+| Cap. 05 de T-S20-05 y Cap. 06 de T-S20-06 | B4: frontend e infraestructura | `51d4b63` |
+| Cap. 07 de T-S20-06 | B5: seguridad, pruebas y entorno local | `fd0f2db` |
+| T-S20-07 | B6: PDF formal | commit de esta tarea |
+
+**Decisiones del cierre:**
+- `.gitattributes` queda fuera del Sprint para mantener el PR estrictamente documental. `docs/tecnica/07-calidad-y-entorno/03-entorno-local.md` indica `core.autocrlf input` para WSL 2.
+- D05b se queda en página vertical.
+
+**Entregable:**
+- El PDF y los 18 diagramas (SVG y PNG) se regeneran con `sh scripts/docs-pdf.sh` sobre `main` después de fusionar, para que la portada indique el SHA de `main` sin `+cambios`.
+- `docs/tecnica/build/` no se versiona.
+
+**Sin despliegue ni cambios en AWS:** el PR solo agrega documentación y las herramientas que la generan.

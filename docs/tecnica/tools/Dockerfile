@@ -9,7 +9,7 @@ COPY package.json package-lock.json ./
 RUN npm ci --no-audit --no-fund \
     && npx playwright install --with-deps --only-shell chromium \
     && apt-get update \
-    && apt-get install -y --no-install-recommends fonts-noto-core \
+    && apt-get install -y --no-install-recommends fonts-noto-core fonts-noto-mono \
     && rm -rf /var/lib/apt/lists/*
 
 COPY mermaid-theme.json *.mjs ./

@@ -1,0 +1,20 @@
+<!-- T-S20-07: portada del PDF formal. build.mjs sustituye los marcadores {{…}}. -->
+<section class="portada">
+  <div class="logos">
+    <img class="logo-plataforma" src="{{LOGO_PLATAFORMA}}" alt="Logotipo de la plataforma">
+    <img class="logo-secretaria" src="{{LOGO_SECRETARIA}}" alt="Secretaría de Economía">
+  </div>
+  <div class="bloque-titulo">
+    <p class="antetitulo">Educación Dual</p>
+    <h1>Banco de Talentos</h1>
+    <p class="subtitulo">Documentación técnica</p>
+    <p class="descripcion">Arquitectura, modelo de datos, backend, frontend, infraestructura en AWS, seguridad y calidad del sistema de vinculación entre instituciones educativas, empresas y la Secretaría de Economía, verificados contra el código del repositorio.</p>
+  </div>
+  <table class="ficha">
+    <tr><td>Versión</td><td>{{FECHA}}</td></tr>
+    <tr><td>Commit</td><td><code>{{COMMIT}}</code> · rama <code>{{RAMA}}</code></td></tr>
+    <tr><td>Fuente</td><td><code>docs/tecnica/</code> ({{CAPITULOS}} capítulos, {{FIGURAS}} diagramas)</td></tr>
+    <tr><td>Sprint</td><td>Sprint 20 · T-S20-07</td></tr>
+    <tr><td>Licencia</td><td>Documento propietario (ver <code>LICENSE</code> del repositorio)</td></tr>
+  </table>
+</section>

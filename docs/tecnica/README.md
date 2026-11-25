@@ -4,7 +4,7 @@ Documentación técnica del sistema tal como está en `main`, verificada contra 
 - **esta documentación viva**, que GitHub muestra con sus diagramas Mermaid;
 - **un PDF formal** en tamaño Carta, más cada diagrama en SVG y PNG, generados con `sh scripts/docs-pdf.sh` (ver [Generación](#generación)).
 
-Sprint: [Sprint 20](../sprint-20.md). Estado: los siete capítulos y los 18 diagramas están redactados y verificados; el PDF formal está pendiente (T-S20-07).
+Sprint: [Sprint 20](../sprint-20.md). Estado: completo. Los siete capítulos y los 18 diagramas están verificados contra el código, y el PDF formal se genera con `sh scripts/docs-pdf.sh`.
 
 ## Capítulos
 
@@ -83,9 +83,29 @@ El orden de esta lista es el orden del PDF.
 
 ## Generación
 
-Solo necesitas Docker o Podman. La imagen fija Node 24 y el Chromium de Playwright.
+Solo necesitas Docker o Podman. La imagen (`tools/Dockerfile`) fija Node 24, el Chromium de Playwright 1.63, Mermaid 12.3.0, Paged.js 0.4.3 y markdown-it 15.0.3, con las fuentes Noto.
 
 ```sh
-sh scripts/docs-pdf.sh diagramas   # valida los diagramas y exporta build/diagramas/Dxx.svg y Dxx.png
-sh scripts/docs-pdf.sh pdf         # PDF formal en tamaño Carta (T-S20-07, pendiente)
+sh scripts/docs-pdf.sh             # PDF formal en tamaño Carta (también valida y exporta los diagramas)
+sh scripts/docs-pdf.sh diagramas   # solo valida los diagramas y exporta build/diagramas/Dxx.svg y Dxx.png
 ```
+
+| Salida | Ruta |
+|---|---|
+| PDF formal | `docs/tecnica/build/Banco-de-Talentos-Documentacion-Tecnica.pdf` |
+| Diagramas | `docs/tecnica/build/diagramas/Dxx.svg` y `Dxx.png` (a 2×) |
+| HTML intermedio | `docs/tecnica/build/pdf/documento.html` (para depurar la maquetación) |
+
+**Cómo se arma el PDF** (`tools/build.mjs`):
+1. Exporta los diagramas.
+2. Arma el documento:
+   - portada con los logotipos oficiales, leídos de `frontend/public/brand/` sin copiarlos;
+   - «Acerca de este documento»;
+   - el contenido y el índice de figuras, con números de página;
+   - los capítulos en el orden de la lista de arriba.
+3. Pagina con Paged.js:
+   - tamaño Carta;
+   - encabezado con el capítulo y pie con la parte y «Página X de Y»;
+   - páginas horizontales solo para D06, D07, D09 y D10.
+
+La maquetación vive en `assets/pdf.css` y `assets/portada.html`. La portada indica el commit con el que se generó el PDF; si hay cambios sin confirmar en `docs/tecnica/`, lo marca con `+cambios`.

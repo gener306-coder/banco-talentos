@@ -122,8 +122,8 @@ export async function openRenderer() {
   return { render, png, close: () => browser.close() };
 }
 
-async function main() {
-  const docs = process.argv[2] ?? join(TOOLS, '..');
+/** Valida y exporta todos los diagramas a <docs>/build/diagramas/; devuelve los diagramas y los errores. */
+export async function exportDiagrams(docs) {
   const out = join(docs, 'build', 'diagramas');
   const { diagrams, errors } = extractDiagrams(docs);
   diagrams.sort((a, b) => a.id.localeCompare(b.id));
@@ -146,12 +146,21 @@ async function main() {
   } finally {
     await renderer.close();
   }
+  return { diagrams, errors };
+}
 
-  if (errors.length > 0) {
-    console.error(`\n${errors.length} error(es):`);
-    for (const error of errors) console.error(`✗ ${error}`);
-    process.exit(1);
-  }
+/** Imprime los errores y termina con código 1 si hay alguno. */
+export function failOnErrors(errors) {
+  if (errors.length === 0) return;
+  console.error(`\n${errors.length} error(es):`);
+  for (const error of errors) console.error(`✗ ${error}`);
+  process.exit(1);
+}
+
+async function main() {
+  const docs = process.argv[2] ?? join(TOOLS, '..');
+  const { diagrams, errors } = await exportDiagrams(docs);
+  failOnErrors(errors);
   console.log(`\n${diagrams.length} diagramas válidos en build/diagramas/ (SVG y PNG).`);
 }
 

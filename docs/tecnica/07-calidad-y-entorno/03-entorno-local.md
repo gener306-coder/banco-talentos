@@ -116,7 +116,7 @@ docker compose down -v       # BORRA la base de desarrollo y las dependencias: s
 
 ## Documentación técnica
 
-Esta documentación y su PDF se generan también en contenedor: `sh scripts/docs-pdf.sh diagramas` (y, desde T-S20-07, `pdf`). Solo requiere Docker o Podman ([índice](../README.md#generación)).
+Esta documentación y su PDF se generan también en contenedor: `sh scripts/docs-pdf.sh` compila el PDF formal y `sh scripts/docs-pdf.sh diagramas` solo exporta los diagramas. Solo requiere Docker o Podman ([índice](../README.md#generación)).
 
 ## Fuentes en el repositorio
 
