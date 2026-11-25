@@ -4,7 +4,7 @@ Documentación técnica del sistema tal como está en `main`, verificada contra 
 - **esta documentación viva**, que GitHub muestra con sus diagramas Mermaid;
 - **un PDF formal** en tamaño Carta, más cada diagrama en SVG y PNG, generados con `sh scripts/docs-pdf.sh` (ver [Generación](#generación)).
 
-Sprint: [Sprint 20](../sprint-20.md). Estado: estructura y diagramas listos; capítulos en redacción.
+Sprint: [Sprint 20](../sprint-20.md). Estado: los siete capítulos y los 18 diagramas están redactados y verificados; el PDF formal está pendiente (T-S20-07).
 
 ## Capítulos
 

@@ -115,9 +115,7 @@ Auditoría de solo lectura de `main`:
 
 ### T-S20-05 — Cap. 04 (backend) y Cap. 05 (frontend)
 
-**Estado:** en revisión.
-- El Cap. 04 se redactó en B3 y quedó aprobado en el commit `809f6ff`.
-- El Cap. 05 se redactó en B4.
+**Estado:** completada (Cap. 04 en `809f6ff` y Cap. 05 en `51d4b63`).
 
 **Alcance del Cap. 04:** arquitectura Laravel (D04), catálogo de las 111 rutas (ninguna `DELETE`), colas y FFmpeg (D10), y correos transaccionales (D06, D07). El detalle está en el commit `809f6ff`.
 
@@ -135,7 +133,21 @@ Auditoría de solo lectura de `main`:
 
 ### T-S20-06 — Cap. 06 (infraestructura y operación) y Cap. 07 (seguridad, pruebas y entorno local)
 
-**Estado:** Cap. 06 en revisión (B4); Cap. 07 pendiente (B5).
+**Estado:** Cap. 06 completado (`51d4b63`); Cap. 07 en revisión (B5).
+
+**Alcance del Cap. 07:**
+- **Seguridad:** las capas de extremo a extremo con enlace a su detalle, la verificación automática (`ApiSecurityMatrixTest`, `tokens.test.ts`, `smoke.sh`, `99-verify.sh`, `npm audit` y `composer audit`) y las limitaciones conocidas.
+- **Estrategia y conteos de pruebas.** Corridas en secuencia el 25 de noviembre de 2026, de 18:04 a 18:45 UTC, sobre `51d4b63`, cuyo código es idéntico al de `main` en `a01d283`:
+
+  | Suite | Resultado | Duración |
+  |---|---|---|
+  | Pest | 1810 de 1810 (18 103 aserciones) | 1528 s |
+  | Vitest | 1637 de 1637 (80 archivos) | 71.6 s |
+  | Playwright | 82 de 82 | 10.1 min |
+- **Entorno local:** guía verificada contra `compose.yaml` para Linux, macOS y Windows con WSL 2.
+  - **Apple Silicon:** `postgis/postgis:17-3.5` solo existe para amd64 y corre emulado; las demás imágenes son nativas.
+  - **WSL 2:** clonar dentro del sistema de archivos Linux y usar `core.autocrlf input`, porque el repositorio no tiene `.gitattributes`.
+  - **Variables y correo:** las de los dos `.env`, Mailpit y `mail:preview`.
 
 **Alcance del Cap. 06:**
 - **Topología AWS** (D11): recursos por módulo, flujos de red y salidas.
