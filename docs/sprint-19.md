@@ -306,10 +306,11 @@ Mi cuenta y los listados de cuentas (Administración, Secretaría, empresa y el 
 
 ### Validación funcional del responsable (25 de noviembre de 2026)
 
-El responsable validó en el piloto, con cuentas reales:
-- **Correo con marca:** el correo real por Resend llega en español, con el logotipo.
-- **Correo de acceso:** se verificó, se cambió con confirmación desde el correo nuevo y se corrigió el de una cuenta pendiente desde el listado de cuentas institucionales.
-- **Ficha compartida:** se compartió desde la institución, la empresa la vio con su aviso por correo y luego se dejó de compartir.
-- **Interfaz del Sprint 18:** favicon, logotipos al 100 % de zoom y mostrar u ocultar la contraseña.
+El responsable validó en el navegador, en https://piloto.ellukas.online, los 5 puntos:
+- **Verificación:** el correo de verificación llega por Resend, con marca y logotipo y en español, y la cuenta pasa a «Correo verificado».
+- **Cambio de correo:** se confirmó desde el correo nuevo y se cerraron las sesiones en otros dispositivos.
+- **Cuentas pendientes:** se revisó el listado de cuentas institucionales y se corrigió el correo de una cuenta pendiente.
+- **Ficha compartida:** se compartió como institución, la empresa la vio y recibió el correo de aviso, y se dejó de compartir.
+- **Ajustes visuales del Sprint 18:** favicon, logotipos al 100 % de zoom y el botón de mostrar contraseña.
 
 El piloto sigue encendido.
