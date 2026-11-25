@@ -1,6 +1,6 @@
 # Sprint 19 — Correo de acceso verificado y ficha compartida con la empresa
 
-Sprint vigente desde el 24 de noviembre de 2026. Sprint anterior: [sprint-18.md](sprint-18.md) (histórico).
+Sprint del 24 de noviembre de 2026, cerrado el 25 de noviembre de 2026 (PRs #11 y #12) y desplegado junto con el Sprint 18. Sprint anterior: [sprint-18.md](sprint-18.md) (histórico).
 
 **Objetivo del Sprint:**
 - que ningún correo de acceso mal escrito impida activar una cuenta o restablecer su contraseña;
@@ -10,7 +10,7 @@ Sprint vigente desde el 24 de noviembre de 2026. Sprint anterior: [sprint-18.md]
 - **PR 1 (correo de acceso):** `feat/s19-access-email`, con T-S19-01 a T-S19-04.
 - **PR 2 (ficha compartida):** `feat/s19-student-disclosure`, con T-S19-05 a T-S19-08, después del PR 1.
 
-**Despliegue:** ninguno durante el Sprint. Al fusionar ambos PRs se hace un solo **Build AMI** y **Deploy pilot** con los Sprints 18 y 19 ([runbook](infra/runbook-pilot.md)).
+**Despliegue:** ninguno durante el Sprint. Al fusionar ambos PRs se hizo un solo **Build AMI** y **Deploy pilot** con los Sprints 18 y 19 ([runbook](infra/runbook-pilot.md)); ver [Cierre y despliegue](#cierre-y-despliegue-25-de-noviembre-de-2026).
 
 ## Diagnóstico (24 de noviembre de 2026)
 
@@ -265,3 +265,52 @@ Mi cuenta y los listados de cuentas (Administración, Secretaría, empresa y el 
 - **`CLAUDE.md` y `AGENTS.md`:** la regla «Privacidad por diseño» documenta la única excepción y sus límites.
 
 **Pruebas:** se actualizaron las de Vitest que fijaban los textos anteriores: Aviso de privacidad, notas de los dos detalles, CV y bitácora.
+
+---
+
+## Cierre y despliegue (25 de noviembre de 2026)
+
+### Fusión
+
+| PR | Contenido | CI | Merge commit |
+|---|---|---|---|
+| #11 | PR 1, correo de acceso (T-S19-01 a T-S19-04) | run 45518158643 en verde | `64466b4` |
+| #12 | PR 2, ficha compartida (T-S19-05 a T-S19-08) | run 45527280314 en verde | `ae66735` |
+
+- El #12 estaba apilado sobre el #11. Al redirigirlo a `main` se comprobó que el árbol fusionado era idéntico al que ya había pasado su CI.
+- **Verificación local antes de abrir los PRs:**
+  - Pest: 1788 de 1788 en el PR 1 y 1810 de 1810 en el PR 2.
+  - Vitest: 1625 y 1637.
+  - E2E: 81 de 81 en el PR 1. En el PR 2, 81 de 82: el único fallo era un texto viejo en `students.spec.ts`, ya corregido; ese spec pasa.
+
+### Despliegue único de los Sprints 18 y 19
+
+| Paso | Resultado |
+|---|---|
+| **Build AMI**, run 45530619567, sobre `main` `ae66735` | CI, artefacto y Packer en verde; AMI `ami-08be59a77a7a7cafa` (us-east-2) |
+| **Deploy pilot**, run 45537218160 | Plan 2/0/2 (instancia y asociación de la EIP); apply, migraciones y smoke en verde |
+| Instancia nueva | `i-003d4d131e3b6d0e7` con `ami-08be59a77a7a7cafa` |
+| Migraciones, por SSM | `2026_11_24_000001_add_email_verification_to_users_table` y `2026_11_25_000001_create_student_disclosures_table`, ambas en el lote 2 |
+| Servicios | `php8.4-fpm`, `caddy`, `bt-queue@videos`, `bt-queue@default` y `bt-schedule.timer` activos |
+
+**Comprobaciones externas** en https://piloto.ellukas.online:
+
+| Ruta | Respuesta |
+|---|---|
+| `/up` | 200 |
+| `/brand/logo-correo.png` | `200 image/png`: el logo de los correos lo sirve Caddy (D4 del Sprint 18) |
+| `/favicon.ico` | 200, y `index.html` enlaza los íconos |
+| `/confirm-email` | 200 |
+| `POST /api/account-email/confirm` sin CSRF | 419 |
+| `GET /api/linkage-requests/{id}/disclosure` sin sesión | 401 |
+
+### Validación funcional del responsable (25 de noviembre de 2026)
+
+El responsable validó en el navegador, en https://piloto.ellukas.online, los 5 puntos:
+- **Verificación:** el correo de verificación llega por Resend, con marca y logotipo y en español, y la cuenta pasa a «Correo verificado».
+- **Cambio de correo:** se confirmó desde el correo nuevo y se cerraron las sesiones en otros dispositivos.
+- **Cuentas pendientes:** se revisó el listado de cuentas institucionales y se corrigió el correo de una cuenta pendiente.
+- **Ficha compartida:** se compartió como institución, la empresa la vio y recibió el correo de aviso, y se dejó de compartir.
+- **Ajustes visuales del Sprint 18:** favicon, logotipos al 100 % de zoom y el botón de mostrar contraseña.
+
+El piloto sigue encendido.
